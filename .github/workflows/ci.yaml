@@ -18,146 +18,6 @@ on:
         value: ${{ jobs.build.outputs.artifact-prefix }}
 
 jobs:
-  lint:
-    name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v29.0.0
-
-  unit-test:
-    name: Unit test charm
-    runs-on: ubuntu-22.04
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install tox & poetry
-        run: |
-          pipx install tox
-          pipx install poetry
-      - name: Run tests
-        run: tox run -e unit
-
-  promtool:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      # prometheus snap includes promtool
-      - name: Install prometheus snap
-        run: sudo snap install prometheus
-
-      - name: Check validity of prometheus alert rules
-        run: |
-          promtool check rules src/alert_rules/prometheus/*.yaml
-
-      - name: Run unit tests for prometheus alert rules
-        run: |
-          promtool test rules tests/unit/test_alert_rules/*.yaml
-
-  terraform-test:
-    name: Terraform - Validation and Simple Deployment product
-    runs-on: ubuntu-22.04
-    timeout-minutes: 120
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: (GitHub hosted) Free up disk space
-        run: |
-          printf '\nDisk usage before cleanup\n'
-          df --human-readable
-          # Based on https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
-          rm -r /opt/hostedtoolcache/
-          printf '\nDisk usage after cleanup\n'
-          df --human-readable
-
-      - name: (self hosted) Disk usage
-        run: df --human-readable
-
-      - name: Install terraform snap
-        run: |
-          sudo snap install terraform --channel=latest/stable --classic
-
-      - name: Lint / format / validate TF modules
-        run: |
-          pushd ./terraform
-          for dir in charm/simple_deployment charm/large_deployment product/simple_deployment product/large_deployment; do
-            (cd "${dir}" && terraform init && terraform fmt && terraform validate)
-          done
-          popd
-
-      - name: run checks - prepare
-        run: |
-          sudo snap install juju --channel=3.6 --classic
-
-      - name: LXD setup
-        run: |
-          sudo snap refresh lxd --channel=latest/stable
-          sudo adduser "$USER" 'lxd'
-          # `newgrp` does not work in GitHub Actions; use `sg` instead
-          sg 'lxd' -c "lxd waitready"
-          sg 'lxd' -c "lxd init --auto"
-          sg 'lxd' -c "lxc network set lxdbr0 ipv6.address none"
-          sudo iptables -F FORWARD
-          sudo iptables -P FORWARD ACCEPT
-
-      - name: Juju setup
-        run: |
-          mkdir -p ~/.local/share/juju
-          sg 'lxd' -c "juju bootstrap 'localhost' --config model-logs-size=10G"
-          juju model-defaults logging-config='<root>=INFO; unit=DEBUG'
-          juju add-model test
-          
-          sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
-          vm.max_map_count=262144
-          vm.swappiness=0
-          net.ipv4.tcp_retries2=5
-          fs.file-max=1048576
-          EOT
-          
-          sudo sysctl -p
-
-      - name: Terraform deploy - simple deployments product module
-        run: |
-          pushd ./terraform/product/simple_deployment/
-          terraform apply \
-            -var='opensearch={"model": "test"}' \
-            -var='backups-integrator={"config": {"bucket": "test"}}' \
-            -auto-approve
-          popd
-
-      - name: Wait for juju deployment
-        run: |
-          # TODO - remove this when juju wait-for starts reporting the up to date status
-          until timeout 2m juju wait-for model test --query='life=="alive" && status=="available"'
-          do
-            echo "Retrying in 5 seconds..."
-            juju status -m test
-            sleep 5
-          done
-
-  lib-check:
-    name: Check libraries
-    runs-on: ubuntu-22.04
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - run: |
-          # Workaround for https://github.com/canonical/charmcraft/issues/1389#issuecomment-1880921728
-          touch requirements.txt
-      - name: Check libs
-        uses: canonical/charming-actions/check-libraries@2.4.0
-        with:
-          credentials: ${{ secrets.CHARMHUB_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          use-labels: false
-          fail-build: ${{ github.event_name == 'pull_request' }}
-
   build:
     strategy:
       fail-fast: false
@@ -166,7 +26,7 @@ jobs:
           - .
           - tests/integration/relations/opensearch_provider/application-charm
     name: Build charm | ${{ matrix.path }}
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v29.0.0
+    uses: phvalguima/data-platform-workflows/.github/workflows/build_charm.yaml@add-systemd-logs
     with:
       cache: false
       path-to-charm-directory: ${{ matrix.path }}
@@ -177,22 +37,11 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v29.0.0
+    uses: phvalguima/data-platform-workflows/.github/workflows/integration_test_charm.yaml@add-systemd-logs
     with:
       juju-agent-version: 3.6.1 # renovate: juju-agent-pin-minor
       _beta_allure_report: true
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       cloud: lxd
-    secrets:
-      # GitHub appears to redact each line of a multi-line secret
-      # Avoid putting `{` or `}` on a line by itself so that it doesn't get redacted in logs
-      integration-test: |
-        { "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
-          "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
-          "AZURE_STORAGE_ACCOUNT": "${{ secrets.AZURE_STORAGE_ACCOUNT }}",
-          "AZURE_SECRET_KEY": "${{ secrets.AZURE_SECRET_KEY }}",
-          "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
-          "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
-          "GCP_SERVICE_ACCOUNT": "${{ secrets.GCP_SERVICE_ACCOUNT }}", }
     permissions:
       contents: write
