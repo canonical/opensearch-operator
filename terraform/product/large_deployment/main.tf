@@ -33,23 +33,37 @@ module "opensearch" {
 module "opensearch-dashboards" {
   source = "git::https://github.com/canonical/opensearch-dashboards-operator//terraform?ref=2/edge"
   model  = var.main.model
+
+  channel  = var.opensearch-dashboards.channel
+  revision = var.opensearch-dashboards.revision
+  base     = var.opensearch-dashboards.base
+
+  app_name          = var.opensearch-dashboards.app_name
+  units             = var.opensearch-dashboards.units
+  config            = var.opensearch-dashboards.config
+  constraints       = var.opensearch-dashboards.constraints
+  endpoint_bindings = var.opensearch-dashboards.endpoint_bindings
 }
 
 # data-integrator in the main model
 resource "juju_application" "data-integrator" {
   charm {
-    name    = "data-integrator"
-    channel = "latest/stable"
+    name     = "data-integrator"
+    channel  = var.data-integrator.channel
+    revision = var.data-integrator.revision
+    base     = var.data-integrator.base
   }
   model  = var.main.model
-  config = var.data-integrator
+  config = var.data-integrator.config
 }
 
 # s3 or azure integrator in the main model
 resource "juju_application" "backups-integrator" {
   charm {
-    name    = "${var.backups-integrator.storage_type}-integrator"
-    channel = "latest/stable"
+    name     = "${var.backups-integrator.storage_type}-integrator"
+    channel  = var.backups-integrator.channel
+    revision = var.backups-integrator.revision
+    base     = var.backups-integrator.base
   }
   model  = var.main.model
   config = var.backups-integrator.config
@@ -60,8 +74,9 @@ resource "juju_application" "grafana_agents" {
   for_each = toset(local.all_models)
 
   charm {
-    name    = "grafana-agent"
-    channel = "latest/stable"
+    name      = "grafana-agent"
+    channel   = var.grafana-agent.channel
+    revision  = var.grafana-agent.revision
   }
   model = each.value
 }
