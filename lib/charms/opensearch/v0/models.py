@@ -327,6 +327,7 @@ class PeerClusterRelData(Model):
     credentials: PeerClusterRelDataCredentials
     deployment_desc: Optional[DeploymentDescription]
     security_index_initialised: bool = False
+    cluster_name_auto_generated: bool = False
 
 
 class PeerClusterRelErrorData(Model):

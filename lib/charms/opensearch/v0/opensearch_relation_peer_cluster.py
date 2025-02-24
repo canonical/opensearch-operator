@@ -467,6 +467,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 ),
                 deployment_desc=deployment_desc,
                 security_index_initialised=self._get_security_index_initialised(),
+                cluster_name_auto_generated=self.charm.peers_data.get(
+                    Scope.APP, "cluster_name_auto_generated", False
+                ),
             )
         except OpenSearchHttpError:
             return PeerClusterRelErrorData(
@@ -1058,11 +1061,15 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             blocked_msg = (
                 "A cluster can only be related to 1 main and 1 failover-clusters at most."
             )
-        elif (
-            peer_cluster_rel_data.cluster_name != deployment_desc.config.cluster_name
-            and Directive.INHERIT_CLUSTER_NAME not in deployment_desc.pending_directives
-        ):
-            blocked_msg = "Cannot relate 2 clusters with different 'cluster_name' values."
+        elif peer_cluster_rel_data.cluster_name != deployment_desc.config.cluster_name:
+            contains_inherit_directive = (
+                Directive.INHERIT_CLUSTER_NAME in deployment_desc.pending_directives
+            )
+            if not contains_inherit_directive or (
+                contains_inherit_directive
+                and not peer_cluster_rel_data.cluster_name_auto_generated
+            ):
+                blocked_msg = "Cannot relate 2 clusters with different 'cluster_name' values."
 
         if not blocked_msg:
             self._clear_errors(f"error_from_requirer-{event_rel_id}")
@@ -1076,6 +1083,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 should_wait=False,
                 blocked_message=blocked_msg,
                 deployment_desc=deployment_desc,
+                cluster_name_auto_generated=peer_cluster_rel_data.cluster_name_auto_generated,
             ).to_dict(),
         )
         return True
