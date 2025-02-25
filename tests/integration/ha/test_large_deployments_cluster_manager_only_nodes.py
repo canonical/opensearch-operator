@@ -160,3 +160,32 @@ async def test_integrate_failover(ops_test: OpsTest) -> None:
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=MAIN_APP)
     nodes = await all_nodes(ops_test, leader_unit_ip, app=MAIN_APP)
     assert len(nodes) == 4, f"Wrong node count. Expecting 4 online nodes, found: {len(nodes)}."
+
+
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_remove_relation(ops_test: OpsTest) -> None:
+    """Successfully remove relation"""
+    await ops_test.model.applications[DATA_APP].destroy_relation(
+        f"{DATA_APP}:{REL_PEER}", f"{FAILOVER_APP}:{REL_ORCHESTRATOR}"
+    )
+
+    await ops_test.model.applications[DATA_APP].destroy_relation(
+        f"{DATA_APP}:{REL_PEER}", f"{MAIN_APP}:{REL_ORCHESTRATOR}"
+    )
+
+    await wait_until(
+        ops_test,
+        apps=[MAIN_APP, DATA_APP, FAILOVER_APP],
+        apps_full_statuses={
+            MAIN_APP: {"active": []},
+            DATA_APP: {
+                "blocked": ["Main-cluster-orchestrator removed, and no failover cluster related."]
+            },
+            FAILOVER_APP: {"active": []},
+        },
+        units_statuses=["active"],
+        wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
+        idle_period=IDLE_PERIOD,
+    )
