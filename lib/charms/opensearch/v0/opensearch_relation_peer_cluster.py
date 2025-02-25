@@ -1005,7 +1005,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         if (
             self.charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.OTHER
             or deployment_desc.app.id
-            not in [orchestrators.main_app.id, orchestrators.failover_app.id]
+            not in [app.id for app in (orchestrators.main_app, orchestrators.failover_app) if app]
         ):
             return
 
