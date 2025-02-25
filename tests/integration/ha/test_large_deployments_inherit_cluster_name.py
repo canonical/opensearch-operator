@@ -204,15 +204,8 @@ async def test_invalid_inherit_cluster_name_integration(ops_test: OpsTest) -> No
             },
         },
         units_statuses=["active"],
-        wait_for_exact_units={app: units for app, units in AUTOGEN_APP_UNITS.items()},
+        wait_for_exact_units={app: units for app, units in NON_AUTOGEN_APP_UNITS.items()},
         idle_period=IDLE_PERIOD,
-    )
-    # delete the invalid failover app and main app
-    await ops_test.model.remove_application(
-        INVALID_FAILOVER_APP, block_until_done=True, force=True, destroy_storage=True, no_wait=True
-    )
-    await ops_test.model.remove_application(
-        MAIN_APP_NOT_AUTOGEN, block_until_done=True, force=True, destroy_storage=True, no_wait=True
     )
 
 
