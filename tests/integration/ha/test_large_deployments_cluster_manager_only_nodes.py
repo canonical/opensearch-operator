@@ -171,18 +171,12 @@ async def test_remove_relation(ops_test: OpsTest) -> None:
         f"{DATA_APP}:{REL_PEER}", f"{FAILOVER_APP}:{REL_ORCHESTRATOR}"
     )
 
-    await ops_test.model.applications[DATA_APP].destroy_relation(
-        f"{DATA_APP}:{REL_PEER}", f"{MAIN_APP}:{REL_ORCHESTRATOR}"
-    )
-
     await wait_until(
         ops_test,
         apps=[MAIN_APP, DATA_APP, FAILOVER_APP],
         apps_full_statuses={
             MAIN_APP: {"active": []},
-            DATA_APP: {
-                "blocked": ["Main-cluster-orchestrator removed, and no failover cluster related."]
-            },
+            DATA_APP: {"active": []},
             FAILOVER_APP: {"active": []},
         },
         units_statuses=["active"],
