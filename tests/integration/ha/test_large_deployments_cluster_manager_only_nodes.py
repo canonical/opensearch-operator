@@ -177,7 +177,9 @@ async def test_remove_relation(ops_test: OpsTest) -> None:
         apps_full_statuses={
             MAIN_APP: {"active": []},
             DATA_APP: {"active": []},
-            FAILOVER_APP: {"blocked": ["Main-cluster-orchestrator removed, and no failover cluster related."]},
+            FAILOVER_APP: {
+                "blocked": ["Main-cluster-orchestrator removed, and no failover cluster related."]
+            },
         },
         units_statuses=["active"],
         wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
