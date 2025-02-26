@@ -873,7 +873,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # In case of renewal of the unit transport layer cert - restart opensearch
         if renewal and self.is_admin_user_configured():
             if self.peers_data.get(Scope.UNIT, "tls_ca_renewed", False):
-                # First, we check if we are renewing the CA and we have finished with that operation
+                # First, we check if we are renewing the CA and we have finished with that already
                 # If yes for both, then it means we did not run the reset_ca_rotation_state() at
                 # _post_start_init, but we finished the CA rotation operation itself.
                 # Let's clean up the CA rotation state in this case.
