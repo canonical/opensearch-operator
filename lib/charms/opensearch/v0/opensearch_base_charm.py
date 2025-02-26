@@ -881,6 +881,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
             # Now, we should progress with TLS setup
             if self.tls.is_fully_configured():
+                self.status.clear(TLSCaRotation)
+                self.status.clear(TLSNotFullyConfigured)
                 try:
                     self.tls.reload_tls_certificates()
                 except OpenSearchHttpError:
