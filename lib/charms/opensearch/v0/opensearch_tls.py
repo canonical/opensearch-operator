@@ -213,6 +213,10 @@ class OpenSearchTLS(Object):
         if not self.charm.unit.is_leader() and scope == Scope.APP:
             return
 
+        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+            event.defer()
+            return
+
         old_cert = secrets.get("cert", None)
         ca_chain = "\n".join(event.chain[::-1])
 
@@ -223,7 +227,11 @@ class OpenSearchTLS(Object):
             "ca-cert": current_secret_obj.get("ca-cert"),
         }
 
-        if secret != {"chain": ca_chain, "cert": event.certificate, "ca-cert": event.ca}:
+        if (
+            cert_type == CertType.APP_ADMIN
+            and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+            and secret != {"chain": ca_chain, "cert": event.certificate, "ca-cert": event.ca}
+        ):
             # Juju is not able to check if secrets' content changed between revisions
             # this IF is intended to reduce a storm of secret-removed/-changed events
             # for the same content
