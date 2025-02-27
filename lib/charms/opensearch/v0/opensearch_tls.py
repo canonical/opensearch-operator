@@ -93,6 +93,8 @@ class OpenSearchTLS(Object):
             self.charm.on[TLS_RELATION].relation_broken, self._on_tls_relation_broken
         )
 
+        self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
+
         self.framework.observe(self.certs.on.certificate_available, self._on_certificate_available)
         self.framework.observe(self.certs.on.certificate_expiring, self._on_certificate_expiring)
         self.framework.observe(
@@ -199,13 +201,6 @@ class OpenSearchTLS(Object):
 
     def _on_secret_changed(self, event) -> None:
         """Handle the secret change event."""
-        # We only process the app-admin secret if we are not the MAIN orchestrator
-        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
-            event.defer()
-            return
-        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
-            return
-
         # We need to find the app name of the main orchestrator
         if not self.charm.model.relations[PeerClusterOrchestratorRelationName] or not (
             orchestrators := self.charm.peers_data.get_object(Scope.APP, "orchestrators")
@@ -215,12 +210,12 @@ class OpenSearchTLS(Object):
             return
         orchestrators = PeerClusterOrchestrators.from_dict(orchestrators)
 
-        if f"{orchestrators.main_app.name}:app:{CertType.APP_ADMIN.val}" != event.label:
+        # Now we know we should consider this event
+        secret = event.secret
+        if secret and f"{orchestrators.main_app.name}:app:{CertType.APP_ADMIN.val}" != secret.label:
             # This event does not apply to us
             return
 
-        # Now we know we should consider this event
-        secret = event.secret
         new_cert_data = secret.get_content(refresh=True)
 
         # Reissue a new cert. available
