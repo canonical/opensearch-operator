@@ -216,11 +216,9 @@ class OpenSearchTLS(Object):
         orchestrators = PeerClusterOrchestrators.from_dict(orchestrators)
 
         # Now we know we should consider this event
-        if not (secret := event.secret):
+        if not (secret := event.secret) or not secret.label:
             return
-        if (
-            CertType.APP_ADMIN.val not in secret.label
-        ):
+        if CertType.APP_ADMIN.val not in secret.label:
             # This event does not apply for us
             return
 
@@ -356,7 +354,7 @@ class OpenSearchTLS(Object):
                 return
             # replacing the current CA initiates a rolling restart and certificate renewal
             # the workflow is the following:
-          # get new CA -> set tls_ca_renewing -> restart -> post_start_init -> set tls_ca_renewed
+            # get new CA -> set tls_ca_renewing -> restart -> post_start_init -> set tls_ca_renewed
             # -> request new certs -> get new certs -> on_tls_conf_set
             # -> delete both tls_ca_renewing and tls_ca_renewed
             if current_stored_ca:
