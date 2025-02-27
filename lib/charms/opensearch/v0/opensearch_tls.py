@@ -64,6 +64,11 @@ LIBAPI = 0
 # to 0 if you are raising the major API version
 LIBPATCH = 1
 
+
+CA_ALIAS = "ca"
+OLD_ALIAS = f"old-{CA_ALIAS}"
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -241,9 +246,17 @@ class OpenSearchTLS(Object):
 
         current_stored_ca = self.read_stored_ca()
         if current_stored_ca != new_cert_data.get("ca-cert"):
-            if not self.store_new_ca(self.charm.secrets.get_object(scope, cert_type.val)):
-                logger.debug("Could not store new CA certificate.")
-                return
+            try:
+                if not self.store_new_ca(self.charm.secrets.get_object(scope, cert_type.val)):
+                    logger.debug("Could not store new CA certificate.")
+                    return
+            except OpenSearchCmdError as e:
+                if f"Destination alias <{OLD_ALIAS}> already exists" in e.out:
+                    # Nothing to do, the old alias is still present
+                    logger.warning(
+                        f"Old {OLD_ALIAS} already exists, skipping this secret-changed event."
+                    )
+                    return
             # replacing the current CA initiates a rolling restart and certificate renewal
             # the workflow is the following:
             # get new CA -> set tls_ca_renewing -> restart -> post_start_init -> set tls_ca_renewed
@@ -265,7 +278,7 @@ class OpenSearchTLS(Object):
 
         # apply the chain.pem file for API requests, only if the CA cert has not been updated
         admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
-        if admin_secrets.get("chain") and not self.read_stored_ca(alias="old-ca"):
+        if admin_secrets.get("chain") and not self.read_stored_ca(alias=OLD_ALIAS):
             self.update_request_ca_bundle()
 
         for relation in self.charm.opensearch_provider.relations:
@@ -283,7 +296,7 @@ class OpenSearchTLS(Object):
 
         # The other "or" as the cert available is always false, as
         # event.certificate == old_cert (given we read it from the secret anyways)
-        renewal = self.read_stored_ca(alias="old-ca") is not None
+        renewal = self.read_stored_ca(alias=OLD_ALIAS) is not None
 
         try:
             self.charm.on_tls_conf_set(None, scope, cert_type, renewal)
@@ -356,7 +369,7 @@ class OpenSearchTLS(Object):
 
         # apply the chain.pem file for API requests, only if the CA cert has not been updated
         admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
-        if admin_secrets.get("chain") and not self.read_stored_ca(alias="old-ca"):
+        if admin_secrets.get("chain") and not self.read_stored_ca(alias=OLD_ALIAS):
             self.update_request_ca_bundle()
 
         # store the admin certificates in non-leader units
@@ -381,7 +394,7 @@ class OpenSearchTLS(Object):
         if self.charm.unit.is_leader() and self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
-        renewal = self.read_stored_ca(alias="old-ca") is not None or (
+        renewal = self.read_stored_ca(alias=OLD_ALIAS) is not None or (
             old_cert is not None and old_cert != event.certificate
         )
 
@@ -618,24 +631,23 @@ class OpenSearchTLS(Object):
             logging.error("CA cert  or truststore-password not found, quitting.")
             return False
 
-        alias = "ca"
-        store_path = f"{self.certs_path}/{alias}.p12"
+        store_path = f"{self.certs_path}/{CA_ALIAS}.p12"
 
         try:
             run_cmd(
                 f"""{self.keytool} -changealias \
-                -alias {alias} \
-                -destalias old-{alias} \
+                -alias {CA_ALIAS} \
+                -destalias {OLD_ALIAS} \
                 -keystore {store_path} \
                 -storetype PKCS12
             """,
                 f"-storepass {admin_secrets.get('truststore-password')}",
             )
-            logger.info(f"Current CA {alias} was renamed to old-{alias}.")
+            logger.info(f"Current CA {CA_ALIAS} was renamed to old-{CA_ALIAS}.")
         except OpenSearchCmdError as e:
             # This message means there was no "ca" alias or store before, if it happens ignore
             if not (
-                f"Alias <{alias}> does not exist" in e.out
+                f"Alias <{CA_ALIAS}> does not exist" in e.out
                 or "Keystore file does not exist" in e.out
             ):
                 raise
@@ -651,7 +663,7 @@ class OpenSearchTLS(Object):
                     f"""{self.keytool} -importcert \
                     -trustcacerts \
                     -noprompt \
-                    -alias {alias} \
+                    -alias {CA_ALIAS} \
                     -keystore {store_path} \
                     -file {ca_tmp_file.name} \
                     -storetype PKCS12
@@ -668,7 +680,7 @@ class OpenSearchTLS(Object):
 
         return True
 
-    def read_stored_ca(self, alias: str = "ca") -> Optional[str]:
+    def read_stored_ca(self, alias: str = CA_ALIAS) -> Optional[str]:
         """Load stored CA cert."""
         secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
@@ -698,7 +710,7 @@ class OpenSearchTLS(Object):
     def remove_old_ca(self) -> None:
         """Remove old CA cert from trust store."""
         ca_trust_store = f"{self.certs_path}/ca.p12"
-        old_alias = "old-ca"
+        old_alias = OLD_ALIAS
 
         secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
         store_pwd = secrets.get("truststore-password")
