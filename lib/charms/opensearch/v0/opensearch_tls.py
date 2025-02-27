@@ -212,7 +212,10 @@ class OpenSearchTLS(Object):
 
         # Now we know we should consider this event
         secret = event.secret
-        if secret and f"{orchestrators.main_app.name}:app:{CertType.APP_ADMIN.val}" != secret.label:
+        if (
+            secret
+            and f"{orchestrators.main_app.name}:app:{CertType.APP_ADMIN.val}" != secret.label
+        ):
             # This event does not apply to us
             return
 
