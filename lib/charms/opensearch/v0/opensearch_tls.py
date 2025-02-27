@@ -216,10 +216,10 @@ class OpenSearchTLS(Object):
         orchestrators = PeerClusterOrchestrators.from_dict(orchestrators)
 
         # Now we know we should consider this event
-        secret = event.secret
+        if not (secret := event.secret):
+            return
         if (
-            secret
-            and CertType.APP_ADMIN.val not in secret.label
+            CertType.APP_ADMIN.val not in secret.label
             and CertType.UNIT_HTTP.val not in secret.label
             and CertType.UNIT_TRANSPORT.val not in secret.label
         ):
@@ -241,13 +241,14 @@ class OpenSearchTLS(Object):
                 if el
             ]
 
-        scope = Scope.APP
-        cert_type = CertType.APP_ADMIN
         # Reordering
         ca_chain = "\n".join(ca_chain[::-1])
+        scope = Scope.APP
+        cert_type = CertType.APP_ADMIN
+        renewal = self.read_stored_ca(alias=OLD_ALIAS) is not None
 
         current_stored_ca = self.read_stored_ca()
-        if current_stored_ca != new_cert_data.get("ca-cert"):
+        if not renewal and current_stored_ca != new_cert_data.get("ca-cert"):
             try:
                 if not self.store_new_ca(self.charm.secrets.get_object(scope, cert_type.val)):
                     logger.debug("Could not store new CA certificate.")
@@ -264,7 +265,7 @@ class OpenSearchTLS(Object):
             # get new CA -> set tls_ca_renewing -> restart -> post_start_init -> set tls_ca_renewed
             # -> request new certs -> get new certs -> on_tls_conf_set
             # -> delete both tls_ca_renewing and tls_ca_renewed
-            if current_stored_ca:
+            if current_stored_ca and not renewal:
                 self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
                 self.update_ca_rotation_flag_to_peer_cluster_relation(
                     flag="tls_ca_renewing", operation="add"
@@ -280,7 +281,7 @@ class OpenSearchTLS(Object):
 
         # apply the chain.pem file for API requests, only if the CA cert has not been updated
         admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
-        if admin_secrets.get("chain") and not self.read_stored_ca(alias=OLD_ALIAS):
+        if admin_secrets.get("chain") and renewal:
             self.update_request_ca_bundle()
 
         for relation in self.charm.opensearch_provider.relations:
@@ -296,8 +297,7 @@ class OpenSearchTLS(Object):
         if self.charm.unit.is_leader() and self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
-        # The other "or" as the cert available is always false, as
-        # event.certificate == old_cert (given we read it from the secret anyways)
+        # Recalculating renewal
         renewal = self.read_stored_ca(alias=OLD_ALIAS) is not None
 
         try:
