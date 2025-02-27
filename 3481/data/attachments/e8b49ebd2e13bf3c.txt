@@ -1,0 +1,172 @@
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:602 Remove backup relation
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:614 Re-add backup credentials relation
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:623 Syncing credentials for aws
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  main/0 [idle] active: 
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.101.51.3:9200/_recovery?human
+[32mINFO    [0m integration.ha.helpers:helpers.py:246 Continuous writes result: namespace(max_stored_id=324, count=325, last_expected_id=324)
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.101.51.3:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: POST -- https://10.101.51.3:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.101.51.3:9200/series_index/_count
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.101.51.3:9200/_recovery?human
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: POST -- https://10.101.51.3:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.101.51.3:9200/series_index/_count
+[32mINFO    [0m integration.ha.helpers:helpers.py:590 Testing restore for series_index - original count pre-restore: 325, and now, new count: 295
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: POST -- https://10.101.51.3:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.101.51.3:9200/series_index/_count
+[32mINFO    [0m integration.ha.conftest:conftest.py:39 
+
+
+
+The writes have been cleared.
+
+
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.6.1    unsupported  02:03:08Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+failover                           active      2  opensearch                                 1  no       
+main                               active      1  opensearch                                 0  no       
+opensearch                         active      1  opensearch                                 2  no       
+s3-integrator                      active      1  s3-integrator             latest/edge    135  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+failover/0                   active    idle   2        10.101.51.9     9200/tcp  
+failover/1*                  active    idle   3        10.101.51.226   9200/tcp  
+main/0*                      active    idle   5        10.101.51.3     9200/tcp  
+opensearch/0*                active    idle   4        10.101.51.200   9200/tcp  
+s3-integrator/0*             active    idle   0        10.101.51.67              
+self-signed-certificates/0*  active    idle   1        10.101.51.204             
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.101.51.67   juju-b85410-0  ubuntu@22.04      Running
+1        started  10.101.51.204  juju-b85410-1  ubuntu@22.04      Running
+2        started  10.101.51.9    juju-b85410-2  ubuntu@22.04      Running
+3        started  10.101.51.226  juju-b85410-3  ubuntu@22.04      Running
+4        started  10.101.51.200  juju-b85410-4  ubuntu@22.04      Running
+5        started  10.101.51.3    juju-b85410-5  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:42:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:42:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-s3-integrator-0: 01:42:28 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:42:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:42:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:42:33 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:42:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:42:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-1: 01:42:53 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-5: 01:42:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:42:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:42:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:42:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:42:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:42:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-main-0: 01:42:53 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-failover-0: 01:42:57 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-0: 01:42:58 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-main-0: 01:45:02 ERROR unit.main/0.juju-log certificates:13: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-main-0: 01:45:08 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-main-0: 01:45:08 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-main-0: 01:45:09 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-main-0: 01:45:12 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-main-0: 01:45:15 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-main-0: 01:45:18 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-main-0: 01:45:21 ERROR unit.main/0.juju-log Cannot connect to the OpenSearch server...
+unit-failover-1: 01:45:41 ERROR unit.failover/1.juju-log certificates:14: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-failover-1: 01:45:46 ERROR unit.failover/1.juju-log Cannot connect to the OpenSearch server...
+unit-failover-1: 01:45:48 ERROR unit.failover/1.juju-log Cannot connect to the OpenSearch server...
+unit-failover-0: 01:45:49 ERROR unit.failover/0.juju-log certificates:14: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-failover-0: 01:45:54 ERROR unit.failover/0.juju-log Cannot connect to the OpenSearch server...
+unit-failover-0: 01:45:55 ERROR unit.failover/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:45:55 ERROR unit.opensearch/0.juju-log certificates:15: err:  / out: keytool error: java.lang.Exception: Keystore file does not exist: /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12
+
+unit-failover-0: 01:45:56 ERROR unit.failover/0.juju-log opensearch-peers:3: Cannot connect to the OpenSearch server...
+unit-failover-0: 01:45:58 ERROR unit.failover/0.juju-log opensearch-peers:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:46:00 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:46:01 ERROR unit.opensearch/0.juju-log Cannot connect to the OpenSearch server...
+unit-failover-0: 01:46:07 ERROR unit.failover/0.juju-log opensearch-peers:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:46:08 ERROR unit.opensearch/0.juju-log peer-cluster:12: Cannot connect to the OpenSearch server...
+unit-failover-0: 01:46:09 ERROR unit.failover/0.juju-log opensearch-peers:3: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:46:09 ERROR unit.opensearch/0.juju-log opensearch-peers:4: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:46:11 ERROR unit.opensearch/0.juju-log opensearch-peers:4: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:46:18 ERROR unit.opensearch/0.juju-log peer-cluster:12: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:46:22 ERROR unit.opensearch/0.juju-log opensearch-peers:4: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:46:24 ERROR unit.opensearch/0.juju-log opensearch-peers:4: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:46:26 ERROR unit.opensearch/0.juju-log peer-cluster:12: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 01:46:28 ERROR unit.opensearch/0.juju-log peer-cluster:12: Cannot connect to the OpenSearch server...
+unit-main-0: 01:49:50 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:50:07 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:50:21 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:50:36 ERROR unit.main/0.juju-log peer-cluster-orchestrator:10: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:50:49 ERROR unit.main/0.juju-log peer-cluster-orchestrator:10: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:51:06 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:51:19 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:51:35 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:51:46 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:52:00 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:52:15 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:52:27 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:52:40 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:52:53 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:53:09 ERROR unit.main/0.juju-log opensearch-peers:7: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:53:21 ERROR unit.main/0.juju-log opensearch-peers:7: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:53:34 ERROR unit.main/0.juju-log opensearch-peers:7: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:53:46 ERROR unit.main/0.juju-log opensearch-peers:7: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:54:20 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:54:31 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:54:43 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:54:54 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:55:05 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:55:20 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:55:32 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:55:44 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:55:55 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:56:07 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 01:56:19 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:198 Cleaning backups from cloud buckets
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.0 Python/3.10.12 (Linux-5.15.0-133-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'fe71c828-f4ae-11ef-bb19-c3398f8727ed'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'f15bc18d-d01e-00ab-51bb-88cd18000000'
+    'x-ms-client-request-id': 'fe71c828-f4ae-11ef-bb19-c3398f8727ed'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Thu, 27 Feb 2025 02:03:09 GMT'
