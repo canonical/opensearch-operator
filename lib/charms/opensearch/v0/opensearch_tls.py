@@ -221,26 +221,92 @@ class OpenSearchTLS(Object):
 
         new_cert_data = secret.get_content(refresh=True)
 
-        chain = None
+        ca_chain = None
         if new_cert_data.get("chain"):
-            chain = (
-                new_cert_data.get("chain") + "\n" if new_cert_data.get("chain") != "\n" else chain
+            ca_chain = (
+                new_cert_data.get("chain") + "\n"
+                if new_cert_data.get("chain") != "\n"
+                else ca_chain
             )
-            chain = [
+            ca_chain = [
                 el + "-----END CERTIFICATE-----"
-                for el in chain.split("-----END CERTIFICATE-----\n")
+                for el in ca_chain.split("-----END CERTIFICATE-----\n")
                 if el
             ]
 
-        # Reissue a new cert. available
-        # If the right cert has been already processed, then it will be eventually abandoned
-        # Otherwise, we will update the cert to the right value.
-        self.certs.on.certificate_available.emit(
-            certificate_signing_request=new_cert_data.get("csr"),
-            certificate=new_cert_data.get("cert"),
-            ca=new_cert_data.get("ca-cert"),
-            chain=chain,
+        # # Reissue a new cert. available
+        # # If the right cert has been already processed, then it will be eventually abandoned
+        # # Otherwise, we will update the cert to the right value.
+        # self.certs.on.certificate_available.emit(
+        #     certificate_signing_request=new_cert_data.get("csr"),
+        #     certificate=new_cert_data.get("cert"),
+        #     ca=new_cert_data.get("ca-cert"),
+        #     chain=ca_chain,
+        # )
+
+        scope = Scope.APP
+        cert_type = CertType.APP_ADMIN
+        # Reordering
+        ca_chain = "\n".join(ca_chain[::-1])
+
+        current_stored_ca = self.read_stored_ca()
+        if current_stored_ca != new_cert_data.get("ca-cert"):
+            if not self.store_new_ca(self.charm.secrets.get_object(scope, cert_type.val)):
+                logger.debug("Could not store new CA certificate.")
+                return
+            # replacing the current CA initiates a rolling restart and certificate renewal
+            # the workflow is the following:
+            # get new CA -> set tls_ca_renewing -> restart -> post_start_init -> set tls_ca_renewed
+            # -> request new certs -> get new certs -> on_tls_conf_set
+            # -> delete both tls_ca_renewing and tls_ca_renewed
+            if current_stored_ca:
+                self.charm.peers_data.put(Scope.UNIT, "tls_ca_renewing", True)
+                self.update_ca_rotation_flag_to_peer_cluster_relation(
+                    flag="tls_ca_renewing", operation="add"
+                )
+                self.charm.on_tls_ca_rotation()
+                return
+
+        # store the certificates and keys in a key store
+        self.store_new_tls_resources(
+            cert_type, self.charm.secrets.get_object(scope, cert_type.val)
         )
+
+        # apply the chain.pem file for API requests, only if the CA cert has not been updated
+        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
+        if admin_secrets.get("chain") and not self.read_stored_ca(alias="old-ca"):
+            self.update_request_ca_bundle()
+
+        # store the admin certificates in non-leader units
+        # if admin cert not available we need to defer, otherwise it will never be stored
+        if not self.charm.unit.is_leader():
+            if admin_secrets.get("cert"):
+                self.store_new_tls_resources(CertType.APP_ADMIN, admin_secrets)
+            else:
+                logger.info("Admin certificate not available yet. Waiting for next events.")
+                return
+
+        for relation in self.charm.opensearch_provider.relations:
+            try:
+                self.charm.opensearch_provider.update_certs(relation.id, ca_chain)
+            except KeyError:
+                # As we are setting the ca_chain, it should not be likely to happen a KeyError at
+                # update_certs. This logic is left for a very corner case.
+                logger.error("Error updating certificates in the relation: ca_chain not set.")
+                return
+
+        # broadcast secret updates for certs and CA to related sub-clusters
+        if self.charm.unit.is_leader() and self.charm.opensearch_peer_cm.is_provider(typ="main"):
+            self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+
+        # The other "or" as the cert available is always false, as
+        # event.certificate == old_cert (given we read it from the secret anyways)
+        renewal = self.read_stored_ca(alias="old-ca") is not None
+
+        try:
+            self.charm.on_tls_conf_set(None, scope, cert_type, renewal)
+        except OpenSearchError as e:
+            logger.exception(e)
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:  # noqa: C901
         """Enable TLS when TLS certificate available.

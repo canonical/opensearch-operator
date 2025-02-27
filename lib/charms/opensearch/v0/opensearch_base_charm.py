@@ -889,10 +889,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                         logger.info("on_tls_conf_set: Detected CA rotation complete in cluster")
                         self.tls.on_ca_certs_rotation_complete()
 
-            else:
-                event.defer()
-                return
-
     def on_tls_relation_broken(self, _: RelationBrokenEvent):
         """As long as all certificates are produced, we don't do anything."""
         if self.tls.all_tls_resources_stored():
