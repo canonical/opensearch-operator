@@ -199,7 +199,7 @@ class OpenSearchTLS(Object):
             )
         self.charm.on_tls_relation_broken(event)
 
-    def _on_secret_changed(self, event) -> None:
+    def _on_secret_changed(self, event) -> None:  # noqa C901
         """Handle the secret change event."""
         # We need to find the app name of the main orchestrator
         if not self.charm.model.relations[PeerClusterOrchestratorRelationName] or not (
@@ -234,16 +234,6 @@ class OpenSearchTLS(Object):
                 if el
             ]
 
-        # # Reissue a new cert. available
-        # # If the right cert has been already processed, then it will be eventually abandoned
-        # # Otherwise, we will update the cert to the right value.
-        # self.certs.on.certificate_available.emit(
-        #     certificate_signing_request=new_cert_data.get("csr"),
-        #     certificate=new_cert_data.get("cert"),
-        #     ca=new_cert_data.get("ca-cert"),
-        #     chain=ca_chain,
-        # )
-
         scope = Scope.APP
         cert_type = CertType.APP_ADMIN
         # Reordering
@@ -268,23 +258,15 @@ class OpenSearchTLS(Object):
                 return
 
         # store the certificates and keys in a key store
-        self.store_new_tls_resources(
-            cert_type, self.charm.secrets.get_object(scope, cert_type.val)
-        )
+        if self.charm.secrets.get_object(scope, cert_type.val).get("cert"):
+            self.store_new_tls_resources(
+                cert_type, self.charm.secrets.get_object(scope, cert_type.val)
+            )
 
         # apply the chain.pem file for API requests, only if the CA cert has not been updated
         admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
         if admin_secrets.get("chain") and not self.read_stored_ca(alias="old-ca"):
             self.update_request_ca_bundle()
-
-        # store the admin certificates in non-leader units
-        # if admin cert not available we need to defer, otherwise it will never be stored
-        if not self.charm.unit.is_leader():
-            if admin_secrets.get("cert"):
-                self.store_new_tls_resources(CertType.APP_ADMIN, admin_secrets)
-            else:
-                logger.info("Admin certificate not available yet. Waiting for next events.")
-                return
 
         for relation in self.charm.opensearch_provider.relations:
             try:
