@@ -221,14 +221,25 @@ class OpenSearchTLS(Object):
 
         new_cert_data = secret.get_content(refresh=True)
 
+        chain = None
+        if new_cert_data.get("chain"):
+            chain = (
+                new_cert_data.get("chain") + "\n" if new_cert_data.get("chain") != "\n" else chain
+            )
+            chain = [
+                el + "-----END CERTIFICATE-----"
+                for el in chain.split("-----END CERTIFICATE-----\n")
+                if el
+            ]
+
         # Reissue a new cert. available
         # If the right cert has been already processed, then it will be eventually abandoned
         # Otherwise, we will update the cert to the right value.
-        self.certs.certificate_available.emit(
+        self.certs.on.certificate_available.emit(
             certificate_signing_request=new_cert_data.get("csr"),
             certificate=new_cert_data.get("cert"),
             ca=new_cert_data.get("ca-cert"),
-            chain=new_cert_data.get("chain"),
+            chain=chain,
         )
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:  # noqa: C901
