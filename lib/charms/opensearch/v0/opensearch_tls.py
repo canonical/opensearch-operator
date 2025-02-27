@@ -33,7 +33,7 @@ from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import all_units, run_cmd
 from charms.opensearch.v0.helper_networking import get_host_public_ip
 from charms.opensearch.v0.helper_security import generate_password
-from charms.opensearch.v0.models import DeploymentType
+from charms.opensearch.v0.models import DeploymentType, PeerClusterOrchestrators
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
@@ -197,6 +197,42 @@ class OpenSearchTLS(Object):
             )
         self.charm.on_tls_relation_broken(event)
 
+    def _on_secret_changed(self, event) -> None:
+        """Handle the secret change event."""
+        # We only process the app-admin secret if we are not the MAIN orchestrator
+        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+            event.defer()
+            return
+        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+            return
+
+        # We need to find the app name of the main orchestrator
+        if not self.charm.model.relations[PeerClusterOrchestratorRelationName] or not (
+            orchestrators := self.charm.peers_data.get_object(Scope.APP, "orchestrators")
+        ):
+            # not populated yet
+            event.defer()
+            return
+        orchestrators = PeerClusterOrchestrators.from_dict(orchestrators)
+
+        if f"{orchestrators.main_app.name}:app:{CertType.APP_ADMIN.val}" != event.label:
+            # This event does not apply to us
+            return
+
+        # Now we know we should consider this event
+        secret = event.secret
+        new_cert_data = secret.get_content(refresh=True)
+
+        # Reissue a new cert. available
+        # If the right cert has been already processed, then it will be eventually abandoned
+        # Otherwise, we will update the cert to the right value.
+        self.certs.certificate_available.emit(
+            certificate_signing_request=new_cert_data.get("csr"),
+            certificate=new_cert_data.get("cert"),
+            ca=new_cert_data.get("ca-cert"),
+            chain=new_cert_data.get("chain"),
+        )
+
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:  # noqa: C901
         """Enable TLS when TLS certificate available.
 
@@ -209,20 +245,8 @@ class OpenSearchTLS(Object):
             logger.debug("Unknown certificate available.")
             return
 
-        if (
-            cert_type == CertType.APP_ADMIN
-            and deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
-        ):
-            # we should abandon this event as the non-main orch. units follow the MAIN secret
-            # use the secret-changed event instead
-            return
-
         # seems like the admin certificate is also broadcast to non leader units on refresh request
         if not self.charm.unit.is_leader() and scope == Scope.APP:
-            return
-
-        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
-            event.defer()
             return
 
         old_cert = secrets.get("cert", None)
@@ -235,7 +259,7 @@ class OpenSearchTLS(Object):
             "ca-cert": current_secret_obj.get("ca-cert"),
         }
 
-        if secret != {"chain": ca_chain, "cert": event.certificate, "ca-cert": event.ca};
+        if secret != {"chain": ca_chain, "cert": event.certificate, "ca-cert": event.ca}:
             # Juju is not able to check if secrets' content changed between revisions
             # this IF is intended to reduce a storm of secret-removed/-changed events
             # for the same content
