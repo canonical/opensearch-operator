@@ -851,7 +851,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if scope == Scope.UNIT:
             admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
             if not (truststore_pwd := admin_secrets.get("truststore-password")):
-                event.defer()
                 return
 
             keystore_pwd = self.secrets.get_object(scope, cert_type.val)["keystore-password"]

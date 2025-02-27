@@ -318,7 +318,7 @@ class OpenSearchTLS(Object):
             if admin_secrets.get("cert"):
                 self.store_new_tls_resources(CertType.APP_ADMIN, admin_secrets)
             else:
-                event.defer()
+                logger.info("Admin certificate not available yet. Waiting for next events.")
                 return
 
         for relation in self.charm.opensearch_provider.relations:
