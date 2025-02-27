@@ -209,6 +209,14 @@ class OpenSearchTLS(Object):
             logger.debug("Unknown certificate available.")
             return
 
+        if (
+            cert_type == CertType.APP_ADMIN
+            and deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
+        ):
+            # we should abandon this event as the non-main orch. units follow the MAIN secret
+            # use the secret-changed event instead
+            return
+
         # seems like the admin certificate is also broadcast to non leader units on refresh request
         if not self.charm.unit.is_leader() and scope == Scope.APP:
             return
@@ -227,11 +235,7 @@ class OpenSearchTLS(Object):
             "ca-cert": current_secret_obj.get("ca-cert"),
         }
 
-        if (
-            cert_type == CertType.APP_ADMIN
-            and deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
-            and secret != {"chain": ca_chain, "cert": event.certificate, "ca-cert": event.ca}
-        ):
+        if secret != {"chain": ca_chain, "cert": event.certificate, "ca-cert": event.ca};
             # Juju is not able to check if secrets' content changed between revisions
             # this IF is intended to reduce a storm of secret-removed/-changed events
             # for the same content
