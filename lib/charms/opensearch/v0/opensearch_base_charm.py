@@ -823,7 +823,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         password = self.secrets.get(Scope.APP, self.secrets.password_key(user_name))
         cert = self.secrets.get_object(
-            Scope.APP, CertType.APP_ADMIN.val
+            Scope.APP, CertType.APP_ADMIN.val, peek=True
         )  # replace later with new user certs
 
         event.set_results(
@@ -849,12 +849,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         - Run the security admin script
         """
         if scope == Scope.UNIT:
-            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
+            admin_secrets = (
+                self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val, peek=True) or {}
+            )
             if not (truststore_pwd := admin_secrets.get("truststore-password")):
                 event.defer()
                 return
 
-            keystore_pwd = self.secrets.get_object(scope, cert_type.val)["keystore-password"]
+            keystore_pwd = self.secrets.get_object(scope, cert_type.val, peek=True)[
+                "keystore-password"
+            ]
 
             # node http or transport cert
             self.opensearch_config.set_node_tls_conf(
@@ -1086,7 +1090,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 == StartMode.WITH_GENERATED_ROLES
             )
         ):
-            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val, peek=True)
             try:
                 self._initialize_security_index(admin_secrets)
                 self.put_security_index_initialized(event)
@@ -1446,11 +1450,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             f"-cn {self.opensearch_peer_cm.deployment_desc().config.cluster_name}",
             f"-h {self.unit_ip}",
             f"-ts {self.opensearch.paths.certs}/ca.p12",
-            f"-tspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['truststore-password']}",
+            f"-tspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val, peek=True)['truststore-password']}",
             "-tsalias ca",
             "-tst PKCS12",
             f"-ks {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.p12",
-            f"-kspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['keystore-password']}",
+            f"-kspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val, peek=True)['keystore-password']}",
             f"-ksalias {CertType.APP_ADMIN}",
             "-kst PKCS12",
         ]
@@ -1708,7 +1712,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _scrape_config(self) -> List[Dict]:
         """Generates the scrape config as needed."""
         if (
-            not (app_secrets := self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val))
+            not (
+                app_secrets := self.secrets.get_object(
+                    Scope.APP, CertType.APP_ADMIN.val, peek=True
+                )
+            )
             or not (ca := app_secrets.get("ca-cert"))
             or not (pwd := self.secrets.get(Scope.APP, self.secrets.password_key(COSUser)))
             or not self._get_prometheus_labels()
