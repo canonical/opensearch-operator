@@ -177,27 +177,22 @@ jobs:
       - lint
       - unit-test
       - build
-    steps:
-      - name: Set up environment
-        run: |
-          sudo snap install charmcraft --classic
-      - name: Integration test charm
-        uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v29.0.0
-        with:
-          juju-snap-channel: 3.6/candidate
-          _beta_allure_report: true
-          artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
-          cloud: lxd
-        secrets:
-          # GitHub appears to redact each line of a multi-line secret
-          # Avoid putting `{` or `}` on a line by itself so that it doesn't get redacted in logs
-          integration-test: |
-            { "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
-              "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
-              "AZURE_STORAGE_ACCOUNT": "${{ secrets.AZURE_STORAGE_ACCOUNT }}",
-              "AZURE_SECRET_KEY": "${{ secrets.AZURE_SECRET_KEY }}",
-              "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
-              "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
-              "GCP_SERVICE_ACCOUNT": "${{ secrets.GCP_SERVICE_ACCOUNT }}", }
-        permissions:
-          contents: write
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v29.0.0
+    with:
+      juju-snap-channel: 3.6/candidate
+      _beta_allure_report: true
+      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
+      cloud: lxd
+    secrets:
+      # GitHub appears to redact each line of a multi-line secret
+      # Avoid putting `{` or `}` on a line by itself so that it doesn't get redacted in logs
+      integration-test: |
+        { "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
+          "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
+          "AZURE_STORAGE_ACCOUNT": "${{ secrets.AZURE_STORAGE_ACCOUNT }}",
+          "AZURE_SECRET_KEY": "${{ secrets.AZURE_SECRET_KEY }}",
+          "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
+          "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
+          "GCP_SERVICE_ACCOUNT": "${{ secrets.GCP_SERVICE_ACCOUNT }}", }
+    permissions:
+      contents: write
