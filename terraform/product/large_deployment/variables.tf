@@ -75,12 +75,36 @@ variable "opensearch-dashboards" {
   })
 }
 
+variable "self-signed-certificates" {
+  description = "Configuration for the self-signed-certificates app"
+  type = object({
+    channel       = optional(string, "latest/stable")
+    revision      = optional(string, null)
+    base          = optional(string, "ubuntu@22.04")
+    config        = optional(map(string), { "ca-common-name": "CA" })
+  })
+  default = {
+    channel  = "latest/stable"
+    revision = null
+    base     = "ubuntu@22.04"
+    config   = { "ca-common-name" = "CA" }
+  }
+}
+
 variable "grafana-agent" {
   description = "Configuration for the grafana-agent"
   type = object({
     channel       = optional(string, "latest/stable")
     revision      = optional(string, null)
+    base          = optional(string, "ubuntu@22.04")
+    config        = optional(map(string), {})
   })
+  default = {
+    channel   = "latest/stable"
+    revision  = null
+    base      = "ubuntu@22.04"
+    config    = {}
+  }
 }
 
 # Integrators

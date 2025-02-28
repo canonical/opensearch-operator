@@ -20,11 +20,13 @@ module "opensearch" {
   constraints       = var.opensearch.constraints
   storage           = var.opensearch.storage
   endpoint_bindings = var.opensearch.endpoint_bindings
+
+  self-signed-certificates = var.self-signed-certificates
 }
 
 # OpenSearch dashboards
 module "opensearch-dashboards" {
-  source = "git::https://github.com/canonical/opensearch-dashboards-operator//terraform?ref=2/edge"
+  source = "git::https://github.com/canonical/opensearch-dashboards-operator//terraform?ref=tf-improvements"
   model  = var.opensearch.model
 
   channel  = var.opensearch-dashboards.channel
@@ -52,11 +54,13 @@ resource "juju_application" "data-integrator" {
 
 resource "juju_application" "grafana-agent" {
   charm {
-    name      = "grafana-agent"
-    channel   = var.grafana-agent.channel
-    revision  = var.grafana-agent.revision
+    name     = "grafana-agent"
+    channel  = var.grafana-agent.channel
+    revision = var.grafana-agent.revision
+    base     = var.grafana-agent.base
   }
-  model = var.opensearch.model
+  model  = var.opensearch.model
+  config = var.grafana-agent.config
 }
 
 resource "juju_application" "backups-integrator" {
@@ -76,15 +80,34 @@ resource "juju_application" "backups-integrator" {
 #--------------------------------------------------------
 
 # Integrations
+resource "juju_integration" "opensearch_dashboards-tls-integration" {
+  for_each = var.opensearch-dashboards.tls ? { "integrate" = true } : {}
+
+  model = var.opensearch.model
+
+  application {
+    name = var.opensearch-dashboards.app_name
+  }
+
+  application {
+    name = module.opensearch.app_names["self-signed-certificates"]
+  }
+
+  depends_on = [
+    module.opensearch,
+    module.opensearch-dashboards,
+  ]
+}
+
 resource "juju_integration" "opensearch_dashboards-opensearch-integration" {
   model = var.opensearch.model
 
   application {
-    name = module.opensearch-dashboards.app_name
+    name = var.opensearch-dashboards.app_name
   }
 
   application {
-    name = module.opensearch.app_name
+    name = var.opensearch.app_name
   }
 
   depends_on = [
@@ -101,7 +124,7 @@ resource "juju_integration" "backups_integrator-opensearch-integration" {
   }
 
   application {
-    name = module.opensearch.app_name
+    name = var.opensearch.app_name
   }
 
   depends_on = [
@@ -118,7 +141,7 @@ resource "juju_integration" "data_integrator-opensearch-integration" {
   }
 
   application {
-    name = module.opensearch.app_name
+    name = var.opensearch.app_name
   }
 
   depends_on = [
@@ -135,7 +158,7 @@ resource "juju_integration" "grafana_agent-opensearch-integration" {
   }
 
   application {
-    name = module.opensearch.app_name
+    name = var.opensearch.app_name
   }
 
   depends_on = [
@@ -152,7 +175,7 @@ resource "juju_integration" "grafana_agent-opensearch_dashboards-integration" {
   }
 
   application {
-    name = module.opensearch-dashboards.app_name
+    name = var.opensearch-dashboards.app_name
   }
 
   depends_on = [

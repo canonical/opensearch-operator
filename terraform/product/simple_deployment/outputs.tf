@@ -22,8 +22,18 @@ output "provides" {
 
 output app_names {
   description = "Output of all deployed application names."
-  value = {
-    opensearch               = juju_application.opensearch.name
-    self-signed-certificates = juju_application.self-signed-certificates.name
-  }
+  value = merge(
+    module.opensearch.app_names,
+    {
+      "opensearch-dashboards" : module.opensearch-dashboards.app_names["opensearch-dashboards"]
+      "data-integrator" : juju_application.data-integrator.name,
+      "backups-integrator" : juju_application.backups-integrator.name,
+      "grafana-agent" : juju_application.grafana-agent.name
+    }
+  )
+}
+
+output "offers" {
+  description = "List of offers URLs."
+  value       = {}
 }

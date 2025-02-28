@@ -4,16 +4,18 @@
 locals {
   all_models = distinct(concat(
     [var.main.model],
-    var.failover != null ? [var.failover.model] : [],
-    var.apps != null ? [for app in var.apps : app.model] : [],
+      var.failover != null ? [var.failover.model] : [],
+      var.apps != null ? [for app in var.apps : app.model] : [],
   ))
 
   # Map each model to its OpenSearch apps
-  opensearch_apps_per_model = { for model in local.all_models : model => flatten(concat(
-    model == var.main.model ? [var.main.app_name] : [],
-    var.failover != null && model == var.failover.model ? [var.failover.app_name] : [],
-    var.apps != null ? [for app in var.apps : app.app_name if app.model == model] : [],
-  )) }
+  opensearch_apps_per_model = {
+    for model in local.all_models : model => flatten(concat(
+        model == var.main.model ? [var.main.app_name] : [],
+        var.failover != null && model == var.failover.model ? [var.failover.app_name] : [],
+        var.apps != null ? [for app in var.apps : app.app_name if app.model == model] : [],
+    ))
+  }
 }
 
 #--------------------------------------------------------
@@ -22,16 +24,17 @@ locals {
 
 # deploy all opensearch apps as per the large deployment charm module
 module "opensearch" {
-  source       = "../../charm/large_deployment"
-  cluster_name = var.cluster_name
-  main         = var.main
-  failover     = var.failover
-  apps         = var.apps
+  source                   = "../../charm/large_deployment"
+  cluster_name             = var.cluster_name
+  main                     = var.main
+  failover                 = var.failover
+  apps                     = var.apps
+  self-signed-certificates = var.self-signed-certificates
 }
 
 # opensearch-dashboards in the main model
 module "opensearch-dashboards" {
-  source = "git::https://github.com/canonical/opensearch-dashboards-operator//terraform?ref=2/edge"
+  source = "git::https://github.com/canonical/opensearch-dashboards-operator//terraform?ref=tf-improvements"
   model  = var.main.model
 
   channel  = var.opensearch-dashboards.channel
@@ -74,23 +77,44 @@ resource "juju_application" "grafana_agents" {
   for_each = toset(local.all_models)
 
   charm {
-    name      = "grafana-agent"
-    channel   = var.grafana-agent.channel
-    revision  = var.grafana-agent.revision
+    name     = "grafana-agent"
+    channel  = var.grafana-agent.channel
+    revision = var.grafana-agent.revision
   }
   model = each.value
+  config = var.grafana-agent.config
 }
 
 #--------------------------------------------------------
 # 2. INTEGRATIONS
 #--------------------------------------------------------
 
+# Integrate the dashboards with the self-signed-certificates operator if needed
+resource "juju_integration" "opensearch_dashboards-tls-integration" {
+  for_each = var.opensearch-dashboards.tls ? { "integrate" = true } : {}
+
+  model = var.main.model
+
+  application {
+    name = var.opensearch-dashboards.app_name
+  }
+
+  application {
+    name = module.opensearch.app_names["self-signed-certificates"]
+  }
+
+  depends_on = [
+    module.opensearch,
+    module.opensearch-dashboards,
+  ]
+}
+
 # integrate the dashboards with the opensearch main
 resource "juju_integration" "opensearch_dashboards-opensearch_main-integration" {
   model = var.main.model
 
   application {
-    name = module.opensearch-dashboards.app_name
+    name = var.opensearch-dashboards.app_name
   }
   application {
     name = var.main.app_name
@@ -171,7 +195,7 @@ resource "juju_integration" "grafana_agent_opensearch-dashboards_integrations" {
     name = juju_application.grafana_agents[var.main.model].name
   }
   application {
-    name = module.opensearch-dashboards.app_name
+    name = var.opensearch-dashboards.app_name
   }
 
   depends_on = [

@@ -58,9 +58,13 @@ resource "juju_application" "self-signed-certificates" {
   model = var.model
 
   charm {
-    name    = "self-signed-certificates"
-    channel = "latest/stable"
+    name      = "self-signed-certificates"
+    channel   = var.self-signed-certificates.channel
+    revision  = var.self-signed-certificates.revision
+    base      = var.self-signed-certificates.base
   }
+
+  config = var.self-signed-certificates.config
 }
 
 

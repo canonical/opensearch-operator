@@ -1,7 +1,6 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-
 # integration endpoints
 output "requires" {
   description = "Map of all \"requires\" endpoints"
@@ -21,17 +20,24 @@ output "provides" {
   }
 }
 
-output "certificates_offer_url" {
-  description = "Offer URL for TLS provider"
-  value       = try(juju_offer.self_signed_certificates-offer["offered"].url, null)
+output app_names {
+  description = "Output of all deployed application names."
+  value = {
+    opensearch_main     = module.opensearch_main.app_names["opensearch"]
+    opensearch_failover = module.opensearch_failover.app_names["opensearch"]
+    opensearch_apps     = {
+      for app_key, app_module in module.opensearch_non_orchestrator_apps :
+      app_key => app_module.app_names["opensearch"]
+    }
+    self-signed-certificates = module.opensearch_main.app_names["self-signed-certificates"]
+  }
 }
 
-output "peer_cluster_orchestrator_main_offer_url" {
-  description = "Offer URL for Main Peer cluster orchestrator"
-  value       = try(juju_offer.opensearch_main-offer["offered"].url, null)
-}
-
-output "peer_cluster_orchestrator_failover_offer_url" {
-  description = "Offer URL for Failover Peer cluster orchestrator"
-  value       = try(juju_offer.opensearch_failover-offer["offered"].url, null)
+output "offers" {
+  description = "List of offers URLs."
+  value = {
+    opensearch_main     = try(juju_offer.opensearch_main-offer["offered"].url, null)
+    opensearch_failover = try(juju_offer.opensearch_failover-offer["offered"].url, null)
+    certificates        = try(juju_offer.self_signed_certificates-offer["offered"].url, null)
+  }
 }

@@ -67,9 +67,27 @@ variable "endpoint_bindings" {
 }
 
 # --------
+variable "self-signed-certificates" {
+  description = "Configuration for the self-signed-certificates app"
+  type = object({
+    channel       = optional(string, "latest/stable")
+    revision      = optional(string, null)
+    base          = optional(string, "ubuntu@22.04")
+    config        = optional(map(string), { "ca-common-name": "CA" })
+  })
+  default = {
+    channel  = "latest/stable"
+    revision = null
+    base     = "ubuntu@22.04"
+    config   = { "ca-common-name" = "CA" }
+  }
+}
+
+# --------
 # Additional variables - needed for extensibility
 variable "main_model" {
   description = "Model name of the main orchestrator (to detect same-model apps)"
   type        = string
   default     = null
 }
+
