@@ -66,7 +66,7 @@ LIBPATCH = 1
 
 
 CA_ALIAS = "ca"
-OLD_ALIAS = f"old-{CA_ALIAS}"
+OLD_CA_ALIAS = f"old-{CA_ALIAS}"
 
 
 logger = logging.getLogger(__name__)
@@ -279,7 +279,7 @@ class OpenSearchTLS(Object):
         admin_secrets = (
             self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val, peek=True) or {}
         )
-        if admin_secrets.get("chain") and not self.read_stored_ca(alias=OLD_ALIAS):
+        if admin_secrets.get("chain") and not self.read_stored_ca(alias=OLD_CA_ALIAS):
             self.update_request_ca_bundle()
 
         # store the admin certificates in non-leader units
@@ -306,7 +306,7 @@ class OpenSearchTLS(Object):
         if self.charm.unit.is_leader() and self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
-        renewal = self.read_stored_ca(alias=OLD_ALIAS) is not None or (
+        renewal = self.read_stored_ca(alias=OLD_CA_ALIAS) is not None or (
             old_cert is not None and old_cert != event.certificate
         )
 
@@ -558,7 +558,7 @@ class OpenSearchTLS(Object):
             run_cmd(
                 f"""{self.keytool} -changealias \
                 -alias {CA_ALIAS} \
-                -destalias {OLD_ALIAS} \
+                -destalias {OLD_CA_ALIAS} \
                 -keystore {store_path} \
                 -storetype PKCS12
             """,
@@ -631,7 +631,6 @@ class OpenSearchTLS(Object):
     def remove_old_ca(self) -> None:
         """Remove old CA cert from trust store."""
         ca_trust_store = f"{self.certs_path}/ca.p12"
-        old_alias = OLD_ALIAS
 
         secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val, peek=True)
         store_pwd = secrets.get("truststore-password")
@@ -642,25 +641,25 @@ class OpenSearchTLS(Object):
                 -list \
                 -keystore {ca_trust_store} \
                 -storepass {store_pwd} \
-                -alias {old_alias} \
+                -alias {OLD_CA_ALIAS} \
                 -storetype PKCS12"""
             )
         except OpenSearchCmdError as e:
             # This message means there was no "ca" alias or store before, if it happens ignore
-            if f"Alias <{old_alias}> does not exist" in e.out:
+            if f"Alias <{OLD_CA_ALIAS}> does not exist" in e.out:
                 return
 
-        old_ca_content = self.read_stored_ca(alias=old_alias)
+        old_ca_content = self.read_stored_ca(alias=OLD_CA_ALIAS)
 
         run_cmd(
             f"""{self.keytool} \
             -delete \
             -keystore {ca_trust_store} \
             -storepass {store_pwd} \
-            -alias {old_alias} \
+            -alias {OLD_CA_ALIAS} \
             -storetype PKCS12"""
         )
-        logger.info(f"Removed {old_alias} from truststore.")
+        logger.info(f"Removed {OLD_CA_ALIAS} from truststore.")
         # remove it from the request bundle
         self._remove_ca_from_request_bundle(old_ca_content)
 

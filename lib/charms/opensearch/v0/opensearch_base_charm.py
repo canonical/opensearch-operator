@@ -89,7 +89,7 @@ from charms.opensearch.v0.opensearch_relation_peer_cluster import (
 )
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
-from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
+from charms.opensearch.v0.opensearch_tls import OLD_CA_ALIAS, OpenSearchTLS
 from charms.opensearch.v0.opensearch_users import (
     OpenSearchUserManager,
     OpenSearchUserMgmtError,
@@ -666,7 +666,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # If the unit reloads its certs but the other units are not ready yet
         # we need to wait for them all to be ready before deleting the old CA
         if (
-            self.tls.read_stored_ca("old-ca")
+            self.tls.read_stored_ca(OLD_CA_ALIAS)
             and self.tls.ca_and_certs_rotation_complete_in_cluster()
         ):
             logger.debug("update_status: Detected CA rotation complete in cluster")
@@ -888,7 +888,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     # if all certs are stored and CA rotation is complete in the cluster
                     # we delete the old ca and update the chain to only include the new one
                     if (
-                        self.tls.read_stored_ca("old-ca")
+                        self.tls.read_stored_ca(OLD_CA_ALIAS)
                         and self.tls.ca_and_certs_rotation_complete_in_cluster()
                     ):
                         logger.info("on_tls_conf_set: Detected CA rotation complete in cluster")
@@ -1238,7 +1238,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # We remove the old CA and update the chain to only include the new one
         # if all certs are stored and CA rotation is complete in the cluster
         if (
-            self.tls.read_stored_ca("old-ca")
+            self.tls.read_stored_ca(OLD_CA_ALIAS)
             and self.tls.ca_and_certs_rotation_complete_in_cluster()
         ):
             logger.info("post_start_init: Detected CA rotation complete in cluster")
