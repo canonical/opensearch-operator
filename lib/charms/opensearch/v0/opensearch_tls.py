@@ -98,7 +98,7 @@ class OpenSearchTLS(Object):
             self.charm.on[TLS_RELATION].relation_broken, self._on_tls_relation_broken
         )
 
-        self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
+        # self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
 
         self.framework.observe(self.certs.on.certificate_available, self._on_certificate_available)
         self.framework.observe(self.certs.on.certificate_expiring, self._on_certificate_expiring)
@@ -317,6 +317,7 @@ class OpenSearchTLS(Object):
         if not self.charm.unit.is_leader() and scope == Scope.APP:
             return
 
+        old_cert = secrets.get("cert", None)
         ca_chain = "\n".join(event.chain[::-1])
 
         current_secret_obj = self.charm.secrets.get_object(scope, cert_type.val) or {}
@@ -340,17 +341,12 @@ class OpenSearchTLS(Object):
                 },
                 merge=True,
             )
-            if cert_type == CertType.APP_ADMIN:
-                # We leave now, as the secret-changed will perform the next steps
-                # unit-related secrets must be processed here
-                return
-
-        old_cert = secrets.get("cert", None)
 
         current_stored_ca = self.read_stored_ca()
         if current_stored_ca != event.ca:
             if not self.store_new_ca(self.charm.secrets.get_object(scope, cert_type.val)):
                 logger.debug("Could not store new CA certificate.")
+                event.defer()
                 return
             # replacing the current CA initiates a rolling restart and certificate renewal
             # the workflow is the following:
@@ -382,6 +378,7 @@ class OpenSearchTLS(Object):
                 self.store_new_tls_resources(CertType.APP_ADMIN, admin_secrets)
             else:
                 logger.info("Admin certificate not available yet. Waiting for next events.")
+                event.defer()
                 return
 
         for relation in self.charm.opensearch_provider.relations:
@@ -391,6 +388,7 @@ class OpenSearchTLS(Object):
                 # As we are setting the ca_chain, it should not be likely to happen a KeyError at
                 # update_certs. This logic is left for a very corner case.
                 logger.error("Error updating certificates in the relation: ca_chain not set.")
+                event.defer()
                 return
 
         # broadcast secret updates for certs and CA to related sub-clusters
@@ -405,6 +403,7 @@ class OpenSearchTLS(Object):
             self.charm.on_tls_conf_set(event, scope, cert_type, renewal)
         except OpenSearchError as e:
             logger.exception(e)
+            event.defer()
 
     def _on_certificate_expiring(
         self, event: Union[CertificateExpiringEvent, CertificateInvalidatedEvent]
