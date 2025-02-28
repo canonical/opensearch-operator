@@ -70,10 +70,10 @@ variable "endpoint_bindings" {
 variable "self-signed-certificates" {
   description = "Configuration for the self-signed-certificates app"
   type = object({
-    channel       = optional(string, "latest/stable")
-    revision      = optional(string, null)
-    base          = optional(string, "ubuntu@22.04")
-    config        = optional(map(string), { "ca-common-name": "CA" })
+    channel  = optional(string, "latest/stable")
+    revision = optional(string, null)
+    base     = optional(string, "ubuntu@22.04")
+    config   = optional(map(string), { "ca-common-name" : "CA" })
   })
   default = {
     channel  = "latest/stable"

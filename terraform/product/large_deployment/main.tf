@@ -4,16 +4,16 @@
 locals {
   all_models = distinct(concat(
     [var.main.model],
-      var.failover != null ? [var.failover.model] : [],
-      var.apps != null ? [for app in var.apps : app.model] : [],
+    var.failover != null ? [var.failover.model] : [],
+    var.apps != null ? [for app in var.apps : app.model] : [],
   ))
 
   # Map each model to its OpenSearch apps
   opensearch_apps_per_model = {
     for model in local.all_models : model => flatten(concat(
-        model == var.main.model ? [var.main.app_name] : [],
-        var.failover != null && model == var.failover.model ? [var.failover.app_name] : [],
-        var.apps != null ? [for app in var.apps : app.app_name if app.model == model] : [],
+      model == var.main.model ? [var.main.app_name] : [],
+      var.failover != null && model == var.failover.model ? [var.failover.app_name] : [],
+      var.apps != null ? [for app in var.apps : app.app_name if app.model == model] : [],
     ))
   }
 }
@@ -81,7 +81,7 @@ resource "juju_application" "grafana_agents" {
     channel  = var.grafana-agent.channel
     revision = var.grafana-agent.revision
   }
-  model = each.value
+  model  = each.value
   config = var.grafana-agent.config
 }
 

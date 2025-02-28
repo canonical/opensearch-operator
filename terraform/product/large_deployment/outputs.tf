@@ -20,7 +20,7 @@ output "provides" {
   }
 }
 
-output app_names {
+output "app_names" {
   description = "Output of all deployed application names."
   value = merge(
     module.opensearch.app_names,

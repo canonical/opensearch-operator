@@ -38,10 +38,10 @@ variable "opensearch-dashboards" {
 variable "self-signed-certificates" {
   description = "Configuration for the self-signed-certificates app"
   type = object({
-    channel       = optional(string, "latest/stable")
-    revision      = optional(string, null)
-    base          = optional(string, "ubuntu@22.04")
-    config        = optional(map(string), { "ca-common-name": "CA" })
+    channel  = optional(string, "latest/stable")
+    revision = optional(string, null)
+    base     = optional(string, "ubuntu@22.04")
+    config   = optional(map(string), { "ca-common-name" : "CA" })
   })
   default = {}
 }
@@ -49,10 +49,10 @@ variable "self-signed-certificates" {
 variable "grafana-agent" {
   description = "Configuration for the grafana-agent"
   type = object({
-    channel       = optional(string, "latest/stable")
-    revision      = optional(string, null)
-    base          = optional(string, "ubuntu@22.04")
-    config        = optional(map(string), {})
+    channel  = optional(string, "latest/stable")
+    revision = optional(string, null)
+    base     = optional(string, "ubuntu@22.04")
+    config   = optional(map(string), {})
   })
   default = {}
 }
@@ -61,13 +61,13 @@ variable "grafana-agent" {
 variable "backups-integrator" {
   description = "Configuration for the backup integrator"
   type = object({
-    storage_type  = optional(string, "s3")
-    config        = map(string)
-    channel       = optional(string, "latest/edge")
-    base          = optional(string, "ubuntu@22.04")
-    revision      = optional(string, null)
-    constraints   = optional(string, "arch=amd64")
-    machines      = optional(list(string), [])
+    storage_type = optional(string, "s3")
+    config       = map(string)
+    channel      = optional(string, "latest/edge")
+    base         = optional(string, "ubuntu@22.04")
+    revision     = optional(string, null)
+    constraints  = optional(string, "arch=amd64")
+    machines     = optional(list(string), [])
   })
 
   validation {
@@ -79,12 +79,12 @@ variable "backups-integrator" {
 variable "data-integrator" {
   description = "Configuration for the data-integrator"
   type = object({
-    config        = optional(map(string), { "index-name" : "test", "extra-user-roles" : "admin" })
-    channel       = optional(string, "latest/edge")
-    base          = optional(string, "ubuntu@22.04")
-    revision      = optional(string, null)
-    constraints   = optional(string, "arch=amd64")
-    machines      = optional(list(string), [])
+    config      = optional(map(string), { "index-name" : "test", "extra-user-roles" : "admin" })
+    channel     = optional(string, "latest/edge")
+    base        = optional(string, "ubuntu@22.04")
+    revision    = optional(string, null)
+    constraints = optional(string, "arch=amd64")
+    machines    = optional(list(string), [])
   })
   default = {}
 
