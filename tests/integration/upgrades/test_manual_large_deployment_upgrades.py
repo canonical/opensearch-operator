@@ -130,7 +130,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest) -> None
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_manually_upgrade_to_local(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+    ops_test: OpsTest, charm, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
     """Test upgrade from usptream to currently locally built version."""
     units = await get_application_units(ops_test, OPENSEARCH_MAIN_APP_NAME)
@@ -145,9 +145,6 @@ async def test_manually_upgrade_to_local(
     assert action.status == "completed"
 
     logger.info("Build charm locally")
-    global charm
-    if not charm:
-        charm = await ops_test.build_charm(".")
 
     async with ops_test.fast_forward():
         for app, unit_count in WORKLOAD.items():

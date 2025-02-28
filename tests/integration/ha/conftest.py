@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+import shutil
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -14,12 +15,23 @@ from .helpers import ORIGINAL_RESTART_DELAY, app_name, update_restart_delay
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def charm():
     # Return str instead of pathlib.Path since python-libjuju's model.deploy(), juju deploy, and
     # juju bundle files expect local charms to begin with `./` or `/` to distinguish them from
     # Charmhub charms.
     return "./opensearch_ubuntu@22.04-amd64.charm"
+
+
+@pytest.fixture(scope="module")
+async def application_charm(ops_test: OpsTest):
+    """Build the application charm."""
+    shutil.copyfile(
+        "./lib/charms/data_platform_libs/v0/data_interfaces.py",
+        "./tests/integration/relations/opensearch_provider/application-charm/lib/charms/data_platform_libs/v0/data_interfaces.py",
+    )
+    test_charm_path = "./tests/integration/relations/opensearch_provider/application-charm/"
+    return await test_charm_path + "application_ubuntu@22.04-amd64.charm"
 
 
 @pytest.fixture(scope="function")

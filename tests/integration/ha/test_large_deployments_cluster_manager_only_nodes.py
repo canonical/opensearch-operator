@@ -14,7 +14,7 @@ from ..helpers import CONFIG_OPTS, MODEL_CONFIG, SERIES, get_leader_unit_ip
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
 from .continuous_writes import ContinuousWrites
-from .helpers import all_nodes
+from .helpers import all_nodes, app_name
 from .test_horizontal_scaling import IDLE_PERIOD
 
 logger = logging.getLogger(__name__)
@@ -35,11 +35,12 @@ APP_UNITS = {MAIN_APP: 1, FAILOVER_APP: 1, DATA_APP: 2}
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
-    my_charm = await ops_test.build_charm(".")
+    if await app_name(ops_test):
+        return
     await ops_test.model.set_config(MODEL_CONFIG)
 
     # Deploy TLS Certificates operator.
@@ -47,14 +48,14 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=MAIN_APP,
             num_units=1,
             series=SERIES,
             config={"cluster_name": CLUSTER_NAME, "roles": "cluster_manager"} | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=FAILOVER_APP,
             num_units=1,
             series=SERIES,
@@ -62,7 +63,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=DATA_APP,
             num_units=2,
             series=SERIES,

@@ -178,11 +178,10 @@ async def test_upgrade_between_versions(
 @pytest.mark.group("happy_path_upgrade")
 @pytest.mark.abort_on_fail
 async def test_upgrade_to_local(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+    ops_test: OpsTest, charm, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
     """Test upgrade from usptream to currently locally built version."""
     logger.info("Build charm locally")
-    charm = await ops_test.build_charm(".")
     await assert_upgrade_to_local(ops_test, c_writes, charm)
 
 
@@ -209,7 +208,7 @@ async def test_deploy_from_version(ops_test: OpsTest, version) -> None:
 @pytest.mark.parametrize("version", UPGRADE_INITIAL_VERSION)
 @pytest.mark.abort_on_fail
 async def test_upgrade_rollback_from_local(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, version
+    ops_test: OpsTest, charm, c_writes: ContinuousWrites, c_writes_runner, version
 ) -> None:
     """Test upgrade and rollback to each version available."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -223,11 +222,6 @@ async def test_upgrade_rollback_from_local(
         app=app,
     )
     assert action.status == "completed"
-
-    logger.info("Build charm locally")
-    global charm
-    if not charm:
-        charm = await ops_test.build_charm(".")
 
     async with ops_test.fast_forward():
         logger.info("Refresh the charm")
@@ -291,11 +285,7 @@ async def test_upgrade_rollback_from_local(
 @pytest.mark.parametrize("version", UPGRADE_INITIAL_VERSION)
 @pytest.mark.abort_on_fail
 async def test_upgrade_from_version_to_local(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, version
+    ops_test: OpsTest, charm, c_writes: ContinuousWrites, c_writes_runner, version
 ) -> None:
     """Test upgrade from usptream to currently locally built version."""
-    logger.info("Build charm locally")
-    global charm
-    if not charm:
-        charm = await ops_test.build_charm(".")
     await assert_upgrade_to_local(ops_test, c_writes, charm)

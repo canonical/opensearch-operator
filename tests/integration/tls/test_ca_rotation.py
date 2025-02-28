@@ -66,13 +66,12 @@ ALL_DEPLOYMENTS = list(ALL_GROUPS.values())
 @pytest.mark.group(SMALL_DEPLOYMENT)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
+async def test_build_and_deploy_active(ops_test: OpsTest, charm) -> None:
     """Build and deploy one unit of OpenSearch."""
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
     await ops_test.model.deploy(
-        my_charm,
+        charm,
         num_units=len(UNIT_IDS),
         series=SERIES,
         config=CONFIG_OPTS,
@@ -98,20 +97,19 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(LARGE_DEPLOYMENT)
 @pytest.mark.abort_on_fail
-async def test_build_large_deployment(ops_test: OpsTest) -> None:
+async def test_build_large_deployment(ops_test: OpsTest, charm) -> None:
     """Setup a large deployments cluster."""
     # deploy new cluster
-    my_charm = await ops_test.build_charm(".")
     await asyncio.gather(
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=MAIN_APP,
             num_units=3,
             series=SERIES,
             config={"cluster_name": CLUSTER_NAME, "roles": "cluster_manager,data"} | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=FAILOVER_APP,
             num_units=1,
             series=SERIES,
@@ -123,7 +121,7 @@ async def test_build_large_deployment(ops_test: OpsTest) -> None:
             | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=DATA_APP,
             num_units=1,
             series=SERIES,
