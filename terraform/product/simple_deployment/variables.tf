@@ -32,18 +32,7 @@ variable "opensearch-dashboards" {
     endpoint_bindings = optional(map(string), {})
     tls               = optional(bool, false)
   })
-  default = {
-    app_name          = "opensearch-dashboards"
-    config            = {}
-    channel           = "2/stable"
-    base              = "ubuntu@22.04"
-    revision          = null
-    units             = 1
-    constraints       = "arch=amd64"
-    machines          = []
-    endpoint_bindings = {}
-    tls               = false
-  }
+  default = {}
 }
 
 variable "self-signed-certificates" {
@@ -54,12 +43,7 @@ variable "self-signed-certificates" {
     base          = optional(string, "ubuntu@22.04")
     config        = optional(map(string), { "ca-common-name": "CA" })
   })
-  default = {
-    channel  = "latest/stable"
-    revision = null
-    base     = "ubuntu@22.04"
-    config   = { "ca-common-name" = "CA" }
-  }
+  default = {}
 }
 
 variable "grafana-agent" {
@@ -70,12 +54,7 @@ variable "grafana-agent" {
     base          = optional(string, "ubuntu@22.04")
     config        = optional(map(string), {})
   })
-  default = {
-    channel   = "latest/stable"
-    revision  = null
-    base      = "ubuntu@22.04"
-    config    = {}
-  }
+  default = {}
 }
 
 # Integrators
@@ -107,6 +86,7 @@ variable "data-integrator" {
     constraints   = optional(string, "arch=amd64")
     machines      = optional(list(string), [])
   })
+  default = {}
 
   validation {
     condition = (
