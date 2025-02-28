@@ -1083,7 +1083,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 should_wait=False,
                 blocked_message=blocked_msg,
                 deployment_desc=deployment_desc,
-                cluster_name_auto_generated=peer_cluster_rel_data.cluster_name_auto_generated,
             ).to_dict(),
         )
         return True
