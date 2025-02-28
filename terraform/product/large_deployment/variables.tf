@@ -72,7 +72,20 @@ variable "opensearch-dashboards" {
     constraints       = optional(string, "arch=amd64")
     machines          = optional(list(string), [])
     endpoint_bindings = optional(map(string), {})
+    tls               = optional(bool, false)
   })
+  default = {
+    app_name          = "opensearch-dashboards"
+    config            = {}
+    channel           = "2/stable"
+    base              = "ubuntu@22.04"
+    revision          = null
+    units             = 1
+    constraints       = "arch=amd64"
+    machines          = []
+    endpoint_bindings = {}
+    tls               = false
+  }
 }
 
 variable "self-signed-certificates" {

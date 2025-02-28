@@ -24,6 +24,6 @@ output app_names {
   description = "Output of all deployed application names."
   value = {
     opensearch               = juju_application.opensearch.name
-    self-signed-certificates = juju_application.self-signed-certificates.name
+    self-signed-certificates = try(juju_application.self-signed-certificates["deployed"].name, null)
   }
 }
