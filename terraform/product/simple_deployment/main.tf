@@ -54,7 +54,7 @@ resource "juju_application" "data-integrator" {
   config = var.data-integrator.config
 
   constraints = var.data-integrator.constraints
-  placement   = var.data-integrator.machines != null ? var.data-integrator.machines[0] : null
+  placement   = len(var.data-integrator.machines) == 1 ? var.data-integrator.machines[0] : null
 }
 
 resource "juju_application" "grafana-agent" {
@@ -79,7 +79,7 @@ resource "juju_application" "backups-integrator" {
   config = var.backups-integrator.config
 
   constraints = var.backups-integrator.constraints
-  placement   = var.backups-integrator.machines != null ? var.backups-integrator.machines[0] : null
+  placement   = len(var.backups-integrator.machines) == 1 ? var.backups-integrator.machines[0] : null
 }
 
 
