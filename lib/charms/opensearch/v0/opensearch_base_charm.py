@@ -75,6 +75,7 @@ from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Sco
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyError
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
+from charms.opensearch.v0.opensearch_oauth import OAuthHandler
 from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchPeerClustersManager,
     OpenSearchProvidedRolesException,
@@ -199,6 +200,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.tls = OpenSearchTLS(
             self, PeerRelationName, self.opensearch.paths.jdk, self.opensearch.paths.certs
         )
+        self.oauth = OAuthHandler(self)
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
         self.node_lock = OpenSearchNodeLock(self)
