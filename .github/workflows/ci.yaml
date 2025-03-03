@@ -168,7 +168,6 @@ jobs:
     name: Build charm | ${{ matrix.path }}
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v29.0.0
     with:
-      cache: false
       path-to-charm-directory: ${{ matrix.path }}
 
   integration-test:
@@ -177,22 +176,9 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v29.0.0
+    uses: ./.github/workflows/integration_test.yaml
     with:
-      juju-agent-version: 3.6.1 # renovate: juju-agent-pin-minor
-      _beta_allure_report: true
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
-      cloud: lxd
-    secrets:
-      # GitHub appears to redact each line of a multi-line secret
-      # Avoid putting `{` or `}` on a line by itself so that it doesn't get redacted in logs
-      integration-test: |
-        { "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
-          "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
-          "AZURE_STORAGE_ACCOUNT": "${{ secrets.AZURE_STORAGE_ACCOUNT }}",
-          "AZURE_SECRET_KEY": "${{ secrets.AZURE_SECRET_KEY }}",
-          "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
-          "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
-          "GCP_SERVICE_ACCOUNT": "${{ secrets.GCP_SERVICE_ACCOUNT }}", }
+    secrets: inherit
     permissions:
-      contents: write
+      contents: write  # Needed for Allure Report

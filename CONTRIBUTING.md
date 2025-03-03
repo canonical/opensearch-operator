@@ -21,40 +21,26 @@ this operator.
 - Please help us out in ensuring easy to review branches by rebasing your pull request branch onto
   the `main` branch. This also avoids merge commits and creates a linear Git commit history.
 
+## Developing
+Install `tox`, `poetry`, and `charmcraftcache`
+
+Install pipx: https://pipx.pypa.io/stable/installation/
+```shell
+pipx install tox
+pipx install poetry
+pipx install charmcraftcache
+```
+
+You can create an environment for development:
+```shell
+poetry install
+```
+
 
 ## Build charm
-
-Build the charm in this git repository using tox.
-
-There are two alternatives to build the charm: using the charm cache or not.
-Cache will speed the build by downloading all dependencies from charmcraftcache-hub.
-
-First, ensure you have the right dependencies:
-* charmcraft v2.5.4+
-* charmcraftcache
-
-By running the following commands:
-
-```shell
-pipx install charmcraftcache
-tox -e build-dev
-```
-
-### Build Without Cache
-
-To run the traditional build only using `charmcraft`, run the following command:
-
+Build the charm in this git repository using:
 ```shell
 charmcraftcache pack
-```
-
-## Developing
-
-You can create an environment for development with `tox`:
-
-```shell
-tox devenv -e integration
-source venv/bin/activate
 ```
 
 ### Testing
@@ -62,60 +48,11 @@ source venv/bin/activate
 To run tests, first build the charm as described above, then run the following
 
 ```shell
-tox -e format       # update your code according to linting rules
-tox -e lint         # code style
-tox -e unit         # unit tests
-tox -e integration  # integration tests, running on juju 3.
-tox                 # runs 'format', 'lint', and 'unit' environments
-```
-
-Integration tests can be run for separate files:
-
-```shell
-tox -e integration -- tests/integration/tls/test_tls.py
-tox -e integration -- tests/integration/relations/test_charm.py
-tox -e integration -- tests/integration/plugins/test_plugins.py
-tox -e integration -- tests/integration/ha/test_storage.py
-tox -e integration -- tests/integration/ha/test_large_deployments.py
-tox -e integration -- tests/integration/ha/test_horizontal_scaling.py
-tox -e integration -- tests/integration/ha/test_ha_networking.py
-tox -e integration -- tests/integration/ha/test_ha_multi_clusters.py
-tox -e integration -- tests/integration/relations/test_opensearch_provider.py
-tox -e integration -- tests/integration/ha/test_ha.py
-tox -e integration -- tests/integration/ha/test_backups.py
-```
-
-#### Running different major versions of Juju
-
-For integration tests, libjuju must be in-sync with the target juju version.
-Make sure that the version of libjuju installed is compatible with the bootstrapped
-controller version. If not, update it with:
-
-```shell
-poetry add --lock --group integration juju@<YOUR CHOSEN VERSION>
-```
-
-#### FOR DEVELOPMENT ONLY: Testing Backups In Your Local Machine
-
-Backup testing installs microceph and can run on S3 (aws) object stores.
-To setup your environment, you should set the: access / secret / service account information as environment variables.
-
-To run the test only against microceph:
-
-```shell
-tox -e integration -- tests/integration/ha/test_backups.py --group='microceph' # test backup service for microceph
-```
-
-And against public clouds + microceph:
-
-```shell
-SECRETS_FROM_GITHUB=$(cat <path-to>/credentials.json) tox -e integration -- tests/integration/ha/test_backups.py
-```
-
-Where, for AWS only, `credentials.json` should look like:
-```shell
-$ cat credentials.json
-{ "AWS_ACCESS_KEY": ..., "AWS_SECRET_KEY": ...}
+tox -e format            # update your code according to linting rules
+tox -e lint              # code style
+tox -e unit              # unit tests
+charmcraft test lxd-vm:  # integration tests
+tox                      # runs 'format', 'lint', and 'unit' environments
 ```
 
 ## Deploy
