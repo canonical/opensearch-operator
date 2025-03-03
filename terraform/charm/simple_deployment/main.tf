@@ -60,7 +60,7 @@ resource "juju_application" "self-signed-certificates" {
 
   units       = 1
   constraints = var.self-signed-certificates.constraints
-  placement   = len(var.self-signed-certificates.machines) == 1 ? var.self-signed-certificates.machines[0] : null
+  placement   = length(var.self-signed-certificates.machines) == 1 ? var.self-signed-certificates.machines[0] : null
 }
 
 
