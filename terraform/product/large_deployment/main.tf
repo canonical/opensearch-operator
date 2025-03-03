@@ -61,7 +61,7 @@ resource "juju_application" "data-integrator" {
   config = var.data-integrator.config
 
   constraints = var.data-integrator.constraints
-  placement   = var.data-integrator.machines != null ? var.data-integrator.machines[0] : [null]
+  placement   = var.data-integrator.machines != null ? var.data-integrator.machines[0] : null
 }
 
 # s3 or azure integrator in the main model
