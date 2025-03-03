@@ -69,6 +69,36 @@ class OpenSearchConfig:
             "-Djdk.tls.client.protocols=TLSv1.2",
         )
 
+    def add_oidc_auth(self, openid_connect_url: str):
+        """Adds OIDC auth scheme on the security config."""
+        oidc_config = {
+            "http_enabled": True,
+            "transport_enabled": True,
+            # NOTE: Order value needs to be lower than basic_internal_auth_domain section, which
+            # is set to 4 by default. Only available number is 1, if we want a different number,
+            # all other numbers need to be reshuffled.
+            "order": 1,
+            "http_authenticator": {
+                "type": "openid",
+                "challenge": False,
+                "config": {
+                    "subject_key": "sub",
+                    "openid_connect_url": openid_connect_url,
+                    "openid_connect_idp": {
+                        "enable_ssl": True,
+                        "verify_hostnames": False,
+                        # NOTE: this assumes Hydra and Opensearch are using the same certificates
+                        # relation.
+                        "pemtrustedcas_filepath": f"{self._opensearch.paths.certs}/chain.pem",
+                    },
+                },
+            },
+            "authentication_backend": {"type": "noop"},
+        }
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML, "config/dynamic/authc/openid_auth_domain", oidc_config
+        )
+
     def apply_performance_profile(self, profile: OpenSearchPerfProfile):
         """Apply the performance profile to the opensearch config."""
         self._opensearch.config.replace(

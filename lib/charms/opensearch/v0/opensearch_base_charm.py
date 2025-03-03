@@ -1459,6 +1459,33 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         )
         self.status.clear(SecurityIndexInitProgress)
 
+    def update_security_config(self, admin_secrets: Dict[str, any]) -> None:
+        """Run the security_admin script.
+
+        This will only update with the config.yml contents, avoiding changes to users and ACLs.
+        """
+        args = [
+            f"-f {self.opensearch.paths.conf}/opensearch-security/config.yml",
+            f"-cn {self.opensearch_peer_cm.deployment_desc().config.cluster_name}",
+            f"-h {self.unit_ip}",
+            f"-ts {self.opensearch.paths.certs}/ca.p12",
+            f"-tspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['truststore-password']}",
+            "-tsalias ca",
+            "-tst PKCS12",
+            f"-ks {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.p12",
+            f"-kspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['keystore-password']}",
+            f"-ksalias {CertType.APP_ADMIN}",
+            "-kst PKCS12",
+        ]
+
+        admin_key_pwd = admin_secrets.get("key-password", None)
+        if admin_key_pwd is not None:
+            args.append(f"-keypass {admin_key_pwd}")
+
+        self.opensearch.run_script(
+            "plugins/opensearch-security/tools/securityadmin.sh", " ".join(args)
+        )
+
     def _get_nodes(self, use_localhost: bool) -> List[Node]:
         """Fetch the list of nodes of the cluster, depending on the requester."""
         if self.app.planned_units() == 0 and not self.opensearch_peer_cm.deployment_desc():
