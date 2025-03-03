@@ -41,6 +41,8 @@ module "opensearch_main" {
   constraints       = var.main.constraints
   storage           = var.main.storage
   endpoint_bindings = var.main.endpoint_bindings
+
+  self-signed-certificates = var.self-signed-certificates
 }
 
 # failover orchestrator opensearch app

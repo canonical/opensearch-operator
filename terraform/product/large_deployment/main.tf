@@ -46,6 +46,7 @@ module "opensearch-dashboards" {
   config            = var.opensearch-dashboards.config
   constraints       = var.opensearch-dashboards.constraints
   endpoint_bindings = var.opensearch-dashboards.endpoint_bindings
+  machines          = var.opensearch-dashboards.machines
 }
 
 # data-integrator in the main model
@@ -58,6 +59,9 @@ resource "juju_application" "data-integrator" {
   }
   model  = var.main.model
   config = var.data-integrator.config
+
+  constraints = var.data-integrator.constraints
+  placement   = var.data-integrator.machines != null ? var.data-integrator.machines[0] : [null]
 }
 
 # s3 or azure integrator in the main model
@@ -70,6 +74,9 @@ resource "juju_application" "backups-integrator" {
   }
   model  = var.main.model
   config = var.backups-integrator.config
+
+  constraints = var.backups-integrator.constraints
+  placement   = var.backups-integrator.machines != null ? var.backups-integrator.machines[0] : null
 }
 
 # grafana agent in all models

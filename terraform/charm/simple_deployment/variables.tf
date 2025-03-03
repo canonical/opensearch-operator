@@ -52,12 +52,22 @@ variable "machines" {
   description = "List of machines for placement"
   type        = list(string)
   default     = []
+
+  validation {
+    condition     = length(var.machines) == 0 || length(var.machines) == var.units
+    error_message = "Machine count does not match unit count"
+  }
 }
 
 variable "storage" {
   description = "Map of storage used by the application"
   type        = map(string)
   default     = {}
+
+  validation {
+    condition     = length(var.storage) == 0 || lookup(var.storage, "count", 0) <= 1
+    error_message = "Only one storage is supported"
+  }
 }
 
 variable "endpoint_bindings" {
@@ -70,16 +80,18 @@ variable "endpoint_bindings" {
 variable "self-signed-certificates" {
   description = "Configuration for the self-signed-certificates app"
   type = object({
-    channel  = optional(string, "latest/stable")
-    revision = optional(string, null)
-    base     = optional(string, "ubuntu@22.04")
-    config   = optional(map(string), { "ca-common-name" : "CA" })
+    channel     = optional(string, "latest/stable")
+    revision    = optional(string, null)
+    base        = optional(string, "ubuntu@22.04")
+    constraints = optional(string, "arch=amd64")
+    machines    = optional(list(string), [])
+    config      = optional(map(string), { "ca-common-name" : "CA" })
   })
-  default = {
-    channel  = "latest/stable"
-    revision = null
-    base     = "ubuntu@22.04"
-    config   = { "ca-common-name" = "CA" }
+  default = {}
+
+  validation {
+    condition     = length(var.self-signed-certificates.machines) <= 1
+    error_message = "Machine count should be at most 1"
   }
 }
 

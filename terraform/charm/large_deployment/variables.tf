@@ -64,15 +64,17 @@ variable "apps" {
 variable "self-signed-certificates" {
   description = "Configuration for the self-signed-certificates app"
   type = object({
-    channel  = optional(string, "latest/stable")
-    revision = optional(string, null)
-    base     = optional(string, "ubuntu@22.04")
-    config   = optional(map(string), { "ca-common-name" : "CA" })
+    channel     = optional(string, "latest/stable")
+    revision    = optional(string, null)
+    base        = optional(string, "ubuntu@22.04")
+    constraints = optional(string, "arch=amd64")
+    machines    = optional(list(string), [])
+    config      = optional(map(string), { "ca-common-name" : "CA" })
   })
-  default = {
-    channel  = "latest/stable"
-    revision = null
-    base     = "ubuntu@22.04"
-    config   = { "ca-common-name" = "CA" }
+  default = {}
+
+  validation {
+    condition     = length(var.self-signed-certificates.machines) <= 1
+    error_message = "Machine count should be at most 1"
   }
 }

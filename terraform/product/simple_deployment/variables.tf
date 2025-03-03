@@ -38,21 +38,29 @@ variable "opensearch-dashboards" {
 variable "self-signed-certificates" {
   description = "Configuration for the self-signed-certificates app"
   type = object({
-    channel  = optional(string, "latest/stable")
-    revision = optional(string, null)
-    base     = optional(string, "ubuntu@22.04")
-    config   = optional(map(string), { "ca-common-name" : "CA" })
+    channel     = optional(string, "latest/stable")
+    revision    = optional(string, null)
+    base        = optional(string, "ubuntu@22.04")
+    constraints = optional(string, "arch=amd64")
+    machines    = optional(list(string), [])
+    config      = optional(map(string), { "ca-common-name" : "CA" })
   })
   default = {}
+
+  validation {
+    condition     = length(var.self-signed-certificates.machines) <= 1
+    error_message = "Machine count should be at most 1"
+  }
 }
 
 variable "grafana-agent" {
   description = "Configuration for the grafana-agent"
   type = object({
-    channel  = optional(string, "latest/stable")
-    revision = optional(string, null)
-    base     = optional(string, "ubuntu@22.04")
-    config   = optional(map(string), {})
+    channel     = optional(string, "latest/stable")
+    revision    = optional(string, null)
+    base        = optional(string, "ubuntu@22.04")
+    constraints = optional(string, "arch=amd64")
+    config      = optional(map(string), {})
   })
   default = {}
 }
@@ -74,6 +82,11 @@ variable "backups-integrator" {
     condition     = contains(["s3", "azure-storage"], var.backups-integrator.storage_type)
     error_message = "backup-integrator allows one of the values: 's3', 'azure' for storage_type."
   }
+
+  validation {
+    condition     = length(var.backups-integrator.machines) <= 1
+    error_message = "Machine count should be at most 1"
+  }
 }
 
 variable "data-integrator" {
@@ -94,5 +107,10 @@ variable "data-integrator" {
       && contains(["default", "admin"], lookup(var.data-integrator.config, "extra-user-roles", "admin"))
     )
     error_message = "data-integrator config must contain a non-empty 'index-name' and 'extra-user-roles' must be either 'default' or 'admin'."
+  }
+
+  validation {
+    condition     = length(var.data-integrator.machines) <= 1
+    error_message = "Machine count should be at most 1"
   }
 }

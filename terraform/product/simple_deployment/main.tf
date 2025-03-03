@@ -20,6 +20,7 @@ module "opensearch" {
   constraints       = var.opensearch.constraints
   storage           = var.opensearch.storage
   endpoint_bindings = var.opensearch.endpoint_bindings
+  machines          = var.opensearch.machines
 
   self-signed-certificates = var.self-signed-certificates
 }
@@ -38,6 +39,7 @@ module "opensearch-dashboards" {
   config            = var.opensearch-dashboards.config
   constraints       = var.opensearch-dashboards.constraints
   endpoint_bindings = var.opensearch-dashboards.endpoint_bindings
+  machines          = var.opensearch-dashboards.machines
 }
 
 # Integrator apps and grafana-agent
@@ -50,6 +52,9 @@ resource "juju_application" "data-integrator" {
   }
   model  = var.opensearch.model
   config = var.data-integrator.config
+
+  constraints = var.data-integrator.constraints
+  placement   = var.data-integrator.machines != null ? var.data-integrator.machines[0] : null
 }
 
 resource "juju_application" "grafana-agent" {
@@ -72,6 +77,9 @@ resource "juju_application" "backups-integrator" {
   }
   model  = var.opensearch.model
   config = var.backups-integrator.config
+
+  constraints = var.backups-integrator.constraints
+  placement   = var.backups-integrator.machines != null ? var.backups-integrator.machines[0] : null
 }
 
 
