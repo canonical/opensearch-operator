@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from charms.hydra.v0.oauth import ClientConfig, OAuthRequirer
 from charms.opensearch.v0.constants_charm import OAUTH_RELATION
 from charms.opensearch.v0.constants_tls import CertType
+from charms.opensearch.v0.models import StartMode
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import EventBase, Object
@@ -46,17 +47,25 @@ class OAuthHandler(Object):
 
         Updates the security config.yml with the OIDC info and update the cluster.
         """
-        if not (provider_info := self.oauth.get_provider_info()):
+        if (
+            not (relation := self.model.get_relation(OAUTH_RELATION))
+            or not relation.data[relation.app]
+        ):
+            logger.info("Oauth relation not yet set up")
             return
 
         if (
             self.charm.unit.is_leader()
             # First wait until "normal" initialization is finished
             and self.charm.peers_data.get(Scope.APP, "security_index_initialised")
-            and "data" in self.charm.opensearch_peer_cm.deployment_desc().config.roles
+            and (
+                "data" in self.charm.opensearch_peer_cm.deployment_desc().config.roles
+                or self.charm.opensearch_peer_cm.deployment_desc().start
+                == StartMode.WITH_GENERATED_ROLES
+            )
         ):
             self.charm.opensearch_config.add_oidc_auth(
-                openid_connect_url=f"{provider_info.issuer_url}/.well-known/openid-configuration"
+                openid_connect_url=f"{relation.data[relation.app].get('issuer_url')}/.well-known/openid-configuration"
             )
 
             admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)

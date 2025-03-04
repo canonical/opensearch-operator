@@ -1472,11 +1472,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             f"-h {self.unit_ip}",
             f"-ts {self.opensearch.paths.certs}/ca.p12",
             f"-tspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['truststore-password']}",
-            "-tsalias ca",
             "-tst PKCS12",
             f"-ks {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.p12",
             f"-kspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['keystore-password']}",
-            f"-ksalias {CertType.APP_ADMIN}",
             "-kst PKCS12",
         ]
 
