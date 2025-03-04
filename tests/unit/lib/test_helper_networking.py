@@ -18,14 +18,14 @@ from charms.opensearch.v0.helper_networking import (
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
-from tests.helpers import patch_network_get
 
 
-@patch_network_get("1.1.1.1")
 class TestHelperNetworking(unittest.TestCase):
     def setUp(self) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
+        self.harness.add_network("1.1.1.1")
+
         self.harness.begin()
 
         self.charm = self.harness.charm

@@ -34,7 +34,7 @@ from ops.testing import Harness
 from parameterized import parameterized
 
 from charm import OpenSearchOperatorCharm
-from tests.helpers import create_utf8_encoded_private_key, patch_network_get
+from tests.helpers import create_utf8_encoded_private_key
 from tests.unit.helpers import (
     mock_response_health_green,
     mock_response_lock_not_requested,
@@ -50,7 +50,6 @@ def single_space(input: str) -> str:
     return " ".join(input.split())
 
 
-@patch_network_get("1.1.1.1")
 class TestOpenSearchTLS(unittest.TestCase):
     BASE_LIB_PATH = "charms.opensearch.v0"
     BASE_CHARM_CLASS = f"{BASE_LIB_PATH}.opensearch_base_charm.OpenSearchBaseCharm"
@@ -84,6 +83,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
     def setUp(self, _) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
+        self.harness.add_network("1.1.1.1")
         self.addCleanup(self.harness.cleanup)
         self.rel_id = self.harness.add_network("1.1.1.1", endpoint=PeerRelationName)
         self.harness.add_network("1.1.1.1", endpoint=TLS_RELATION)

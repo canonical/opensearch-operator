@@ -26,24 +26,6 @@ def patch_wait_fixed() -> Callable:
     return patch("charms.opensearch.v0.opensearch_backups.wait_fixed", _wait_fixed)
 
 
-def patch_network_get(private_address: str = "1.1.1.1") -> Callable:
-    def network_get(*args, **kwargs) -> dict:
-        """Patch for the not-yet-implemented testing backend needed for `bind_address`.
-
-        This patch decorator can be used for cases such as:
-        self.model.get_binding(event.relation).network.bind_address
-        """
-        return {
-            "bind-addresses": [
-                {
-                    "addresses": [{"value": private_address}],
-                }
-            ]
-        }
-
-    return patch("ops.testing._TestingModelBackend.network_get", network_get)
-
-
 def copy_file_content_to_tmp(config_dir_path: str, source_path: str) -> str:
     """Copy the content of a file into a temporary file and return it."""
     relative_dir = ""

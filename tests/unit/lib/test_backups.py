@@ -47,7 +47,7 @@ from lib.charms.opensearch.v0.models import (
     StartMode,
     State,
 )
-from tests.helpers import patch_network_get, patch_wait_fixed
+from tests.helpers import patch_wait_fixed
 
 TEST_BUCKET_NAME = "s3://bucket-test"
 TEST_BASE_PATH = "/test"
@@ -493,7 +493,6 @@ def test_on_s3_broken_steps(
         harness.charm.backup._execute_s3_broken_calls.assert_called_once()
 
 
-@patch_network_get("1.1.1.1")
 @patch(
     "charms.opensearch.v0.opensearch_base_charm.OpenSearchPeerClustersManager.deployment_desc",
     return_value=create_deployment_desc(),

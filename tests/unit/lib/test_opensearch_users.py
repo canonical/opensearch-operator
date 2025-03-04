@@ -29,7 +29,6 @@ from charms.opensearch.v0.opensearch_users import (
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
-from tests.helpers import patch_network_get
 
 PEERS_USER_DICT_JSON = f"""{{
     "0": ["{ClientRelationName}_2"],
@@ -42,7 +41,6 @@ PEERS_ROLE_DICT_JSON = f"""{{
 }}"""  # returns role list
 
 
-@patch_network_get("1.1.1.1")
 class TestOpenSearchUserManager(unittest.TestCase):
     def setUp(self):
         self.charm = MagicMock()
@@ -50,6 +48,7 @@ class TestOpenSearchUserManager(unittest.TestCase):
         self.mgr = OpenSearchUserManager(self.charm)
 
         self.harness = Harness(OpenSearchOperatorCharm)
+        self.harness.add_network("1.1.1.1")
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
