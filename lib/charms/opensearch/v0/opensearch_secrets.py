@@ -202,7 +202,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         return secret
 
     def _get_juju_secret_content(
-        self, scope: Scope, key: str, peek: bool = False
+        self, scope: Scope, key: str, peek: bool = True
     ) -> Optional[Dict[str, str]]:
         cached_secret_content = self.cached_secrets.get_content(scope, self.label(scope, key))
         if cached_secret_content:
