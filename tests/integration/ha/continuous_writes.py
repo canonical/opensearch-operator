@@ -64,12 +64,13 @@ class ContinuousWrites:
         """Run continuous writes in the background."""
         if not self._is_stopped:
             await self.clear()
-
         # create index if custom conf needed
         if repl_mode == ReplicationMode.WITH_AT_LEAST_1_REPL:
             await self._create_fully_replicated_index()
         elif repl_mode == ReplicationMode.WITH_AT_LEAST_0_REPL:
             await self._create_index_with_0_all_replicas()
+        elif repl_mode == ReplicationMode.DEFAULT:
+            await self._create_default_index()
 
         # create process
         self._create_process(is_bulk=is_bulk)
@@ -138,6 +139,19 @@ class ContinuousWrites:
 
             # max stored document id
             return int(resp["aggregations"]["max_id"]["value"])
+        finally:
+            client.close()
+
+    async def _create_default_index(self):
+        """Create index with 1 p_shard and an r_shard on each node."""
+        client = await self._client()
+        try:
+            # create index with a replica shard on every node
+            client.indices.create(
+                index=ContinuousWrites.INDEX_NAME,
+            )
+        except Exception as e:
+            print(e)
         finally:
             client.close()
 
