@@ -760,7 +760,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
-        if plugin_needs_restart or perf_profile_needs_restart:
+        if self.opensearch.is_service_started() and (
+            plugin_needs_restart or perf_profile_needs_restart
+        ):
             self._restart_opensearch_event.emit()
 
     def _on_set_password_action(self, event: ActionEvent):
