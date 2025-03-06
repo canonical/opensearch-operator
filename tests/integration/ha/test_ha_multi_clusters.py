@@ -31,20 +31,19 @@ logger = logging.getLogger(__name__)
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
     if await app_name(ops_test):
         return
 
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
-        ops_test.model.deploy(my_charm, num_units=2, series=SERIES, config=CONFIG_OPTS),
+        ops_test.model.deploy(charm, num_units=2, series=SERIES, config=CONFIG_OPTS),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -64,7 +63,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 async def test_multi_clusters_db_isolation(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+    ops_test: OpsTest, charm, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
     """Check that writes in cluster not replicated to another cluster."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -73,9 +72,8 @@ async def test_multi_clusters_db_isolation(
     unit_ids = get_application_unit_ids(ops_test, app=app)
 
     # deploy new cluster
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.deploy(
-        my_charm, num_units=1, application_name=SECOND_APP_NAME, config=CONFIG_OPTS
+        charm, num_units=1, application_name=SECOND_APP_NAME, config=CONFIG_OPTS
     )
     await ops_test.model.integrate(SECOND_APP_NAME, TLS_CERTIFICATES_APP_NAME)
 

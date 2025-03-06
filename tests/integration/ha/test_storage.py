@@ -291,6 +291,7 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     my_charm = await ops_test.build_charm(".")
     deploy_cluster_with_storage_cmd = (
         f"deploy {my_charm} --model={ops_test.model.info.name} --attach-storage={storage_ids[0]}"
+        " --config profile=testing"
     )
     return_code, _, _ = await ops_test.juju(*deploy_cluster_with_storage_cmd.split())
     assert return_code == 0, f"Failed to deploy app with storage {storage_ids[0]}"

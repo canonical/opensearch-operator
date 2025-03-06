@@ -1,11 +1,6 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-output "app_name" {
-  description = "Name of the deployed application."
-  value       = juju_application.opensearch.name
-}
-
 # integration endpoints
 output "requires" {
   description = "Map of all \"requires\" endpoints"
@@ -22,5 +17,13 @@ output "provides" {
     peer_cluster_orchestrator = "peer-cluster-orchestrator"
     opensearch_client         = "opensearch-client"
     cos_agent                 = "cos-agent"
+  }
+}
+
+output "app_names" {
+  description = "Output of all deployed application names."
+  value = {
+    opensearch               = juju_application.opensearch.name
+    self-signed-certificates = try(juju_application.self-signed-certificates["deployed"].name, null)
   }
 }

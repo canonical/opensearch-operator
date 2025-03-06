@@ -14,6 +14,14 @@ from .helpers import ORIGINAL_RESTART_DELAY, app_name, update_restart_delay
 logger = logging.getLogger(__name__)
 
 
+@pytest.fixture
+def charm():
+    # Return str instead of pathlib.Path since python-libjuju's model.deploy(), juju deploy, and
+    # juju bundle files expect local charms to begin with `./` or `/` to distinguish them from
+    # Charmhub charms.
+    return "./opensearch_ubuntu@22.04-amd64.charm"
+
+
 @pytest.fixture(scope="function")
 async def reset_restart_delay(ops_test: OpsTest):
     """Resets service file delay on all units."""
