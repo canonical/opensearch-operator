@@ -34,7 +34,7 @@ module "opensearch" {
 
 # opensearch-dashboards in the main model
 module "opensearch-dashboards" {
-  source = "git::https://github.com/canonical/opensearch-dashboards-operator//terraform?ref=tf-improvements"
+  source = "git::https://github.com/canonical/opensearch-dashboards-operator//terraform?ref=2/edge"
   model  = var.main.model
 
   channel  = var.opensearch-dashboards.channel
