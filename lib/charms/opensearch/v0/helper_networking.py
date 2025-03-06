@@ -6,6 +6,7 @@ import logging
 import os
 import socket
 import subprocess
+from enum import Enum
 from typing import Dict, List, Optional
 
 from ops.charm import CharmBase
@@ -25,9 +26,22 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
-def get_host_ip(charm: CharmBase, peer_relation_name: str) -> str:
+class NetworkType(str, Enum):
+    """NetworkType Enum."""
+
+    PUBLIC = "public"
+    PRIVATE = "private"
+    BIND = "bind"
+
+
+def get_host_ip(charm: CharmBase, relation_name: str, type: NetworkType = NetworkType.BIND) -> str:
     """Fetches the IP address of the current unit."""
-    address = charm.model.get_binding(peer_relation_name).network.bind_address
+    if type == NetworkType.PRIVATE:
+        address = charm.model.get_binding(relation_name).network.private_address
+    elif type == NetworkType.PUBLIC:
+        address = charm.model.get_binding(relation_name).network.ingress_address
+    else:
+        address = charm.model.get_binding(relation_name).network.bind_address
     return str(address)
 
 
