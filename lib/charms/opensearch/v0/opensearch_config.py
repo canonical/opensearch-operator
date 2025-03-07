@@ -118,6 +118,11 @@ class OpenSearchConfig:
             f"plugins.security.ssl.{target_conf_layer}.keystore_alias",
             cert_type.val,
         )
+        self._opensearch.config.put(
+            self.CONFIG_YML,
+            f"plugins.security.ssl.{target_conf_layer}.keystore_keypassword",
+            pwd,
+        )
 
         for store_type, pwd in [("keystore", keystore_pwd), ("truststore", truststore_pwd)]:
             self._opensearch.config.put(
@@ -125,12 +130,6 @@ class OpenSearchConfig:
                 f"plugins.security.ssl.{target_conf_layer}.{store_type}_password",
                 pwd,
             )
-            if store_type == "keystore":
-                self._opensearch.config.put(
-                    self.CONFIG_YML,
-                    f"plugins.security.ssl.{target_conf_layer}.{store_type}_keypassword",
-                    pwd,
-                )
 
         self._opensearch.config.put(
             self.CONFIG_YML,
