@@ -647,7 +647,7 @@ def ci_only():
     is_ci = os.environ.get("CI", "false").lower() == "true"
 
     if not is_ci:
-        logger.info(f"Skipping test as not running in CI")
+        logger.info("Skipping test as not running in CI")
 
     return pytest.mark.skipif(
         not is_ci,
