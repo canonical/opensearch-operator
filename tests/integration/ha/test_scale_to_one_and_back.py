@@ -2,6 +2,8 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import os
+import subprocess
 import asyncio
 import logging
 
@@ -43,7 +45,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     if await app_name(ops_test):
         return
 
-    my_charm = await ops_test.build_charm(".")
+    my_charm = "./opensearch_ubuntu@22.04-amd64.charm"  # await ops_test.build_charm(".")
     # This test will manually issue update-status hooks, as we want to see the change in behavior
     # when applying `settle_voting` during start/stop and during update-status.
     MODEL_CONFIG["update-status-hook-interval"] = "360m"
@@ -53,8 +55,24 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
-        ops_test.model.deploy(my_charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME,
+            channel="stable",
+            config=config,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
+        ops_test.model.deploy(
+            my_charm,
+            num_units=3,
+            series=SERIES,
+            config=CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
+    )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} opensearch",
+        shell=True,
     )
 
     # Relate it to OpenSearch to set up TLS.

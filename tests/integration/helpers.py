@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+
 import json
 import logging
+import os
 import random
 import shlex
 import subprocess
@@ -12,6 +14,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Dict, List, Optional, Union
 
+import pytest
 import requests
 import yaml
 from charms.opensearch.v0.helper_networking import is_reachable
@@ -638,3 +641,15 @@ async def is_each_unit_restarted(
                 return True
     except RetryError:
         return False
+
+
+def ci_only():
+    is_ci = os.environ.get("CI", "false").lower() == "true"
+
+    if not is_ci:
+        logger.info(f"Skipping test as not running in CI")
+
+    return pytest.mark.skipif(
+        not is_ci,
+        reason="Skipping test as not running in CI",
+    )

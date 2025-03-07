@@ -27,6 +27,7 @@ from ..helpers import (
     SERIES,
     app_name,
     check_cluster_formation_successful,
+    ci_only,
     get_application_unit_ids_hostnames,
     get_application_unit_ids_ips,
     get_application_unit_names,
@@ -42,6 +43,7 @@ from .test_horizontal_scaling import IDLE_PERIOD
 logger = logging.getLogger(__name__)
 
 
+@ci_only()
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -72,6 +74,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
+@ci_only()
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -175,6 +178,7 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
+@ci_only()
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -294,6 +298,7 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
+@ci_only()
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -383,6 +388,7 @@ async def test_full_network_cut_without_ip_change_node_with_elected_cm(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
+@ci_only()
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
