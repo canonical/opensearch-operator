@@ -643,13 +643,18 @@ async def is_each_unit_restarted(
         return False
 
 
-def ci_only():
-    is_ci = os.environ.get("CI", "false").lower() == "true"
+def filter_cloud(allowed_clouds: List[str]) -> "pytest.mark.skipif":
+    if not (chosen_cloud := os.environ.get("SUBSTRATE", "").lower()):
+        # Assume we are running in LXD if not specified
+        chosen_cloud = "lxd"
 
-    if not is_ci:
-        logger.info("Skipping test as not running in CI")
+    if not allowed_clouds:
+        allowed_clouds = ["aws", "azure", "maas", "manual"]
+
+    if chosen_cloud not in allowed_clouds:
+        logger.info(f"Skipping test as substrate:{chosen_cloud} not in {allowed_clouds}")
 
     return pytest.mark.skipif(
-        not is_ci,
-        reason="Skipping test as not running in CI",
+        chosen_cloud not in allowed_clouds,
+        reason=f"Skipping test as substrate:{chosen_cloud} not in {allowed_clouds}",
     )

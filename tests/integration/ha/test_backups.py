@@ -17,6 +17,7 @@ different cloud.
 
 import asyncio
 import logging
+import os
 import random
 import string
 import subprocess
@@ -327,9 +328,29 @@ async def test_small_deployment_build_and_deploy(
     )
 
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
-        ops_test.model.deploy(backup_integrator, channel=backup_integrator_channel),
-        ops_test.model.deploy(charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME,
+            channel="stable",
+            config=config,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
+        ops_test.model.deploy(
+            backup_integrator,
+            channel=backup_integrator_channel,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
+        ops_test.model.deploy(
+            charm,
+            num_units=3,
+            series=SERIES,
+            config=CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
+    )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {APP_NAME}",
+        shell=True,
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -383,14 +404,24 @@ async def test_large_deployment_build_and_deploy(
     )
 
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
-        ops_test.model.deploy(backup_integrator, channel=backup_integrator_channel),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME,
+            channel="stable",
+            config=tls_config,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
+        ops_test.model.deploy(
+            backup_integrator,
+            channel=backup_integrator_channel,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
         ops_test.model.deploy(
             charm,
             application_name="main",
             num_units=1,
             series=SERIES,
             config=main_orchestrator_conf | CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
         ops_test.model.deploy(
             charm,
@@ -398,6 +429,7 @@ async def test_large_deployment_build_and_deploy(
             num_units=2,
             series=SERIES,
             config=failover_orchestrator_conf | CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
         ops_test.model.deploy(
             charm,
@@ -405,7 +437,21 @@ async def test_large_deployment_build_and_deploy(
             num_units=1,
             series=SERIES,
             config=data_hot_conf | CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
+    )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {APP_NAME}",
+        shell=True,
+    )
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} main",
+        shell=True,
+    )
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} failover",
+        shell=True,
     )
 
     # Large deployment setup
@@ -689,9 +735,29 @@ async def test_restore_to_new_cluster(
     config = {"ca-common-name": "CN_CA"}
 
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
-        ops_test.model.deploy(backup_integrator, channel=backup_integrator_channel),
-        ops_test.model.deploy(charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME,
+            channel="stable",
+            config=config,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
+        ops_test.model.deploy(
+            backup_integrator,
+            channel=backup_integrator_channel,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
+        ops_test.model.deploy(
+            charm,
+            num_units=3,
+            series=SERIES,
+            config=CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
+    )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {APP_NAME}",
+        shell=True,
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -793,9 +859,29 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest, charm) -> None:
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
-        ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL),
-        ops_test.model.deploy(charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME,
+            channel="stable",
+            config=config,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
+        ops_test.model.deploy(
+            S3_INTEGRATOR,
+            channel=S3_INTEGRATOR_CHANNEL,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
+        ops_test.model.deploy(
+            charm,
+            num_units=3,
+            series=SERIES,
+            config=CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
+    )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {APP_NAME}",
+        shell=True,
     )
 
     # Relate it to OpenSearch to set up TLS.

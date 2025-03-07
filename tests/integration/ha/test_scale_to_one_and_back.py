@@ -2,10 +2,10 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import os
-import subprocess
 import asyncio
 import logging
+import os
+import subprocess
 
 import pytest
 from pytest_operator.plugin import OpsTest
