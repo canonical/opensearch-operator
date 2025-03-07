@@ -45,7 +45,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     if await app_name(ops_test):
         return
 
-    my_charm = "./opensearch_ubuntu@22.04-amd64.charm"  # await ops_test.build_charm(".")
+    my_charm = await ops_test.build_charm(".")
     # This test will manually issue update-status hooks, as we want to see the change in behavior
     # when applying `settle_voting` during start/stop and during update-status.
     MODEL_CONFIG["update-status-hook-interval"] = "360m"
