@@ -1,0 +1,958 @@
+[32mINFO    [0m integration.upgrades.test_small_deployment_upgrades:test_small_deployment_upgrades.py:297 Build charm locally
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:85 Refresh the charm
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:393 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:394 Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.6.4.1  unsupported  02:24:34Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         active      3  opensearch                                 1  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0                 active    idle   0        10.150.199.11   9200/tcp  
+opensearch/1*                active    idle   1        10.150.199.40   9200/tcp  
+opensearch/2                 active    idle   2        10.150.199.121  9200/tcp  
+self-signed-certificates/0*  active    idle   3        10.150.199.157            
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.150.199.11   juju-a9475e-0  ubuntu@22.04      Running
+1        started  10.150.199.40   juju-a9475e-1  ubuntu@22.04      Running
+2        started  10.150.199.121  juju-a9475e-2  ubuntu@22.04      Running
+3        started  10.150.199.157  juju-a9475e-3  ubuntu@22.04      Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:24:34 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch active -- message: None
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:13)] active: 
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:23)] active: 
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:24:10)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:24:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:24:47)] active: 
+		opensearch-1.d1e* -- (10.150.199.40) -- [executing (since: 02:24:47)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:25:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: The OpenSearch service is stopping.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:25:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:25:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:25:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:25:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:26:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:26:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:26:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:26:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:26:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:27:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:27:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:27:30 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:27:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:27:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:28:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:28:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:28:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:24:49)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:24:48)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:28:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:28:46)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [executing (since: 02:28:46)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:24:48)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:28:59 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:28:51)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:28:53)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:28:48)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:29:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:28:51)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:28:53)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:28:48)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:29:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:28:51)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:28:53)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:28:48)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:29:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:28:51)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:28:53)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:28:48)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:29:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:28:51)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:28:53)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:28:48)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:30:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:28:51)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:28:53)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:28:48)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:30:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:412 02:30:17 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:101 Upgrade finished
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:109 namespace(status='completed', response={'result': 'Upgrade resumed.', 'return-code': 0})
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:112 Refresh is over, waiting for the charm to settle
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:393 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:394 Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.6.4.1  unsupported  02:31:12Z
+
+App                       Version  Status       Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         maintenance      3  opensearch                                 1  no       Upgrading. To rollback, `juju refresh` to the previous revision
+self-signed-certificates           active           1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch/0                 active    executing  0        10.150.199.11   9200/tcp  OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+opensearch/1*                waiting   executing  1        10.150.199.40   9200/tcp  Waiting for OpenSearch to start...
+opensearch/2                 active    executing  2        10.150.199.121  9200/tcp  OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+self-signed-certificates/0*  active    idle       3        10.150.199.157            
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.150.199.11   juju-a9475e-0  ubuntu@22.04      Running
+1        started  10.150.199.40   juju-a9475e-1  ubuntu@22.04      Running
+2        started  10.150.199.121  juju-a9475e-2  ubuntu@22.04      Running
+3        started  10.150.199.157  juju-a9475e-3  ubuntu@22.04      Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:31:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:11)] active: OpenSearch 2.16.0 running; Snap rev 57 (outdated); Charmed operator 1+f1cc887-dirty
+		opensearch-1.d1e* -- (10.150.199.40) -- [executing (since: 02:31:11)] waiting: Waiting for OpenSearch to start...
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:31:11)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:31:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: The OpenSearch service is stopping.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:31:38 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:31:50 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:32:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:32:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:32:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:32:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:32:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:33:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:33:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:33:30 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:33:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:33:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:34:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:34:19 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:34:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:34:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:34:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: Waiting for OpenSearch to start...
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:35:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] waiting: Waiting for OpenSearch to start...
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:31:22)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:35:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] maintenance: Plugin configuration check.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:35:15)] maintenance: Plugin configuration check.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:35:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] maintenance: Plugin configuration check.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:35:15)] maintenance: Plugin configuration check.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:35:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] maintenance: Plugin configuration check.
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:31:23)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:35:15)] maintenance: Plugin configuration check.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:36:01 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:31:21)] active: 
+		opensearch-1.d1e* -- (10.150.199.40) -- [executing (since: 02:35:59)] active: OpenSearch 2.17.0 running; Snap rev 65; Charmed operator 1+f1cc887-dirty
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:36:00)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:36:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:36:03)] active: 
+		opensearch-1.d1e* -- (10.150.199.40) -- [executing (since: 02:36:04)] maintenance: Plugin configuration check.
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:36:04)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:36:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: opensearch maintenance -- message: Upgrading. To rollback, `juju refresh` to the previous revision
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:36:03)] active: 
+		opensearch-1.d1e* -- (10.150.199.40) -- [executing (since: 02:36:04)] maintenance: Plugin configuration check.
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:36:04)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:36:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.d1e  -- (10.150.199.11) -- [executing (since: 02:36:39)] active: 
+		opensearch-1.d1e* -- (10.150.199.40) -- [executing (since: 02:36:39)] active: 
+		opensearch-2.d1e  -- (10.150.199.121) -- [executing (since: 02:36:39)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:36:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:36:48)] active: 
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:36:48)] active: 
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:36:48)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:37:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:36:48)] active: 
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:36:48)] active: 
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:36:48)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:37:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:36:48)] active: 
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:36:48)] active: 
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:36:48)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:37:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:36:48)] active: 
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:36:48)] active: 
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:36:48)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:37:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:36:48)] active: 
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:36:48)] active: 
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:36:48)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:37:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.d1e  -- (10.150.199.11) -- [idle (since: 02:36:48)] active: 
+		opensearch-1.d1e* -- (10.150.199.40) -- [idle (since: 02:36:48)] active: 
+		opensearch-2.d1e  -- (10.150.199.121) -- [idle (since: 02:36:48)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:38:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:412 02:38:10 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.ha.helpers:helpers.py:246 Continuous writes result: namespace(max_stored_id=949, count=950, last_expected_id=949)
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.150.199.40:9200/series_index/_search_shards
+[32mINFO    [0m integration.upgrades.conftest:conftest.py:30 
+
+
+
+The writes have been cleared.
+
+
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.6.4.1  unsupported  02:39:19Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         active      3  opensearch                                 1  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0                 active    idle   0        10.150.199.11   9200/tcp  
+opensearch/1*                active    idle   1        10.150.199.40   9200/tcp  
+opensearch/2                 active    idle   2        10.150.199.121  9200/tcp  
+self-signed-certificates/0*  active    idle   3        10.150.199.157            
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.150.199.11   juju-a9475e-0  ubuntu@22.04      Running
+1        started  10.150.199.40   juju-a9475e-1  ubuntu@22.04      Running
+2        started  10.150.199.121  juju-a9475e-2  ubuntu@22.04      Running
+3        started  10.150.199.157  juju-a9475e-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-1: 01:59:46 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:59:46 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 01:59:47 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:59:48 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:59:48 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:59:48 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:59:49 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:59:49 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 01:59:49 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:59:52 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:59:52 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:59:52 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-0: 02:01:43 ERROR unit.opensearch/0.juju-log certificates:3: CA cert not found, quitting.
+unit-opensearch-0: 02:01:44 ERROR unit.opensearch/0.juju-log certificates:3: CA cert not found, quitting.
+unit-opensearch-0: 02:01:45 ERROR unit.opensearch/0.juju-log CA cert not found, quitting.
+unit-opensearch-0: 02:01:45 ERROR unit.opensearch/0.juju-log CA cert not found, quitting.
+unit-opensearch-2: 02:01:45 ERROR unit.opensearch/2.juju-log certificates:3: CA cert not found, quitting.
+unit-opensearch-2: 02:01:46 ERROR unit.opensearch/2.juju-log certificates:3: CA cert not found, quitting.
+unit-opensearch-0: 02:01:46 ERROR unit.opensearch/0.juju-log CA cert not found, quitting.
+unit-opensearch-0: 02:01:46 ERROR unit.opensearch/0.juju-log CA cert not found, quitting.
+unit-opensearch-2: 02:01:47 ERROR unit.opensearch/2.juju-log CA cert not found, quitting.
+unit-opensearch-2: 02:01:47 ERROR unit.opensearch/2.juju-log CA cert not found, quitting.
+unit-opensearch-0: 02:01:47 ERROR unit.opensearch/0.juju-log CA cert not found, quitting.
+unit-opensearch-0: 02:01:48 ERROR unit.opensearch/0.juju-log CA cert not found, quitting.
+unit-opensearch-0: 02:01:57 ERROR unit.opensearch/0.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:01:58 ERROR unit.opensearch/2.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:01:58 ERROR unit.opensearch/0.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:01:59 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:01:59 ERROR unit.opensearch/2.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:00 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:02:00 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:00 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:02:01 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:01 ERROR unit.opensearch/0.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:02:01 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:01 ERROR unit.opensearch/2.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:02 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:03 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:03 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:04 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:02:04 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:04 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:05 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:06 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:07 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:07 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:02:07 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:08 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:08 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:09 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:09 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:02:10 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:10 ERROR unit.opensearch/0.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:10 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:12 ERROR unit.opensearch/2.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:12 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:13 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:02:13 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:14 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:14 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:15 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:15 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-1: 02:02:16 ERROR unit.opensearch/1.juju-log Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:16 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:16 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:17 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:18 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:19 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:19 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:20 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:20 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:21 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:21 ERROR unit.opensearch/2.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:22 ERROR unit.opensearch/0.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:23 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:24 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:24 ERROR unit.opensearch/2.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:25 ERROR unit.opensearch/0.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:25 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:26 ERROR unit.opensearch/0.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:26 ERROR unit.opensearch/2.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:27 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:29 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:30 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:31 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:32 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-0: 02:02:34 ERROR unit.opensearch/0.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:35 ERROR unit.opensearch/2.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:37 ERROR unit.opensearch/2.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:38 ERROR unit.opensearch/2.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:40 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:41 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:54 ERROR unit.opensearch/2.juju-log opensearch-peers:1: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:57 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:02:59 ERROR unit.opensearch/2.juju-log node-lock-fallback:0: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:11:19 ERROR juju.worker.uniter resolver loop error: preparing operation "upgrade to ch:amd64/opensearch-168" for opensearch/2: failed to download charm "ch:amd64/opensearch-168" from API server: download request with archiveSha256 length 0 not valid
+unit-opensearch-0: 02:11:19 ERROR juju.worker.uniter resolver loop error: preparing operation "upgrade to ch:amd64/opensearch-168" for opensearch/0: failed to download charm "ch:amd64/opensearch-168" from API server: download request with archiveSha256 length 0 not valid
+unit-opensearch-0: 02:11:19 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "upgrade to ch:amd64/opensearch-168" for opensearch/0: failed to download charm "ch:amd64/opensearch-168" from API server: download request with archiveSha256 length 0 not valid
+unit-opensearch-2: 02:11:19 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "upgrade to ch:amd64/opensearch-168" for opensearch/2: failed to download charm "ch:amd64/opensearch-168" from API server: download request with archiveSha256 length 0 not valid
+unit-opensearch-2: 02:12:44 ERROR unit.opensearch/2.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:13:03 ERROR unit.opensearch/2.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:16:07 ERROR unit.opensearch/2.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:18:52 ERROR unit.opensearch/2.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:19:02 ERROR unit.opensearch/2.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:22:06 ERROR unit.opensearch/2.juju-log upgrade-version-a:2: Cannot connect to the OpenSearch server...
+unit-opensearch-2: 02:35:34 ERROR unit.opensearch/2.juju-log upgrade-version-a:2: opensearch.keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-0: 02:35:34 ERROR unit.opensearch/0.juju-log opensearch.keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-2: 02:35:36 ERROR unit.opensearch/2.juju-log upgrade-version-a:2: opensearch.keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-0: 02:35:36 ERROR unit.opensearch/0.juju-log opensearch.keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-2: 02:35:38 ERROR unit.opensearch/2.juju-log upgrade-version-a:2: opensearch.keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-0: 02:35:38 ERROR unit.opensearch/0.juju-log opensearch.keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-2: 02:35:39 ERROR unit.opensearch/2.juju-log upgrade-version-a:2: opensearch.keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-0: 02:35:40 ERROR unit.opensearch/0.juju-log opensearch.keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-2: 02:35:41 ERROR unit.opensearch/2.juju-log upgrade-version-a:2: opensearch.keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-0: 02:35:41 ERROR unit.opensearch/0.juju-log opensearch.keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-2: 02:35:43 ERROR unit.opensearch/2.juju-log upgrade-version-a:2: opensearch.keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-0: 02:35:43 ERROR unit.opensearch/0.juju-log opensearch.keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-1: 02:36:22 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: opensearch.keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-1: 02:36:24 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: opensearch.keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-1: 02:36:26 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: opensearch.keystore remove s3.client.default.access_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-1: 02:36:27 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: opensearch.keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-1: 02:36:29 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: opensearch.keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+unit-opensearch-1: 02:36:31 ERROR unit.opensearch/1.juju-log upgrade-version-a:2: opensearch.keystore remove s3.client.default.secret_key:
+ Stderr: warning: no-jdk distributions that do not bundle a JDK are deprecated and will be removed in a future release
+ERROR: Setting [s3.client.default.secret_key] does not exist in the keystore.
+
+ Stdout: 
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
