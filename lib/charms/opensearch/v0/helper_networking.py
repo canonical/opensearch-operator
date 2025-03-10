@@ -26,19 +26,15 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
-class NetworkType(str, Enum):
-    """NetworkType Enum."""
-
-    PUBLIC = "public"
-    BIND = "bind"
-
-
-def get_host_ip(charm: CharmBase, relation_name: str, type: NetworkType = NetworkType.BIND) -> str:
+def get_host_ip(charm: CharmBase, peer_relation_name: str) -> str:
     """Fetches the IP address of the current unit."""
-    elif type == NetworkType.PUBLIC:
-        address = charm.model.get_binding(relation_name).network.ingress_address
-    else:
-        address = charm.model.get_binding(relation_name).network.bind_address
+    address = charm.model.get_binding(peer_relation_name).network.bind_address
+    return str(address)
+
+
+def get_host_public_ip(charm: CharmBase, peer_relation_name: str) -> str:
+    """Fetches the IP address of the current unit."""
+    address = charm.model.get_binding(peer_relation_name).network.ingress_address
     return str(address)
 
 
