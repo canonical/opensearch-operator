@@ -117,7 +117,7 @@ async def run_action(
                 continue
 
             ping = subprocess.call(
-                f"nc -zv {unit.ip} 9200".split(),
+                f"nc -zv {unit.ip} 22".split(),
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
@@ -440,7 +440,7 @@ def opensearch_client(
         sniff_on_start=True,  # sniff before doing anything
         sniff_on_connection_fail=True,  # refresh nodes after a node fails to respond
         sniffer_timeout=60.0,  # and also every 60 seconds
-        sniff_timeout=60.0,  # and also every 60 seconds
+        sniff_timeout=5.0,  # and also every 60 seconds
         use_ssl=True,  # turn on ssl
         verify_certs=True,  # make sure we verify SSL certificates
         ssl_assert_hostname=False,
