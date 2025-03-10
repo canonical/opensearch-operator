@@ -1164,11 +1164,11 @@ class OpenSearchAzureBackup(OpenSearchMainBackup):
         super().__init__(charm, relation_name)
         self.client = AzureStorageRequires(self.charm, AZURE_RELATION)
         self.framework.observe(
-            self.azure_client.on.storage_connection_info_changed,
+            self.client.on.storage_connection_info_changed,
             self._on_backup_credentials_changed,
         )
         self.framework.observe(
-            self.azure_client.on.storage_connection_info_gone,
+            self.client.on.storage_connection_info_gone,
             self._on_backup_credentials_changed,
         )
 
