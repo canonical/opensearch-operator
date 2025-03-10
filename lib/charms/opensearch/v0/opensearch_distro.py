@@ -442,10 +442,8 @@ class OpenSearchDistribution(ABC):
     @property
     def public_address(self) -> str:
         """Get the client bind address."""
-        return (
-            get_host_public_ip() or str(
-                self._charm.model.get_binding(self._peer_relation_name).network.ingress_address
-            )
+        return get_host_public_ip() or str(
+            self._charm.model.get_binding(self._peer_relation_name).network.ingress_address
         )
 
     @property
