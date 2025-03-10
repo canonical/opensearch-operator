@@ -114,7 +114,7 @@ async def run_action(
                 continue
 
             ping = subprocess.call(
-                f"nc -zv {unit.ip} 9200".split(),
+                f"nc -zv {unit.ip} 22".split(),
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
