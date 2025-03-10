@@ -444,9 +444,7 @@ class OpenSearchDistribution(ABC):
         """Get the client bind address."""
         return (
             get_host_public_ip()
-            or self._charm.model.get_binding(
-                self._peer_relation_name
-            ).network.ingress_address
+            or or self._charm.model.get_binding(self._peer_relation_name).network.ingress_address
         )
 
     @property
