@@ -425,26 +425,27 @@ def test_on_s3_broken_steps(
     harness.charm.plugin_manager.get_plugin = MagicMock()
     harness.charm.plugin_manager.status = MagicMock(return_value=PluginState.ENABLED)
     harness.charm.status.set = MagicMock()
+    harness.charm.backup.backup_manager.clean = MagicMock()
 
     # Call the method
     harness.charm.backup._on_backup_relation_broken(event)
 
     if test_type == "s3-still-units-present":
         event.defer.assert_called()
-        harness.charm.backup._execute_s3_broken_calls.assert_not_called()
+        harness.charm.backup.backup_manager.clean.assert_not_called()
     elif test_type == "snapshot-in-progress":
         event.defer.assert_called()
         harness.charm.status.set.assert_any_call(MaintenanceStatus(BackupInDisabling))
         harness.charm.status.set.assert_any_call(WaitingStatus(BackupDeferRelBrokenAsInProgress))
-        harness.charm.backup._execute_s3_broken_calls.assert_not_called()
+        harness.charm.backup.backup_manager.clean.assert_not_called()
     elif test_type == "apply-config-error" or test_type == "apply-config-error-not-leader":
         event.defer.assert_called()
         harness.charm.status.set.assert_any_call(MaintenanceStatus(BackupInDisabling))
-        harness.charm.backup._execute_s3_broken_calls.assert_called_once()
+        harness.charm.backup.backup_manager.clean.assert_called_once()
     elif test_type == "success":
         event.defer.assert_not_called()
         harness.charm.status.set.assert_any_call(MaintenanceStatus(BackupInDisabling))
-        harness.charm.backup._execute_s3_broken_calls.assert_called_once()
+        harness.charm.backup.backup_manager.clean.assert_called_once()
 
 
 @patch_network_get("1.1.1.1")
@@ -544,7 +545,7 @@ class TestBackups(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchS3Backup.apply_api_config_if_needed")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.apply_config")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
-    @patch("charms.opensearch.v0.opensearch_backups.OpenSearchS3Backup._execute_s3_broken_calls")
+    @patch("charms.opensearch.v0.opensearch_backups.BackupManager.clean")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
     def test_relation_broken(
         self,
