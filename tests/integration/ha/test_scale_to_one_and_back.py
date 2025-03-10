@@ -38,14 +38,13 @@ logger = logging.getLogger(__name__)
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
     if await app_name(ops_test):
         return
 
-    my_charm = await ops_test.build_charm(".")
     # This test will manually issue update-status hooks, as we want to see the change in behavior
     # when applying `settle_voting` during start/stop and during update-status.
     MODEL_CONFIG["update-status-hook-interval"] = "360m"
@@ -62,7 +61,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             num_units=3,
             series=SERIES,
             config=CONFIG_OPTS,

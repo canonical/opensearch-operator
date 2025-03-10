@@ -4,6 +4,7 @@
 
 import asyncio
 import logging
+import os
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -42,8 +43,19 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
-        ops_test.model.deploy(charm, num_units=2, series=SERIES, config=CONFIG_OPTS),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME,
+            channel="stable",
+            config=config,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
+        ops_test.model.deploy(
+            charm,
+            num_units=2,
+            series=SERIES,
+            config=CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -73,7 +85,11 @@ async def test_multi_clusters_db_isolation(
 
     # deploy new cluster
     await ops_test.model.deploy(
-        charm, num_units=1, application_name=SECOND_APP_NAME, config=CONFIG_OPTS
+        charm,
+        num_units=1,
+        application_name=SECOND_APP_NAME,
+        config=CONFIG_OPTS,
+        constraints=os.environ.get("TEST_CONSTRAINTS"),
     )
     await ops_test.model.integrate(SECOND_APP_NAME, TLS_CERTIFICATES_APP_NAME)
 

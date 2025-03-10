@@ -4,6 +4,7 @@
 
 import asyncio
 import logging
+import os
 import time
 
 import pytest
@@ -57,8 +58,19 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
-        ops_test.model.deploy(my_charm, num_units=1, series=SERIES, config=CONFIG_OPTS),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME,
+            channel="stable",
+            config=config,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
+        ops_test.model.deploy(
+            my_charm,
+            num_units=1,
+            series=SERIES,
+            config=CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
     )
 
     # Relate it to OpenSearch to set up TLS.
