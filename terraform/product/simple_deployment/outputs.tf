@@ -22,22 +22,18 @@ output "provides" {
 
 output "app_names" {
   description = "Output of all deployed application names."
-  value = {
-    opensearch_main     = module.opensearch_main.app_names["opensearch"]
-    opensearch_failover = module.opensearch_failover.app_names["opensearch"]
-    opensearch_apps = [
-      for app_module in module.opensearch_non_orchestrator_apps :
-      app_module.app_names["opensearch"]
-    ]
-    self-signed-certificates = module.opensearch_main.app_names["self-signed-certificates"]
-  }
+  value = merge(
+    module.opensearch.app_names,
+    {
+      "opensearch-dashboards" : module.opensearch-dashboards.app_names["opensearch-dashboards"]
+      "data-integrator" : juju_application.data-integrator.name,
+      "backups-integrator" : juju_application.backups-integrator.name,
+      "grafana-agent" : juju_application.grafana-agent.name
+    }
+  )
 }
 
 output "offers" {
   description = "List of offers URLs."
-  value = {
-    opensearch_main     = try(juju_offer.opensearch_main-offer["offered"].url, null)
-    opensearch_failover = try(juju_offer.opensearch_failover-offer["offered"].url, null)
-    certificates        = try(juju_offer.self_signed_certificates-offer["offered"].url, null)
-  }
+  value       = {}
 }

@@ -37,14 +37,6 @@ resource "juju_application" "opensearch" {
 
   lifecycle {
     precondition {
-      condition     = length(var.machines) == 0 || length(var.machines) == var.units
-      error_message = "Machine count does not match unit count"
-    }
-    precondition {
-      condition     = length(var.storage) == 0 || lookup(var.storage, "count", 0) <= 1
-      error_message = "Only one storage is supported"
-    }
-    precondition {
       condition     = local.is_main_orchestrator && (var.main_model == null || var.model == var.main_model) || !local.is_main_orchestrator && var.main_model != null
       error_message = "The main_model should either be null or equal to the model for main orchestrators."
     }
@@ -58,9 +50,17 @@ resource "juju_application" "self-signed-certificates" {
   model = var.model
 
   charm {
-    name    = "self-signed-certificates"
-    channel = "latest/stable"
+    name     = "self-signed-certificates"
+    channel  = var.self-signed-certificates.channel
+    revision = var.self-signed-certificates.revision
+    base     = var.self-signed-certificates.base
   }
+
+  config = var.self-signed-certificates.config
+
+  units       = 1
+  constraints = var.self-signed-certificates.constraints
+  placement   = length(var.self-signed-certificates.machines) == 1 ? var.self-signed-certificates.machines[0] : null
 }
 
 
