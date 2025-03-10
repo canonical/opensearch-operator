@@ -31,12 +31,6 @@ def get_host_ip(charm: CharmBase, peer_relation_name: str) -> str:
     return str(address)
 
 
-def get_host_public_ip(charm: CharmBase, peer_relation_name: str) -> str:
-    """Fetches the IP address of the current unit."""
-    address = charm.model.get_binding(peer_relation_name).network.ingress_address
-    return str(address)
-
-
 def get_host_public_ip() -> Optional[str]:
     """Fetches the Public IP address of the current unit."""
     cmd = "dig +short myip.opendns.com @resolver1.opendns.com"
