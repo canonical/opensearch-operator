@@ -802,6 +802,7 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
         """Manager of OpenSearch backup relations."""
         super().__init__(charm, relation_name)
         self.relation_name = relation_name
+        self.client = None
 
         # relation handles the config options for backups
         self.framework.observe(
@@ -818,11 +819,6 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
     @property
     def plugin(self):
         """Returns the plugin for this class."""
-        ...
-
-    @property
-    def client(self):
-        """Returns the client for this class."""
         ...
 
     @property
@@ -1131,6 +1127,7 @@ class OpenSearchS3Backup(OpenSearchMainBackup):
     def __init__(self, charm: "OpenSearchBaseCharm", relation_name: str = S3_RELATION):
         """Manager of OpenSearch backup relations."""
         super().__init__(charm, relation_name)
+        self.client = S3Requirer(self.charm, S3_RELATION)
         self.framework.observe(
             self.client.on.credentials_changed, self._on_backup_credentials_changed
         )
@@ -1140,12 +1137,6 @@ class OpenSearchS3Backup(OpenSearchMainBackup):
     def plugin(self) -> OpenSearchS3Plugin:
         """Returns the plugin for this class."""
         return OpenSearchS3Plugin(self.charm)
-
-    @property
-    @override
-    def client(self):
-        """Returns the client for this class."""
-        return S3Requirer(self.charm, S3_RELATION)
 
     @override
     def get_service_status(self, response: dict[str, Any] | None) -> BackupServiceState:
@@ -1171,6 +1162,7 @@ class OpenSearchAzureBackup(OpenSearchMainBackup):
     def __init__(self, charm: "OpenSearchBaseCharm", relation_name: str = AZURE_RELATION):
         """Manager of OpenSearch backup relations."""
         super().__init__(charm, relation_name)
+        self.client = AzureStorageRequires(self.charm, AZURE_RELATION)
         self.framework.observe(
             self.azure_client.on.storage_connection_info_changed,
             self._on_backup_credentials_changed,
@@ -1185,12 +1177,6 @@ class OpenSearchAzureBackup(OpenSearchMainBackup):
     def plugin(self) -> OpenSearchAzurePlugin:
         """Returns the plugin for this class."""
         return OpenSearchAzurePlugin(self.charm)
-
-    @property
-    @override
-    def client(self):
-        """Returns the client for this class."""
-        return AzureStorageRequires(self.charm, AZURE_RELATION)
 
     @override
     def get_service_status(self, response: dict[str, Any] | None) -> BackupServiceState:
