@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+import os
 import subprocess
 import time
 
@@ -46,21 +47,31 @@ SECRET_EXPIRY_WAIT_TIME = SECRET_EXPIRY_TIME + 60
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
+async def test_build_and_deploy_active(ops_test: OpsTest, charm) -> None:
     """Build and deploy one unit of OpenSearch."""
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
     await ops_test.model.deploy(
-        my_charm,
+        charm,
         num_units=len(UNIT_IDS),
         series=SERIES,
         config=CONFIG_OPTS,
+        constraints=os.environ.get("TEST_CONSTRAINTS"),
+    )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {APP_NAME}",
+        shell=True,
     )
 
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
-    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
+    await ops_test.model.deploy(
+        TLS_CERTIFICATES_APP_NAME,
+        channel="stable",
+        config=config,
+        constraints=os.environ.get("TEST_CONSTRAINTS"),
+    )
     await wait_until(ops_test, apps=[TLS_CERTIFICATES_APP_NAME], apps_statuses=["active"])
 
     # Relate it to OpenSearch to set up TLS.
@@ -168,7 +179,7 @@ async def test_tls_renewal(ops_test: OpsTest) -> None:
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_tls_expiration(ops_test: OpsTest) -> None:
+async def test_tls_expiration(ops_test: OpsTest, charm) -> None:
     """Test that expiring TLS certificates are renewed."""
     # before we can run this test, need to clean up and deploy with different config
     if APP_NAME in ops_test.model.applications:
@@ -181,19 +192,29 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
     # Deploy TLS Certificates operator
     logger.info("Deploying TLS Certificates operator")
     config = {"ca-common-name": "CN_CA", "certificate-validity": "1"}
-    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
+    await ops_test.model.deploy(
+        TLS_CERTIFICATES_APP_NAME,
+        channel="stable",
+        config=config,
+        constraints=os.environ.get("TEST_CONSTRAINTS"),
+    )
     await wait_until(ops_test, apps=[TLS_CERTIFICATES_APP_NAME], apps_statuses=["active"])
 
     # Deploy Opensearch operator
     await ops_test.model.set_config(MODEL_CONFIG)
-    my_charm = await ops_test.build_charm(".")
 
     logger.info("Deploying OpenSearch")
     await ops_test.model.deploy(
-        my_charm,
+        charm,
         num_units=1,
         series=SERIES,
         config=CONFIG_OPTS,
+        constraints=os.environ.get("TEST_CONSTRAINTS"),
+    )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {APP_NAME}",
+        shell=True,
     )
 
     await wait_until(

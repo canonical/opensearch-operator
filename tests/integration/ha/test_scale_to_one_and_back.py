@@ -70,7 +70,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     )
 
     subprocess.call(
-        f"juju expose -m {ops_test.model.name} opensearch",
+        f"juju expose -m {ops_test.model.name} {APP_NAME}",
         shell=True,
     )
 

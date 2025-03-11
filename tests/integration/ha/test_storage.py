@@ -65,6 +65,11 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
         ),
     )
 
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {APP_NAME}",
+        shell=True,
+    )
+
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await wait_until(

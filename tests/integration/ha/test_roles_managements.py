@@ -5,6 +5,7 @@
 import asyncio
 import logging
 import os
+import subprocess
 
 import pytest
 from charms.opensearch.v0.constants_charm import PClusterWrongNodesCountForQuorum
@@ -58,6 +59,11 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
             config=CONFIG_OPTS,
             constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
+    )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {APP_NAME}",
+        shell=True,
     )
 
     # Relate it to OpenSearch to set up TLS.

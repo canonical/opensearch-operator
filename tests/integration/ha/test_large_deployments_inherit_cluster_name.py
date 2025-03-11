@@ -5,6 +5,7 @@
 import asyncio
 import logging
 import os
+import subprocess
 import time
 
 import pytest
@@ -55,7 +56,12 @@ async def test_build_and_deploy_not_autogen(ops_test: OpsTest, charm) -> None:
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME,
+            channel="stable",
+            config=config,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
         ops_test.model.deploy(
             charm,
             application_name=MAIN_APP_NOT_AUTOGEN,
@@ -72,6 +78,15 @@ async def test_build_and_deploy_not_autogen(ops_test: OpsTest, charm) -> None:
             config={"init_hold": True, "roles": "cluster_manager"} | CONFIG_OPTS,
             constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
+    )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {MAIN_APP_NOT_AUTOGEN}",
+        shell=True,
+    )
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {INVALID_FAILOVER_APP}",
+        shell=True,
     )
 
     # wait until the TLS operator is ready
@@ -120,14 +135,19 @@ async def test_build_and_deploy_autogen(ops_test: OpsTest, charm) -> None:
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME,
+            channel="stable",
+            config=config,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
+        ),
         ops_test.model.deploy(
             charm,
             application_name=MAIN_APP_AUTOGEN,
             num_units=1,
             series=SERIES,
-            constraints=os.environ.get("TEST_CONSTRAINTS"),
             config={"roles": "cluster_manager"} | CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
         ops_test.model.deploy(
             charm,
@@ -145,6 +165,19 @@ async def test_build_and_deploy_autogen(ops_test: OpsTest, charm) -> None:
             config={"init_hold": True, "roles": "data"} | CONFIG_OPTS,
             constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
+    )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {MAIN_APP_AUTOGEN}",
+        shell=True,
+    )
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {FAILOVER_APP_AUTOGEN}",
+        shell=True,
+    )
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {DATA_APP_AUTOGEN}",
+        shell=True,
     )
 
     # wait until the TLS operator is ready

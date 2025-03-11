@@ -5,6 +5,7 @@
 import asyncio
 import logging
 import os
+import subprocess
 import time
 
 import pytest
@@ -87,6 +88,23 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
             | CONFIG_OPTS,
             constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
+    )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {MAIN_APP}",
+        shell=True,
+    )
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {FAILOVER_APP}",
+        shell=True,
+    )
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {DATA_APP}",
+        shell=True,
+    )
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {INVALID_APP}",
+        shell=True,
     )
 
     # wait until the TLS operator is ready

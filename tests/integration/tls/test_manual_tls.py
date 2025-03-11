@@ -3,6 +3,8 @@
 # See LICENSE file for licensing details.
 
 import logging
+import os
+import subprocess
 
 import pytest
 from juju.application import Application
@@ -19,23 +21,29 @@ logger = logging.getLogger(__name__)
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy_with_manual_tls(ops_test: OpsTest) -> None:
+async def test_build_and_deploy_with_manual_tls(ops_test: OpsTest, charm) -> None:
     """Build and deploy prod cluster of OpenSearch with Manual TLS Operator integration."""
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
     os_app: Application = await ops_test.model.deploy(
-        my_charm,
+        charm,
         num_units=len(UNIT_IDS),
         series=SERIES,
         application_name=APP_NAME,
         config=CONFIG_OPTS,
+        constraints=os.environ.get("TEST_CONSTRAINTS"),
+    )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {APP_NAME}",
+        shell=True,
     )
 
     # Deploy TLS Certificates operator.
     tls_app: Application = await ops_test.model.deploy(
         MANUAL_TLS_CERTIFICATES_APP_NAME,
         channel="stable",
+        constraints=os.environ.get("TEST_CONSTRAINTS"),
     )
     await wait_until(
         ops_test,

@@ -4,6 +4,7 @@
 
 import asyncio
 import logging
+import os
 import shlex
 import subprocess
 
@@ -46,17 +47,23 @@ DEFAULT_NUM_UNITS = 2
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_deploy_and_remove_single_unit(ops_test: OpsTest) -> None:
+async def test_deploy_and_remove_single_unit(ops_test: OpsTest, charm) -> None:
     """Build and deploy OpenSearch with a single unit and remove it."""
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
     await ops_test.model.deploy(
-        my_charm,
+        charm,
         num_units=1,
         series=SERIES,
         config=CONFIG_OPTS,
+        constraints=os.environ.get("TEST_CONSTRAINTS"),
     )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {APP_NAME}",
+        shell=True,
+    )
+
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
@@ -84,20 +91,26 @@ async def test_deploy_and_remove_single_unit(ops_test: OpsTest) -> None:
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     """Build and deploy a couple of OpenSearch units."""
-    my_charm = await ops_test.build_charm(".")
     model_config = MODEL_CONFIG
     model_config["update-status-hook-interval"] = "1m"
 
     await ops_test.model.set_config(MODEL_CONFIG)
 
     await ops_test.model.deploy(
-        my_charm,
+        charm,
         num_units=DEFAULT_NUM_UNITS,
         series=SERIES,
         config=CONFIG_OPTS,
+        constraints=os.environ.get("TEST_CONSTRAINTS"),
     )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {APP_NAME}",
+        shell=True,
+    )
+
     await wait_until(
         ops_test,
         apps=[APP_NAME],
