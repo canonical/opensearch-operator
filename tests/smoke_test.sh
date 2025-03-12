@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eux
+set -eu
 
 
 ### CONSTANT VALUES
@@ -20,6 +20,7 @@ ERROR_CREATE_INDEX_FAILED=5
 ERROR_SHARDS_NOT_STARTED=6
 ERROR_DELETING_IDX_FAILED=7
 ERROR_INDEXING_DOC_FAILED=8
+ERROR_COUNT_INDEX_DOC_FAILED=9
 ################################################
 
 
@@ -141,18 +142,17 @@ function check_index_data() {
 
     for id in {1..100}; do
         ack=$(curl -XPUT -sk -u "${OPENSEARCH_USERNAME}":"${OPENSEARCH_PASSWORD}" "https://${OPENSEARCH_IP}:9200/${TEST_IDX}/_doc/${id}" -H 'Content-Type: application/json' -d'{"test": "${id}"}')
-        echo "Indexing ack: $ack"
-
         if [ "$(echo "$ack" | jq -r ._shards.total)" -ne $DEFAULT_NODE_COUNT ]; then
             echo "Data in index is not as expected"
             exit $ERROR_DATA_NOT_FOUND
         fi
     done
 
-    ack=$(curl -XPUT -sk -u "${OPENSEARCH_USERNAME}":"${OPENSEARCH_PASSWORD}" "https://${OPENSEARCH_IP}:9200/${TEST_IDX}/_count")
-    if [ $(echo "$ack" | jq -r .count) -ne 100 ]; then
-        echo "Indexing document failed"
-        exit $ERROR_INDEXING_DOC_FAILED
+    ack=$(curl -sk -u "${OPENSEARCH_USERNAME}":"${OPENSEARCH_PASSWORD}" "https://${OPENSEARCH_IP}:9200/${TEST_IDX}/_count")
+    echo "Indexing document count ack: $ack"
+    if [ "$(echo "$ack" | jq -r .count)" -ne 100 ]; then
+        echo "Indexing count document failed"
+        exit $ERROR_COUNT_INDEX_DOC_FAILED
     fi
 }
 
