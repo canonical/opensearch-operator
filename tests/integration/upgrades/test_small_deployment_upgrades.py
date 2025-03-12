@@ -118,6 +118,8 @@ async def _build_env(ops_test: OpsTest, version: str) -> None:
 @pytest.mark.skip_if_deployed
 async def test_deploy_latest_from_channel(ops_test: OpsTest) -> None:
     """Deploy OpenSearch."""
+    if await app_name(ops_test):
+        return
     await _build_env(ops_test, STARTING_VERSION)
 
 
@@ -214,6 +216,8 @@ async def test_upgrade_to_local(
 @pytest.mark.skip_if_deployed
 async def test_deploy_from_version(ops_test: OpsTest, version) -> None:
     """Deploy OpenSearch."""
+    if await app_name(ops_test):
+        return
     await _build_env(ops_test, version)
 
 
