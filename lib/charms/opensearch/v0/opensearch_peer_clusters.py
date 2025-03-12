@@ -361,7 +361,7 @@ class OpenSearchPeerClustersManager:
 
         return DeploymentDescription.from_dict(current_deployment_desc)
 
-    def promote_to_main_orchestrator(self) -> None:
+    def promote_deployment_desc_type(self) -> None:
         """Update the deployment type of the current deployment desc."""
         if not (deployment_desc := self.deployment_desc()):
             return
