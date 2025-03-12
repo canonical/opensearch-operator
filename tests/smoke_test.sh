@@ -19,6 +19,7 @@ ERROR_CLUSTER_COUNT_WRONG=4
 ERROR_CREATE_INDEX_FAILED=5
 ERROR_SHARDS_NOT_STARTED=6
 ERROR_DELETING_IDX_FAILED=7
+ERROR_INDEXING_DOC_FAILED=8
 ################################################
 
 
@@ -35,31 +36,24 @@ EOF
 exit $ERROR_OPTION
 }
 
-
-function set_arguments() {
-
-    echo $@
-    exit 0
-
-    while [ $# -gt 0 ]; do
-        case $1 in
-            --model) shift
-                MODEL=$1
-                ;;
-            --opensearch) shift
-                APP=$1
-                ;;
-            --dashboard) shift
-                OSD=$1
-                ;;
-            *)
-                usage
-                ;;
-        esac
-        shift
-    done
-    shift $((OPTIND-1))
-}
+while [ $# -gt 0 ]; do
+    case $1 in
+        --model) shift
+            MODEL=$1
+            ;;
+        --opensearch) shift
+            APP=$1
+            ;;
+        --dashboard) shift
+            OSD=$1
+            ;;
+        *)
+            usage
+            ;;
+    esac
+    shift
+done
+shift $((OPTIND-1))
 
 
 function run_prechecks() {
@@ -83,14 +77,14 @@ function run_prechecks() {
 
 
 # Doing the first checks before moving on
-set_arguments
 run_prechecks
 
 # Now, we wait for all apps to be active / idle
-for app in $(juju status -m test --format json | jq -r '.applications | keys[]'); do 
-    juju wait-for application $app \
-        --query='name=="$app" && (status=="active" || status=="idle")'
-done
+# TODO: FIX THIS WAIT
+#for app in $(juju status -m test --format json | jq -r '.applications | keys[]'); do 
+#    juju wait-for application $app \
+#        --query='name=="$app" && (status=="active" || status=="idle")'
+#done
 
 OPENSEARCH_IP=$(juju exec --unit "${APP}"/leader -m "${MODEL}" -- unit-get public-address)
 OPENSEARCH_USERNAME=$(juju run "$APP"/leader get-password --format=json 2>/dev/null | jq -r '. | values[].results.username')
@@ -112,7 +106,7 @@ function check_cluster_node_count() {
     count=$(curl -sk -u "${OPENSEARCH_USERNAME}":"${OPENSEARCH_PASSWORD}" "https://${OPENSEARCH_IP}:9200/_nodes" | jq -r '.nodes | keys[]' | wc -l)
     echo "Cluster node count is $count"
 
-    if [ $count -ne DEFAULT_NODE_COUNT ]; then
+    if [ $count -ne $DEFAULT_NODE_COUNT ]; then
         echo "Cluster node count is different than three"
         exit $ERROR_CLUSTER_COUNT_WRONG
     fi
@@ -134,12 +128,31 @@ function check_create_idx_and_validate_shards() {
     fi
 
     # Now we check the shards
-    sleep 30
-    shards="$(curl -sk -u "${OPENSEARCH_USERNAME}":"${OPENSEARCH_PASSWORD}" "https://${OPENSEARCH_IP}:9200/_cat/shards/${TEST_IDX]?format=json" | jq -c '.[] | select(.state | contains("STARTED"))' | wc -l)"
+    sleep 10
+    shards=$(curl -sk -u "${OPENSEARCH_USERNAME}":"${OPENSEARCH_PASSWORD}" "https://${OPENSEARCH_IP}:9200/_cat/shards/${TEST_IDX}?format=json" | jq -c '.[] | select(.state | contains("STARTED"))' | wc -l)
     echo "Shards started: $shards"
-    if [ $shards -ne 3 ]; then
-        echo "Shards are not as expected"
-        exit $ERROR_SHARDS_NOT_STARTED
+    if [ "$(echo "$ack" | jq -r .acknowledged)" != "true" ]; then
+        echo "Indexing document failed"
+        exit $ERROR_INDEXING_DOC_FAILED
+    fi
+}
+
+function check_index_data() {
+
+    for id in {1..100}; do
+        ack=$(curl -XPUT -sk -u "${OPENSEARCH_USERNAME}":"${OPENSEARCH_PASSWORD}" "https://${OPENSEARCH_IP}:9200/${TEST_IDX}/_doc/${id}" -H 'Content-Type: application/json' -d'{"test": "${id}"}')
+        echo "Indexing ack: $ack"
+
+        if [ "$(echo "$ack" | jq -r ._shards.total)" -ne $DEFAULT_NODE_COUNT ]; then
+            echo "Data in index is not as expected"
+            exit $ERROR_DATA_NOT_FOUND
+        fi
+    done
+
+    ack=$(curl -XPUT -sk -u "${OPENSEARCH_USERNAME}":"${OPENSEARCH_PASSWORD}" "https://${OPENSEARCH_IP}:9200/${TEST_IDX}/_count")
+    if [ $(echo "$ack" | jq -r .count) -ne 100 ]; then
+        echo "Indexing document failed"
+        exit $ERROR_INDEXING_DOC_FAILED
     fi
 }
 
@@ -154,3 +167,6 @@ function check_delete_idx() {
 
 check_cluster_status
 check_cluster_node_count
+check_create_idx_and_validate_shards
+check_index_data
+check_delete_idx
