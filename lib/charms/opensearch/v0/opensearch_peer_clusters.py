@@ -425,11 +425,11 @@ class OpenSearchPeerClustersManager:
             # this is not the latest unit to be brought online, we can continue
             return
 
-        voters = sum(1 for node in nodes if node.is_cm_eligible() or node.is_voting_only())
-        if voters % 2 == (0 if on_new_unit else 1):
-            # if validation called on new unit: it means it will start and maintain the quorum
-            #    (called on the latest unit to be configured and brought online)
-            # if validation called on existing cluster we should expect an odd number in the sum
+        is_large_deployment = len(apps_in_fleet) > 1
+        cms = sum(1 for node in nodes if node.is_cm_eligible())
+        if on_new_unit or not is_large_deployment or (is_large_deployment and cms >= 3):
+            # if validation called on large deployment,
+            # start if there are at least 3 cm eligible nodes
             return
 
         raise OpenSearchProvidedRolesException(PClusterWrongNodesCountForQuorum)

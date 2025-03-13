@@ -7,7 +7,12 @@ import logging
 import time
 
 import pytest
-from charms.opensearch.v0.constants_charm import PClusterNoRelation, TLSRelationMissing
+from charms.opensearch.v0.constants_charm import (
+    PClusterNoRelation,
+    PClusterOrchestratorsRemoved,
+    PClusterWaitingForFailoverPromotion,
+    TLSRelationMissing,
+)
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import CONFIG_OPTS, MODEL_CONFIG, SERIES, get_leader_unit_ip
@@ -246,3 +251,102 @@ async def test_large_deployment_fully_formed(
             assert (
                 temperature == "hot"
             ), f"Wrong temperature for {app}:{temperature} - expected:hot"
+
+
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_large_deployment_sever_main_failover_relation(ops_test: OpsTest) -> None:
+    """Test that the main-failover relation can be removed and re-added."""
+    await ops_test.model.applications[MAIN_APP].remove_relation(
+        f"{FAILOVER_APP}:{REL_PEER}", f"{MAIN_APP}:{REL_ORCHESTRATOR}"
+    )
+
+    await wait_until(
+        ops_test,
+        apps=[MAIN_APP, FAILOVER_APP, DATA_APP],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units={
+            app: units for app, units in APP_UNITS.items() if app != INVALID_APP
+        },
+        idle_period=IDLE_PERIOD,
+        timeout=1800,
+    )
+    # re-relate main and failover
+    await ops_test.model.integrate(f"{FAILOVER_APP}:{REL_PEER}", f"{MAIN_APP}:{REL_ORCHESTRATOR}")
+
+    await wait_until(
+        ops_test,
+        apps=[MAIN_APP, FAILOVER_APP, DATA_APP],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units={
+            app: units for app, units in APP_UNITS.items() if app != INVALID_APP
+        },
+        idle_period=IDLE_PERIOD,
+        timeout=1800,
+    )
+
+
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_large_deployment_remove_app(ops_test: OpsTest) -> None:
+    """Test that the orchestrator apps can be deleted."""
+    # delete the main orchestrator
+    await ops_test.model.remove_application(
+        MAIN_APP,
+        block_until_done=True,
+        destroy_storage=True,
+    )
+
+    await wait_until(
+        ops_test,
+        apps=[FAILOVER_APP, DATA_APP],
+        units_full_statuses={
+            DATA_APP: {
+                "units": {
+                    "waiting": [PClusterWaitingForFailoverPromotion],
+                    "active": [],
+                },
+            },
+            FAILOVER_APP: {
+                "units": {
+                    "active": [],
+                },
+            },
+        },
+        apps_statuses=["active"],
+        wait_for_exact_units={
+            DATA_APP: APP_UNITS[DATA_APP],
+            FAILOVER_APP: APP_UNITS[FAILOVER_APP],
+        },
+        idle_period=IDLE_PERIOD,
+        timeout=1800,
+    )
+
+    # delete the failover orchestrator
+    await ops_test.model.remove_application(
+        FAILOVER_APP,
+        block_until_done=True,
+        destroy_storage=True,
+    )
+    await wait_until(
+        ops_test,
+        apps=[DATA_APP],
+        units_full_statuses={
+            DATA_APP: {
+                "units": {
+                    "blocked": [PClusterOrchestratorsRemoved],
+                    "active": [],
+                },
+            },
+        },
+        apps_statuses=["active"],
+        wait_for_exact_units={
+            DATA_APP: APP_UNITS[DATA_APP],
+        },
+        idle_period=IDLE_PERIOD,
+        timeout=1800,
+    )
