@@ -1,0 +1,2993 @@
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:599 Remove backup relation
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:611 Re-add backup credentials relation
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [executing] maintenance: Backup setup started.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:620 Syncing credentials for azure
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:280 Adding Juju secret for secret-key config option for azure-storage-integrator
+[32mINFO    [0m integration.ha.helpers:helpers.py:603 Data keys to insert: dict_keys(['secret-key'])
+[32mINFO    [0m integration.ha.helpers:helpers.py:607 Add secret output: secret:cvck7gtu6tssg7j53eo0
+
+[32mINFO    [0m integration.ha.helpers:helpers.py:609 Secret uri: secret:cvck7gtu6tssg7j53eo0
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:290 Juju secret for secret-key config option for azure-storage-integrator added. Secret URI: secret:cvck7gtu6tssg7j53eo0
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:299 Setting up configuration for azure-storage-integrator charm...
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  azure-storage-integrator/0 [idle] active: 
+  main/0 [idle] active: 
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.61.70.198:9200/_recovery?human
+[32mINFO    [0m integration.ha.helpers:helpers.py:246 Continuous writes result: namespace(max_stored_id=351, count=352, last_expected_id=351)
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.61.70.198:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: POST -- https://10.61.70.198:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.61.70.198:9200/series_index/_count
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.61.70.198:9200/_recovery?human
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: POST -- https://10.61.70.198:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.61.70.198:9200/series_index/_count
+[32mINFO    [0m integration.ha.helpers:helpers.py:590 Testing restore for series_index - original count pre-restore: 352, and now, new count: 317
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: POST -- https://10.61.70.198:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.61.70.198:9200/series_index/_count
+[32mINFO    [0m integration.ha.conftest:conftest.py:47 
+
+
+
+The writes have been cleared.
+
+
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.6.4    unsupported  10:00:37Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+azure-storage-integrator           active      1  azure-storage-integrator  latest/edge     11  no       
+failover                           active      2  opensearch                                 1  no       
+main                               active      1  opensearch                                 0  no       
+opensearch                         active      1  opensearch                                 2  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+azure-storage-integrator/0*  active    idle   1        10.61.70.94               
+failover/0*                  active    idle   4        10.61.70.129    9200/tcp  
+failover/1                   active    idle   5        10.61.70.95     9200/tcp  
+main/0*                      active    idle   3        10.61.70.198    9200/tcp  
+opensearch/0*                active    idle   2        10.61.70.93     9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.61.70.7                
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.61.70.7    juju-01b527-0  ubuntu@22.04      Running
+1        started  10.61.70.94   juju-01b527-1  ubuntu@22.04      Running
+2        started  10.61.70.93   juju-01b527-2  ubuntu@22.04      Running
+3        started  10.61.70.198  juju-01b527-3  ubuntu@22.04      Running
+4        started  10.61.70.129  juju-01b527-4  ubuntu@22.04      Running
+5        started  10.61.70.95   juju-01b527-5  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-1: 09:42:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 09:42:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-azure-storage-integrator-0: 09:42:58 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 09:42:59 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 09:42:59 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 09:42:59 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 09:43:19 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 09:43:19 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 09:43:19 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 09:43:23 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 09:43:23 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-0: 09:43:23 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-5: 09:43:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 09:43:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-1: 09:43:27 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 09:43:30 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 09:43:30 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-main-0: 09:43:31 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-main-0: 09:50:16 ERROR unit.main/0.juju-log azure-credentials:15: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 09:50:33 ERROR unit.main/0.juju-log azure-credentials:15: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 09:50:48 ERROR unit.main/0.juju-log azure-credentials:15: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 09:51:05 ERROR unit.main/0.juju-log opensearch-peers:7: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 09:51:19 ERROR unit.main/0.juju-log opensearch-peers:7: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 09:51:57 ERROR unit.main/0.juju-log azure-credentials:15: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 09:52:14 ERROR unit.main/0.juju-log azure-credentials:15: Failed to setup backup service with state Repository exception: unknown
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:198 Cleaning backups from cloud buckets
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd82d63f8-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa26a-d01e-0094-7eec-9705bb000000'
+    'x-ms-client-request-id': 'd82d63f8-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:38 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/index-1'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd82d63f9-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa469-d01e-0094-4aec-9705bb000000'
+    'x-ms-client-request-id': 'd82d63f9-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:38 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/index.latest'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd82d63fa-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa4b8-d01e-0094-17ec-9705bb000000'
+    'x-ms-client-request-id': 'd82d63fa-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:38 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/72mmPipzSR2o5yMljdfOaA/0/index-hn1QFoehS1-BiG2muNIKaw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd82d63fb-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa522-d01e-0094-7bec-9705bb000000'
+    'x-ms-client-request-id': 'd82d63fb-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:39 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/72mmPipzSR2o5yMljdfOaA/0/snap-jrkvldiwS4yYWdKhvh4r5A.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd82d63fc-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa59e-d01e-0094-6cec-9705bb000000'
+    'x-ms-client-request-id': 'd82d63fc-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:39 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/72mmPipzSR2o5yMljdfOaA/0/snap-wdnfAgUKQy2NlGroltnUEg.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd82d63fd-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa610-d01e-0094-54ec-9705bb000000'
+    'x-ms-client-request-id': 'd82d63fd-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:39 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/72mmPipzSR2o5yMljdfOaA/meta-8w-sqJUBGbpPI8-VJ9ra.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea6962-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa66a-d01e-0094-2aec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea6962-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:39 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__29XoleRkSBSFeo_vKVIUgA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea6963-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa6ab-d01e-0094-66ec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea6963-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:39 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__2cM23-MsQWWN3pL0v8ueMQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea6964-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa702-d01e-0094-34ec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea6964-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:39 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__437B15v3Qtugencpmpr7Fw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea6965-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa74a-d01e-0094-78ec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea6965-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:39 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__7Jxoo3vxTdedFIkbInVvUA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea6966-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa79f-d01e-0094-48ec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea6966-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:39 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__ARVP7_2bTza_F5DaaBw6YA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea6967-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa7d7-d01e-0094-7cec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea6967-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:39 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__NduaD0oJS6OxqTJGsuFrMQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea6968-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa82a-d01e-0094-46ec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea6968-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:39 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__OEfp5NsLRJCcshtNG2mqWQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea6969-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa893-d01e-0094-28ec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea6969-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:40 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__S0JQBXyoR7eQcpu4WgaEvw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea696a-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa908-d01e-0094-1dec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea696a-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:40 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__SL6EsrWFT--QoSaW7A7RXQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea696b-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa963-d01e-0094-6aec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea696b-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:40 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__Uqduz4ptQsqyUEWzS3avDA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea696c-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa99d-d01e-0094-1eec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea696c-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:40 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__W9icx42LTKGyxtTVfe4dnQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea696d-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afa9ff-d01e-0094-77ec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea696d-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:40 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/___kU_3Y1kQxO-eUfiWVibQw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea696e-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afaa64-d01e-0094-58ec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea696e-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:40 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__bzrM8c4vR_qcyTyPBN_tyA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea696f-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afaac5-d01e-0094-32ec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea696f-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:40 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__eSGgWvo5Q2aw2OxdpkO1tQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea6970-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afab10-d01e-0094-77ec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea6970-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:40 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__lHgyX6kATb6XKB16-HKBmw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea6971-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afab51-d01e-0094-31ec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea6971-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:40 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__qDmA7QYtQVGCp7DbjXTiaw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea6972-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afaba8-d01e-0094-69ec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea6972-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:40 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__sOzB0qMuTXSIMnwzvGNNag'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea6973-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afabfa-d01e-0094-30ec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea6973-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:40 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__tr2Tq8FNQg6YoYtgHWAtdw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea6974-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afac53-d01e-0094-03ec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea6974-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:41 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/__w9ReHoznRsyQhTAs_pslPA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea6975-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afac9a-d01e-0094-44ec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea6975-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:41 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/index-yUaTJBkjSyOhTk3CqHUq8Q'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea6976-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7aface5-d01e-0094-0aec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea6976-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:41 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/snap-jrkvldiwS4yYWdKhvh4r5A.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'd8ea6977-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afad27-d01e-0094-47ec-9705bb000000'
+    'x-ms-client-request-id': 'd8ea6977-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:41 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/0/snap-wdnfAgUKQy2NlGroltnUEg.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2ce-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afad8d-d01e-0094-25ec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2ce-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:41 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/U_slmEAmSGmdLsX3TxRGNw/meta-9Q-sqJUBGbpPI8-VJ9ra.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2cf-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afae00-d01e-0094-0cec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2cf-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:41 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/ZG7ABAphQzqvtQ3baNM9LQ/0/__35zdNKTGT0qJyr7Ukunk6g'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2d0-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afae4f-d01e-0094-4dec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2d0-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:41 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/ZG7ABAphQzqvtQ3baNM9LQ/0/__AV2oKeBvThG94oU6y6gTmQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2d1-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afaeb8-d01e-0094-24ec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2d1-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:41 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/ZG7ABAphQzqvtQ3baNM9LQ/0/__PnJJHrkoQca5E9BDuSEFuw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2d2-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afaeee-d01e-0094-53ec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2d2-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:41 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/ZG7ABAphQzqvtQ3baNM9LQ/0/__mIPfsCxTRQaaWwWBH5YEPg'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2d3-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afaf2a-d01e-0094-0aec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2d3-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:41 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/ZG7ABAphQzqvtQ3baNM9LQ/0/index-1UG2sFf-Rcau63aDKi7tHg'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2d4-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afaf6b-d01e-0094-45ec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2d4-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:41 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/ZG7ABAphQzqvtQ3baNM9LQ/0/snap-jrkvldiwS4yYWdKhvh4r5A.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2d5-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afafc3-d01e-0094-16ec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2d5-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:42 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/ZG7ABAphQzqvtQ3baNM9LQ/0/snap-wdnfAgUKQy2NlGroltnUEg.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2d6-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb026-d01e-0094-6dec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2d6-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:42 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/ZG7ABAphQzqvtQ3baNM9LQ/meta--A-xqJUBGbpPI8-VJNrp.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2d7-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb06b-d01e-0094-29ec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2d7-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:42 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/ZG7ABAphQzqvtQ3baNM9LQ/meta-9A-sqJUBGbpPI8-VJ9ra.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2d8-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb0b4-d01e-0094-6dec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2d8-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:42 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__-voFIAjYQzCxvk93e8kXaQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2d9-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb109-d01e-0094-3aec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2d9-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:42 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__3YRq-tutR6SWNAwu_qEyiA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2da-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb155-d01e-0094-02ec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2da-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:42 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__5xg0bMBvT_qb4pFRG_rCrA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2db-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb1d6-d01e-0094-76ec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2db-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:42 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__6xJmwIZfSRuLK49gi8ES3w'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2dc-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb25e-d01e-0094-73ec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2dc-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:42 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__7Bw6vnIjSaqAXHR5jnm9Sg'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2dd-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb2ee-d01e-0094-73ec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2dd-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:42 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__8UZ953MkShy2ZAWnz_Ry2g'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2de-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb333-d01e-0094-31ec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2de-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:42 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__8oWw89aNS8OcpUpF5qXjGw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2df-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb386-d01e-0094-7fec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2df-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:43 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__9WYRAcNnRcqDrGXkfAXqYA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2e0-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb3cc-d01e-0094-3cec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2e0-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:43 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__BdEF_2kKTwiFgpAJlfRjXQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'da23c2e1-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb43c-d01e-0094-10ec-9705bb000000'
+    'x-ms-client-request-id': 'da23c2e1-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:43 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__Bfj7szsuQzOEii7CZYZtbw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb0c-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb475-d01e-0094-46ec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb0c-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:43 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__D5LnMJBjSymCNt-XuTJaiA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb0d-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb4d3-d01e-0094-18ec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb0d-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:43 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__FNQlpG-cQYikHyEfdS8KIg'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb0e-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb539-d01e-0094-76ec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb0e-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:43 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__GwxhJ4QDTxaWUWksHbKskQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb0f-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb5a3-d01e-0094-54ec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb0f-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:43 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__HwgWpFGaTIOBQbcO6oKiPA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb10-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb5f5-d01e-0094-19ec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb10-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:43 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__IAp2y1SRSsWW2Z5qY179BQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb11-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb65c-d01e-0094-7aec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb11-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:43 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__JMND8S6xRmCkZA9eil5KOw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb12-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb6a1-d01e-0094-33ec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb12-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:43 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__JpPTgtHdRuq3MRg3b8xdxA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb13-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb6ea-d01e-0094-70ec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb13-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:44 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__KPz4iOPdTBmj7plueqjoCw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb14-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb757-d01e-0094-4fec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb14-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:44 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__LbKmS_DTRlOkK3b5nz357A'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb15-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb7b6-d01e-0094-1fec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb15-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:44 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__MKZJflewRpWrEs5dP7ptGA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb16-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb807-d01e-0094-63ec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb16-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:44 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__MeMTJ0wdTNSKDEHe_H2Xgw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb17-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb847-d01e-0094-1eec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb17-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:44 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__NUvpXdk9TEG-Hqgc03rg0w'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb18-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb893-d01e-0094-66ec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb18-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:44 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__NonK7qI0ToeXGMCXGUeUJg'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb19-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb8da-d01e-0094-24ec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb19-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:44 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__PUe52zHGTfeE6Cb8UwJWJA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb1a-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb928-d01e-0094-6bec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb1a-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:44 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__P_A5s_moQD6ApR7l7Nq9tQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb1b-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb97f-d01e-0094-3eec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb1b-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:44 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__PuuXX3hIQ4GPqAPeo6HquQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb1c-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afb9cb-d01e-0094-07ec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb1c-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:44 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__PuzMTGZ2TfeaYv2BLLIRDA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb1d-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afba15-d01e-0094-47ec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb1d-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:44 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__QuIgNUHzTjueIKeb0gaMRg'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb1e-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afba4c-d01e-0094-76ec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb1e-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:45 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__RDmh2hqXQAytE9wupeER7g'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb1f-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afba8d-d01e-0094-34ec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb1f-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:45 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__RmgDiDUKSbqOIkkwMREtOg'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'db4deb20-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afbae8-d01e-0094-02ec-9705bb000000'
+    'x-ms-client-request-id': 'db4deb20-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:45 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__TfUBlRqIT1WhYUJow8TJog'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c8574-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afbb20-d01e-0094-2fec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c8574-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:45 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__VkMGf2M2T6S09FD86W5ZVw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c8575-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afbb8a-d01e-0094-0dec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c8575-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:45 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__XHwYQaaxSzCvn1ZEhhuVSw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c8576-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afbc12-d01e-0094-09ec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c8576-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:45 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__YVkQb92JQMSqRNHvv4ZnIA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c8577-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afbc59-d01e-0094-43ec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c8577-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:45 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__Z1G31ImoS0aHrGIO2Yf-Sg'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c8578-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afbcd4-d01e-0094-31ec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c8578-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:45 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__ZR-6ahQASTiOg3mXqIzWlQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c8579-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afbd69-d01e-0094-30ec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c8579-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:45 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__ZqzuBQ2dRcy93PC9a8ABTw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c857a-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afbdda-d01e-0094-04ec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c857a-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:45 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__azCV-XPwTFeBrdUfG8_ScA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c857b-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afbe58-d01e-0094-75ec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c857b-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:46 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__bQ6DW_JYSLizQfk3Q51Z9Q'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c857c-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afbeca-d01e-0094-5eec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c857c-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:46 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__c3J3K9CzR5SfisrFVR-DyQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c857d-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afbf31-d01e-0094-3eec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c857d-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:46 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__ehatL_q4QAaw8FzMbl0vwA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c857e-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afbf7c-d01e-0094-05ec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c857e-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:46 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__fdLBD8NXQLKAHNxFje6KWA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c857f-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afbfda-d01e-0094-5bec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c857f-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:46 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__i8j7fUDvQ86e7mWxsrUbYg'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c8580-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc02a-d01e-0094-25ec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c8580-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:46 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__iPH7E_81RrWoft806-lKzA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c8581-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc08f-d01e-0094-04ec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c8581-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:46 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__j-vmlGplR5-D_Pp3-7czHA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c8582-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc0cf-d01e-0094-3bec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c8582-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:46 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__jGDcEWhBRi26CQsNtjIVDg'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c8583-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc11e-d01e-0094-05ec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c8583-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:46 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__klU4_obDTpGTJBanpzlQ8Q'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c8584-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc175-d01e-0094-55ec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c8584-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:46 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__lRnIMEM3TiKbak8-yoWhcw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c8585-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc1c3-d01e-0094-21ec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c8585-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:46 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__m1pl7I5TTTafeKGnTFHeXw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c8586-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc224-d01e-0094-7aec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c8586-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:47 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__nUtfD_K3Rq6VCYruu-qZtw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c8587-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc289-d01e-0094-53ec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c8587-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:47 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__n_bxpsL4QOK1FzlQa54YzQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dc7c8588-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc2fb-d01e-0094-3eec-9705bb000000'
+    'x-ms-client-request-id': 'dc7c8588-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:47 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__qL_Rx8XORiC-myQPf_oZYg'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe8c-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc35f-d01e-0094-18ec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe8c-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:47 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__qYuS-3e-R4uhK3_EOmGUSw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe8d-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc3c6-d01e-0094-75ec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe8d-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:47 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__rIKMmkVRTs6KC322HlxIQw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe8e-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc40f-d01e-0094-36ec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe8e-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:47 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__sUaUtd8qTyS040w4bO1cqQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe8f-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc45e-d01e-0094-03ec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe8f-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:47 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__tC87JjJ3SBGeqqMAIgATow'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe90-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc4c4-d01e-0094-62ec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe90-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:47 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__wRPcvgG-QK-s174HLE1eRA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe91-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc50b-d01e-0094-24ec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe91-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:47 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__xZgQFRllSGqW4NP49QRaIA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe92-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc56a-d01e-0094-7cec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe92-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:47 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__xv0vkQsyT2iNtWOVdyhiTA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe93-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc5b0-d01e-0094-3bec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe93-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:47 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__xxedzJgaSdOaFsFujBUCfw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe94-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc60f-d01e-0094-12ec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe94-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:48 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__xz4MRz7eSXOo1W21C7zTCA'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe95-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc67a-d01e-0094-6fec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe95-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:48 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__y3HoO7B-RYW2Md_vPk-qpQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe96-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc6d2-d01e-0094-43ec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe96-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:48 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__y9R1XNo2TY6_PIFOmHtZJw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe97-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc71c-d01e-0094-05ec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe97-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:48 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__yX6VxUw4RzKMiYXQ5BqZDQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe98-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc790-d01e-0094-6bec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe98-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:48 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__yYpbh5lpRg6gus9EJfAFIw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe99-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc808-d01e-0094-54ec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe99-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:48 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__zQYkJ2gCRa6m_xeHBFJApQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe9a-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc874-d01e-0094-3aec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe9a-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:48 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/__zzGKf8weSJ6fWJC0ZLLTVQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe9b-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc8d0-d01e-0094-0cec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe9b-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:48 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/index-B2AbIQpvT2WaxY-JvIsiFw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe9c-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc92f-d01e-0094-5fec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe9c-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:48 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/snap-jrkvldiwS4yYWdKhvh4r5A.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe9d-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc97e-d01e-0094-29ec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe9d-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:48 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/0/snap-wdnfAgUKQy2NlGroltnUEg.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe9e-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afc9f3-d01e-0094-13ec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe9e-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:49 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/meta--Q-xqJUBGbpPI8-VJNrp.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbe9f-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afca5a-d01e-0094-75ec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbe9f-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:49 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/hPAZ7aEKQOaqGdXAgyhauA/meta-9g-sqJUBGbpPI8-VKNo5.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbea0-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afcac7-d01e-0094-56ec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbea0-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:49 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/tjnKB-T_SjK1a6Sr4rM54Q/0/index-kkym7uqzQC-Yvl51-wg3ug'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'ddacbea1-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afcb1c-d01e-0094-22ec-9705bb000000'
+    'x-ms-client-request-id': 'ddacbea1-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:49 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/tjnKB-T_SjK1a6Sr4rM54Q/0/snap-jrkvldiwS4yYWdKhvh4r5A.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee80572-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afcba2-d01e-0094-17ec-9705bb000000'
+    'x-ms-client-request-id': 'dee80572-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:49 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/tjnKB-T_SjK1a6Sr4rM54Q/0/snap-wdnfAgUKQy2NlGroltnUEg.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee80573-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afcc13-d01e-0094-80ec-9705bb000000'
+    'x-ms-client-request-id': 'dee80573-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:49 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/tjnKB-T_SjK1a6Sr4rM54Q/meta-8g-sqJUBGbpPI8-VJ9ra.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee80574-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afcc84-d01e-0094-6dec-9705bb000000'
+    'x-ms-client-request-id': 'dee80574-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:49 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/zGCWBqiiSGiG0j9TqAvDRQ/0/__5n2rA6-hQhypiWj0m24uPw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee80575-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afccd7-d01e-0094-3fec-9705bb000000'
+    'x-ms-client-request-id': 'dee80575-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:49 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/zGCWBqiiSGiG0j9TqAvDRQ/0/__FGsEAoaTSoS81boTvPhvfw'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee80576-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afcd52-d01e-0094-31ec-9705bb000000'
+    'x-ms-client-request-id': 'dee80576-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:49 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/zGCWBqiiSGiG0j9TqAvDRQ/0/index-tn4V8CozTIG01rqUoOGulQ'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee80577-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afcda8-d01e-0094-7eec-9705bb000000'
+    'x-ms-client-request-id': 'dee80577-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:49 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/zGCWBqiiSGiG0j9TqAvDRQ/0/snap-jrkvldiwS4yYWdKhvh4r5A.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee80578-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afcdf0-d01e-0094-3bec-9705bb000000'
+    'x-ms-client-request-id': 'dee80578-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:49 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/zGCWBqiiSGiG0j9TqAvDRQ/0/snap-wdnfAgUKQy2NlGroltnUEg.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee80579-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afce3a-d01e-0094-80ec-9705bb000000'
+    'x-ms-client-request-id': 'dee80579-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:50 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/zGCWBqiiSGiG0j9TqAvDRQ/meta--g-xqJUBGbpPI8-VJNrp.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee8057a-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afce77-d01e-0094-37ec-9705bb000000'
+    'x-ms-client-request-id': 'dee8057a-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:50 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/indices/zGCWBqiiSGiG0j9TqAvDRQ/meta-9w-sqJUBGbpPI8-VKNo5.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee8057b-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afceb6-d01e-0094-73ec-9705bb000000'
+    'x-ms-client-request-id': 'dee8057b-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:50 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/meta-jrkvldiwS4yYWdKhvh4r5A.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee8057c-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afcef2-d01e-0094-2fec-9705bb000000'
+    'x-ms-client-request-id': 'dee8057c-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:50 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/meta-wdnfAgUKQy2NlGroltnUEg.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee8057d-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afcf54-d01e-0094-09ec-9705bb000000'
+    'x-ms-client-request-id': 'dee8057d-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:50 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/snap-jrkvldiwS4yYWdKhvh4r5A.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee8057e-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afcfac-d01e-0094-4dec-9705bb000000'
+    'x-ms-client-request-id': 'dee8057e-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:50 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/snap-wdnfAgUKQy2NlGroltnUEg.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee8057f-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd006-d01e-0094-1fec-9705bb000000'
+    'x-ms-client-request-id': 'dee8057f-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:50 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-0hR2X1dOSdaciCR5-85_AA/data-nxlqwNxTR4mNUaLpOBcozw.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee80580-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd066-d01e-0094-78ec-9705bb000000'
+    'x-ms-client-request-id': 'dee80580-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:50 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-0hR2X1dOSdaciCR5-85_AA/master.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee80581-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd0ad-d01e-0094-38ec-9705bb000000'
+    'x-ms-client-request-id': 'dee80581-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:50 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-1Q7i0EQJSJC78ipyj3YznQ/data-nxlqwNxTR4mNUaLpOBcozw.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee80582-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd10b-d01e-0094-0aec-9705bb000000'
+    'x-ms-client-request-id': 'dee80582-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:50 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-1Q7i0EQJSJC78ipyj3YznQ/master.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee80583-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd14f-d01e-0094-47ec-9705bb000000'
+    'x-ms-client-request-id': 'dee80583-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:51 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-35Ct3tyBRn688xKYFKH-FQ/data-nxlqwNxTR4mNUaLpOBcozw.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee80584-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd1a4-d01e-0094-19ec-9705bb000000'
+    'x-ms-client-request-id': 'dee80584-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:51 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-35Ct3tyBRn688xKYFKH-FQ/master.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee80585-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd1f0-d01e-0094-5bec-9705bb000000'
+    'x-ms-client-request-id': 'dee80585-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:51 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-3RmR0c-aTwKGuI-55l7spw/data-nxlqwNxTR4mNUaLpOBcozw.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'dee80586-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd230-d01e-0094-14ec-9705bb000000'
+    'x-ms-client-request-id': 'dee80586-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:51 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-3RmR0c-aTwKGuI-55l7spw/master.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e0190252-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd285-d01e-0094-64ec-9705bb000000'
+    'x-ms-client-request-id': 'e0190252-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:51 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-4iNIAbFARYGE7S18oGEP1w/data-nxlqwNxTR4mNUaLpOBcozw.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e0190253-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd2d2-d01e-0094-2fec-9705bb000000'
+    'x-ms-client-request-id': 'e0190253-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:51 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-4iNIAbFARYGE7S18oGEP1w/master.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e0190254-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd318-d01e-0094-72ec-9705bb000000'
+    'x-ms-client-request-id': 'e0190254-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:51 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-6TsGe0LqRI2CYzV-kUH9mg/data-nxlqwNxTR4mNUaLpOBcozw.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e0190255-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd375-d01e-0094-48ec-9705bb000000'
+    'x-ms-client-request-id': 'e0190255-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:51 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-6TsGe0LqRI2CYzV-kUH9mg/master.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e0190256-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd3c8-d01e-0094-15ec-9705bb000000'
+    'x-ms-client-request-id': 'e0190256-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:51 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-Dq6cgjWWSZeWcwZ3Cktrdg/data-nxlqwNxTR4mNUaLpOBcozw.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e0190257-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd42d-d01e-0094-70ec-9705bb000000'
+    'x-ms-client-request-id': 'e0190257-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:51 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-Dq6cgjWWSZeWcwZ3Cktrdg/master.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e0190258-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd49e-d01e-0094-55ec-9705bb000000'
+    'x-ms-client-request-id': 'e0190258-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:51 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-EG3AdYaBRumPkelLzq3Hww/data-nxlqwNxTR4mNUaLpOBcozw.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e0190259-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd512-d01e-0094-43ec-9705bb000000'
+    'x-ms-client-request-id': 'e0190259-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:52 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-EG3AdYaBRumPkelLzq3Hww/master.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e019025a-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd56d-d01e-0094-17ec-9705bb000000'
+    'x-ms-client-request-id': 'e019025a-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:52 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-Ps36tl0xTdC9xsqL8CXcDw/data-nxlqwNxTR4mNUaLpOBcozw.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e019025b-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd5da-d01e-0094-77ec-9705bb000000'
+    'x-ms-client-request-id': 'e019025b-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:52 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-Ps36tl0xTdC9xsqL8CXcDw/master.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e019025c-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd63f-d01e-0094-4eec-9705bb000000'
+    'x-ms-client-request-id': 'e019025c-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:52 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-U380MDDFS7SA3oPBELvBzQ/data-nxlqwNxTR4mNUaLpOBcozw.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e019025d-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd6b1-d01e-0094-3bec-9705bb000000'
+    'x-ms-client-request-id': 'e019025d-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:52 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-U380MDDFS7SA3oPBELvBzQ/master.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e019025e-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd70f-d01e-0094-0bec-9705bb000000'
+    'x-ms-client-request-id': 'e019025e-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:52 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-cUggsZxBQKWy0uxUrNfrLA/data-nxlqwNxTR4mNUaLpOBcozw.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e019025f-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd760-d01e-0094-53ec-9705bb000000'
+    'x-ms-client-request-id': 'e019025f-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:52 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-cUggsZxBQKWy0uxUrNfrLA/master.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e0190260-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd7c4-d01e-0094-2eec-9705bb000000'
+    'x-ms-client-request-id': 'e0190260-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:52 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-kZgzf4xWTy6BZ3oawp3DVA/data-nxlqwNxTR4mNUaLpOBcozw.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e0190261-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd80d-d01e-0094-6eec-9705bb000000'
+    'x-ms-client-request-id': 'e0190261-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:52 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-kZgzf4xWTy6BZ3oawp3DVA/master.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e0190262-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd884-d01e-0094-55ec-9705bb000000'
+    'x-ms-client-request-id': 'e0190262-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:52 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-tn0LoeziQzeTRnLpiQZwuA/data-nxlqwNxTR4mNUaLpOBcozw.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e0190263-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd8d7-d01e-0094-23ec-9705bb000000'
+    'x-ms-client-request-id': 'e0190263-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:52 GMT'
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing/opensearch/6b985fe4-dc3a-4313-a3be-3b4e4c78b047/tests-tn0LoeziQzeTRnLpiQZwuA/master.dat'
+Request method: 'DELETE'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e0190264-03df-11f0-83f0-1f19a05480ab'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 202
+Response headers:
+    'Content-Length': '0'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e7afd924-d01e-0094-68ec-9705bb000000'
+    'x-ms-client-request-id': 'e0190264-03df-11f0-83f0-1f19a05480ab'
+    'x-ms-version': 'REDACTED'
+    'x-ms-delete-type-permanent': 'REDACTED'
+    'Date': 'Tue, 18 Mar 2025 10:00:53 GMT'
