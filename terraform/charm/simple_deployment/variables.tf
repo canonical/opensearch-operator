@@ -80,7 +80,7 @@ variable "endpoint_bindings" {
 variable "self-signed-certificates" {
   description = "Configuration for the self-signed-certificates app"
   type = object({
-    channel     = optional(string, "1/stable")
+    channel     = optional(string, "latest/stable")
     revision    = optional(string, null)
     base        = optional(string, "ubuntu@22.04")
     constraints = optional(string, "arch=amd64")
