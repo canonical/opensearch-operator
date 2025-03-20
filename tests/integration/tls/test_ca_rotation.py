@@ -9,8 +9,6 @@ import pytest
 import requests
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
-
 from ..ha.continuous_writes import ContinuousWrites
 from ..helpers import (
     APP_NAME,
@@ -23,6 +21,7 @@ from ..helpers import (
     get_secret_by_label,
 )
 from ..helpers_deployments import wait_until
+from .test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 
 logger = logging.getLogger(__name__)
 
