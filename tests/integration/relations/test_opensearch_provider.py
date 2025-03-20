@@ -23,7 +23,7 @@ from ..helpers import (
     run_action,
 )
 from ..helpers_deployments import wait_until
-from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import (
     get_application_relation_data,
     ip_to_url,
@@ -67,7 +67,9 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
     new_model_conf["update-status-hook-interval"] = "1m"
 
     config = {"ca-common-name": "CN_CA"}
-    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
+    await ops_test.model.deploy(
+        TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+    )
 
     await ops_test.model.set_config(new_model_conf)
     await asyncio.gather(

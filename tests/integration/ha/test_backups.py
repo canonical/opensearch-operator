@@ -49,7 +49,7 @@ from ..helpers import (
     run_action,
 )
 from ..helpers_deployments import get_application_units, wait_until
-from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import (
     add_juju_secret,
     app_name,
@@ -327,7 +327,9 @@ async def test_small_deployment_build_and_deploy(
     )
 
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+        ),
         ops_test.model.deploy(backup_integrator, channel=backup_integrator_channel),
         ops_test.model.deploy(charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
     )
@@ -383,7 +385,9 @@ async def test_large_deployment_build_and_deploy(
     )
 
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=tls_config
+        ),
         ops_test.model.deploy(backup_integrator, channel=backup_integrator_channel),
         ops_test.model.deploy(
             charm,
@@ -689,7 +693,9 @@ async def test_restore_to_new_cluster(
     config = {"ca-common-name": "CN_CA"}
 
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+        ),
         ops_test.model.deploy(backup_integrator, channel=backup_integrator_channel),
         ops_test.model.deploy(charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
     )
@@ -793,7 +799,9 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest, charm) -> None:
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+        ),
         ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL),
         ops_test.model.deploy(charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
     )

@@ -12,7 +12,7 @@ from pytest_operator.plugin import OpsTest
 
 from ..helpers import CONFIG_OPTS, MODEL_CONFIG, SERIES, get_leader_unit_ip
 from ..helpers_deployments import wait_until
-from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .continuous_writes import ContinuousWrites
 from .helpers import all_nodes
 from .test_horizontal_scaling import IDLE_PERIOD
@@ -47,7 +47,9 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+        ),
         ops_test.model.deploy(
             my_charm,
             application_name=MAIN_APP,
