@@ -195,7 +195,8 @@ class YamlConfigSetter(ConfigSetter):
             lines.append(f"{random_id}: {random_id}")
 
             data = self.yaml.load(StringIO("\n".join(lines)))
-            del data[random_id]
+            if random_id in data:
+                del data[random_id]
 
             return data
 
