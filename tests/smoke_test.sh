@@ -9,18 +9,22 @@ TEST_IDX="test"
 # Default APP name:
 APP="opensearch"
 OSD="opensearch-dashboard"
+URL=
+OSD_PORT=5601
+INTEGRATOR="data-integrator"
 MODEL=
 
 # Error codes
 ERROR_OPTION=1
-ERROR_BASIC_HTTP=2
+#ERROR_BASIC_HTTP=2
 ERROR_CLUSTER_NOT_GREEN=3
 ERROR_CLUSTER_COUNT_WRONG=4
 ERROR_CREATE_INDEX_FAILED=5
-ERROR_SHARDS_NOT_STARTED=6
+#ERROR_SHARDS_NOT_STARTED=6
 ERROR_DELETING_IDX_FAILED=7
 ERROR_INDEXING_DOC_FAILED=8
 ERROR_COUNT_INDEX_DOC_FAILED=9
+ERROR_DASHBOARDS_NOT_ACCESSIBLE=10
 ################################################
 
 
@@ -28,10 +32,12 @@ function usage() {
 cat << EOF
 usage: smoke_test.sh [OPTIONS]
 To be ran / setup once per cluster.
---model            (Required)  Model name for the deployment
---opensearch       (Optional)  Name of the opensearch app to be targeted for these tests
---model            (Optional)  Name of the opensearch-dashboard app to be targeted for these tests
---help                         Shows help menu
+-m            (Required)  Model name for the deployment
+-o            (Optional)  Name of the opensearch app to be targeted for these tests. Defaults to "opensearch"
+-u            (Optional)  OpenSearch dashboards URL. Defaults to empty value.
+-d            (Optional)  Name of the opensearch-dashboard app to be targeted for these tests if the URL is not set. Defaults to "opensearch-dashboard"
+-i            (Optional)  Name of the data-integrator app to be targeted for these tests. Defaults to "data-integrator"
+--help                    Shows help menu
 EOF
 
 exit $ERROR_OPTION
@@ -39,14 +45,20 @@ exit $ERROR_OPTION
 
 while [ $# -gt 0 ]; do
     case $1 in
-        --model) shift
+        -m) shift
             MODEL=$1
             ;;
-        --opensearch) shift
+        -o) shift
             APP=$1
             ;;
-        --dashboard) shift
+        -d) shift
             OSD=$1
+            ;;
+        -u) shift
+            URL=$1
+            ;;
+        -i) shift
+            INTEGRATOR=$1
             ;;
         *)
             usage
@@ -70,7 +82,7 @@ function run_prechecks() {
         echo "Missing juju command"
         exit 1
     fi
-    if ! juju models | grep $MODEL > /dev/null 2>&1; then
+    if ! juju models | grep "$MODEL" > /dev/null 2>&1; then
         echo "Model ${MODEL} not found in Juju"
         exit 1
     fi
@@ -80,16 +92,59 @@ function run_prechecks() {
 # Doing the first checks before moving on
 run_prechecks
 
-# Now, we wait for all apps to be active / idle
-# TODO: FIX THIS WAIT
-#for app in $(juju status -m test --format json | jq -r '.applications | keys[]'); do 
-#    juju wait-for application $app \
-#        --query='name=="$app" && (status=="active" || status=="idle")'
-#done
+# Now, we wait for all apps to be active
+for app in $(juju status -m "${MODEL}" --format json | jq -r '.applications | keys[]'); do 
+    juju wait-for application "$app"
+done
 
 OPENSEARCH_IP=$(juju exec --unit "${APP}"/leader -m "${MODEL}" -- unit-get public-address)
+if [ -z "$URL" ]; then
+    URL=$(juju exec --unit "${OSD}"/leader -m "${MODEL}" -- unit-get public-address)
+else
+    OSD_PORT=443
+fi
+
 OPENSEARCH_USERNAME=$(juju run "$APP"/leader get-password --format=json 2>/dev/null | jq -r '. | values[].results.username')
 OPENSEARCH_PASSWORD=$(juju run "$APP"/leader get-password --format=json 2>/dev/null | jq -r '. | values[].results.password')
+
+INTEGRATOR_USERNAME=$(juju run "$INTEGRATOR"/leader get-credentials --format=json 2>/dev/null | jq -r '. | values[].results' | jq --arg app "$APP" -r '.[$app].username')
+INTEGRATOR_PASSWORD=$(juju run data-integrator/leader get-credentials --format=json 2>/dev/null | jq -r '. | values[].results' | jq --arg app "$APP" -r '.[$app].password')
+
+############################################################
+#                                                          #
+#                                                          #
+#               OPENSEARCH  DASHBOARDS                     #
+#                                                          #
+#                                                          #
+############################################################
+
+function check_dashboards_accessible() {
+    val=$(curl -XPOST -sk -H "Content-Type: application/json" -H "osd-xsrf: true" -d "{\"username\": \"${OPENSEARCH_USERNAME}\", \"password\": \"${OPENSEARCH_PASSWORD}\"}" "https://${URL}:${OSD_PORT}/auth/login" | jq -r .username)
+    if [ "$val" == "null" ] || [ "$val" != "${OPENSEARCH_USERNAME}" ]; then
+        echo "Dashboards is not accessible"
+        exit $ERROR_DASHBOARDS_NOT_ACCESSIBLE
+    fi
+}
+
+function check_integrator_dashboards_accessible() {
+    val=$(curl -XPOST -sk -H "Content-Type: application/json" -H "osd-xsrf: true" -d "{\"username\": \"${INTEGRATOR_USERNAME}\", \"password\": \"${INTEGRATOR_PASSWORD}\"}" "https://${URL}:${OSD_PORT}/auth/login" | jq -r .username)
+    if [ "$val" == "null" ] || [ "$val" != "${INTEGRATOR_USERNAME}" ]; then
+        echo "Dashboards is not accessible"
+        exit $ERROR_DASHBOARDS_NOT_ACCESSIBLE
+    fi
+}
+
+check_dashboards_accessible
+check_integrator_dashboards_accessible
+
+############################################################
+#                                                          #
+#                                                          #
+#               OPENSEARCH                                 #
+#                                                          #
+#                                                          #
+############################################################
+
 
 
 # Now, the basic is all set, we move on to the actual tests
@@ -107,7 +162,7 @@ function check_cluster_node_count() {
     count=$(curl -sk -u "${OPENSEARCH_USERNAME}":"${OPENSEARCH_PASSWORD}" "https://${OPENSEARCH_IP}:9200/_nodes" | jq -r '.nodes | keys[]' | wc -l)
     echo "Cluster node count is $count"
 
-    if [ $count -ne $DEFAULT_NODE_COUNT ]; then
+    if [ "$count" -ne $DEFAULT_NODE_COUNT ]; then
         echo "Cluster node count is different than three"
         exit $ERROR_CLUSTER_COUNT_WRONG
     fi
@@ -141,12 +196,14 @@ function check_create_idx_and_validate_shards() {
 function check_index_data() {
 
     for id in {1..100}; do
-        ack=$(curl -XPUT -sk -u "${OPENSEARCH_USERNAME}":"${OPENSEARCH_PASSWORD}" "https://${OPENSEARCH_IP}:9200/${TEST_IDX}/_doc/${id}" -H 'Content-Type: application/json' -d'{"test": "${id}"}')
+        ack=$(curl -XPUT -sk -u "${OPENSEARCH_USERNAME}":"${OPENSEARCH_PASSWORD}" "https://${OPENSEARCH_IP}:9200/${TEST_IDX}/_doc/${id}" -H 'Content-Type: application/json' -d"{\"test\": \"${id}\"}")
         if [ "$(echo "$ack" | jq -r ._shards.total)" -ne $DEFAULT_NODE_COUNT ]; then
             echo "Data in index is not as expected"
-            exit $ERROR_DATA_NOT_FOUND
+            exit "$ERROR_DATA_NOT_FOUND"
         fi
     done
+
+    sleep 15s
 
     ack=$(curl -sk -u "${OPENSEARCH_USERNAME}":"${OPENSEARCH_PASSWORD}" "https://${OPENSEARCH_IP}:9200/${TEST_IDX}/_count")
     echo "Indexing document count ack: $ack"
