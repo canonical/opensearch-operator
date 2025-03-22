@@ -1,0 +1,124 @@
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:603 Remove backup relation
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:615 Re-add backup credentials relation
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [executing] maintenance: Backup setup started.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  main/0 [idle] active: 
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:624 Syncing credentials for aws
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  main/0 [idle] active: 
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.182.6.77:9200/_recovery?human
+[32mINFO    [0m integration.ha.helpers:helpers.py:246 Continuous writes result: namespace(max_stored_id=354, count=355, last_expected_id=354)
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.182.6.77:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: POST -- https://10.182.6.77:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.182.6.77:9200/series_index/_count
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.182.6.77:9200/_recovery?human
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: POST -- https://10.182.6.77:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.182.6.77:9200/series_index/_count
+[32mINFO    [0m integration.ha.helpers:helpers.py:590 Testing restore for series_index - original count pre-restore: 355, and now, new count: 317
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: POST -- https://10.182.6.77:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.182.6.77:9200/series_index/_count
+[32mINFO    [0m integration.ha.conftest:conftest.py:47 
+
+
+
+The writes have been cleared.
+
+
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.6.4    unsupported  02:15:27Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+failover                           active      2  opensearch                                 0  no       
+main                               active      1  opensearch                                 2  no       
+opensearch                         active      1  opensearch                                 1  no       
+s3-integrator                      active      1  s3-integrator             latest/edge    143  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+failover/0*                  active    idle   4        10.182.6.154    9200/tcp  
+failover/1                   active    idle   5        10.182.6.173    9200/tcp  
+main/0*                      active    idle   2        10.182.6.77     9200/tcp  
+opensearch/0*                active    idle   3        10.182.6.68     9200/tcp  
+s3-integrator/0*             active    idle   0        10.182.6.81               
+self-signed-certificates/0*  active    idle   1        10.182.6.199              
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.182.6.81   juju-603f8d-0  ubuntu@22.04      Running
+1        started  10.182.6.199  juju-603f8d-1  ubuntu@22.04      Running
+2        started  10.182.6.77   juju-603f8d-2  ubuntu@22.04      Running
+3        started  10.182.6.68   juju-603f8d-3  ubuntu@22.04      Running
+4        started  10.182.6.154  juju-603f8d-4  ubuntu@22.04      Running
+5        started  10.182.6.173  juju-603f8d-5  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-2: 01:49:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:49:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-main-0: 01:49:13 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:49:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:49:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-0: 01:49:34 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:49:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:49:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:49:51 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-5: 01:49:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:49:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-1: 01:49:51 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:50:02 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:50:02 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:50:02 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:50:52 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:50:52 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-s3-integrator-0: 01:50:52 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-main-0: 02:02:36 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 02:02:59 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 02:03:17 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 02:03:36 ERROR unit.main/0.juju-log peer-cluster-orchestrator:10: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 02:03:52 ERROR unit.main/0.juju-log peer-cluster-orchestrator:10: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 02:04:19 ERROR unit.main/0.juju-log opensearch-peers:4: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 02:04:35 ERROR unit.main/0.juju-log opensearch-peers:4: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 02:04:59 ERROR unit.main/0.juju-log opensearch-peers:4: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 02:05:16 ERROR unit.main/0.juju-log opensearch-peers:4: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 02:05:58 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 02:06:15 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 02:06:42 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-main-0: 02:07:01 ERROR unit.main/0.juju-log s3-credentials:16: Failed to setup backup service with state Repository exception: unknown
+unit-s3-integrator-0: 02:09:58 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "0a41c193-8da5-4bd9-8048-44b79b603f8d:r#16#main": settings 0a41c193-8da5-4bd9-8048-44b79b603f8d:r#16#main not found (not found)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:198 Cleaning backups from cloud buckets
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:509 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.24.1 Python/3.10.12 (Linux-6.8.0-52-generic-x86_64-with-glibc2.35)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': '86f1993c-06c3-11f0-82c3-0b5742f7493d'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:545 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': '4603a557-f01e-0058-59d0-9a6a8d000000'
+    'x-ms-client-request-id': '86f1993c-06c3-11f0-82c3-0b5742f7493d'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Sat, 22 Mar 2025 02:15:30 GMT'
