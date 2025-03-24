@@ -755,8 +755,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             event.defer()
             return
 
-        # register in the 'main/failover'-CMs / save the number of planned units of the current app
-        self._put_current_app(event, deployment_desc)
+        if event.relation.app:
+            # register in the 'main/failover'-CMs the number of planned units of the current app
+            self._put_current_app(event.relation.id, deployment_desc)
 
         if not (data := event.relation.data.get(event.app)):
             return
@@ -936,14 +937,14 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             rel_id=orchestrators.main_rel_id,
         )
 
-    def _put_current_app(
-        self, event: RelationEvent, deployment_desc: DeploymentDescription
-    ) -> None:
-        """Report the current app on the peer cluster rel data to be broadcast to all apps."""
-        # this guards against a deferred event from an already departed orchestrator
-        if not event.relation.app:
-            return
+    def refresh_relation_data(self) -> None:
+        """Refresh the peer cluster rel data (planned units)."""
+        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
+        for rel in self.model.relations[self.relation_name]:
+            self._put_current_app(rel.id, deployment_desc)
 
+    def _put_current_app(self, rel_id: int, deployment_desc: DeploymentDescription) -> None:
+        """Report the current app on the peer cluster rel data to be broadcast to all apps."""
         current_app = PeerClusterApp(
             app=deployment_desc.app,
             planned_units=self.charm.app.planned_units(),
@@ -952,10 +953,10 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             ],
             roles=deployment_desc.config.roles,
         )
-        self.put_in_rel(data={"app": current_app.to_str()}, rel_id=event.relation.id)
+        self.put_in_rel(data={"app": current_app.to_str()}, rel_id=rel_id)
 
         # update content of fleet in the current app's peer databag
-        cluster_fleet_apps = self.get_obj_from_rel("cluster_fleet_apps", rel_id=event.relation.id)
+        cluster_fleet_apps = self.get_obj_from_rel("cluster_fleet_apps", rel_id=rel_id)
         cluster_fleet_apps.update({deployment_desc.app.id: current_app.to_dict()})
 
         self.charm.peers_data.put_object(Scope.APP, "cluster_fleet_apps", cluster_fleet_apps)

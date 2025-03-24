@@ -555,7 +555,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             unit_name=format_unit_name(event.departing_unit.name, deployment_desc.app)
         )
 
-    def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):  # noqa: C901
+    def _on_opensearch_data_storage_detaching(self, event: StorageDetachingEvent):  # noqa: C901
         """Triggered when removing unit, Prior to the storage being detached."""
         if self.upgrade_in_progress:
             logger.warning(
@@ -577,9 +577,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     if node.name != self.unit_name
                 ]
                 self._compute_and_broadcast_updated_topology(remaining_nodes)
-            elif self.app.planned_units() == 0 and self.model.get_relation(PeerRelationName):
-                self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")
-                self.peers_data.delete(Scope.APP, "nodes_config")
+            elif self.app.planned_units() == 0:
+                if self.model.get_relation(PeerRelationName):
+                    self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")
+                    self.peers_data.delete(Scope.APP, "nodes_config")
+                if self.opensearch_peer_cm.is_provider():
+                    self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+                if self.model.relations.get(PeerClusterRelationName):
+                    self.peer_cluster_requirer.refresh_relation_data()
 
         # we attempt to flush the translog to disk
         if self.opensearch.is_node_up():
