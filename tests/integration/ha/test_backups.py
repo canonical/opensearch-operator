@@ -132,6 +132,14 @@ async def force_clear_cwrites_index():
         pass
 
 
+def skip_microceph() -> "pytest.mark.skipif":
+    """Skip tests that require microceph."""
+    return pytest.mark.skipif(
+        "CI" not in os.environ or os.environ["CI"] != "true",
+        reason=f"Skipping test as substrate:{chosen_cloud} not in {allowed_clouds}",
+    )
+
+
 @pytest.fixture(scope="session")
 def cloud_configs(
     github_secrets: Dict[str, str], microceph: Dict[str, str]
