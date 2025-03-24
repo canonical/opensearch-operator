@@ -135,45 +135,44 @@ async def test_upgrade_between_versions(
         )
         assert action.status == "completed"
 
-        async with ops_test.fast_forward():
-            logger.info("Refresh the charm")
-            await refresh(ops_test, app, revision=rev)
+        logger.info("Refresh the charm")
+        await refresh(ops_test, app, revision=rev)
 
-            await wait_until(
-                ops_test,
-                apps=[app],
-                apps_statuses=["blocked"],
-                units_statuses=["active"],
-                wait_for_exact_units={
-                    APP_NAME: 3,
-                },
-                timeout=1400,
-                idle_period=IDLE_PERIOD,
-            )
+        await wait_until(
+            ops_test,
+            apps=[app],
+            apps_statuses=["blocked"],
+            units_statuses=["active"],
+            wait_for_exact_units={
+                APP_NAME: 3,
+            },
+            timeout=1400,
+            idle_period=IDLE_PERIOD,
+        )
 
-            logger.info("Upgrade finished")
-            # Resume the upgrade
-            action = await run_action(
-                ops_test,
-                leader_id,
-                "resume-upgrade",
-                app=app,
-            )
-            logger.info(action)
-            assert action.status == "completed"
+        logger.info("Upgrade finished")
+        # Resume the upgrade
+        action = await run_action(
+            ops_test,
+            leader_id,
+            "resume-upgrade",
+            app=app,
+        )
+        logger.info(action)
+        assert action.status == "completed"
 
-            logger.info("Refresh is over, waiting for the charm to settle")
-            await wait_until(
-                ops_test,
-                apps=[app],
-                apps_statuses=["active"],
-                units_statuses=["active"],
-                wait_for_exact_units={
-                    APP_NAME: 3,
-                },
-                timeout=1400,
-                idle_period=IDLE_PERIOD,
-            )
+        logger.info("Refresh is over, waiting for the charm to settle")
+        await wait_until(
+            ops_test,
+            apps=[app],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            wait_for_exact_units={
+                APP_NAME: 3,
+            },
+            timeout=1400,
+            idle_period=IDLE_PERIOD,
+        )
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
@@ -231,62 +230,61 @@ async def test_upgrade_rollback_from_local(
     if not charm:
         charm = await ops_test.build_charm(".")
 
-    async with ops_test.fast_forward():
-        logger.info("Refresh the charm")
-        await refresh(ops_test, app, path=charm, config={"profile": "testing"})
+    logger.info("Refresh the charm")
+    await refresh(ops_test, app, path=charm, config={"profile": "testing"})
 
-        await wait_until(
-            ops_test,
-            apps=[app],
-            apps_statuses=["blocked"],
-            units_statuses=["active"],
-            wait_for_exact_units={
-                APP_NAME: 3,
-            },
-            timeout=1400,
-            idle_period=IDLE_PERIOD,
-        )
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["blocked"],
+        units_statuses=["active"],
+        wait_for_exact_units={
+            APP_NAME: 3,
+        },
+        timeout=1400,
+        idle_period=IDLE_PERIOD,
+    )
 
-        logger.info(f"Rolling back to {version}")
-        # TODO: return to 2/edge channel instead once this channel's latest 2.17 charm
-        # revision points to snap rev. 65 instead of snap rev. 62.
-        await refresh(
-            ops_test,
-            app,
-            switch=OPENSEARCH_ORIGINAL_CHARM_NAME,
-            channel=OPENSEARCH_STABLE_CHANNEL,
-        )
-        # Wait until we are set in an idle state and can rollback the revision.
-        # app status blocked: that will happen if we are jumping N-2 versions in our test
-        # app status active: that will happen if we are jumping N-1 in our test
-        await wait_until(
-            ops_test,
-            apps=[app],
-            apps_statuses=["active", "blocked"],
-            units_statuses=["active"],
-            wait_for_exact_units={
-                APP_NAME: 3,
-            },
-            timeout=1400,
-            idle_period=IDLE_PERIOD,
-        )
-        await refresh(
-            ops_test,
-            app,
-            revision=VERSION_TO_REVISION[version],
-        )
+    logger.info(f"Rolling back to {version}")
+    # TODO: return to 2/edge channel instead once this channel's latest 2.17 charm
+    # revision points to snap rev. 65 instead of snap rev. 62.
+    await refresh(
+        ops_test,
+        app,
+        switch=OPENSEARCH_ORIGINAL_CHARM_NAME,
+        channel=OPENSEARCH_STABLE_CHANNEL,
+    )
+    # Wait until we are set in an idle state and can rollback the revision.
+    # app status blocked: that will happen if we are jumping N-2 versions in our test
+    # app status active: that will happen if we are jumping N-1 in our test
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["active", "blocked"],
+        units_statuses=["active"],
+        wait_for_exact_units={
+            APP_NAME: 3,
+        },
+        timeout=1400,
+        idle_period=IDLE_PERIOD,
+    )
+    await refresh(
+        ops_test,
+        app,
+        revision=VERSION_TO_REVISION[version],
+    )
 
-        await wait_until(
-            ops_test,
-            apps=[app],
-            apps_statuses=["active"],
-            units_statuses=["active"],
-            wait_for_exact_units={
-                APP_NAME: 3,
-            },
-            timeout=1400,
-            idle_period=IDLE_PERIOD,
-        )
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units={
+            APP_NAME: 3,
+        },
+        timeout=1400,
+        idle_period=IDLE_PERIOD,
+    )
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
