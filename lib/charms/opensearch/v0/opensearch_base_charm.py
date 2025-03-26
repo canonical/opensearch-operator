@@ -1495,7 +1495,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         ):
             return []
 
-        return ClusterTopology.nodes(self.opensearch, use_localhost, self.alt_hosts)
+        nodes = ClusterTopology.nodes(self.opensearch, use_localhost, self.alt_hosts)
+        if cluster_fleet_apps := self.peers_data.get_object(Scope.APP, "cluster_fleet_apps"):
+            has_planned_units = (
+                lambda node: node.app.id in cluster_fleet_apps
+                and cluster_fleet_apps[node.app.id]["planned_units"] != 0
+            )
+            nodes = [node for node in nodes if has_planned_units(node)]
+
+        return nodes
 
     def _set_node_conf(self, nodes: List[Node]) -> None:
         """Set the configuration of the current node / unit."""
