@@ -108,8 +108,9 @@ OPENSEARCH_CREDENTIALS=$(juju run "${APP}"/leader get-password --format=json 2>/
 OPENSEARCH_USERNAME=$(echo "${OPENSEARCH_CREDENTIALS}" | jq -r '. | values[].results.username')
 OPENSEARCH_PASSWORD=$(echo "${OPENSEARCH_CREDENTIALS}" | jq -r '. | values[].results.password')
 
-INTEGRATOR_USERNAME=$(juju run "$INTEGRATOR"/leader get-credentials --format=json 2>/dev/null | jq -r '. | values[].results' | jq --arg app "$APP" -r '.[$app].username')
-INTEGRATOR_PASSWORD=$(juju run data-integrator/leader get-credentials --format=json 2>/dev/null | jq -r '. | values[].results' | jq --arg app "$APP" -r '.[$app].password')
+INTEGRATOR_CREDENTIALS=$(juju run "$INTEGRATOR"/leader get-credentials --format=json 2>/dev/null)
+INTEGRATOR_USERNAME=$(echo "${INTEGRATOR_CREDENTIALS}" | jq -r '. | values[].results' | jq --arg app "$APP" -r '.[$app].username')
+INTEGRATOR_PASSWORD=$(echo "${INTEGRATOR_CREDENTIALS}" | jq -r '. | values[].results' | jq --arg app "$APP" -r '.[$app].password')
 
 ############################################################
 #                                                          #
