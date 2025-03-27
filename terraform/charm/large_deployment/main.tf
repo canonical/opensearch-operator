@@ -41,6 +41,7 @@ module "opensearch_main" {
   constraints       = var.main.constraints
   storage           = var.main.storage
   endpoint_bindings = var.main.endpoint_bindings
+  expose            = var.main.expose
 
   self-signed-certificates = var.self-signed-certificates
 }
@@ -64,6 +65,7 @@ module "opensearch_failover" {
   constraints       = var.failover.constraints
   storage           = var.failover.storage
   endpoint_bindings = var.failover.endpoint_bindings
+  expose            = var.failover.expose
 }
 
 # all non orchestrator apps
@@ -84,6 +86,7 @@ module "opensearch_non_orchestrator_apps" {
   model       = each.value.model
   constraints = each.value.constraints
   storage     = each.value.storage
+  expose      = each.value.expose
 }
 
 #--------------------------------------------------------
