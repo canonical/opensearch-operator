@@ -355,7 +355,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             event.defer()
 
     def _delete_rel_data_on_error(self, rel_id: int) -> None:
-        """Deletes relation data when an error is about to be broadcasted"""
+        """Deletes relation data when an error is broadcasted"""
         self.delete_from_rel("cluster_fleet_apps", rel_id=rel_id)
         self.delete_from_rel("data", rel_id=rel_id)
         self.delete_from_rel("rel_data_hash", rel_id=rel_id)
