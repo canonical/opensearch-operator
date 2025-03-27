@@ -395,8 +395,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             units=[format_unit_name(u, app=deployment_desc.app) for u in all_units(self.charm)],
             roles=deployment_desc.config.roles,
         )
-
         cluster_fleet_apps.update({current_app.app.id: current_app.to_dict()})
+
         if p_cluster_app:
             cluster_fleet_apps.update({p_cluster_app.app.id: p_cluster_app.to_dict()})
 
@@ -769,9 +769,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             return
 
         # register in the 'main/failover'-CMs the number of planned units of the current app
-        if (
-            event.relation.active
-        ):  # guard against updating a relation with an already departed orchestrator
+        if event.relation.active:  # ensure not deferred event from departed orchestrator
             self._put_current_app(event.relation.id, deployment_desc)
 
         if not (data := event.relation.data.get(event.app)):
@@ -1000,7 +998,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # handle scale-down at the charm level storage detaching, or??
         if (
-            relation_departure_reason(self.charm, self.relation_name, event.app.name)
+            relation_departure_reason(
+                self.charm, self.relation_name, event.app.name if event.app else ""
+            )
             == RelDepartureReason.SCALE_DOWN
         ):
             return
