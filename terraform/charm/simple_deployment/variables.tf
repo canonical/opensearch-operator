@@ -79,7 +79,7 @@ variable "endpoint_bindings" {
 }
 
 variable "expose" {
-  description = "Expose the application"
+  description = "Expose the application for external access."
   type        = bool
   default     = false
 }
