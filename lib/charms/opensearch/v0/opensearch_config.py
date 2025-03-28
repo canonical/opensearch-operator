@@ -99,6 +99,11 @@ class OpenSearchConfig:
             self.SECURITY_CONFIG_YML, "config/dynamic/authc/openid_auth_domain", oidc_config
         )
 
+    def remove_oidc_auth(self):
+        self._opensearch.config.delete(
+            self.SECURITY_CONFIG_YML, "config/dynamic/authc/openid_auth_domain"
+        )
+
     def apply_performance_profile(self, profile: OpenSearchPerfProfile):
         """Apply the performance profile to the opensearch config."""
         self._opensearch.config.replace(

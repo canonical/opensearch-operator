@@ -13,7 +13,7 @@ from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.models import StartMode
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from ops import EventBase, Object
+from ops import EventBase, Object, RelationBrokenEvent, RelationDepartedEvent
 
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
@@ -39,7 +39,10 @@ class OAuthHandler(Object):
             self.charm.on[OAUTH_RELATION].relation_changed, self._on_oauth_relation_changed
         )
         self.framework.observe(
-            self.charm.on[OAUTH_RELATION].relation_broken, self._on_oauth_relation_changed
+            self.charm.on[OAUTH_RELATION].relation_departed, self._on_oauth_relation_departed
+        )
+        self.framework.observe(
+            self.charm.on[OAUTH_RELATION].relation_broken, self._on_oauth_relation_broken
         )
 
     def _on_oauth_relation_changed(self, event: EventBase) -> None:
@@ -47,32 +50,59 @@ class OAuthHandler(Object):
 
         Updates the security config.yml with the OIDC info and update the cluster.
         """
-        if (
-            not (relation := self.model.get_relation(OAUTH_RELATION))
-            or not relation.data[relation.app]
-        ):
-            logger.info("Oauth relation not yet set up")
+        if not self.charm.unit.is_leader():
             return
 
+        relation = self.model.get_relation(OAUTH_RELATION)
+        if not relation.data[relation.app]:
+            logger.debug("Oauth relation not yet set up")
+            return
+
+        if not self.charm.peers_data.get(Scope.APP, "security_index_initialised") or (
+            "data" not in self.charm.opensearch_peer_cm.deployment_desc().config.roles
+            and self.charm.opensearch_peer_cm.deployment_desc().start
+            != StartMode.WITH_GENERATED_ROLES
+        ):
+            logger.debug("Deferring oauth relation changed event as cluster is not ready yet")
+            event.defer()
+
+        self.charm.opensearch_config.add_oidc_auth(
+            openid_connect_url=f"{relation.data[relation.app].get('issuer_url')}/.well-known/openid-configuration"
+        )
+
+        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        try:
+            self.charm.update_security_config(admin_secrets)
+        except OpenSearchCmdError as e:
+            logger.debug(f"Error when updating the security index: {e.out}")
+            event.defer()
+            return
+
+    def _on_oauth_relation_departed(self, event: RelationDepartedEvent) -> None:
+        if event.departing_unit == self.charm.unit and self.charm.peers_data is not None:
+            self.charm.peers_data.put(Scope.UNIT, "departing", True)
+        pass
+
+    def _on_oauth_relation_broken(self, event: RelationBrokenEvent) -> None:
         if (
-            self.charm.unit.is_leader()
-            # First wait until "normal" initialization is finished
-            and self.charm.peers_data.get(Scope.APP, "security_index_initialised")
-            and (
-                "data" in self.charm.opensearch_peer_cm.deployment_desc().config.roles
-                or self.charm.opensearch_peer_cm.deployment_desc().start
-                == StartMode.WITH_GENERATED_ROLES
+            not self.charm.unit.is_leader()
+            or not self.charm.peers_data is not None
+            or self.charm.peers_data.get(Scope.UNIT, "departing")
+            or not self.charm.peers_data.get(Scope.APP, "security_index_initialised")
+            or (
+                "data" not in self.charm.opensearch_peer_cm.deployment_desc().config.roles
+                and self.charm.opensearch_peer_cm.deployment_desc().start
+                != StartMode.WITH_GENERATED_ROLES
             )
         ):
-            self.charm.opensearch_config.add_oidc_auth(
-                openid_connect_url=f"{relation.data[relation.app].get('issuer_url')}/.well-known/openid-configuration"
-            )
+            return
 
-            admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-            try:
-                self.charm.update_security_config(admin_secrets)
+        self.charm.opensearch_config.remove_oidc_auth()
 
-            except OpenSearchCmdError as e:
-                logger.debug(f"Error when updating the security index: {e.out}")
-                event.defer()
-                return
+        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        try:
+            self.charm.update_security_config(admin_secrets)
+        except OpenSearchCmdError as e:
+            logger.debug(f"Error when updating the security index: {e.out}")
+            event.defer()
+            return
