@@ -1,0 +1,44 @@
+name: TICS run self-hosted test (github-action)
+
+on:
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  build:
+    runs-on: [self-hosted, linux, amd64, tiobe, jammy]
+
+    steps:
+      - name: Checkout the project
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y python3.10-venv
+
+      - name: Install pipx
+        run: python3 -m pip install --user pipx && python3 -m pipx ensurepath
+
+      - name: Add pipx to PATH
+        run: echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+
+      - name: Install tox and poetry using pipx
+        run: |
+          pipx install tox
+          pipx install poetry
+
+      - name: Run tox tests to create coverage.xml
+        run: tox run -e unit
+
+      - name: move results to necessary folder for TICS
+        run: |
+          mkdir .cover
+          mv coverage.xml .cover/coverage.xml
+
+      - name: Run TICS analysis with github-action
+        uses: tiobe/tics-github-action@v3
+        with:
+          mode: qserver
+          project: mongodb-operator
+          branchdir: .
+          viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=default
+          ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
+          installTics: true
