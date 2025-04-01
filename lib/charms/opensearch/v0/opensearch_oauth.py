@@ -70,9 +70,13 @@ class OAuthHandler(Object):
             openid_connect_url=f"{relation.data[relation.app].get('issuer_url')}/.well-known/openid-configuration"
         )
 
-        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        if not (admin_secrets := self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)):
+            event.defer()
+            return
         try:
-            self.charm.update_security_config(admin_secrets)
+            self.charm.update_security_config(
+                admin_secrets, self.charm.opensearch_config.SECURITY_CONFIG_YML
+            )
         except OpenSearchCmdError as e:
             logger.debug(f"Error when updating the security index: {e.out}")
             event.defer()
@@ -99,9 +103,13 @@ class OAuthHandler(Object):
 
         self.charm.opensearch_config.remove_oidc_auth()
 
-        admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+        if not (admin_secrets := self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)):
+            event.defer()
+            return
         try:
-            self.charm.update_security_config(admin_secrets)
+            self.charm.update_security_config(
+                admin_secrets, self.charm.opensearch_config.SECURITY_CONFIG_YML
+            )
         except OpenSearchCmdError as e:
             logger.debug(f"Error when updating the security index: {e.out}")
             event.defer()

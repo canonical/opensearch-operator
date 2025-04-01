@@ -1461,20 +1461,20 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         )
         self.status.clear(SecurityIndexInitProgress)
 
-    def update_security_config(self, admin_secrets: Dict[str, any]) -> None:
-        """Run the security_admin script.
+    def update_security_config(self, admin_secrets: Dict[str, any], file: str) -> None:
+        """Run the security_admin script for the provided config file, avoiding changes to others."""
+        if not file.startswith("opensearch-security"):
+            raise ValueError("security config is expected")
 
-        This will only update with the config.yml contents, avoiding changes to users and ACLs.
-        """
         args = [
-            f"-f {self.opensearch.paths.conf}/opensearch-security/config.yml",
+            f"-f {self.opensearch.paths.conf}/{file}",
             f"-cn {self.opensearch_peer_cm.deployment_desc().config.cluster_name}",
             f"-h {self.unit_ip}",
             f"-ts {self.opensearch.paths.certs}/ca.p12",
-            f"-tspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['truststore-password']}",
+            f"-tspass {admin_secrets['truststore-password']}",
             "-tst PKCS12",
             f"-ks {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.p12",
-            f"-kspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['keystore-password']}",
+            f"-kspass {admin_secrets['keystore-password']}",
             "-kst PKCS12",
         ]
 
