@@ -103,7 +103,7 @@ from charms.opensearch.v0.constants_secrets import (
 )
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import DeploymentType, S3RelData
+from charms.opensearch.v0.models import AzureRelData, DeploymentType, Model, S3RelData
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
@@ -276,7 +276,7 @@ class BackupManager:
         """Executes broken API calls."""
         return  # do not execute anything as we intend to keep the backups untouched
 
-    def register_snapshot_repo(self, plugin) -> Dict[str, Any]:
+    def register(self, data: Dict[str, Any] | None) -> Dict[str, Any]:
         """Registers the snapshot repo in the cluster.
 
         Returns the API call's response or raises an HTTP error.
@@ -284,14 +284,14 @@ class BackupManager:
         Raises:
           - OpenSearchHttpError
         """
-        if not plugin.data:
+        if not data:
             return BackupServiceState.REPO_ERR_UNKNOWN
         response = self.charm.opensearch.request(
             "PUT",
             f"_snapshot/{self.repository}",
             payload={
                 "type": "s3" if self.repository == S3_REPOSITORY else "azure",
-                "settings": plugin.data.dict(exclude={"tls_ca_chain", "credentials"}),
+                "settings": data,
             },
             retries=6,
             timeout=10,
@@ -749,11 +749,11 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         plugins = [
             OpenSearchS3Plugin(
                 charm=self.charm,
-                data=data.credentials.s3,
+                relation_data=data.credentials.s3,
             ),
             OpenSearchAzurePlugin(
                 charm=self.charm,
-                data=data.credentials.azure,
+                relation_data=data.credentials.azure,
             ),
         ]
 
@@ -819,8 +819,13 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
         ...
 
     @property
+    def data(self) -> Model | None:
+        """Returns the data for the backup backend."""
+        ...
+
+    @property
     def _plugin_status(self):
-        return self.charm.plugin_manager.get_plugin_status(type(self.plugin))
+        return self.charm.plugin_manager.status(self.plugin)
 
     @override
     def _on_backup_relation_event(self, event: RelationEvent) -> None:
@@ -965,6 +970,9 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
             # in this case, seems one of the conditions above is not yet present
             # abandon this restart event, as it will be called later once s3 configuration
             # is correctly set
+            self.charm.status.clear(PluginConfigError)
+            self.charm.status.clear(BackupSetupStart)
+            self.charm.status.clear(BackupRelDataIncomplete)
             return
 
         self.charm.status.set(MaintenanceStatus(BackupSetupStart))
@@ -1010,9 +1018,9 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
             # Finish here and wait for the user to reconfigure it and retrigger a new event
             event.defer()
             return
-        self.charm.status.clear(BackupRelDataIncomplete)
         self.charm.status.clear(PluginConfigError)
         self.charm.status.clear(BackupSetupStart)
+        self.charm.status.clear(BackupRelDataIncomplete)
 
     def apply_api_config_if_needed(self) -> None:
         """Runs the post restart routine and API calls needed to setup/disable backup.
@@ -1028,10 +1036,9 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
         self.charm.status.set(MaintenanceStatus(BackupConfigureStart))
         #     (2) run the request; and
         try:
-            state = self.get_service_status(
-                self.backup_manager.register_snapshot_repo(self.plugin)
-            )
-        except OpenSearchHttpError:
+            state = self.get_service_status(self.backup_manager.register(self.data))
+        except OpenSearchHttpError as e:
+            logger.error(f"Failed to setup backup service with exception: {e}")
             state = BackupServiceState.REPO_ERR_UNKNOWN
         #     (3) based on the response, set the message status
         if state != BackupServiceState.SUCCESS:
@@ -1130,6 +1137,13 @@ class OpenSearchS3Backup(OpenSearchMainBackup):
         )
 
     @property
+    def _model(self) -> S3RelData | None:
+        if relation := self.charm.model.get_relation(S3_RELATION):
+            if data := S3RelData.from_relation(dict(relation.data[relation.app])):
+                return data
+        return None
+
+    @property
     @override
     def plugin(self) -> OpenSearchS3Plugin:
         """Returns the plugin for this class."""
@@ -1137,6 +1151,14 @@ class OpenSearchS3Backup(OpenSearchMainBackup):
             if data := S3RelData.from_relation(dict(relation.data[relation.app])):
                 return OpenSearchS3Plugin(self.charm, data.credentials)
         return OpenSearchS3Plugin(self.charm, relation_data=None)
+
+    @property
+    @override
+    def data(self) -> Dict[str, Any] | None:
+        """Returns the data for the backup backend."""
+        if self._model:
+            return self._model.dict(exclude={"tls_ca_chain", "credentials"})
+        return None
 
     @override
     def get_service_status(self, response: dict[str, Any] | None) -> BackupServiceState:
@@ -1171,19 +1193,36 @@ class OpenSearchAzureBackup(OpenSearchMainBackup):
             self.client.on.storage_connection_info_gone,
             self._on_backup_credentials_changed,
         )
+        self._relation = self.charm.model.get_relation(AZURE_RELATION)
+
+    @property
+    def _model(self) -> AzureRelData | None:
+        if RequirerData(
+            model=self.charm.model,
+            relation_name=AZURE_RELATION,
+            additional_secret_fields=["secret-key"],
+        ):
+            if (data := self._requirer.fetch_relation_data()) and self._relation.id in data:
+                return AzureRelData.from_relation(data[self._relation.id])
+        return None
 
     @property
     @override
     def plugin(self) -> OpenSearchAzurePlugin:
         """Returns the plugin for this class."""
-        if azure_data_endpoint := RequirerData(
-            model=self._charm.model,
-            relation_name=AZURE_RELATION,
-            additional_secret_fields=["secret-key"],
-        ):
-            if data := azure_data_endpoint.fetch_relation_data():
-                return OpenSearchAzurePlugin(self.charm, data.credentials)
-        return OpenSearchAzurePlugin(self.charm, relation_data=None)
+        if not self._model:
+            return OpenSearchAzurePlugin(self.charm, relation_data=None)
+        return OpenSearchAzurePlugin(self.charm, relation_data=self._model.credentials)
+
+    @property
+    @override
+    def data(self) -> Dict[str, Any] | None:
+        """Returns the data for the backup backend."""
+        if not self._model:
+            return None
+        to_include = {"container", "base_path"}
+        settings = {k: self._model.dict()[k] for k in to_include}
+        return settings
 
     @override
     def get_service_status(self, response: dict[str, Any] | None) -> BackupServiceState:

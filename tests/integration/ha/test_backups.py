@@ -363,6 +363,9 @@ async def test_large_deployment_build_and_deploy(
     The data node is selected to adopt the "APP_NAME" value because it is the node which
     ContinuousWrites will later target its writes to.
     """
+    if await app_name(ops_test):
+        return
+
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
     tls_config = {"ca-common-name": "CN_CA"}
