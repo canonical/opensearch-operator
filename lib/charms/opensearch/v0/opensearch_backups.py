@@ -78,6 +78,7 @@ import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, Optional, Set
 
+from charms.data_platform_libs.v0.data_interfaces import RequirerData
 from charms.data_platform_libs.v0.object_storage import AzureStorageRequires
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.opensearch.v0.constants_charm import (
@@ -102,7 +103,7 @@ from charms.opensearch.v0.constants_secrets import (
 )
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import DeploymentType
+from charms.opensearch.v0.models import DeploymentType, S3RelData
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
@@ -738,7 +739,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
             self.framework.observe(event, self._on_peer_cluster_relation_event)
 
     @override
-    def _on_secret_changed(self, event: SecretEvent) -> None:
+    def _on_secret_changed(self, event: SecretEvent) -> None:  # noqa: C901
         """Processes the secret changes."""
         try:
             if not any(
@@ -755,12 +756,20 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
             logger.warning("Secret not found, abandoning secret event")
             return
 
-        event.secret.get_content(refresh=True)
-        self._on_peer_cluster_relation_event(event)
+        if not (data := self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)):
+            event.defer()
+            return
 
-    def _on_peer_cluster_relation_event(self, event):
-        """Processes the peer-cluster relation events."""
-        plugins = [OpenSearchS3Plugin(charm=self.charm), OpenSearchAzurePlugin(charm=self.charm)]
+        plugins = [
+            OpenSearchS3Plugin(
+                charm=self.charm,
+                data=data.credentials.s3,
+            ),
+            OpenSearchAzurePlugin(
+                charm=self.charm,
+                data=data.credentials.azure,
+            ),
+        ]
 
         for plugin in plugins:
             # Early check to avoid trying to configure both with empty credentials
@@ -774,6 +783,8 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
                 logger.info(f"{plugin.name}: not ready, we wait for another peer cluster.")
             except OpenSearchPluginMissingConfigError as e:
                 logger.info(f"Missing configs for {plugin.name}: {e}")
+
+        event.secret.get_content(refresh=True)
 
     @override
     def _on_backup_relation_event(self, event: RelationEvent) -> None:
@@ -1136,7 +1147,10 @@ class OpenSearchS3Backup(OpenSearchMainBackup):
     @override
     def plugin(self) -> OpenSearchS3Plugin:
         """Returns the plugin for this class."""
-        return OpenSearchS3Plugin(self.charm)
+        if relation := self.charm.model.get_relation(S3_RELATION):
+            if data := S3RelData.from_relation(dict(relation.data[relation.app])):
+                return OpenSearchS3Plugin(self.charm, data.credentials)
+        return OpenSearchS3Plugin(self.charm, relation_data=None)
 
     @override
     def get_service_status(self, response: dict[str, Any] | None) -> BackupServiceState:
@@ -1171,6 +1185,19 @@ class OpenSearchAzureBackup(OpenSearchMainBackup):
             self.client.on.storage_connection_info_gone,
             self._on_backup_credentials_changed,
         )
+
+    @property
+    @override
+    def plugin(self) -> OpenSearchAzurePlugin:
+        """Returns the plugin for this class."""
+        if azure_data_endpoint := RequirerData(
+            model=self._charm.model,
+            relation_name=AZURE_RELATION,
+            additional_secret_fields=["secret-key"],
+        ):
+            if data := azure_data_endpoint.fetch_relation_data():
+                return OpenSearchAzurePlugin(self.charm, data.credentials)
+        return OpenSearchAzurePlugin(self.charm, relation_data=None)
 
     @property
     @override
