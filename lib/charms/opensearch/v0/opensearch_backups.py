@@ -1199,12 +1199,6 @@ class OpenSearchAzureBackup(OpenSearchMainBackup):
                 return OpenSearchAzurePlugin(self.charm, data.credentials)
         return OpenSearchAzurePlugin(self.charm, relation_data=None)
 
-    @property
-    @override
-    def plugin(self) -> OpenSearchAzurePlugin:
-        """Returns the plugin for this class."""
-        return OpenSearchAzurePlugin(self.charm)
-
     @override
     def get_service_status(self, response: dict[str, Any] | None) -> BackupServiceState:
         """Returns the response status in a Enum."""
