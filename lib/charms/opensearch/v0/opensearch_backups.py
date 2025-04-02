@@ -724,20 +724,6 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
                 self.charm.on[relation].relation_broken, self._on_backup_relation_broken
             )
 
-        for event in [
-            charm.on[PeerClusterRelationName].relation_joined,
-            charm.on[PeerClusterRelationName].relation_changed,
-            charm.on[PeerClusterRelationName].relation_broken,
-        ]:
-            # We need to keep track of the peer-cluster relation
-            # A unit-level secret will not trigger secret changes, nor an app-level secret
-            # change will trigger an update in its leader.
-
-            # Listening to the peer cluster relation is another alternative:
-            # Effectively it will call the common method that both _on_secret_changed and
-            # _on_peer_cluster_relation_event uses to update the keystore.
-            self.framework.observe(event, self._on_peer_cluster_relation_event)
-
     @override
     def _on_secret_changed(self, event: SecretEvent) -> None:  # noqa: C901
         """Processes the secret changes."""
