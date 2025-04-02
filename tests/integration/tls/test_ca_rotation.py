@@ -21,11 +21,10 @@ from ..helpers import (
     get_secret_by_label,
 )
 from ..helpers_deployments import wait_until
+from .test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 
 logger = logging.getLogger(__name__)
 
-
-TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 
 REL_ORCHESTRATOR = "peer-cluster-orchestrator"
 REL_PEER = "peer-cluster"
@@ -80,7 +79,9 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
 
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
-    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
+    await ops_test.model.deploy(
+        TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+    )
     await wait_until(ops_test, apps=[TLS_CERTIFICATES_APP_NAME], apps_statuses=["active"])
 
     # Relate it to OpenSearch to set up TLS.
@@ -132,7 +133,7 @@ async def test_build_large_deployment(ops_test: OpsTest) -> None:
         ),
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME,
-            channel="stable",
+            channel=TLS_STABLE_CHANNEL,
             config={"ca-common-name": "CN_CA"},
         ),
     )

@@ -30,10 +30,8 @@ from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
-from tests.helpers import patch_network_get
 
 
-@patch_network_get("1.1.1.1")
 @patch.dict("os.environ", {"JUJU_CONTEXT_ID": "foo"})
 class TestOpenSearchBaseCharm(unittest.TestCase):
     BASE_LIB_PATH = "charms.opensearch.v0"
@@ -89,6 +87,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     def setUp(self) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
+        self.harness.add_network("1.1.1.1")
         self.harness.begin()
 
         self.charm = self.harness.charm
@@ -469,7 +468,6 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.peers_data.put(Scope.UNIT, "unit-key", "unit-val")
         self.assertEqual(self.peers_data.get(Scope.UNIT, "unit-key"), "unit-val")
 
-    @patch_network_get("1.1.1.1")
     def test_unit_ip(self):
         """Test current unit ip value."""
         self.assertEqual(self.charm.unit_ip, "1.1.1.1")

@@ -22,7 +22,9 @@ variable "base" {
 variable "config" {
   description = "Map of charm configuration options"
   type        = map(string)
-  default     = {}
+  default = {
+    profile = "testing"
+  }
 }
 
 variable "model" {
@@ -74,6 +76,12 @@ variable "endpoint_bindings" {
   description = "Map of endpoint bindings"
   type        = map(string)
   default     = {}
+}
+
+variable "expose" {
+  description = "Expose the application for external access."
+  type        = bool
+  default     = false
 }
 
 # --------

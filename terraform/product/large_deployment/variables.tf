@@ -21,6 +21,7 @@ variable "main" {
     machines          = optional(list(string), [])
     storage           = optional(map(string), {})
     endpoint_bindings = optional(map(string), {})
+    expose            = optional(bool, false)
   })
 }
 
@@ -38,6 +39,7 @@ variable "failover" {
     machines          = optional(list(string), [])
     storage           = optional(map(string), {})
     endpoint_bindings = optional(map(string), {})
+    expose            = optional(bool, false)
   })
   default = null
 }
@@ -56,6 +58,7 @@ variable "apps" {
     machines          = optional(list(string), [])
     storage           = optional(map(string), {})
     endpoint_bindings = optional(map(string), {})
+    expose            = optional(bool, false)
   }))
   default = null
 }
@@ -73,6 +76,7 @@ variable "opensearch-dashboards" {
     machines          = optional(list(string), [])
     endpoint_bindings = optional(map(string), {})
     tls               = optional(bool, false)
+    expose            = optional(bool, false)
   })
   default = {}
 }
