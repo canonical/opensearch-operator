@@ -1197,12 +1197,12 @@ class OpenSearchAzureBackup(OpenSearchMainBackup):
 
     @property
     def _model(self) -> AzureRelData | None:
-        if RequirerData(
+        if endpoint_info := RequirerData(
             model=self.charm.model,
             relation_name=AZURE_RELATION,
             additional_secret_fields=["secret-key"],
         ):
-            if (data := self._requirer.fetch_relation_data()) and self._relation.id in data:
+            if (data := endpoint_info.fetch_relation_data()) and self._relation.id in data:
                 return AzureRelData.from_relation(data[self._relation.id])
         return None
 
