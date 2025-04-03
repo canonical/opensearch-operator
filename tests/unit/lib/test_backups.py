@@ -615,17 +615,7 @@ class TestBackups(unittest.TestCase):
         event = MagicMock()
         self.charm.backup.backup_manager.is_set = MagicMock(return_value=False)
         self.charm.backup._on_create_backup_action(event)
-        event.fail.assert_called_with("Failed: backup service is not configured or busy")
-
-    def test_on_create_backup_action_backup_in_progress(self, _):
-        event = MagicMock()
-        self.charm.backup._check_repo_status = MagicMock(return_value=BackupServiceState.SUCCESS)
-        self.charm.backup.backup_manager.is_backup_in_progress = MagicMock(return_value=True)
-        plugin_method = "charms.opensearch.v0.opensearch_backups.OpenSearchS3Backup._plugin_status"
-        with patch(plugin_method, new_callable=PropertyMock) as mock_plugin_status:
-            mock_plugin_status.return_value = PluginState.ENABLED
-            self.charm.backup._on_create_backup_action(event)
-        event.fail.assert_called_with("Failed: backup service is not configured or busy")
+        event.fail.assert_called_with("Failed: backup service is not configured")
 
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     def test_on_create_backup_action_exception(self, mock_request, _):
