@@ -635,6 +635,10 @@ async def test_remove_and_readd_backup_relation(
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
     date_before_backup = datetime.utcnow()
+
+    # Wait, we want to make sure the timestamps are different
+    await asyncio.sleep(5)
+
     assert (
         datetime.strptime(
             backup_id := await create_backup(
@@ -756,6 +760,10 @@ async def test_restore_to_new_cluster(
     await writer.start()
     time.sleep(10)
     date_before_backup = datetime.utcnow()
+
+    # Wait, we want to make sure the timestamps are different
+    await asyncio.sleep(5)
+
     assert (
         datetime.strptime(
             backup_id := await create_backup(
@@ -934,6 +942,10 @@ async def test_change_config_and_backup_restore(
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
         date_before_backup = datetime.utcnow()
+
+        # Wait, we want to make sure the timestamps are different
+        await asyncio.sleep(5)
+
         assert (
             datetime.strptime(
                 backup_id := await create_backup(
