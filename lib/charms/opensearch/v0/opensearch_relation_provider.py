@@ -17,9 +17,11 @@ Default security values can be found in the opensearch documentation here:
 https://opensearch.org/docs/latest/security/access-control/index/.
 
 """
+import json
 import logging
 import typing
 from enum import Enum
+from json import JSONDecodeError
 from typing import Dict, Optional, Set
 
 from charms.data_platform_libs.v0.data_interfaces import (
@@ -476,6 +478,7 @@ class OpenSearchProvider(Object):
             )
 
         self.user_manager.create_user(user, [user], hashed_pwd)
+        self.user_manager.create_role_mapping(user, self._get_relation_mapped_users(user))
         users[str(relation_id)] = user
         self.charm.peers_data.put_object(Scope.APP, ClientUsersDict, users)
 
@@ -520,6 +523,43 @@ class OpenSearchProvider(Object):
                 except OpenSearchUserMgmtError:
                     logger.error(f"failed to remove role {username}")
 
+                try:
+                    self.user_manager.remove_role_mapping(username)
+                except OpenSearchUserMgmtError:
+                    logger.error(f"failed to remove role mapping for {username}")
+
                 del relation_users[rel_id]
 
         self.charm.peers_data.put_object(Scope.APP, ClientUsersDict, relation_users)
+
+    def update_relations_roles_mapping(self) -> None:
+        """Updates all the relations roles mapping due to config change."""
+        if (
+            not self.unit.is_leader()
+            or not self.opensearch.is_node_up()
+            or not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False)
+        ):
+            return
+
+        users = self.charm.peers_data.get_object(Scope.APP, ClientUsersDict)
+        for rel_id, user in users.items():
+            self.user_manager.create_role_mapping(user, self._get_relation_mapped_users(user))
+
+    def _get_relation_mapped_users(self, role: str) -> list[str]:
+        config_roles_mapping = self.charm.config.get("roles_mapping")
+        if not config_roles_mapping:
+            return []
+        try:
+            roles_mapping = json.loads(config_roles_mapping)
+            if not isinstance(roles_mapping, dict):
+                logger.error("Bad roles_mapping config value")
+                return []
+        except JSONDecodeError:
+            logger.error("Bad roles_mapping config value")
+            return []
+
+        return [
+            mapped_user
+            for mapped_user, mapped_role in roles_mapping.items()
+            if mapped_role == role
+        ]

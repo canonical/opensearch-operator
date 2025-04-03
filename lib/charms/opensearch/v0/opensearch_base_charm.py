@@ -762,6 +762,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
+        self.opensearch_provider.update_relations_roles_mapping()
+
         if plugin_needs_restart or perf_profile_needs_restart:
             self._restart_opensearch_event.emit()
 
