@@ -941,8 +941,11 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
         if self.charm.upgrade_in_progress:
             event.fail("Backup not supported while upgrade in-progress")
             return
-        if not self.backup_manager.is_set() or self.backup_manager.is_backup_in_progress():
-            event.fail("Failed: backup service is not configured or busy")
+        if not self.backup_manager.is_set():
+            event.fail("Failed: backup service is not configured")
+            return
+        if not self.backup_manager.is_idle():
+            event.fail("Failed: backup service is busy")
             return
 
         new_backup_id = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT)
