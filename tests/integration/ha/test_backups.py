@@ -50,7 +50,7 @@ from ..helpers import (
     run_action,
 )
 from ..helpers_deployments import get_application_units, wait_until
-from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import (
     add_juju_secret,
     app_name,
@@ -330,7 +330,7 @@ async def test_small_deployment_build_and_deploy(
     await asyncio.gather(
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME,
-            channel="stable",
+            channel=TLS_STABLE_CHANNEL,
             config=config,
             constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
@@ -406,7 +406,7 @@ async def test_large_deployment_build_and_deploy(
     await asyncio.gather(
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME,
-            channel="stable",
+            channel=TLS_STABLE_CHANNEL,
             config=tls_config,
             constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
@@ -737,7 +737,7 @@ async def test_restore_to_new_cluster(
     await asyncio.gather(
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME,
-            channel="stable",
+            channel=TLS_STABLE_CHANNEL,
             config=config,
             constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
@@ -861,7 +861,7 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest, charm) -> None:
     await asyncio.gather(
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME,
-            channel="stable",
+            channel=TLS_STABLE_CHANNEL,
             config=config,
             constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),

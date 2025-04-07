@@ -719,6 +719,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
+        if not self.opensearch_peer_cm.deployment_desc():
+            logger.info("Deployment description not ready yet, deferring and trying later.")
+            event.defer()
+            return
+
         perf_profile_needs_restart = False
         plugin_needs_restart = False
 
@@ -752,13 +757,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if original_status:
                 self.status.set(original_status)
 
-        if self.opensearch_peer_cm.deployment_desc():
-            perf_profile_needs_restart = self.performance_profile.apply(
-                self.config.get(PERFORMANCE_PROFILE)
-            )
-        else:
-            event.defer()
-            return
+        perf_profile_needs_restart = self.performance_profile.apply(
+            self.config.get(PERFORMANCE_PROFILE)
+        )
 
         if self.opensearch.is_service_started() and (
             plugin_needs_restart or perf_profile_needs_restart

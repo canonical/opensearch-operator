@@ -23,7 +23,6 @@ from lib.charms.opensearch.v0.models import (
     StartMode,
     State,
 )
-from tests.helpers import patch_network_get
 
 
 class PatchedUnit:
@@ -31,7 +30,6 @@ class PatchedUnit:
         self.name = name
 
 
-@patch_network_get("1.1.1.1")
 class TestOpenSearchPeerClustersManager(unittest.TestCase):
     BASE_LIB_PATH = "charms.opensearch.v0"
     BASE_CHARM_CLASS = f"{BASE_LIB_PATH}.opensearch_base_charm.OpenSearchBaseCharm"
@@ -74,6 +72,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
     @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
     def setUp(self, _) -> None:
         self.harness = Harness(OpenSearchOperatorCharm)
+        self.harness.add_network("1.1.1.1")
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 

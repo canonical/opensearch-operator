@@ -26,7 +26,7 @@ from ..helpers import (
     get_application_unit_ids,
 )
 from ..helpers_deployments import wait_until
-from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .continuous_writes import ContinuousWrites
 
 logger = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     await asyncio.gather(
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME,
-            channel="stable",
+            channel=TLS_STABLE_CHANNEL,
             config=config,
             constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),

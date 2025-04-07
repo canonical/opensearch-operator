@@ -20,7 +20,7 @@ from ..helpers import (
     set_watermark,
 )
 from ..helpers_deployments import get_application_units, wait_until
-from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import assert_upgrade_to_local, refresh
 
 logger = logging.getLogger(__name__)
@@ -87,7 +87,7 @@ async def _build_env(ops_test: OpsTest, version: str) -> None:
     config = {"ca-common-name": "CN_CA"}
     await ops_test.model.deploy(
         TLS_CERTIFICATES_APP_NAME,
-        channel="stable",
+        channel=TLS_STABLE_CHANNEL,
         config=config,
         constraints=os.environ.get("TEST_CONSTRAINTS"),
     )

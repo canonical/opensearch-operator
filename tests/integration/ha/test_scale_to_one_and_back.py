@@ -23,7 +23,7 @@ from ..helpers import (
     set_watermark,
 )
 from ..helpers_deployments import wait_until
-from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .continuous_writes import ContinuousWrites
 from .helpers import (
     app_name,
@@ -35,6 +35,7 @@ from .test_horizontal_scaling import IDLE_PERIOD
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -56,7 +57,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     await asyncio.gather(
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME,
-            channel="stable",
+            channel=TLS_STABLE_CHANNEL,
             config=config,
             constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
@@ -88,6 +89,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     await set_watermark(ops_test, app=APP_NAME)
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_scale_down(
@@ -149,6 +151,7 @@ async def test_scale_down(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_scale_back_up(
@@ -200,6 +203,7 @@ async def test_scale_back_up(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_gracefully_cluster_remove(ops_test: OpsTest) -> None:

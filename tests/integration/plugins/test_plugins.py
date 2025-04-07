@@ -40,7 +40,7 @@ from ..plugins.helpers import (
     run_knn_training,
 )
 from ..relations.helpers import get_unit_relation_data
-from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 
 logger = logging.getLogger(__name__)
 
@@ -194,7 +194,7 @@ async def test_build_and_deploy_small_deployment(
         ),
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME,
-            channel="stable",
+            channel=TLS_STABLE_CHANNEL,
             config=config,
             constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
@@ -315,7 +315,7 @@ async def test_large_deployment_build_and_deploy(
     await asyncio.gather(
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME,
-            channel="stable",
+            channel=TLS_STABLE_CHANNEL,
             config=tls_config,
             constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
