@@ -393,7 +393,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         current_app = PeerClusterApp(
             app=deployment_desc.app,
             planned_units=planned_units,
-            units=[format_unit_name(u, app=deployment_desc.app) for u in all_units(self.charm)] if planned_units > 0 else [],
+            units=(
+                [format_unit_name(u, app=deployment_desc.app) for u in all_units(self.charm)]
+                if planned_units > 0
+                else []
+            ),
             roles=deployment_desc.config.roles,
         )
         cluster_fleet_apps.update({current_app.app.id: current_app.to_dict()})
