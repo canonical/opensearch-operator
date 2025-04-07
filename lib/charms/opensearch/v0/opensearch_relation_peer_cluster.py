@@ -303,8 +303,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             self.put_in_rel({"trigger": cluster_type}, rel_id=event_rel_id)
 
         # update reported orchestrators on local orchestrator
+        has_units = self.charm.app.planned_units() > 0
         orchestrators = orchestrators.to_dict()
-        orchestrators[f"{cluster_type}_app"] = deployment_desc.app.to_dict()
+        if has_units:
+            orchestrators[f"{cluster_type}_app"] = deployment_desc.app.to_dict()
+        else:
+            orchestrators[f"{cluster_type}_app"] = None
+            orchestrators[f"{cluster_type}_rel_id"] = -1
         self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators)
 
         should_defer = False
@@ -314,10 +319,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         # save the orchestrators of this fleet
         for rel_id in all_relation_ids:
             orchestrators = self.get_obj_from_rel("orchestrators", rel_id=rel_id)
+            # remove orchestrator if units scaled down to 0
             orchestrators.update(
                 {
-                    f"{cluster_type}_app": deployment_desc.app.to_dict(),
-                    f"{cluster_type}_rel_id": rel_id,
+                    f"{cluster_type}_app": deployment_desc.app.to_dict() if has_units else None,
+                    f"{cluster_type}_rel_id": rel_id if has_units else -1,
                 }
             )
             self.put_in_rel(data={"orchestrators": json.dumps(orchestrators)}, rel_id=rel_id)
