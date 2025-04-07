@@ -314,7 +314,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         # save the orchestrators of this fleet
         for rel_id in all_relation_ids:
             orchestrators = self.get_obj_from_rel("orchestrators", rel_id=rel_id)
-            # remove orchestrator if units scaled down to 0
             orchestrators.update(
                 {
                     f"{cluster_type}_app": deployment_desc.app.to_dict(),
@@ -409,6 +408,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps_rels") or {}
             )
             cluster_fleet_apps_rels.update({str(trigger_rel_id): p_cluster_app.to_dict()})
+
             self.charm.peers_data.put_object(
                 Scope.APP, "cluster_fleet_apps_rels", cluster_fleet_apps_rels
             )
