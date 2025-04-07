@@ -39,7 +39,7 @@ from ..plugins.helpers import (
     run_knn_training,
 )
 from ..relations.helpers import get_unit_relation_data
-from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 
 logger = logging.getLogger(__name__)
 
@@ -190,7 +190,9 @@ async def test_build_and_deploy_small_deployment(ops_test: OpsTest, deploy_type:
             series=SERIES,
             config={"plugin_opensearch_knn": False} | CONFIG_OPTS,
         ),
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+        ),
     )
 
     await wait_until(
@@ -296,7 +298,9 @@ async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type:
     data_hot_conf = {"cluster_name": "plugins-test", "init_hold": True, "roles": "data.hot,ml"}
 
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=tls_config
+        ),
         ops_test.model.deploy(
             my_charm,
             application_name=MAIN_ORCHESTRATOR_NAME,

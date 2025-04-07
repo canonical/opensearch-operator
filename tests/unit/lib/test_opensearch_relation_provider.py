@@ -35,17 +35,16 @@ from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 
 from charm import OpenSearchOperatorCharm
-from tests.helpers import patch_network_get
 from tests.unit.helpers import mock_response_nodes, mock_response_root
 
 DASHBOARDS_CHARM = "opensearch-dashboards"
 
 
-@patch_network_get("1.1.1.1")
 class TestOpenSearchProvider(unittest.TestCase):
     def setUp(self):
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
+        self.harness.add_network("1.1.1.1")
         self.harness.begin()
 
         self.charm = self.harness.charm

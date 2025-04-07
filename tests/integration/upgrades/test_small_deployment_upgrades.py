@@ -18,7 +18,7 @@ from ..helpers import (
     set_watermark,
 )
 from ..helpers_deployments import get_application_units, wait_until
-from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import assert_upgrade_to_local, refresh
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 OPENSEARCH_ORIGINAL_CHARM_NAME = "opensearch"
 OPENSEARCH_CHANNEL = "2/edge"
+OPENSEARCH_STABLE_CHANNEL = "2/stable"
 
 
 STARTING_VERSION = "2.15.0"
@@ -76,7 +77,9 @@ async def _build_env(ops_test: OpsTest, version: str) -> None:
 
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
-    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
+    await ops_test.model.deploy(
+        TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+    )
 
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
@@ -245,11 +248,13 @@ async def test_upgrade_rollback_from_local(
         )
 
         logger.info(f"Rolling back to {version}")
+        # TODO: return to 2/edge channel instead once this channel's latest 2.17 charm
+        # revision points to snap rev. 65 instead of snap rev. 62.
         await refresh(
             ops_test,
             app,
             switch=OPENSEARCH_ORIGINAL_CHARM_NAME,
-            channel=OPENSEARCH_CHANNEL,
+            channel=OPENSEARCH_STABLE_CHANNEL,
         )
         # Wait until we are set in an idle state and can rollback the revision.
         # app status blocked: that will happen if we are jumping N-2 versions in our test
