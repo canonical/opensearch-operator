@@ -389,10 +389,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
         )
 
+        planned_units = self.charm.app.planned_units()
         current_app = PeerClusterApp(
             app=deployment_desc.app,
-            planned_units=self.charm.app.planned_units(),
-            units=[format_unit_name(u, app=deployment_desc.app) for u in all_units(self.charm)],
+            planned_units=planned_units,
+            units=[format_unit_name(u, app=deployment_desc.app) for u in all_units(self.charm)] if planned_units > 0 else [],
             roles=deployment_desc.config.roles,
         )
         cluster_fleet_apps.update({current_app.app.id: current_app.to_dict()})
