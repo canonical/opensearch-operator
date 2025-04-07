@@ -304,15 +304,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         # update reported orchestrators on local orchestrator
         orchestrators = orchestrators.to_dict()
-        orchestrator_app_key = f"{cluster_type}_app"
-        orchestrator_rel_key = f"{cluster_type}_rel_id"
-        planned_units = self.charm.app.planned_units()
-        if planned_units == 0:
-            # remove orchestrator if units scaled down to 0
-            orchestrators[orchestrator_app_key] = None
-            orchestrators[orchestrator_rel_key] = -1
-        else:
-            orchestrators[orchestrator_app_key] = deployment_desc.app.to_dict()
+        orchestrators[f"{cluster_type}_app"] = deployment_desc.app.to_dict()
         self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators)
 
         should_defer = False
@@ -325,10 +317,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             # remove orchestrator if units scaled down to 0
             orchestrators.update(
                 {
-                    orchestrator_app_key: (
-                        None if planned_units == 0 else deployment_desc.app.to_dict()
-                    ),
-                    orchestrator_rel_key: -1 if planned_units == 0 else rel_id,
+                    f"{cluster_type}_app": deployment_desc.app.to_dict(),
+                    f"{cluster_type}_rel_id": rel_id,
                 }
             )
             self.put_in_rel(data={"orchestrators": json.dumps(orchestrators)}, rel_id=rel_id)
