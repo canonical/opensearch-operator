@@ -165,7 +165,6 @@ def all_units_names(charm: "OpenSearchBaseCharm") -> List[Unit]:
 
 def all_units(charm: "OpenSearchBaseCharm") -> List[Unit]:
     """Fetch the list of units for the current app."""
-    # if 0 planned units, return empty list
     return list(charm.model.get_relation(PeerRelationName).units.union({charm.unit}))
 
 
