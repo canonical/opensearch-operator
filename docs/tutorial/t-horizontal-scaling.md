@@ -14,8 +14,8 @@ Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  13:57:38Z
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-data-integrator                    active      1  data-integrator           latest/edge     59  no
-opensearch                         active      3  opensearch                2/beta         117  no
+data-integrator                    active      1  data-integrator           latest/stable     79  no
+opensearch                         active      3  opensearch                2/stable         168  no
 self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
@@ -57,8 +57,8 @@ Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  14:02:18Z
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-data-integrator                    active      1  data-integrator           latest/edge     59  no
-opensearch                         active      4  opensearch                2/beta         117  no
+data-integrator                    active      1  data-integrator           latest/stable     79  no
+opensearch                         active      4  opensearch                2/stable         168  no
 self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
@@ -113,13 +113,9 @@ Notice that the shards are distributed across all nodes.
 
 
 ## Remove nodes
-[note type="caution"]
-**Note:** Refer to [safe-horizontal-scaling guide](/t/10994) to understand how to safely remove units in a production environment.
-[/note]
+> **Note:** Refer to [safe-horizontal-scaling guide](/t/10994) to understand how to safely remove units in a production environment.
 
-[note type="caution"]
-**Warning:** In highly available deployment, only scaling down to 3 nodes is safe. If only 2 nodes are online, neither can be unavailable nor removed. The service will become **unavailable** and **data may be lost**  if scaling below 2 nodes.
-[/note]
+> **Warning:** In highly available deployment, only scaling down to 3 nodes is safe. If only 2 nodes are online, neither can be unavailable nor removed. The service will become **unavailable** and **data may be lost**  if scaling below 2 nodes.
 
 Removing a unit from the Juju application scales down your OpenSearch cluster by one node. Before we scale down the nodes we no longer need, list all the units with `juju status`. Here you will see four units / nodes: `opensearch/0`, `opensearch/1`, `opensearch/2`, `opensearch/3`. To remove the unit `opensearch/3` run:
 
@@ -134,8 +130,8 @@ Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  14:05:58Z
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-data-integrator                    active      1  data-integrator           latest/edge     59  no
-opensearch                         active      3  opensearch                2/beta         117  no
+data-integrator                    active      1  data-integrator           latest/stable     79  no
+opensearch                         active      3  opensearch                2/stable         168  no
 self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message

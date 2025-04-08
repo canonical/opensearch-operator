@@ -1,4 +1,4 @@
-## How to safely scale down 
+# How to safely scale down 
 
 This page outlines the general steps to follow when scaling down Charmed OpenSearch in order to prevent data loss and ensure the deployment remains highly available
 
