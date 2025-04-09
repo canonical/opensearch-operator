@@ -7,17 +7,17 @@ from typing import Any, AsyncGenerator
 
 import pytest
 import yaml
-from juju.model import Model
+from integration.helpers import CONFIG_OPTS, SERIES
 from juju.controller import Controller
+from juju.model import Model
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
-
-from integration.helpers import SERIES, CONFIG_OPTS
 
 IDENTITY_PLATFORM_NAME = "identity-platform"
 MICROK8S_CLOUD_NAME = "uk8s"
 
 logger = logging.getLogger(__name__)
+
 
 @pytest.fixture(scope="module")
 async def microk8s_cloud(ops_test: OpsTest) -> AsyncGenerator[None, Any]:
@@ -100,6 +100,7 @@ async def microk8s_model(ops_test: OpsTest, microk8s_cloud: None) -> AsyncGenera
             await asyncio.sleep(5)
     await controller.disconnect()
 
+
 @pytest.mark.abort_on_fail
 async def test_deploy(ops_test: OpsTest, opensearch_charm, microk8s_model: Model):
     await ops_test.model.deploy(
@@ -113,7 +114,4 @@ async def test_deploy(ops_test: OpsTest, opensearch_charm, microk8s_model: Model
         channel="edge",
         trust=True,
     )
-    await gather(
-        ops_test.model.wait_for_idle(),
-        microk8s_model.wait_for_idle()
-    )
+    await gather(ops_test.model.wait_for_idle(), microk8s_model.wait_for_idle())
