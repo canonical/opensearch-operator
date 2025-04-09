@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
@@ -36,13 +35,16 @@ class OAuthHandler(Object):
         )
         self.oauth = OAuthRequirer(self.charm, client_config, relation_name=OAUTH_RELATION)
         self.framework.observe(
-            self.charm.on[OAUTH_RELATION].relation_changed, self._on_oauth_relation_changed
+            self.charm.on[OAUTH_RELATION].relation_changed,
+            self._on_oauth_relation_changed,
         )
         self.framework.observe(
-            self.charm.on[OAUTH_RELATION].relation_departed, self._on_oauth_relation_departed
+            self.charm.on[OAUTH_RELATION].relation_departed,
+            self._on_oauth_relation_departed,
         )
         self.framework.observe(
-            self.charm.on[OAUTH_RELATION].relation_broken, self._on_oauth_relation_broken
+            self.charm.on[OAUTH_RELATION].relation_broken,
+            self._on_oauth_relation_broken,
         )
 
     def _on_oauth_relation_changed(self, event: EventBase) -> None:
@@ -90,7 +92,7 @@ class OAuthHandler(Object):
     def _on_oauth_relation_broken(self, event: RelationBrokenEvent) -> None:
         if (
             not self.charm.unit.is_leader()
-            or not self.charm.peers_data is not None
+            or self.charm.peers_data is None
             or self.charm.peers_data.get(Scope.UNIT, "departing")
             or not self.charm.peers_data.get(Scope.APP, "security_index_initialised")
             or (

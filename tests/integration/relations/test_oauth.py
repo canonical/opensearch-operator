@@ -1,3 +1,6 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
 import asyncio
 import logging
 import pathlib
@@ -36,7 +39,8 @@ async def microk8s_cloud(ops_test: OpsTest) -> AsyncGenerator[None, Any]:
         subprocess.run(["sudo", "microk8s", "enable", "dns"], check=True)
         subprocess.run(["sudo", "microk8s", "enable", "hostpath-storage"], check=True)
         subprocess.run(
-            ["sudo", "microk8s", "enable", "metallb:10.64.140.43-10.64.140.49"], check=True
+            ["sudo", "microk8s", "enable", "metallb:10.64.140.43-10.64.140.49"],
+            check=True,
         )
 
         # Configure kubectl now
@@ -60,7 +64,14 @@ async def microk8s_cloud(ops_test: OpsTest) -> AsyncGenerator[None, Any]:
 
         # Add microk8s to the kubeconfig
         subprocess.run(
-            ["juju", "add-k8s", MICROK8S_CLOUD_NAME, "--client", "--controller", controller_name],
+            [
+                "juju",
+                "add-k8s",
+                MICROK8S_CLOUD_NAME,
+                "--client",
+                "--controller",
+                controller_name,
+            ],
             check=True,
         )
     except subprocess.CalledProcessError as e:

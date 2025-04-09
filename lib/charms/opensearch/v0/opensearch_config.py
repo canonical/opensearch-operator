@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Class for Setting configuration in opensearch config files."""
+
 import logging
 from collections import namedtuple
 from typing import Any, Dict, List, Optional
@@ -96,10 +97,13 @@ class OpenSearchConfig:
             "authentication_backend": {"type": "noop"},
         }
         self._opensearch.config.put(
-            self.SECURITY_CONFIG_YML, "config/dynamic/authc/openid_auth_domain", oidc_config
+            self.SECURITY_CONFIG_YML,
+            "config/dynamic/authc/openid_auth_domain",
+            oidc_config,
         )
 
     def remove_oidc_auth(self):
+        """Removes the OIDC auth scheme from security config."""
         self._opensearch.config.delete(
             self.SECURITY_CONFIG_YML, "config/dynamic/authc/openid_auth_domain"
         )
@@ -159,7 +163,10 @@ class OpenSearchConfig:
             keystore_pwd,
         )
 
-        for store_type, pwd in [("keystore", keystore_pwd), ("truststore", truststore_pwd)]:
+        for store_type, pwd in [
+            ("keystore", keystore_pwd),
+            ("truststore", truststore_pwd),
+        ]:
             self._opensearch.config.put(
                 self.CONFIG_YML,
                 f"plugins.security.ssl.{target_conf_layer}.{store_type}_password",
@@ -244,7 +251,9 @@ class OpenSearchConfig:
         self._opensearch.config.put(self.CONFIG_YML, "plugins.security.disabled", False)
         self._opensearch.config.put(self.CONFIG_YML, "plugins.security.ssl.http.enabled", True)
         self._opensearch.config.put(
-            self.CONFIG_YML, "plugins.security.ssl.transport.enforce_hostname_verification", True
+            self.CONFIG_YML,
+            "plugins.security.ssl.transport.enforce_hostname_verification",
+            True,
         )
 
         # security plugin rest API access

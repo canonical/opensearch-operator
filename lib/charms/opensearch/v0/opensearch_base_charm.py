@@ -1477,7 +1477,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.clear(SecurityIndexInitProgress)
 
     def update_security_config(self, admin_secrets: Dict[str, any], file: str) -> None:
-        """Run the security_admin script for the provided config file, avoiding changes to others."""
+        """Run the security_admin script for specified config file, avoiding changes to others."""
         if not file.startswith("opensearch-security"):
             raise ValueError("security config is expected")
 
