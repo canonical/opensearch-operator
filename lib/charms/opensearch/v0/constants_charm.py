@@ -64,7 +64,7 @@ PClusterWrongRelation = "Cluster name don't match with related cluster. Remove r
 PClusterWrongRolesProvided = "Cannot start cluster with current set of roles."
 PClusterNoDataNode = "Cannot run cluster with current roles. Waiting for data node..."
 PClusterWrongNodesCountForQuorum = (
-    "Less than 3 cluster-manager-eligible units in this cluster. Add more units."
+    "Even number of members in quorum if current unit started. Add or remove 1 unit."
 )
 PluginConfigError = "Unexpected error during plugin configuration, check the logs"
 BackupSetupFailed = "Backup setup failed, check logs for details"

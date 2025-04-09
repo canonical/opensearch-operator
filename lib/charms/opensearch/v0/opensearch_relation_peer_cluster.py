@@ -243,10 +243,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if not (trigger_app := cluster_fleet_apps_rels.get(str(event.relation.id))):
             return
 
-        # set the planned units to 0 given we're losing visibility over it from here on
         trigger_app = PeerClusterApp.from_dict(trigger_app)
-        trigger_app.planned_units = 0
-
         self._put_fleet_apps(
             deployment_desc=self.charm.opensearch_peer_cm.deployment_desc(),
             target_relation_ids=target_relation_ids,
@@ -254,7 +251,33 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             trigger_rel_id=event.relation.id,
         )
 
-    def refresh_relation_data(
+        # if the trigger app is the failover orchestrator and there are no planned units, delete it
+        if (
+            relation_departure_reason(
+                self.charm, self.relation_name, event.app.name if event.app else ""
+            )
+            == RelDepartureReason.SCALE_DOWN
+        ):
+            return
+
+        orchestrators = PeerClusterOrchestrators.from_dict(
+            self.charm.peers_data.get_object(Scope.APP, "orchestrators")
+        )
+        if event.relation.id == orchestrators.failover_rel_id:
+            orchestrators.delete("failover")
+            self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
+            # update orchestrators in rel data
+            all_relation_ids = [
+                rel.id for rel in self.charm.model.relations[self.relation_name] if rel.units
+            ]
+            for rel_id in all_relation_ids:
+                orchestrators = PeerClusterOrchestrators.from_dict(
+                    self.get_obj_from_rel("orchestrators", rel_id=rel_id)
+                )
+                orchestrators.delete("failover")
+                self.put_in_rel(data={"orchestrators": orchestrators.to_str()}, rel_id=rel_id)
+
+    def refresh_relation_data(  # noqa: C901
         self, event: EventBase, event_rel_id: int | None = None, can_defer: bool = True
     ) -> None:
         """Refresh the peer cluster rel data (new cm node, admin password change etc.)."""
@@ -274,9 +297,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             self.charm.peers_data.get_object(Scope.APP, "orchestrators")
         )
 
-        # store the main/failover-cm planned units count
-        self._put_fleet_apps(deployment_desc, all_relation_ids)
-
         # compute the data that needs to be broadcast to all related clusters (success or error)
         # if rel_data is an error, prepare to broadcast it to all related clusters
         rel_data = self._rel_data(deployment_desc, orchestrators)
@@ -294,6 +314,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             self.delete_from_rel("trigger", rel_id=event_rel_id)
             return
 
+        # store the main/failover-cm planned units count
+        self._put_fleet_apps(deployment_desc, all_relation_ids)
+
         cluster_type = (
             "main" if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR else "failover"
         )
@@ -303,13 +326,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             self.put_in_rel({"trigger": cluster_type}, rel_id=event_rel_id)
 
         # update reported orchestrators on local orchestrator
-        has_units = self.charm.app.planned_units() > 0
         orchestrators = orchestrators.to_dict()
-        if has_units:
-            orchestrators[f"{cluster_type}_app"] = deployment_desc.app.to_dict()
-        else:
-            orchestrators[f"{cluster_type}_app"] = None
-            orchestrators[f"{cluster_type}_rel_id"] = -1
+        orchestrators[f"{cluster_type}_app"] = deployment_desc.app.to_dict()
         self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators)
 
         should_defer = False
@@ -317,9 +335,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             should_defer = rel_data.should_wait
 
         # save the orchestrators of this fleet
+        has_units = self.charm.app.planned_units() > 0
         for rel_id in all_relation_ids:
             orchestrators = self.get_obj_from_rel("orchestrators", rel_id=rel_id)
-            # remove orchestrator if units scaled down to 0
             orchestrators.update(
                 {
                     f"{cluster_type}_app": deployment_desc.app.to_dict() if has_units else None,
@@ -344,16 +362,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 )
             else:
                 self.put_in_rel(data={"error_data": rel_data.to_str()}, rel_id=rel_id)
-                self._delete_rel_data_on_error(rel_id)
+
+            # if no planned units, delete relation data as it won't get updated
+            if not has_units:
+                self._delete_rel_data(rel_id)
 
         if can_defer and should_defer:
             event.defer()
-
-    def _delete_rel_data_on_error(self, rel_id: int) -> None:
-        """Deletes relation data when an error is broadcasted"""
-        self.delete_from_rel("cluster_fleet_apps", rel_id=rel_id)
-        self.delete_from_rel("data", rel_id=rel_id)
-        self.delete_from_rel("rel_data_hash", rel_id=rel_id)
 
     def _notify_if_wrong_integration(
         self,
@@ -372,6 +387,25 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         return True
 
+    def _delete_rel_data(self, rel_id: int) -> None:
+        """Deletes relation data"""
+        self.delete_from_rel("cluster_fleet_apps", rel_id=rel_id)
+        self.delete_from_rel("data", rel_id=rel_id)
+        self.delete_from_rel("rel_data_hash", rel_id=rel_id)
+
+    def _update_or_pop_from_fleet_dict(
+        self, fleet_dict: dict, app: PeerClusterApp, key: Optional[str] = None
+    ) -> None:
+        """Update fleet dictionary with the app, or remove the entry if no planned units."""
+        if not key:
+            key = app.app.id
+
+        if app.planned_units == 0:
+            fleet_dict.pop(key, None)
+            return
+
+        fleet_dict.update({key: app.to_dict()})
+
     def _put_fleet_apps(
         self,
         deployment_desc: DeploymentDescription,
@@ -384,21 +418,16 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
         )
 
-        planned_units = self.charm.app.planned_units()
         current_app = PeerClusterApp(
             app=deployment_desc.app,
-            planned_units=planned_units,
-            units=(
-                [format_unit_name(u, app=deployment_desc.app) for u in all_units(self.charm)]
-                if planned_units > 0
-                else []
-            ),
+            planned_units=self.charm.app.planned_units(),
+            units=[format_unit_name(u, app=deployment_desc.app) for u in all_units(self.charm)],
             roles=deployment_desc.config.roles,
         )
-        cluster_fleet_apps.update({current_app.app.id: current_app.to_dict()})
+        self._update_or_pop_from_fleet_dict(cluster_fleet_apps, current_app)
 
         if p_cluster_app:
-            cluster_fleet_apps.update({p_cluster_app.app.id: p_cluster_app.to_dict()})
+            self._update_or_pop_from_fleet_dict(cluster_fleet_apps, p_cluster_app)
 
         for rel_id in target_relation_ids:
             self.put_in_rel(
@@ -413,7 +442,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             cluster_fleet_apps_rels = (
                 self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps_rels") or {}
             )
-            cluster_fleet_apps_rels.update({str(trigger_rel_id): p_cluster_app.to_dict()})
+            self._update_or_pop_from_fleet_dict(
+                cluster_fleet_apps_rels, p_cluster_app, key=str(trigger_rel_id)
+            )
 
             self.charm.peers_data.put_object(
                 Scope.APP, "cluster_fleet_apps_rels", cluster_fleet_apps_rels
@@ -622,11 +653,12 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             ]
 
         if cluster_fleet_apps := self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps"):
+            # only report nodes from apps with planned units
             has_planned_units = (
-                lambda node: node.app.id in cluster_fleet_apps
-                and cluster_fleet_apps[node.app.id]["planned_units"] != 0
+                lambda app_id: app_id in cluster_fleet_apps
+                and cluster_fleet_apps[app_id]["planned_units"] > 0
             )
-            nodes = [node for node in nodes if has_planned_units(node)]
+            nodes = [node for node in nodes if has_planned_units(node.app.id)]
 
         return [
             node
@@ -764,14 +796,16 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         if not self.charm.unit.is_leader():
             return
 
+        if not event.relation.units:  # ensure not a deferred event from a departed orchestrator
+            return
+
         # check if current cluster ready
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             event.defer()
             return
 
         # register in the 'main/failover'-CMs the number of planned units of the current app
-        if event.relation.active:  # ensure not deferred event from departed orchestrator
-            self._put_current_app(event.relation.id, deployment_desc)
+        self._put_current_app(event.relation.id, deployment_desc)
 
         if not (data := event.relation.data.get(event.app)):
             return
@@ -816,6 +850,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # register main and failover cm app names if any
         self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
 
+        # clear or set missing orchestrator status
+        self.apply_orchestrator_status()
+
         if data.security_index_initialised:
             self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
 
@@ -836,6 +873,23 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # recompute the deployment desc
         self.charm.opensearch_peer_cm.run_with_relation_data(data)
+
+    def apply_orchestrator_status(self) -> None:
+        """Sets or clears status based on presence of local orchestrators."""
+        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
+        orchestrators = PeerClusterOrchestrators.from_dict(
+            self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
+        )
+        if orchestrators.failover_app and orchestrators.failover_app.id == deployment_desc.app.id:
+            return
+
+        if orchestrators.main_app:
+            self.charm.status.clear(PClusterOrchestratorsRemoved, app=True)
+            self.charm.status.clear(PClusterWaitingForFailoverPromotion, app=True)
+        elif orchestrators.failover_app:
+            self.charm.status.set(WaitingStatus(PClusterWaitingForFailoverPromotion), app=True)
+        else:
+            self.charm.status.set(BlockedStatus(PClusterOrchestratorsRemoved), app=True)
 
     def _set_security_conf(self, data: PeerClusterRelData) -> None:
         """Store security related config."""
@@ -919,13 +973,13 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         cm_relations = [
             rel.id
             for rel in self.model.relations[self.relation_name]
-            if rel.id != event.relation.id
+            if rel.id != event.relation.id and rel.units
         ]
         for rel_id in cm_relations:
             remote_orchestrators.update(self.get_obj_from_rel(key="orchestrators", rel_id=rel_id))
 
         local_orchestrators = self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
-        if trigger in {"main", "failover"}:
+        if trigger in {"main", "failover"} and event.relation.units:
             local_orchestrators.update(
                 {
                     f"{trigger}_rel_id": event.relation.id,
@@ -951,20 +1005,27 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             rel_id=orchestrators.main_rel_id,
         )
 
-    def refresh_relation_data(self) -> None:
+    def refresh_requirer_relation_data(self) -> None:
         """Refresh the peer cluster rel data (planned units)."""
+        if not self.charm.unit.is_leader():
+            return
+
         deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
-        for rel in self.model.relations[self.relation_name]:
+        all_relations = [rel for rel in self.model.relations[self.relation_name] if rel.units]
+        for rel in all_relations:
             self._put_current_app(rel.id, deployment_desc)
 
     def _put_current_app(self, rel_id: int, deployment_desc: DeploymentDescription) -> None:
         """Report the current app on the peer cluster rel data to be broadcast to all apps."""
+        planned_units = self.charm.app.planned_units()
         current_app = PeerClusterApp(
             app=deployment_desc.app,
-            planned_units=self.charm.app.planned_units(),
-            units=[
-                format_unit_name(unit, app=deployment_desc.app) for unit in all_units(self.charm)
-            ],
+            planned_units=planned_units,
+            units=(
+                [format_unit_name(u, app=deployment_desc.app) for u in all_units(self.charm)]
+                if planned_units > 0
+                else []
+            ),
             roles=deployment_desc.config.roles,
         )
         self.put_in_rel(data={"app": current_app.to_str()}, rel_id=rel_id)
@@ -972,7 +1033,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # update content of fleet in the current app's peer databag
         cluster_fleet_apps = self.get_obj_from_rel("cluster_fleet_apps", rel_id=rel_id)
         cluster_fleet_apps.update({deployment_desc.app.id: current_app.to_dict()})
-
         self.charm.peers_data.put_object(Scope.APP, "cluster_fleet_apps", cluster_fleet_apps)
 
     def _on_peer_cluster_relation_departed(self, event: RelationDepartedEvent):
@@ -1011,36 +1071,25 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             "main" if event.relation.id == orchestrators.main_rel_id else "failover"
         )
 
-        # delete the orchestrator from cluster fleet apps
-        orchestrator_id = (
+        # delete the orchestrator that triggered this event
+        orchestrator_app_id = (
             orchestrators.main_app.id
             if event_src_cluster_type == "main"
             else orchestrators.failover_app.id
         )
         cluster_fleet_apps = self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps")
-        cluster_fleet_apps.pop(orchestrator_id, None)
+        cluster_fleet_apps.pop(orchestrator_app_id, None)
         self.charm.peers_data.put_object(Scope.APP, "cluster_fleet_apps", cluster_fleet_apps)
 
-        # delete the orchestrator that triggered this event
         orchestrators.delete(event_src_cluster_type)
         self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
-
-        # the 'main' cluster orchestrator is the one being removed
-        if (
-            event_src_cluster_type == "main"
-            and deployment_desc.typ != DeploymentType.FAILOVER_ORCHESTRATOR
-        ):
-            if not orchestrators.failover_app:
-                self.charm.status.set(BlockedStatus(PClusterOrchestratorsRemoved))
-            else:
-                # wait for failover promotion
-                self.charm.status.set(WaitingStatus(PClusterWaitingForFailoverPromotion))
-        elif event_src_cluster_type == "failover" and not orchestrators.main_app:
-            self.charm.status.set(BlockedStatus(PClusterOrchestratorsRemoved))
 
         # clear previously set errors due to this relation
         self._clear_errors(f"error_from_provider-{event.relation.id}")
         self._clear_errors(f"error_from_requirer-{event.relation.id}")
+
+        # clear or set missing orchestrator status
+        self.apply_orchestrator_status()
 
         # we leave in case not an orchestrator
         if (
@@ -1060,27 +1109,10 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
             rel_orchestrators.delete(event_src_cluster_type)
             self.put_in_rel(data={"orchestrators": rel_orchestrators.to_str()}, rel_id=rel_id)
-
-    def _promote_failover(self, orchestrators: PeerClusterOrchestrators, cms: List[Node]) -> None:
-        """Handle the departure of the main orchestrator."""
-        # current cluster is failover
-        self.charm.opensearch_peer_cm.promote_to_main_orchestrator()
-
-        # ensuring quorum
-        main_cms = [cm for cm in cms if cm.app.id == orchestrators.main_app.id]
-        non_main_cms = [cm for cm in cms if cm not in main_cms]
-        if len(non_main_cms) % 2 == 0:
-            departure_reason = relation_departure_reason(self.charm, self.relation_name)
-            message = "Scale-up this application by an odd number of units{} to ensure quorum."
-            if len(main_cms) % 2 == 1 and departure_reason == RelDepartureReason.REL_BROKEN:
-                message = message.format(
-                    f" and scale-'down/up' {orchestrators.main_app.name} by 1 unit"
-                )
-
-            self.charm.status.set(message)
-
-        # remove old main and promote new failover
-        orchestrators.promote_failover()
+            self.put_in_rel(
+                data={"cluster_fleet_apps": json.dumps(cluster_fleet_apps)},
+                rel_id=rel_id,
+            )
 
     def _cm_nodes(self, orchestrators: PeerClusterOrchestrators) -> List[Node]:
         """Fetch the cm nodes passed from the peer cluster relation not api call."""

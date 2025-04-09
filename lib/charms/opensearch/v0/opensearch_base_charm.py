@@ -475,7 +475,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 "Adding units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
 
-    def _on_peer_relation_changed(self, event: RelationChangedEvent):
+    def _on_peer_relation_changed(self, event: RelationChangedEvent):  # noqa C901
         """Handle peer relation changes."""
         if self.unit.is_leader() and self.opensearch.is_node_up():
             health = self.health.apply()
@@ -507,6 +507,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # if app_data + app_data["nodes_config"]: Reconfigure + restart node on the unit
             self._reconfigure_and_restart_unit_if_needed()
 
+        # update any orchestrators about planned units
+        if self.opensearch_peer_cm.is_consumer():
+            self.peer_cluster_requirer.refresh_requirer_relation_data()
+            self.peer_cluster_requirer.apply_orchestrator_status()
+
         if not (unit_data := event.relation.data.get(event.unit)):
             return
 
@@ -525,23 +530,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not (self.unit.is_leader() and self.opensearch.is_node_up()):
             return
 
-        current_app = self.opensearch_peer_cm.deployment_desc().app
-        remaining_nodes = [
-            node
-            for node in self._get_nodes(True)
-            if node.name != format_unit_name(event.departing_unit, app=current_app)
-        ]
-
-        self.health.apply(wait_for_green_first=True)
-
-        if len(remaining_nodes) == self.app.planned_units():
-            self._compute_and_broadcast_updated_topology(remaining_nodes)
-        else:
-            event.defer()
-
-        if not self.unit.is_leader():
-            return
-
         # Now, we register in the leader application the presence of departing unit's name
         # We need to save them as we have a count limit
         if (
@@ -551,6 +539,27 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # No deployment description present
             # that happens in the very last stages of the application removal
             return
+
+        current_app = self.opensearch_peer_cm.deployment_desc().app
+        remaining_nodes = [
+            node
+            for node in self._get_nodes(True)
+            if node.name != format_unit_name(event.departing_unit, app=current_app)
+        ]
+
+        self.health.apply(wait_for_green_first=True)
+
+        if (
+            len([node for node in remaining_nodes if node.app.id == current_app.id])
+            == self.app.planned_units()
+        ):
+            self._compute_and_broadcast_updated_topology(remaining_nodes)
+        else:
+            event.defer()
+
+        if not self.unit.is_leader():
+            return
+
         self.opensearch_exclusions.add_to_cleanup_list(
             unit_name=format_unit_name(event.departing_unit.name, deployment_desc.app)
         )
@@ -583,8 +592,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     self.peers_data.delete(Scope.APP, "nodes_config")
                 if self.opensearch_peer_cm.is_provider():
                     self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
-                if self.model.relations.get(PeerClusterRelationName):
-                    self.peer_cluster_requirer.refresh_relation_data()
+                if self.opensearch_peer_cm.is_consumer():
+                    self.peer_cluster_requirer.refresh_requirer_relation_data()
 
         # we attempt to flush the translog to disk
         if self.opensearch.is_node_up():
@@ -1495,15 +1504,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         ):
             return []
 
-        nodes = ClusterTopology.nodes(self.opensearch, use_localhost, self.alt_hosts)
-        if cluster_fleet_apps := self.peers_data.get_object(Scope.APP, "cluster_fleet_apps"):
-            has_planned_units = (
-                lambda node: node.app.id in cluster_fleet_apps
-                and cluster_fleet_apps[node.app.id]["planned_units"] != 0
-            )
-            nodes = [node for node in nodes if has_planned_units(node)]
-
-        return nodes
+        return ClusterTopology.nodes(self.opensearch, use_localhost, self.alt_hosts)
 
     def _set_node_conf(self, nodes: List[Node]) -> None:
         """Set the configuration of the current node / unit."""
