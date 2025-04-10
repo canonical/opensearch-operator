@@ -89,7 +89,7 @@ from charms.opensearch.v0.opensearch_relation_peer_cluster import (
 )
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
-from charms.opensearch.v0.opensearch_tls import OpenSearchTLS
+from charms.opensearch.v0.opensearch_tls import OLD_CA_ALIAS, OpenSearchTLS
 from charms.opensearch.v0.opensearch_users import (
     OpenSearchUserManager,
     OpenSearchUserMgmtError,
@@ -666,7 +666,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # If the unit reloads its certs but the other units are not ready yet
         # we need to wait for them all to be ready before deleting the old CA
         if (
-            self.tls.read_stored_ca("old-ca")
+            self.tls.read_stored_ca(OLD_CA_ALIAS)
             and self.tls.ca_and_certs_rotation_complete_in_cluster()
         ):
             logger.debug("update_status: Detected CA rotation complete in cluster")
@@ -719,6 +719,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
+        if not self.opensearch_peer_cm.deployment_desc():
+            logger.info("Deployment description not ready yet, deferring and trying later.")
+            event.defer()
+            return
+
         perf_profile_needs_restart = False
         plugin_needs_restart = False
 
@@ -752,15 +757,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if original_status:
                 self.status.set(original_status)
 
-        if self.opensearch_peer_cm.deployment_desc():
-            perf_profile_needs_restart = self.performance_profile.apply(
-                self.config.get(PERFORMANCE_PROFILE)
-            )
-        else:
-            event.defer()
-            return
+        perf_profile_needs_restart = self.performance_profile.apply(
+            self.config.get(PERFORMANCE_PROFILE)
+        )
 
-        if plugin_needs_restart or perf_profile_needs_restart:
+        if self.opensearch.is_service_started() and (
+            plugin_needs_restart or perf_profile_needs_restart
+        ):
             self._restart_opensearch_event.emit()
 
     def _on_set_password_action(self, event: ActionEvent):
@@ -823,7 +826,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         password = self.secrets.get(Scope.APP, self.secrets.password_key(user_name))
         cert = self.secrets.get_object(
-            Scope.APP, CertType.APP_ADMIN.val
+            Scope.APP, CertType.APP_ADMIN.val, peek=True
         )  # replace later with new user certs
 
         event.set_results(
@@ -849,12 +852,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         - Run the security admin script
         """
         if scope == Scope.UNIT:
-            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val) or {}
+            admin_secrets = (
+                self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val, peek=True) or {}
+            )
             if not (truststore_pwd := admin_secrets.get("truststore-password")):
                 event.defer()
                 return
 
-            keystore_pwd = self.secrets.get_object(scope, cert_type.val)["keystore-password"]
+            keystore_pwd = self.secrets.get_object(scope, cert_type.val, peek=True)[
+                "keystore-password"
+            ]
 
             # node http or transport cert
             self.opensearch_config.set_node_tls_conf(
@@ -884,12 +891,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     # if all certs are stored and CA rotation is complete in the cluster
                     # we delete the old ca and update the chain to only include the new one
                     if (
-                        self.tls.read_stored_ca("old-ca")
+                        self.tls.read_stored_ca(OLD_CA_ALIAS)
                         and self.tls.ca_and_certs_rotation_complete_in_cluster()
                     ):
                         logger.info("on_tls_conf_set: Detected CA rotation complete in cluster")
                         self.tls.on_ca_certs_rotation_complete()
-
             else:
                 event.defer()
                 return
@@ -1087,7 +1093,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 == StartMode.WITH_GENERATED_ROLES
             )
         ):
-            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val, peek=True)
             try:
                 self._initialize_security_index(admin_secrets)
                 self.put_security_index_initialized(event)
@@ -1235,7 +1241,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # We remove the old CA and update the chain to only include the new one
         # if all certs are stored and CA rotation is complete in the cluster
         if (
-            self.tls.read_stored_ca("old-ca")
+            self.tls.read_stored_ca(OLD_CA_ALIAS)
             and self.tls.ca_and_certs_rotation_complete_in_cluster()
         ):
             logger.info("post_start_init: Detected CA rotation complete in cluster")
@@ -1447,11 +1453,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             f"-cn {self.opensearch_peer_cm.deployment_desc().config.cluster_name}",
             f"-h {self.unit_ip}",
             f"-ts {self.opensearch.paths.certs}/ca.p12",
-            f"-tspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['truststore-password']}",
+            f"-tspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val, peek=True)['truststore-password']}",
             "-tsalias ca",
             "-tst PKCS12",
             f"-ks {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.p12",
-            f"-kspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)['keystore-password']}",
+            f"-kspass {self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val, peek=True)['keystore-password']}",
             f"-ksalias {CertType.APP_ADMIN}",
             "-kst PKCS12",
         ]
@@ -1709,7 +1715,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _scrape_config(self) -> List[Dict]:
         """Generates the scrape config as needed."""
         if (
-            not (app_secrets := self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val))
+            not (
+                app_secrets := self.secrets.get_object(
+                    Scope.APP, CertType.APP_ADMIN.val, peek=True
+                )
+            )
             or not (ca := app_secrets.get("ca-cert"))
             or not (pwd := self.secrets.get(Scope.APP, self.secrets.password_key(COSUser)))
             or not self._get_prometheus_labels()

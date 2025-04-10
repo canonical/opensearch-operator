@@ -49,7 +49,7 @@ from ..helpers import (
     run_action,
 )
 from ..helpers_deployments import get_application_units, wait_until
-from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import (
     add_juju_secret,
     app_name,
@@ -311,13 +311,12 @@ async def _configure_azure(
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_small_deployment_build_and_deploy(
-    ops_test: OpsTest, cloud_name: str, deploy_type: str
+    ops_test: OpsTest, charm, cloud_name: str, deploy_type: str
 ) -> None:
     """Build and deploy an HA cluster of OpenSearch and corresponding S3 integration."""
     if await app_name(ops_test):
         return
 
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
@@ -328,9 +327,11 @@ async def test_small_deployment_build_and_deploy(
     )
 
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+        ),
         ops_test.model.deploy(backup_integrator, channel=backup_integrator_channel),
-        ops_test.model.deploy(my_charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
+        ops_test.model.deploy(charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -350,7 +351,7 @@ async def test_small_deployment_build_and_deploy(
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_large_deployment_build_and_deploy(
-    ops_test: OpsTest, cloud_name: str, deploy_type: str
+    ops_test: OpsTest, charm, cloud_name: str, deploy_type: str
 ) -> None:
     """Build and deploy a large deployment for OpenSearch.
 
@@ -365,8 +366,6 @@ async def test_large_deployment_build_and_deploy(
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
     tls_config = {"ca-common-name": "CN_CA"}
-
-    my_charm = await ops_test.build_charm(".")
 
     main_orchestrator_conf = {
         "cluster_name": "backup-test",
@@ -386,24 +385,26 @@ async def test_large_deployment_build_and_deploy(
     )
 
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=tls_config
+        ),
         ops_test.model.deploy(backup_integrator, channel=backup_integrator_channel),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name="main",
             num_units=1,
             series=SERIES,
             config=main_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name="failover",
             num_units=2,
             series=SERIES,
             config=failover_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=APP_NAME,
             num_units=1,
             series=SERIES,
@@ -659,6 +660,7 @@ async def test_remove_and_readd_backup_relation(
 @pytest.mark.abort_on_fail
 async def test_restore_to_new_cluster(
     ops_test: OpsTest,
+    charm,
     cloud_configs: Dict[str, Dict[str, str]],
     cloud_credentials: Dict[str, Dict[str, str]],
     cloud_name: str,
@@ -686,15 +688,16 @@ async def test_restore_to_new_cluster(
     )
 
     logging.info("Deploying a new cluster")
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
 
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+        ),
         ops_test.model.deploy(backup_integrator, channel=backup_integrator_channel),
-        ops_test.model.deploy(my_charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
+        ops_test.model.deploy(charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -783,7 +786,7 @@ async def test_restore_to_new_cluster(
 @pytest.mark.group("all")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_deploy_and_test_status(ops_test: OpsTest) -> None:
+async def test_build_deploy_and_test_status(ops_test: OpsTest, charm) -> None:
     """Build, deploy and test status of an HA cluster of OpenSearch and corresponding backups.
 
     This test group will iterate over each cloud, update its credentials via config and rerun
@@ -792,14 +795,15 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest) -> None:
     if await app_name(ops_test):
         return
 
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+        ),
         ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL),
-        ops_test.model.deploy(my_charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
+        ops_test.model.deploy(charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
     )
 
     # Relate it to OpenSearch to set up TLS.

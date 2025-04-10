@@ -156,7 +156,7 @@ juju model-config --file=./cloudinit-userdata.yaml
 
 To deploy OpenSearch, run
 ```shell
-juju deploy opensearch --channel 2/edge
+juju deploy opensearch --channel 2/edge --config profile="testing"
 ```
 
 For more information about deploying OpenSearch, see our [tutorial](https://discourse.charmhub.io/t/topic/9716).

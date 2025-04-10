@@ -2,22 +2,17 @@
 
 # Deploy OpenSearch
 
-To deploy Charmed OpenSearch, all you need to do is run the following command:
+Charmed OpenSearch supports performance profile. It is recommended in a single host deployment with LXD to use the `testing` profile, which will only consume 1G RAM per container.
 
-[note]
-**Note:** Charmed OpenSearch supports performance profile. It is recommended in a single host deployment with LXD to use the testing profile, which will only consume 1G RAM per container.
-[/note]
-
+To deploy Charmed OpenSearch, run the following command:
 
 ```shell
-juju deploy opensearch -n 3 --channel 2/beta --config profile="testing"
+juju deploy opensearch -n 3 --config profile=testing
 ```
 
-[note]
-**Note:** The `-n` flag is optional and specifies the number of units to deploy. In this case, we are deploying three units of Charmed OpenSearch. We recommend deploying at least three units for high availability.
-[/note]
+> The `-n` flag is optional and specifies the number of units to deploy. In this case, we are deploying three units of Charmed OpenSearch. We recommend deploying at least three units for high availability.
 
-The command will fetch the charm from [Charmhub](https://charmhub.io/opensearch?channel=beta) and deploy 3 units to the LXD cloud. This process can take several minutes depending on your machine. 
+This command will fetch the charm from [Charmhub](https://charmhub.io/opensearch?channel=beta) and deploy 3 units to the LXD cloud. This process can take several minutes depending on your machine. 
 
 You can track the progress by running:
 
@@ -25,7 +20,7 @@ You can track the progress by running:
 juju status --watch 1s
 ```
 
->This command is useful for checking the status of your Juju model, including the applications and machines it hosts. Helpful information it displays includes IP addresses, ports, state, etc. The output of this command updates once every other second. 
+> This command is useful for checking the status of your Juju model, including the applications and machines it hosts. Helpful information it displays includes IP addresses, ports, state, etc. The output of this command updates once every other second. 
 
 When the application is ready, `juju status` will show something similar to the sample output below: 
 
@@ -34,7 +29,7 @@ Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:36:56Z
 
 App         Version  Status   Scale  Charm       Channel  Rev  Exposed  Message
-opensearch           blocked      3  opensearch  2/beta   117  no       Missing TLS relation with this cluster.
+opensearch           blocked      3  opensearch  2/stable   168  no       Missing TLS relation with this cluster.
 
 Unit           Workload  Agent      Machine  Public address  Ports  Message
 opensearch/0*  blocked   idle       0        10.95.38.94            Missing TLS relation with this cluster.
@@ -55,7 +50,7 @@ If you see the following status message:
 ```shell
 vm.swappiness should be 0 - net.ipv4.tcp_retries2 should be 5
 ```
-you need to [set the correct kernel parameters](/t/9724) to continue.
+you need to [set the correct kernel parameters](/t/9724#set-kernel-parameters) to continue.
 
 
 >**Next step:** [3. Enable TLS](/t/9718)

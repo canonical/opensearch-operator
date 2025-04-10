@@ -18,7 +18,7 @@ from ..helpers import (
     set_watermark,
 )
 from ..helpers_deployments import get_application_units, wait_until
-from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import assert_upgrade_to_local, refresh
 
 logger = logging.getLogger(__name__)
@@ -77,7 +77,9 @@ async def _build_env(ops_test: OpsTest, version: str) -> None:
 
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
-    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
+    await ops_test.model.deploy(
+        TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+    )
 
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)

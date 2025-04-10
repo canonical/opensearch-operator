@@ -19,7 +19,7 @@ from ..helpers import (
     run_action,
 )
 from ..helpers_deployments import get_application_units, wait_until
-from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME
+from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,9 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest) -> None
     data_hot_conf = {"cluster_name": "backup-test", "init_hold": True, "roles": "data.hot"}
 
     await asyncio.gather(
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=tls_config
+        ),
         ops_test.model.deploy(
             OPENSEARCH_ORIGINAL_CHARM_NAME,
             application_name=OPENSEARCH_MAIN_APP_NAME,

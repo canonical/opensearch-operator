@@ -201,7 +201,9 @@ class OpenSearchSecrets(Object, RelationDataStore):
         self.cached_secrets.set_meta(scope, label, secret)
         return secret
 
-    def _get_juju_secret_content(self, scope: Scope, key: str) -> Optional[Dict[str, str]]:
+    def _get_juju_secret_content(
+        self, scope: Scope, key: str, peek: bool = False
+    ) -> Optional[Dict[str, str]]:
         cached_secret_content = self.cached_secrets.get_content(scope, self.label(scope, key))
         if cached_secret_content:
             return cached_secret_content
@@ -210,7 +212,10 @@ class OpenSearchSecrets(Object, RelationDataStore):
         if not secret:
             return None
 
-        content = secret.get_content()
+        if peek:
+            content = secret.peek_content()
+        else:
+            content = secret.get_content()
         self.cached_secrets.put_content(scope, self.label(scope, key), content=content)
         return content
 
@@ -322,12 +327,12 @@ class OpenSearchSecrets(Object, RelationDataStore):
             raise TypeError(f"Secret {scope}:{key} is to be retrieved with 'get_object()'")
 
     @override
-    def get_object(self, scope: Scope, key: str) -> Optional[Dict[str, any]]:
+    def get_object(self, scope: Scope, key: str, peek: bool = False) -> Optional[Dict[str, any]]:
         """Get dict object from the relation data store."""
         if not self.implements_secrets:
             return super().get_object(scope, key)
 
-        return self._get_juju_secret_content(scope, key)
+        return self._get_juju_secret_content(scope, key, peek)
 
     @override
     def put(self, scope: Scope, key: str, value: Optional[Union[any]]) -> None:

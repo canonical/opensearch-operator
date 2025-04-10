@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
+TLS_STABLE_CHANNEL = "latest/stable"
 # The expiry time of the secret carrying the certificate is set to 3 minutes for testing
 SECRET_EXPIRY_TIME = 180
 # Wait time for the secret to expire and be renewed
@@ -60,7 +61,9 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
 
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
-    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
+    await ops_test.model.deploy(
+        TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+    )
     await wait_until(ops_test, apps=[TLS_CERTIFICATES_APP_NAME], apps_statuses=["active"])
 
     # Relate it to OpenSearch to set up TLS.
@@ -181,7 +184,9 @@ async def test_tls_expiration(ops_test: OpsTest) -> None:
     # Deploy TLS Certificates operator
     logger.info("Deploying TLS Certificates operator")
     config = {"ca-common-name": "CN_CA", "certificate-validity": "1"}
-    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=config)
+    await ops_test.model.deploy(
+        TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+    )
     await wait_until(ops_test, apps=[TLS_CERTIFICATES_APP_NAME], apps_statuses=["active"])
 
     # Deploy Opensearch operator

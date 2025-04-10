@@ -118,6 +118,11 @@ class OpenSearchConfig:
             f"plugins.security.ssl.{target_conf_layer}.keystore_alias",
             cert_type.val,
         )
+        self._opensearch.config.put(
+            self.CONFIG_YML,
+            f"plugins.security.ssl.{target_conf_layer}.keystore_keypassword",
+            keystore_pwd,
+        )
 
         for store_type, pwd in [("keystore", keystore_pwd), ("truststore", truststore_pwd)]:
             self._opensearch.config.put(
@@ -170,6 +175,9 @@ class OpenSearchConfig:
             self._opensearch.config.put(
                 self.CONFIG_YML, "network.publish_host", self._opensearch.host
             )
+        self._opensearch.config.put(
+            self.CONFIG_YML, "http.publish_host", self._opensearch.public_address
+        )
 
         self._opensearch.config.put(
             self.CONFIG_YML, "node.roles", roles, inline_array=len(roles) == 0
@@ -285,6 +293,11 @@ class OpenSearchConfig:
                 "network.publish_host",
                 node.get("network.publish_host"),
                 self._opensearch.host,
+            ),
+            NetworkHost(
+                "http.publish_host",
+                node.get("http.publish_host"),
+                self._opensearch.public_address,
             ),
         ]:
             if not host.old:

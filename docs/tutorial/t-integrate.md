@@ -17,13 +17,13 @@ Data Integrator is a bare-bones charm that allows for central management of data
 Deploy Data Integrator as follows:
 
 ```shell
-juju deploy data-integrator --channel=edge --config index-name=test-index --config extra-user-roles=admin
+juju deploy data-integrator --channel=stable --config index-name=test-index --config extra-user-roles=admin
 ```
 
 The expected output:
 
 ```shell
-Deployed "data-integrator" from charm-hub charm "data-integrator", revision 59 in channel latest/edge on ubuntu@22.04/stable
+Deployed "data-integrator" from charm-hub charm "data-integrator", revision 79 in channel latest/stable on ubuntu@22.04/stable
 ```
 
 Wait for `juju status --watch 1s` to show:
@@ -33,8 +33,8 @@ Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:43:22Z
 
 App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
-data-integrator                    blocked      1  data-integrator           latest/edge     59  no       Please relate the data-integrator with the desired product
-opensearch                         active       3  opensearch                2/beta         117  no
+data-integrator                    blocked      1  data-integrator           latest/stable     79  no       Please relate the data-integrator with the desired product
+opensearch                         active       3  opensearch                2/stable         168  no
 self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
@@ -77,8 +77,8 @@ Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:44:43Z
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-data-integrator                    active      1  data-integrator           latest/edge     59  no
-opensearch                         active      3  opensearch                2/beta         117  no
+data-integrator                    active      1  data-integrator           latest/stable     79  no
+opensearch                         active      3  opensearch                2/stable         168  no
 self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
@@ -333,8 +333,8 @@ Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  13:48:08Z
 
 App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
-data-integrator                    blocked      1  data-integrator           latest/edge     59  no       Please relate the data-integrator with the desired product
-opensearch                         active       3  opensearch                2/beta         117  no
+data-integrator                    blocked      1  data-integrator           latest/stable     79  no       Please relate the data-integrator with the desired product
+opensearch                         active       3  opensearch                2/stable         168  no
 self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
