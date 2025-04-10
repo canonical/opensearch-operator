@@ -140,7 +140,7 @@ jobs:
 
   lib-check:
     name: Check libraries
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Checkout
@@ -172,7 +172,8 @@ jobs:
     name: Integration test charm
     needs:
       - lint
-      - unit-test
+      # TODO add back once spread integration is done
+      # - unit-test
       - build
     uses: ./.github/workflows/integration_test.yaml
     with:
