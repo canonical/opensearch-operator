@@ -407,8 +407,15 @@ def test_close_indices_if_needed(
         ),
     ],
 )
+@patch("charms.opensearch.v0.opensearch_backups.BackupManager.check_snapshot_status")
 def test_on_s3_broken_steps(
-    harness, test_type, s3_units, snapshot_status, is_leader, apply_config_exc
+    check_snapshot_status,
+    harness,
+    test_type,
+    s3_units,
+    snapshot_status,
+    is_leader,
+    apply_config_exc,
 ):
     relation = MagicMock()
     relation.units = s3_units
@@ -418,9 +425,7 @@ def test_on_s3_broken_steps(
     harness.charm.plugin_manager.apply_config = (
         MagicMock(side_effect=apply_config_exc) if apply_config_exc else MagicMock()
     )
-    harness.charm.backup.backup_manager.check_snapshot_status = MagicMock(
-        return_value=snapshot_status
-    )
+    check_snapshot_status.return_value = snapshot_status
     harness.charm.unit.is_leader = MagicMock(return_value=is_leader)
     harness.charm.plugin_manager.get_plugin = MagicMock()
     harness.charm.plugin_manager.status = MagicMock(return_value=PluginState.ENABLED)
