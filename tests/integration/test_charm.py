@@ -79,9 +79,7 @@ async def test_deploy_and_remove_single_unit(charm, ops_test: OpsTest) -> None:
 
     # Now, clean up
     await ops_test.model.remove_application(APP_NAME, block_until_done=True)
-    await ops_test.model.remove_application(
-        TLS_CERTIFICATES_APP_NAME, block_until_done=True
-    )
+    await ops_test.model.remove_application(TLS_CERTIFICATES_APP_NAME, block_until_done=True)
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
@@ -145,15 +143,11 @@ async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
     assert result.get("ca-chain")
 
     # parse_output fields non-null + make http request success
-    http_resp_code = await http_request(
-        ops_test, "GET", test_url, resp_status_code=True
-    )
+    http_resp_code = await http_request(ops_test, "GET", test_url, resp_status_code=True)
     assert http_resp_code == 200
 
     # 3. test retrieving password from non-supported user
-    result = await run_action(
-        ops_test, leader_id, "get-password", {"username": "non-existent"}
-    )
+    result = await run_action(ops_test, leader_id, "get-password", {"username": "non-existent"})
     assert result.status == "failed"
 
 
@@ -167,9 +161,7 @@ async def test_actions_rotate_admin_password(ops_test: OpsTest) -> None:
 
     leader_id = await get_leader_unit_id(ops_test)
     non_leader_id = [
-        unit_id
-        for unit_id in get_application_unit_ids(ops_test)
-        if unit_id != leader_id
+        unit_id for unit_id in get_application_unit_ids(ops_test) if unit_id != leader_id
     ][0]
 
     # 1. run the action on a non_leader unit.
@@ -177,23 +169,17 @@ async def test_actions_rotate_admin_password(ops_test: OpsTest) -> None:
     assert result.status == "failed"
 
     # 2. run the action with the wrong username
-    result = await run_action(
-        ops_test, leader_id, "set-password", {"username": "wrong-user"}
-    )
+    result = await run_action(ops_test, leader_id, "set-password", {"username": "wrong-user"})
     assert result.status == "failed"
 
     # 3. change password and verify the new password works and old password not
     password0 = (await get_secrets(ops_test, leader_id))["password"]
-    result = await run_action(
-        ops_test, leader_id, "set-password", {"password": "new_pwd"}
-    )
+    result = await run_action(ops_test, leader_id, "set-password", {"password": "new_pwd"})
     password1 = result.response.get("admin-password")
     assert password1
     assert password1 == (await get_secrets(ops_test, leader_id))["password"]
 
-    http_resp_code = await http_request(
-        ops_test, "GET", test_url, resp_status_code=True
-    )
+    http_resp_code = await http_request(ops_test, "GET", test_url, resp_status_code=True)
     assert http_resp_code == 200
 
     http_resp_code = await http_request(
@@ -206,9 +192,7 @@ async def test_actions_rotate_admin_password(ops_test: OpsTest) -> None:
     password2 = result.response.get("admin-password")
     assert password2
 
-    http_resp_code = await http_request(
-        ops_test, "GET", test_url, resp_status_code=True
-    )
+    http_resp_code = await http_request(ops_test, "GET", test_url, resp_status_code=True)
     assert http_resp_code == 200
 
     http_resp_code = await http_request(
@@ -415,7 +399,5 @@ async def test_add_users_and_calling_update_status(ops_test: OpsTest) -> None:
             f"stderr = {e.stderr}.",
         )
     await asyncio.sleep(300)
-    http_resp_code = await http_request(
-        ops_test, "GET", test_url, resp_status_code=True
-    )
+    http_resp_code = await http_request(ops_test, "GET", test_url, resp_status_code=True)
     assert http_resp_code >= 200 and http_resp_code < 300
