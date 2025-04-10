@@ -5,6 +5,7 @@
 import asyncio
 import json
 import logging
+import os
 import subprocess
 
 import pytest
@@ -166,12 +167,12 @@ async def _wait_for_units(
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy_small_deployment(ops_test: OpsTest, deploy_type: str) -> None:
+async def test_build_and_deploy_small_deployment(
+    ops_test: OpsTest, charm, deploy_type: str
+) -> None:
     """Build and deploy an OpenSearch cluster."""
     if await app_name(ops_test):
         return
-
-    my_charm = await ops_test.build_charm(".")
 
     model_conf = MODEL_CONFIG.copy()
     # Make it more regular as COS relation-broken really happens on the
@@ -185,14 +186,23 @@ async def test_build_and_deploy_small_deployment(ops_test: OpsTest, deploy_type:
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(
-            my_charm,
+            charm,
             num_units=3,
             series=SERIES,
             config={"plugin_opensearch_knn": False} | CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
         ops_test.model.deploy(
-            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+            TLS_CERTIFICATES_APP_NAME,
+            channel=TLS_STABLE_CHANNEL,
+            config=config,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
+    )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {APP_NAME}",
+        shell=True,
     )
 
     await wait_until(
@@ -249,7 +259,12 @@ async def test_prometheus_exporter_enabled_by_default(ops_test, deploy_type: str
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_small_deployments_prometheus_exporter_cos_relation(ops_test, deploy_type: str):
-    await ops_test.model.deploy(COS_APP_NAME, channel="edge", series=SERIES),
+    await ops_test.model.deploy(
+        COS_APP_NAME,
+        channel="edge",
+        series=SERIES,
+        constraints=os.environ.get("TEST_CONSTRAINTS"),
+    ),
     await ops_test.model.integrate(APP_NAME, COS_APP_NAME)
     await _wait_for_units(ops_test, deploy_type, wait_for_cos=True)
 
@@ -277,13 +292,13 @@ async def test_small_deployments_prometheus_exporter_cos_relation(ops_test, depl
 @pytest.mark.parametrize("deploy_type", LARGE_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type: str) -> None:
+async def test_large_deployment_build_and_deploy(
+    ops_test: OpsTest, charm, deploy_type: str
+) -> None:
     """Build and deploy a large deployment for OpenSearch."""
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
     tls_config = {"ca-common-name": "CN_CA"}
-
-    my_charm = await ops_test.build_charm(".")
 
     main_orchestrator_conf = {
         "cluster_name": "plugins-test",
@@ -299,29 +314,48 @@ async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type:
 
     await asyncio.gather(
         ops_test.model.deploy(
-            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=tls_config
+            TLS_CERTIFICATES_APP_NAME,
+            channel=TLS_STABLE_CHANNEL,
+            config=tls_config,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=MAIN_ORCHESTRATOR_NAME,
             num_units=1,
             series=SERIES,
             config=main_orchestrator_conf | CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=FAILOVER_ORCHESTRATOR_NAME,
             num_units=2,
             series=SERIES,
             config=failover_orchestrator_conf | CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=APP_NAME,
             num_units=1,
             series=SERIES,
             config=data_hot_conf | CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
+    )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {MAIN_ORCHESTRATOR_NAME}",
+        shell=True,
+    )
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {FAILOVER_ORCHESTRATOR_NAME}",
+        shell=True,
+    )
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {APP_NAME}",
+        shell=True,
     )
 
     # Large deployment setup
@@ -344,7 +378,12 @@ async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type:
 @pytest.mark.abort_on_fail
 async def test_large_deployment_prometheus_exporter_cos_relation(ops_test, deploy_type: str):
     # Check that the correct settings were successfully communicated to grafana-agent
-    await ops_test.model.deploy(COS_APP_NAME, channel="edge", series=SERIES),
+    await ops_test.model.deploy(
+        COS_APP_NAME,
+        channel="edge",
+        series=SERIES,
+        constraints=os.environ.get("TEST_CONSTRAINTS"),
+    ),
     await ops_test.model.integrate(FAILOVER_ORCHESTRATOR_NAME, COS_APP_NAME)
     await ops_test.model.integrate(MAIN_ORCHESTRATOR_NAME, COS_APP_NAME)
     await ops_test.model.integrate(APP_NAME, COS_APP_NAME)

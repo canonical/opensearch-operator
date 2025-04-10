@@ -4,7 +4,9 @@
 import asyncio
 import json
 import logging
+import os
 import re
+import subprocess
 import time
 
 import pytest
@@ -68,7 +70,10 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
 
     config = {"ca-common-name": "CN_CA"}
     await ops_test.model.deploy(
-        TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+        TLS_CERTIFICATES_APP_NAME,
+        channel=TLS_STABLE_CHANNEL,
+        config=config,
+        constraints=os.environ.get("TEST_CONSTRAINTS"),
     )
 
     await ops_test.model.set_config(new_model_conf)
@@ -76,12 +81,14 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
         ops_test.model.deploy(
             application_charm,
             application_name=CLIENT_APP_NAME,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
         ops_test.model.deploy(
             DASHBOARDS_APP_NAME,
             application_name=DASHBOARDS_APP_NAME,
             channel="2/edge",
             series=SERIES,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
         ops_test.model.deploy(
             opensearch_charm,
@@ -89,8 +96,19 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
             num_units=NUM_UNITS,
             series=SERIES,
             config=CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
     )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {DASHBOARDS_APP_NAME}",
+        shell=True,
+    )
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {OPENSEARCH_APP_NAME}",
+        shell=True,
+    )
+
     await ops_test.model.integrate(OPENSEARCH_APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME, OPENSEARCH_APP_NAME], status="active", timeout=1600
@@ -379,6 +397,7 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
         application_charm,
         num_units=1,
         application_name=SECONDARY_CLIENT_APP_NAME,
+        constraints=os.environ.get("TEST_CONSTRAINTS"),
     )
 
     # Relate the new application and wait for them to exchange connection data.

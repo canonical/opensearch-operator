@@ -4,6 +4,8 @@
 
 import asyncio
 import logging
+import os
+import subprocess
 
 import pytest
 import requests
@@ -65,22 +67,30 @@ ALL_DEPLOYMENTS = list(ALL_GROUPS.values())
 @pytest.mark.group(SMALL_DEPLOYMENT)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
+async def test_build_and_deploy_active(ops_test: OpsTest, charm) -> None:
     """Build and deploy one unit of OpenSearch."""
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
     await ops_test.model.deploy(
-        my_charm,
+        charm,
         num_units=len(UNIT_IDS),
         series=SERIES,
         config=CONFIG_OPTS,
+        constraints=os.environ.get("TEST_CONSTRAINTS"),
+    )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {APP_NAME}",
+        shell=True,
     )
 
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await ops_test.model.deploy(
-        TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+        TLS_CERTIFICATES_APP_NAME,
+        channel=TLS_STABLE_CHANNEL,
+        config=config,
+        constraints=os.environ.get("TEST_CONSTRAINTS"),
     )
     await wait_until(ops_test, apps=[TLS_CERTIFICATES_APP_NAME], apps_statuses=["active"])
 
@@ -99,20 +109,20 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(LARGE_DEPLOYMENT)
 @pytest.mark.abort_on_fail
-async def test_build_large_deployment(ops_test: OpsTest) -> None:
+async def test_build_large_deployment(ops_test: OpsTest, charm) -> None:
     """Setup a large deployments cluster."""
     # deploy new cluster
-    my_charm = await ops_test.build_charm(".")
     await asyncio.gather(
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=MAIN_APP,
             num_units=3,
             series=SERIES,
             config={"cluster_name": CLUSTER_NAME, "roles": "cluster_manager,data"} | CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=FAILOVER_APP,
             num_units=1,
             series=SERIES,
@@ -122,20 +132,36 @@ async def test_build_large_deployment(ops_test: OpsTest) -> None:
                 "roles": "cluster_manager,data",
             }
             | CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=DATA_APP,
             num_units=1,
             series=SERIES,
             config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "data"}
             | CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME,
             channel=TLS_STABLE_CHANNEL,
             config={"ca-common-name": "CN_CA"},
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
+    )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {MAIN_APP}",
+        shell=True,
+    )
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {FAILOVER_APP}",
+        shell=True,
+    )
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {DATA_APP}",
+        shell=True,
     )
 
     # integrate TLS to all applications

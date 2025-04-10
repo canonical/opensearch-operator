@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+
 import json
 import logging
+import os
 import random
 import shlex
 import subprocess
@@ -12,6 +14,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Dict, List, Optional, Union
 
+import pytest
 import requests
 import yaml
 from charms.opensearch.v0.helper_networking import is_reachable
@@ -638,3 +641,20 @@ async def is_each_unit_restarted(
                 return True
     except RetryError:
         return False
+
+
+def filter_cloud(allowed_clouds: List[str]) -> "pytest.mark.skipif":
+    if not (chosen_cloud := os.environ.get("SUBSTRATE", "").lower()):
+        # Assume we are running in LXD if not specified
+        chosen_cloud = "lxd"
+
+    if not allowed_clouds:
+        allowed_clouds = ["aws", "azure", "maas", "manual"]
+
+    if chosen_cloud not in allowed_clouds:
+        logger.info(f"Skipping test as substrate:{chosen_cloud} not in {allowed_clouds}")
+
+    return pytest.mark.skipif(
+        chosen_cloud not in allowed_clouds,
+        reason=f"Skipping test as substrate:{chosen_cloud} not in {allowed_clouds}",
+    )

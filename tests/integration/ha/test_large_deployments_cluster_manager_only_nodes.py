@@ -4,6 +4,8 @@
 
 import asyncio
 import logging
+import os
+import subprocess
 import time
 
 import pytest
@@ -35,42 +37,60 @@ APP_UNITS = {MAIN_APP: 1, FAILOVER_APP: 1, DATA_APP: 2}
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(
-            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+            TLS_CERTIFICATES_APP_NAME,
+            channel=TLS_STABLE_CHANNEL,
+            config=config,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=MAIN_APP,
             num_units=1,
             series=SERIES,
             config={"cluster_name": CLUSTER_NAME, "roles": "cluster_manager"} | CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=FAILOVER_APP,
             num_units=1,
             series=SERIES,
             config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "cluster_manager"}
             | CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=DATA_APP,
             num_units=2,
             series=SERIES,
             config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "data"}
             | CONFIG_OPTS,
+            constraints=os.environ.get("TEST_CONSTRAINTS"),
         ),
+    )
+
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {MAIN_APP}",
+        shell=True,
+    )
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {FAILOVER_APP}",
+        shell=True,
+    )
+    subprocess.call(
+        f"juju expose -m {ops_test.model.name} {DATA_APP}",
+        shell=True,
     )
 
     # wait until the TLS operator is ready
