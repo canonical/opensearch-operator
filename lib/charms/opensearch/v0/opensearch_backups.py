@@ -108,7 +108,10 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
     OpenSearchNotFullyReadyError,
 )
-from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyError
+from charms.opensearch.v0.opensearch_keystore import (
+    OpenSearchKeystoreError,
+    OpenSearchKeystoreNotReadyError,
+)
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchAzurePlugin,
@@ -642,7 +645,7 @@ class OpenSearchBackupBase(Object):
                 "Modifying relations during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
 
-    def _on_backup_relation_broken(self, event: RelationEvent) -> None:
+    def _on_backup_relation_broken(self, event: RelationEvent) -> None:  # noqa C901
         """Defers the backup relation broken events."""
         self.charm.status.clear(BackupRelDataIncomplete)
 
@@ -694,19 +697,25 @@ class OpenSearchBackupBase(Object):
             # 2) Run the API calls
             self.backup_manager.clean()
 
-        try:
-            if self.charm.plugin_manager.status(self.plugin) == PluginState.ENABLED:
-                self.charm.plugin_manager.apply_config(self.plugin.disable())
-        except OpenSearchKeystoreNotReadyError:
-            logger.warning("s3-changed: keystore not ready yet")
-            event.defer()
-            return
-        except OpenSearchError as e:
-            self.charm.status.set(BlockedStatus(PluginConfigError))
-            # There was an unexpected error, log it and block the unit
-            logger.error(e)
-            event.defer()
-            return
+        # We disable both plugins
+        plugins = [OpenSearchAzurePlugin(self.charm, None), OpenSearchS3Plugin(self.charm, None)]
+        for plug in plugins:
+            try:
+                self.charm.plugin_manager.apply_config(plug.disable())
+            except OpenSearchKeystoreNotReadyError:
+                logger.warning("Backup broken relation: keystore not ready yet")
+                event.defer()
+                return
+            except OpenSearchKeystoreError:
+                logger.info(f"Plugin {plug.name} not found: no keys present")
+                # The plugin is not present, we can ignore it
+                continue
+            except OpenSearchError as e:
+                self.charm.status.set(BlockedStatus(PluginConfigError))
+                # There was an unexpected error, log it and block the unit
+                logger.error(e)
+                event.defer()
+                return
 
         self.charm.status.clear(BackupInDisabling)
         self.charm.status.clear(PluginConfigError)
