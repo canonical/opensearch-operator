@@ -490,8 +490,8 @@ async def test_large_setups_relations_with_misconfiguration(
 
     backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
     backup_relation = AZURE_RELATION if cloud_name == "azure" else S3_RELATION
-    # Now, relate failover cluster to backup-integrator and review the status
 
+    # Now, relate failover cluster to backup-integrator and review the status
     await ops_test.model.integrate(f"failover:{backup_relation}", backup_integrator)
     await ops_test.model.integrate(f"{APP_NAME}:{backup_relation}", backup_integrator)
     await wait_until(

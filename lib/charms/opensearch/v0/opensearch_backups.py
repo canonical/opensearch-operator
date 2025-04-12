@@ -648,18 +648,12 @@ class OpenSearchBackupBase(Object):
     def _on_backup_relation_broken(self, event: RelationEvent) -> None:  # noqa C901
         """Defers the backup relation broken events."""
         self.charm.status.clear(BackupRelDataIncomplete)
+        self.charm.status.clear(BackupRelShouldNotExist)
 
         if self.charm.upgrade_in_progress:
             logger.warning(
                 "Modifying relations during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
-
-        if (
-            self.charm.model.get_relation(self.relation_name)
-            and self.charm.model.get_relation(self.relation_name).units
-        ):
-            event.defer()
-            return
 
         self.charm.status.set(MaintenanceStatus(BackupInDisabling))
         # Check snapshot
@@ -836,8 +830,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
     @override
     def _on_backup_relation_event(self, event: RelationEvent) -> None:
         """Processes the non-orchestrator cluster events."""
-        if self.charm.unit.is_leader():
-            self.charm.status.set(BlockedStatus(BackupRelShouldNotExist), app=True)
+        self.charm.status.set(BlockedStatus(BackupRelShouldNotExist))
         logger.info("Non-orchestrator cluster, abandon relation event")
 
 
