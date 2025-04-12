@@ -530,7 +530,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.health.apply(wait_for_green_first=True)
 
-        if len(remaining_nodes) == self.app.planned_units():
+        if (
+            len([node for node in remaining_nodes if node.app.id == current_app.id])
+            == self.app.planned_units()
+        ):
             self._compute_and_broadcast_updated_topology(remaining_nodes)
         else:
             event.defer()
