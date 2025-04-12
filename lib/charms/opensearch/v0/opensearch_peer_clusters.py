@@ -332,7 +332,6 @@ class OpenSearchPeerClustersManager:
             CmVoRolesProvidedInvalid,
             DataRoleRemovalForbidden,
             PClusterNoRelation,
-            PClusterWrongNodesCountForQuorum,
             PClusterWrongRelation,
             PClusterWrongRolesProvided,
         ]
@@ -397,21 +396,16 @@ class OpenSearchPeerClustersManager:
     def validate_roles(self, nodes: List[Node]) -> None:
         """Validate full-cluster wide the quorum for CM/voting_only nodes on services start."""
         deployment_desc = self.deployment_desc()
-        if (
-            not set(deployment_desc.config.roles) & {"cluster_manager", "voting_only"}
-            and not deployment_desc.start == StartMode.WITH_GENERATED_ROLES
-        ):
+        if not set(deployment_desc.roles) & {"cluster_manager", "voting_only"}:
             # the user is not adding any cm nor voting_only roles to the nodes
             return
 
         # validate the full-cluster wide count of cm+voting_only nodes to keep the quorum
         full_cluster_planned_units = self._charm.app.planned_units()
-        apps_in_fleet = self._charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
-        apps_in_fleet = [PeerClusterApp.from_dict(app) for app in apps_in_fleet.values()]
         full_cluster_planned_units += sum(
             [
                 p_cluster_app.planned_units
-                for p_cluster_app in apps_in_fleet
+                for p_cluster_app in self.apps_in_fleet()
                 if p_cluster_app.app.id != deployment_desc.app.id
             ]
         )
@@ -428,6 +422,27 @@ class OpenSearchPeerClustersManager:
             return
 
         raise OpenSearchProvidedRolesException(PClusterWrongNodesCountForQuorum)
+
+    def _check_sufficient_cm_units(self) -> None:
+        """Validate that at least 3 cm-eligible units are in the cluster"""
+        if self._charm.app.status.message != PClusterWrongNodesCountForQuorum:
+            return
+
+        # if we are in a simple deployment, no need to validate
+        apps_in_fleet = self.apps_in_fleet()
+        if len(apps_in_fleet) <= 1:
+            return
+
+        n_cms = sum(app.planned_units for app in apps_in_fleet if "cluster_manager" in app.roles)
+        if n_cms >= 3:
+            # clear the blocked status if at least 3 cm-eligible units found
+            self._charm.status.clear(PClusterWrongNodesCountForQuorum, app=True)
+
+    def apps_in_fleet(self) -> List[PeerClusterApp]:
+        cluster_fleet_apps = (
+            self._charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
+        )
+        return [PeerClusterApp.from_dict(app) for app in cluster_fleet_apps.values()]
 
     def is_provider(self, typ: Optional[Literal["main", "failover"]] = None) -> bool:
         """Return whether the current app is a related to provider / orchestrator."""
