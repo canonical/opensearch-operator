@@ -444,12 +444,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # check possibility to start
         if self.opensearch_peer_cm.can_start(deployment_desc):
             try:
-                nodes = self._get_nodes(False)
-                self.opensearch_peer_cm.validate_roles(nodes, on_new_unit=True)
+                self._get_nodes(False)
             except OpenSearchHttpError:
-                return False
-            except OpenSearchProvidedRolesException as e:
-                self.unit.status = BlockedStatus(str(e))
                 return False
 
             return True
@@ -543,7 +539,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         try:
-            self.opensearch_peer_cm.validate_roles(remaining_nodes, on_new_unit=False)
+            self.opensearch_peer_cm.validate_roles(remaining_nodes)
         except OpenSearchProvidedRolesException as e:
             logger.exception(e)
             self.app.status = BlockedStatus(str(e))
@@ -1041,21 +1037,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # Retrieve the nodes of the cluster, needed to configure this node
             nodes = self._get_nodes(False)
 
-            # validate the roles prior to starting
-            self.opensearch_peer_cm.validate_roles(nodes, on_new_unit=True)
-
             # Set the configuration of the node
             self._set_node_conf(nodes)
         except OpenSearchHttpError as e:
             logger.debug(f"error getting the nodes: {e}")
             self.node_lock.release()
             event.defer()
-            return
-        except OpenSearchProvidedRolesException as e:
-            logger.exception(e)
-            self.node_lock.release()
-            event.defer()
-            self.unit.status = BlockedStatus(str(e))
             return
 
         try:

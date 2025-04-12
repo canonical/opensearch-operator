@@ -394,42 +394,37 @@ class OpenSearchPeerClustersManager:
             Scope.APP, "deployment-description", deployment_desc.to_dict()
         )
 
-    def validate_roles(self, nodes: List[Node], on_new_unit: bool = False) -> None:
+    def validate_roles(self, nodes: List[Node]) -> None:
         """Validate full-cluster wide the quorum for CM/voting_only nodes on services start."""
         deployment_desc = self.deployment_desc()
-        if not set(deployment_desc.config.roles) & {"cluster_manager", "voting_only"}:
+        if (
+            not set(deployment_desc.config.roles) & {"cluster_manager", "voting_only"}
+            and not deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+        ):
             # the user is not adding any cm nor voting_only roles to the nodes
-            return
-
-        if deployment_desc.start == StartMode.WITH_GENERATED_ROLES:
-            # the roles are automatically generated, we trust the correctness
             return
 
         # validate the full-cluster wide count of cm+voting_only nodes to keep the quorum
         full_cluster_planned_units = self._charm.app.planned_units()
-        if apps_in_fleet := self._charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps"):
-            apps_in_fleet = [PeerClusterApp.from_dict(app) for app in apps_in_fleet.values()]
-            full_cluster_planned_units += sum(
-                [
-                    p_cluster_app.planned_units
-                    for p_cluster_app in apps_in_fleet
-                    if p_cluster_app.app.id != deployment_desc.app.id
-                ]
-            )
+        apps_in_fleet = self._charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
+        apps_in_fleet = [PeerClusterApp.from_dict(app) for app in apps_in_fleet.values()]
+        full_cluster_planned_units += sum(
+            [
+                p_cluster_app.planned_units
+                for p_cluster_app in apps_in_fleet
+                if p_cluster_app.app.id != deployment_desc.app.id
+            ]
+        )
 
-        current_cluster_online_nodes = [
-            node for node in nodes if node.app.id == deployment_desc.app.id
-        ]
-
-        if len(current_cluster_online_nodes) < full_cluster_planned_units - 1:
+        if len(nodes) < full_cluster_planned_units - 1:
             # this is not the latest unit to be brought online, we can continue
             return
 
-        voters = sum(1 for node in nodes if node.is_cm_eligible() or node.is_voting_only())
-        if voters % 2 == (0 if on_new_unit else 1):
-            # if validation called on new unit: it means it will start and maintain the quorum
-            #    (called on the latest unit to be configured and brought online)
-            # if validation called on existing cluster we should expect an odd number in the sum
+        is_large_deployment = len(apps_in_fleet) > 1
+        cms = sum(1 for node in nodes if node.is_cm_eligible())
+        if not is_large_deployment or (is_large_deployment and cms >= 3):
+            # if validation called on large deployment,
+            # start if there are at least 3 cm eligible nodes
             return
 
         raise OpenSearchProvidedRolesException(PClusterWrongNodesCountForQuorum)
