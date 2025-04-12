@@ -542,6 +542,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not self.unit.is_leader():
             return
 
+        try:
+            self.opensearch_peer_cm.validate_roles(remaining_nodes, on_new_unit=False)
+        except OpenSearchProvidedRolesException as e:
+            logger.exception(e)
+            self.app.status = BlockedStatus(str(e))
+
         # Now, we register in the leader application the presence of departing unit's name
         # We need to save them as we have a count limit
         if (
@@ -1642,13 +1648,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     unit_number=self.unit_id,
                     temperature=temperature,
                 )
-
-            # TODO: remove this when we get rid of roles recomputing logic
-            try:
-                self.opensearch_peer_cm.validate_roles(current_nodes, on_new_unit=False)
-            except OpenSearchProvidedRolesException as e:
-                logger.exception(e)
-                self.app.status = BlockedStatus(str(e))
 
         if current_reported_nodes == updated_nodes:
             return
