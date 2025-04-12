@@ -541,11 +541,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not self.unit.is_leader():
             return
 
-        try:
-            self.opensearch_peer_cm.validate_roles(remaining_nodes)
-        except OpenSearchProvidedRolesException as e:
-            logger.exception(e)
-            self.app.status = BlockedStatus(str(e))
+        self._block_status_if_insufficient_cm_units(remaining_nodes)
 
         # Now, we register in the leader application the presence of departing unit's name
         # We need to save them as we have a count limit
@@ -575,13 +571,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # if the leader is departing, and this hook fails "leader elected" won"t trigger,
         # so we want to re-balance the node roles from here
         if self.unit.is_leader():
-            if self.app.planned_units() > 1 and (self.opensearch.is_node_up() or self.alt_hosts):
+            if self.app.planned_units() > 0 and (self.opensearch.is_node_up() or self.alt_hosts):
                 remaining_nodes = [
                     node
                     for node in self._get_nodes(self.opensearch.is_node_up())
                     if node.name != self.unit_name
                 ]
                 self._compute_and_broadcast_updated_topology(remaining_nodes)
+                self._block_status_if_insufficient_cm_units(remaining_nodes)
             elif self.app.planned_units() == 0 and self.model.get_relation(PeerRelationName):
                 self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")
                 self.peers_data.delete(Scope.APP, "nodes_config")
@@ -1646,6 +1643,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # all units will get a peer_rel_changed event, for leader we do as follows
         self._reconfigure_and_restart_unit_if_needed()
+
+    def _block_status_if_insufficient_cm_units(self, nodes: List[Node]) -> None:
+        """Applies blocked status if less than 3 cm-eligible nodes in the cluster"""
+        try:
+            self.opensearch_peer_cm.validate_roles(nodes)
+        except OpenSearchProvidedRolesException as e:
+            logger.exception(e)
+            self.app.status = BlockedStatus(str(e))
 
     def _check_certs_expiration(self, event: UpdateStatusEvent) -> None:
         """Checks the certificates' expiration."""
