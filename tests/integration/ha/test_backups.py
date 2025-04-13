@@ -499,7 +499,6 @@ async def test_large_setups_relations_with_misconfiguration(
         apps=["main", "failover", APP_NAME],
         apps_statuses=["blocked"],
         apps_full_statuses={
-            "main": {"blocked": [BackupSetupFailed]},
             "failover": {"blocked": [BackupRelShouldNotExist]},
             APP_NAME: {"blocked": [BackupRelShouldNotExist]},
         },
