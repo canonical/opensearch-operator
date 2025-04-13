@@ -649,6 +649,8 @@ class OpenSearchBackupBase(Object):
         """Defers the backup relation broken events."""
         self.charm.status.clear(BackupRelDataIncomplete)
         self.charm.status.clear(BackupRelShouldNotExist)
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupRelShouldNotExist, app=True)
 
         if self.charm.upgrade_in_progress:
             logger.warning(
@@ -842,6 +844,8 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
     def _on_backup_relation_event(self, event: RelationEvent) -> None:
         """Processes the non-orchestrator cluster events."""
         self.charm.status.set(BlockedStatus(BackupRelShouldNotExist))
+        if self.charm.unit.is_leader():
+            self.charm.status.set(BlockedStatus(BackupRelShouldNotExist), app=True)
         logger.info("Non-orchestrator cluster, abandon relation event")
 
 
