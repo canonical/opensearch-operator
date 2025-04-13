@@ -655,6 +655,16 @@ class OpenSearchBackupBase(Object):
                 "Modifying relations during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
 
+        if (
+            self.charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR
+            and self.charm.model.get_relation(self.relation_name)
+            and self.charm.model.get_relation(self.relation_name).units
+        ):
+            # The leader units must defer this event as they are related directly with the backup integrator
+            # and they are still seeing data in the relation databag.
+            event.defer()
+            return
+
         self.charm.status.set(MaintenanceStatus(BackupInDisabling))
         # Check snapshot
         # This will call a generic GET /_snapshot/_status, independent of the repository type
