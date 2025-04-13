@@ -660,7 +660,8 @@ class OpenSearchBackupBase(Object):
             and self.charm.model.get_relation(self.relation_name)
             and self.charm.model.get_relation(self.relation_name).units
         ):
-            # The leader units must defer this event as they are related directly with the backup integrator
+            # The main app units must defer this event
+            # as they are related directly with the backup integrator
             # and they are still seeing data in the relation databag.
             event.defer()
             return
