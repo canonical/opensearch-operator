@@ -496,7 +496,7 @@ async def test_large_setups_relations_with_misconfiguration(
     await ops_test.model.integrate(f"{APP_NAME}:{backup_relation}", backup_integrator)
     await wait_until(
         ops_test,
-        apps=["main", "failover", APP_NAME],
+        apps=["failover", APP_NAME],
         apps_statuses=["blocked"],
         apps_full_statuses={
             "failover": {"blocked": [BackupRelShouldNotExist]},
