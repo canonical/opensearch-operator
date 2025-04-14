@@ -402,10 +402,11 @@ class OpenSearchPeerClustersManager:
 
         # validate the full-cluster wide count of cm+voting_only nodes to keep the quorum
         full_cluster_planned_units = self._charm.app.planned_units()
+        apps_in_fleet = self.apps_in_fleet()
         full_cluster_planned_units += sum(
             [
                 p_cluster_app.planned_units
-                for p_cluster_app in self.apps_in_fleet()
+                for p_cluster_app in apps_in_fleet
                 if p_cluster_app.app.id != deployment_desc.app.id
             ]
         )
@@ -423,7 +424,7 @@ class OpenSearchPeerClustersManager:
 
         raise OpenSearchProvidedRolesException(PClusterWrongNodesCountForQuorum)
 
-    def _check_sufficient_cm_units(self) -> None:
+    def unblock_status_if_sufficient_cms(self) -> None:
         """Validate that at least 3 cm-eligible units are in the cluster"""
         if self._charm.app.status.message != PClusterWrongNodesCountForQuorum:
             return
@@ -439,6 +440,7 @@ class OpenSearchPeerClustersManager:
             self._charm.status.clear(PClusterWrongNodesCountForQuorum, app=True)
 
     def apps_in_fleet(self) -> List[PeerClusterApp]:
+        """Returns list of apps in cluster fleet"""
         cluster_fleet_apps = (
             self._charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
         )
