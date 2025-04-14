@@ -80,6 +80,7 @@ async def test_deploy_and_remove_single_unit(charm, ops_test: OpsTest) -> None:
     # Now, clean up
     await ops_test.model.remove_application(APP_NAME, block_until_done=True)
     await ops_test.model.remove_application(TLS_CERTIFICATES_APP_NAME, block_until_done=True)
+    await c_writes.stop()
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
