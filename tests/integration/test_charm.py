@@ -43,10 +43,19 @@ logger = logging.getLogger(__name__)
 DEFAULT_NUM_UNITS = 2
 
 
+@pytest.fixture(scope="function")
+async def c_writes(ops_test: OpsTest):
+    """Creates instance of the ContinuousWrites."""
+    c_writes = ContinuousWrites(ops_test, APP_NAME)
+    yield c_writes
+    # stop the process after the test
+    await c_writes._stop_process()
+
+
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_deploy_and_remove_single_unit(charm, ops_test: OpsTest) -> None:
+async def test_deploy_and_remove_single_unit(charm, c_writes, ops_test: OpsTest) -> None:
     """Build and deploy OpenSearch with a single unit and remove it."""
     await ops_test.model.set_config(MODEL_CONFIG)
 
@@ -72,7 +81,6 @@ async def test_deploy_and_remove_single_unit(charm, ops_test: OpsTest) -> None:
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 1
 
-    c_writes = ContinuousWrites(ops_test, APP_NAME)
     await c_writes.start()
     await assert_continuous_writes_increasing(c_writes)
     await assert_continuous_writes_consistency(ops_test, c_writes, [APP_NAME])
@@ -80,7 +88,6 @@ async def test_deploy_and_remove_single_unit(charm, ops_test: OpsTest) -> None:
     # Now, clean up
     await ops_test.model.remove_application(APP_NAME, block_until_done=True)
     await ops_test.model.remove_application(TLS_CERTIFICATES_APP_NAME, block_until_done=True)
-    await c_writes.stop()
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
