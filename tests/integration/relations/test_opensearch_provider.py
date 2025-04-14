@@ -55,7 +55,6 @@ PROTECTED_INDICES = [
 ]
 
 
-@pytest.mark.skip(reason="Merge 2.18 change")
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -113,7 +112,6 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
     )
 
 
-@pytest.mark.skip(reason="Merge 2.18 change")
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -153,7 +151,6 @@ async def test_index_usage(ops_test: OpsTest):
     )
 
 
-@pytest.mark.skip(reason="Merge 2.18 change")
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -196,7 +193,6 @@ async def test_bulk_index_usage(ops_test: OpsTest):
     assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
 
 
-@pytest.mark.skip(reason="Merge 2.18 change")
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -226,7 +222,6 @@ async def get_secret_data(ops_test, secret_uri):
     return json.loads(stdout)[secret_unique_id]["content"]["Data"]
 
 
-@pytest.mark.skip(reason="Merge 2.18 change")
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -260,7 +255,6 @@ async def test_dashboard_relation(ops_test: OpsTest):
     assert relation_user_pwd == result.response.get("password")
 
 
-@pytest.mark.skip(reason="Merge 2.18 change")
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -291,7 +285,6 @@ async def test_dashboard_relation_password_change(ops_test: OpsTest):
     assert relation_user_pwd == result.response.get("password")
 
 
-@pytest.mark.skip(reason="Merge 2.18 change")
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -357,7 +350,6 @@ async def test_scaling(ops_test: OpsTest):
     ), await rel_endpoints(CLIENT_APP_NAME, FIRST_RELATION_NAME)
 
 
-@pytest.mark.skip(reason="Merge 2.18 change")
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -424,7 +416,6 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
     assert "403 Client Error: Forbidden for url:" in results[0], results
 
 
-@pytest.mark.skip(reason="Merge 2.18 change")
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -463,7 +454,6 @@ async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
     assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
 
 
-@pytest.mark.skip(reason="Merge 2.18 change")
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -502,7 +492,6 @@ async def test_admin_relation(ops_test: OpsTest):
     assert set(artists) == {"Herbie Hancock", "Lydian Collective", "Vulfpeck"}
 
 
-@pytest.mark.skip(reason="Merge 2.18 change")
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -572,7 +561,6 @@ async def test_admin_permissions(ops_test: OpsTest):
         assert "Error:" in results[0], results
 
 
-@pytest.mark.skip(reason="Merge 2.18 change")
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -635,7 +623,6 @@ async def test_normal_user_permissions(ops_test: OpsTest):
         assert "Error:" in results[0], results
 
 
-@pytest.mark.skip(reason="Merge 2.18 change")
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -692,7 +679,6 @@ async def test_relation_broken(ops_test: OpsTest):
     assert relation_user not in users.keys()
 
 
-@pytest.mark.skip(reason="Merge 2.18 change")
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
