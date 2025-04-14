@@ -77,7 +77,6 @@ from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
 from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchPeerClustersManager,
-    OpenSearchProvidedRolesException,
     StartMode,
 )
 from charms.opensearch.v0.opensearch_performance_profile import OpenSearchPerformance
@@ -540,7 +539,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not self.unit.is_leader():
             return
 
-        self._block_status_if_insufficient_cm_units(remaining_nodes)
+        self.opensearch_peer_cm.block_status_if_insufficient_cm_units(remaining_nodes)
 
         # Now, we register in the leader application the presence of departing unit's name
         # We need to save them as we have a count limit
@@ -577,7 +576,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     if node.name != self.unit_name
                 ]
                 self._compute_and_broadcast_updated_topology(remaining_nodes)
-                self._block_status_if_insufficient_cm_units(remaining_nodes)
+                self.opensearch_peer_cm.block_status_if_insufficient_cm_units(remaining_nodes)
             elif self.app.planned_units() == 0 and self.model.get_relation(PeerRelationName):
                 self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")
                 self.peers_data.delete(Scope.APP, "nodes_config")
@@ -1642,14 +1641,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # all units will get a peer_rel_changed event, for leader we do as follows
         self._reconfigure_and_restart_unit_if_needed()
-
-    def _block_status_if_insufficient_cm_units(self, nodes: List[Node]) -> None:
-        """Applies blocked status if role-validation fails"""
-        try:
-            self.opensearch_peer_cm.validate_roles(nodes)
-        except OpenSearchProvidedRolesException as e:
-            logger.exception(e)
-            self.app.status = BlockedStatus(str(e))
 
     def _check_certs_expiration(self, event: UpdateStatusEvent) -> None:
         """Checks the certificates' expiration."""

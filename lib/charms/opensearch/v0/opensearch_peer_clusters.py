@@ -424,8 +424,16 @@ class OpenSearchPeerClustersManager:
 
         raise OpenSearchProvidedRolesException(PClusterWrongNodesCountForQuorum)
 
+    def block_status_if_insufficient_cm_units(self, nodes: List[Node]) -> None:
+        """Applies blocked status if role-validation fails"""
+        try:
+            self.validate_roles(nodes)
+        except OpenSearchProvidedRolesException as e:
+            logger.exception(e)
+            self._charm.app.status = BlockedStatus(str(e))
+
     def unblock_status_if_sufficient_cms(self) -> None:
-        """Validate that at least 3 cm-eligible units are in the cluster"""
+        """Clears blocked status if role-validation succeeds"""
         if self._charm.app.status.message != PClusterWrongNodesCountForQuorum:
             return
 
