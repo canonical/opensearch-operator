@@ -162,7 +162,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             "data": {"planned_units": 1},
         }
         # test no exception is raised when sufficient cms in deployment
-        self.peer_cm.validate_roles(nodes=nodes, on_new_unit=False)
+        self.peer_cm.validate_roles(nodes=nodes)
 
         # large deployment with < 3 cms, should raise an exception on final unit
         nodes = [
@@ -188,11 +188,8 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             "data": {"planned_units": 1},
         }
 
-        # test no exception is raised on new unit
-        self.peer_cm.validate_roles(nodes=nodes, on_new_unit=True)
-
         with self.assertRaises(OpenSearchProvidedRolesException):
-            self.peer_cm.validate_roles(nodes=nodes, on_new_unit=False)
+            self.peer_cm.validate_roles(nodes=nodes)
 
     @patch("ops.model.Model.get_relation")
     @patch(f"{BASE_LIB_PATH}.helper_cluster.ClusterTopology.nodes")
