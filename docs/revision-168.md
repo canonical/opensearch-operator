@@ -66,7 +66,7 @@ For a detailed list of commits throughout all revisions, check our [GitHub Relea
 * Integration with a TLS charm
   * [`self-signed-certificates`](https://charmhub.io/self-signed-certificates) revision 155+ or [`manual-tls-certificates`](https://charmhub.io/manual-tls-certificates) revision 108+
 
-See the [system requirements page](/t/14565) for more information about software and hardware prerequisites.
+See the [system requirements page](/t/14565) for more information about [software](/t/14565#software-2) and [hardware](/t/14565#hardware-3) prerequisites.
 
 ## Integrations
 
@@ -76,6 +76,7 @@ OpenSearch can be seamlessly integrated out of the box with:
 
 * [TLS certificates charms](https://charmhub.io/topics/security-with-x-509-certificates#heading--understanding-your-x-509-certificates-requirements)
   * **Note**: Charmed OpenSearch supports integration with [tls-certificates library](https://charmhub.io/tls-certificates-interface/libraries/tls_certificates) `v2` or higher.
+  * See also: [How to enable TLS](/t/14783#enable-tls)
 * [COS Lite](https://charmhub.io/cos-lite)
 * [OpenSearch Dashboards](https://charmhub.io/opensearch-dashboards)
 * [Data Integrator](https://charmhub.io/data-integrator)

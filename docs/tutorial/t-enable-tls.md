@@ -10,11 +10,8 @@ TLS is enabled by integrating Charmed OpenSearch with the [Self Signed Certifica
 
 In this section, you will learn how to enable security in your OpenSearch deployment using TLS encryption.
 
-[note type="caution"]
-**[Self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate) are not recommended for a production environment.**
-
+> **[Self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate) are not recommended for a production environment.**  
 Check [this guide](/t/11664) for an overview of the TLS certificates charms available. 
-[/note]
 
 ---
 
@@ -33,7 +30,7 @@ Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:39:22Z
 
 App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch                         blocked      3  opensearch                2/beta         117  no       Missing TLS relation with this cluster.
+opensearch                         blocked      3  opensearch                2/stable         168  no       Missing TLS relation with this cluster.
 self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports  Message
@@ -66,7 +63,7 @@ Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:41:22Z
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch                         active      3  opensearch                2/beta         117  no
+opensearch                         active      3  opensearch                2/stable         168  no
 self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
