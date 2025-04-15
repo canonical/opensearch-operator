@@ -18,7 +18,6 @@ from ..helpers import (
     APP_NAME,
     CONFIG_OPTS,
     MODEL_CONFIG,
-    SERIES,
     check_cluster_formation_successful,
     get_application_unit_ids_ips,
     get_application_unit_ids_start_time,
@@ -248,8 +247,10 @@ async def test_prometheus_exporter_enabled_by_default(ops_test, deploy_type: str
 
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
-async def test_small_deployments_prometheus_exporter_cos_relation(ops_test, deploy_type: str):
-    await ops_test.model.deploy(COS_APP_NAME, channel="edge", series=SERIES),
+async def test_small_deployments_prometheus_exporter_cos_relation(
+    ops_test, ubuntu_base, deploy_type: str
+):
+    await ops_test.model.deploy(COS_APP_NAME, channel="edge", base=f"ubuntu@{ubuntu_base}"),
     await ops_test.model.integrate(APP_NAME, COS_APP_NAME)
     await _wait_for_units(ops_test, deploy_type, wait_for_cos=True)
 
@@ -342,9 +343,11 @@ async def test_large_deployment_build_and_deploy(
 
 @pytest.mark.parametrize("deploy_type", LARGE_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
-async def test_large_deployment_prometheus_exporter_cos_relation(ops_test, deploy_type: str):
+async def test_large_deployment_prometheus_exporter_cos_relation(
+    ops_test, ubuntu_base, deploy_type: str
+):
     # Check that the correct settings were successfully communicated to grafana-agent
-    await ops_test.model.deploy(COS_APP_NAME, channel="edge", series=SERIES),
+    await ops_test.model.deploy(COS_APP_NAME, channel="edge", base=f"ubuntu@{ubuntu_base}"),
     await ops_test.model.integrate(FAILOVER_ORCHESTRATOR_NAME, COS_APP_NAME)
     await ops_test.model.integrate(MAIN_ORCHESTRATOR_NAME, COS_APP_NAME)
     await ops_test.model.integrate(APP_NAME, COS_APP_NAME)
