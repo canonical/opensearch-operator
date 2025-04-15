@@ -4,7 +4,7 @@ on:
       artifact-prefix:
         description: |
           Prefix for charm package GitHub artifact(s)
-          
+
           Use canonical/data-platform-workflows build_charm.yaml to build the charm(s)
         required: true
         type: string
@@ -84,7 +84,7 @@ jobs:
     needs:
       - collect-integration-tests
     runs-on: ${{ matrix.job.runner }}
-    timeout-minutes: 217  # Sum of steps `timeout-minutes` + 5
+    timeout-minutes: 217 # Sum of steps `timeout-minutes` + 5
     steps:
       - name: Free up disk space
         timeout-minutes: 1
@@ -127,6 +127,7 @@ jobs:
           GCP_ACCESS_KEY: ${{ secrets.GCP_ACCESS_KEY }}
           GCP_SECRET_KEY: ${{ secrets.GCP_SECRET_KEY }}
           GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          SECRETS_FROM_GITHUB: ${{ secrets.SECRETS_FROM_GITHUB }}
       - name: Upload Allure results
         timeout-minutes: 3
         # Only upload results from one spread system & one spread variant
