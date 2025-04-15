@@ -399,12 +399,13 @@ class OpenSearchPlugin:
     PLUGIN_PROPERTIES = "plugin-descriptor.properties"
     REMOVE_ON_DISABLE = False
 
-    def __init__(self, charm):
+    def __init__(self, charm, node_roles: List[str] = None):
         """Creates the OpenSearchPlugin object."""
         self._plugins_path = (
             f"{charm.opensearch.paths.plugins}/{self.name}/{self.PLUGIN_PROPERTIES}"
         )
         self._extra_config = charm.config
+        self._node_roles = node_roles
 
     @property
     def version(self) -> str:
@@ -419,6 +420,23 @@ class OpenSearchPlugin:
         with open(self._plugins_path) as f:
             properties.load(f.read())
         return properties._properties["version"]
+
+    @property
+    def local_path(self) -> Optional[str]:
+        """Returns the local folder path to receive any artifacts.
+
+        If not set to None, then the plugin manager must download the artifacts from S3
+        and place them in the local path.
+        """
+        return None
+
+    @property
+    def s3_path(self) -> Optional[str]:
+        """Returns the S3 path where the artifacts may be found.
+
+        Either, that is hardcoded or the user can set a config option to specify this path.
+        """
+        return None
 
     @property
     def dependencies(self) -> Optional[List[str]]:
@@ -500,6 +518,65 @@ class OpenSearchKnn(OpenSearchPlugin):
         return OpenSearchPluginConfig(
             config_entries={"knn.plugin.enabled": False},
         )
+
+    @property
+    def name(self) -> str:
+        """Returns the name of the plugin."""
+        return "opensearch-knn"
+
+
+class OpenSearchMlCommons(OpenSearchPlugin):
+    """Implements the ml-commons plugin."""
+
+    def requested_to_enable(self) -> bool:
+        """Returns True if at least one node is marked with "ml" role."""
+        return "ml" in self._node_roles
+
+    def config(self) -> OpenSearchPluginConfig:
+        """Returns a plugin config object to be applied for enabling the current plugin."""
+
+        config = {
+            "plugins.ml_commons.enable_inhouse_python_model": self._extra_config[
+                "plugin_ml_commons_enable_inhouse_python_model"
+            ],
+            "plugins.ml_commons.allow_registering_model_via_local_file": True,
+            "mlcommons.trust_url_regex": "^(https?|file)://(/var/snap/common/opensearch/var/lib/opensearch/ml_commons/|https://artifacts.opensearch.org/models/ml-models/)*",
+        }
+
+        if self._extra_config["plugin_ml_commons_trust_url_regex"]:
+            return OpenSearchPluginConfig(
+                config_entries=config
+                | {
+                    "plugins.ml_commons.allow_registering_model_via_url": True,
+                    "mlcommons.trust_url_regex": self._extra_config[
+                        "plugin_ml_commons_trust_url_regex"
+                    ],
+                },
+            )
+        return OpenSearchPluginConfig(
+            config_entries=config
+            | {
+                "plugins.ml_commons.allow_registering_model_via_url": False,
+            },
+        )
+
+    def disable(self) -> OpenSearchPluginConfig:
+        """Returns a plugin config object to be applied for disabling the current plugin.
+
+        This method disables the
+        """
+        return OpenSearchPluginConfig(
+            config_entries={"knn.plugin.enabled": False},
+        )
+
+    @property
+    def local_path(self) -> Optional[str]:
+        # Returns files with path /var.../model.<uuid>
+        return "/var/snap/common/opensearch/var/lib/opensearch/ml_commons"
+
+    @property
+    def s3_path(self) -> Optional[str]:
+        return self._extra_config.get("plugin_ml_commons_s3_path")
 
     @property
     def name(self) -> str:
