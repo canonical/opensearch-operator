@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 TRAINING_END_TO_END_DATA_INDEX = "test_end_to_end"
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy_small_deployment(ops_test: OpsTest) -> None:
@@ -78,6 +79,7 @@ async def test_build_and_deploy_small_deployment(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_mlcommons_llm_model_register_and_prediction(ops_test: OpsTest) -> None:
     """Uploads and runs the model."""
