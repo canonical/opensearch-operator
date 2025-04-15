@@ -17,12 +17,7 @@ from ..ha.helpers import (
     storage_type,
 )
 from ..ha.test_horizontal_scaling import IDLE_PERIOD
-from ..helpers import (
-    APP_NAME,
-    CONFIG_OPTS,
-    MODEL_CONFIG,
-    get_application_unit_ids,
-)
+from ..helpers import APP_NAME, CONFIG_OPTS, MODEL_CONFIG, get_application_unit_ids
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .continuous_writes import ContinuousWrites
