@@ -131,6 +131,7 @@ async def test_mlcommons_llm_model_register_and_prediction(ops_test: OpsTest) ->
     assert shape_count == len(result["inference_results"][0]["output"][0]["data"])
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_mlcommons_kmeans_model(ops_test: OpsTest) -> None:
     """Uploads and runs the model. This method reuses the data index used for FAISS IVF."""
