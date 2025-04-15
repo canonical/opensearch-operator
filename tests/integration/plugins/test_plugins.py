@@ -166,12 +166,12 @@ async def _wait_for_units(
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy_small_deployment(ops_test: OpsTest, deploy_type: str) -> None:
+async def test_build_and_deploy_small_deployment(
+    ops_test: OpsTest, charm, ubuntu_base, deploy_type: str
+) -> None:
     """Build and deploy an OpenSearch cluster."""
     if await app_name(ops_test):
         return
-
-    my_charm = await ops_test.build_charm(".")
 
     model_conf = MODEL_CONFIG.copy()
     # Make it more regular as COS relation-broken really happens on the
@@ -185,9 +185,9 @@ async def test_build_and_deploy_small_deployment(ops_test: OpsTest, deploy_type:
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(
-            my_charm,
+            charm,
             num_units=3,
-            series=SERIES,
+            base="ubuntu@{ubuntu_base}",
             config={"plugin_opensearch_knn": False} | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
@@ -277,13 +277,13 @@ async def test_small_deployments_prometheus_exporter_cos_relation(ops_test, depl
 @pytest.mark.parametrize("deploy_type", LARGE_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type: str) -> None:
+async def test_large_deployment_build_and_deploy(
+    ops_test: OpsTest, charm, ubuntu_base, deploy_type: str
+) -> None:
     """Build and deploy a large deployment for OpenSearch."""
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
     tls_config = {"ca-common-name": "CN_CA"}
-
-    my_charm = await ops_test.build_charm(".")
 
     main_orchestrator_conf = {
         "cluster_name": "plugins-test",
@@ -302,24 +302,24 @@ async def test_large_deployment_build_and_deploy(ops_test: OpsTest, deploy_type:
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=tls_config
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=MAIN_ORCHESTRATOR_NAME,
             num_units=1,
-            series=SERIES,
+            base=f"ubuntu@{ubuntu_base}",
             config=main_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=FAILOVER_ORCHESTRATOR_NAME,
             num_units=2,
-            series=SERIES,
+            base=f"ubuntu@{ubuntu_base}",
             config=failover_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=APP_NAME,
             num_units=1,
-            series=SERIES,
+            base=f"ubuntu@{ubuntu_base}",
             config=data_hot_conf | CONFIG_OPTS,
         ),
     )
