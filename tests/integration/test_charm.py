@@ -16,7 +16,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.ha.continuous_writes import ContinuousWrites
+from .ha.continuous_writes import ContinuousWrites
 
 from .ha.helpers import (
     assert_continuous_writes_consistency,
@@ -47,7 +47,7 @@ DEFAULT_NUM_UNITS = 2
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_deploy_and_remove_single_unit(charm, c_writes, ops_test: OpsTest) -> None:
+async def test_deploy_and_remove_single_unit(charm, ops_test: OpsTest) -> None:
     """Build and deploy OpenSearch with a single unit and remove it."""
     await ops_test.model.set_config(MODEL_CONFIG)
 
