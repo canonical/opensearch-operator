@@ -15,7 +15,6 @@ from ..helpers import (
     CONFIG_OPTS,
     IDLE_PERIOD,
     MODEL_CONFIG,
-    SERIES,
     get_application_unit_ids,
 )
 from ..helpers_deployments import wait_until
@@ -31,7 +30,7 @@ DEFAULT_NUM_UNITS = 3
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, lxd_spaces) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm, ubuntu_base, lxd_spaces) -> None:
     """Build and deploy OpenSearch.
 
     For this test, we will misconfigure space bindings and see if the charm still
@@ -39,15 +38,14 @@ async def test_build_and_deploy(ops_test: OpsTest, lxd_spaces) -> None:
 
     More information: gh:canonical/opensearch-operator#334
     """
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
     # Create a deployment that binds to the wrong space.
     # That should trigger #334.
     await ops_test.model.deploy(
-        my_charm,
+        charm,
         num_units=DEFAULT_NUM_UNITS,
-        series=SERIES,
+        base=f"ubuntu@{ubuntu_base}",
         constraints="spaces=alpha,client,cluster,backup",
         bind={"": "cluster"},
         config=CONFIG_OPTS,
