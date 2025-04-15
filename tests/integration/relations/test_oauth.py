@@ -13,7 +13,7 @@ import pytest
 import requests
 import yaml
 from integration.helpers import CONFIG_OPTS, SERIES, get_leader_unit_ip
-from juju.client.client import Action, ActionResult
+from juju.client.client import Action
 from juju.controller import Controller
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
@@ -242,7 +242,7 @@ async def test_oauth_access(ops_test: OpsTest, microk8s_model: Model):
     result = requests.get(
         opensearch_url, headers={"Authorization": f"Bearer {oauth_access_token}"}, verify=False
     )
-    assert result.status_code == 200, "requst expected to succeed with roles mapping"
+    assert result.status_code == 200, "request expected to succeed with roles mapping"
 
     await ops_test.model.applications["opensearch"].set_config(config_without_roles)
     await ops_test.model.wait_for_idle(status="active")
