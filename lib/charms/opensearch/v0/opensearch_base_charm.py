@@ -498,7 +498,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.unit.is_leader():
             # Recompute the node roles in case self-healing didn't trigger leader related event
             self._recompute_roles_if_needed(event)
-            self.opensearch_peer_cm.unblock_status_if_sufficient_cms()
+            self.opensearch_peer_cm.validate_recommended_cm_unit_count(
+                only_validate_if_blocked=True
+            )
         elif event.relation.data.get(event.app):
             # if app_data + app_data["nodes_config"]: Reconfigure + restart node on the unit
             self._reconfigure_and_restart_unit_if_needed()
@@ -539,7 +541,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not self.unit.is_leader():
             return
 
-        self.opensearch_peer_cm.block_status_if_insufficient_cm_units(remaining_nodes)
+        self.opensearch_peer_cm.validate_recommended_cm_unit_count(remaining_nodes)
 
         # Now, we register in the leader application the presence of departing unit's name
         # We need to save them as we have a count limit
@@ -576,7 +578,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     if node.name != self.unit_name
                 ]
                 self._compute_and_broadcast_updated_topology(remaining_nodes)
-                self.opensearch_peer_cm.block_status_if_insufficient_cm_units(remaining_nodes)
+                self.opensearch_peer_cm.validate_recommended_cm_unit_count(remaining_nodes)
             elif self.app.planned_units() == 0 and self.model.get_relation(PeerRelationName):
                 self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")
                 self.peers_data.delete(Scope.APP, "nodes_config")

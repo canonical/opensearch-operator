@@ -394,7 +394,7 @@ class OpenSearchPeerClustersManager:
         )
 
     def validate_roles(self, nodes: List[Node]) -> None:
-        """Validate full-cluster wide the quorum for CM/voting_only nodes on services start."""
+        """Validate cluster-wide count for CM-eligible nodes is at least 3"""
         deployment_desc = self.deployment_desc()
         if not set(deployment_desc.roles) & {"cluster_manager", "voting_only"}:
             # the user is not adding any cm nor voting_only roles to the nodes
@@ -424,28 +424,27 @@ class OpenSearchPeerClustersManager:
 
         raise OpenSearchProvidedRolesException(PClusterWrongNodesCountForQuorum)
 
-    def block_status_if_insufficient_cm_units(self, nodes: List[Node]) -> None:
-        """Applies blocked status if role-validation fails"""
+    def validate_recommended_cm_unit_count(
+        self, nodes: Optional[List[Node]] = None, only_validate_if_blocked: bool = False
+    ) -> None:
+        """Sets blocked status if validate_roles fails"""
+        if (
+            only_validate_if_blocked
+            and self._charm.app.status.message != PClusterWrongNodesCountForQuorum
+        ):
+            return
+
+        if nodes is None:
+            nodes = ClusterTopology.nodes(
+                self._charm.opensearch, self._opensearch.is_node_up(), self._charm.alt_hosts
+            )
+
         try:
             self.validate_roles(nodes)
+            self._charm.status.clear(PClusterWrongNodesCountForQuorum)
         except OpenSearchProvidedRolesException as e:
             logger.exception(e)
             self._charm.app.status = BlockedStatus(str(e))
-
-    def unblock_status_if_sufficient_cms(self) -> None:
-        """Clears blocked status if role-validation succeeds"""
-        if self._charm.app.status.message != PClusterWrongNodesCountForQuorum:
-            return
-
-        # if we are in a simple deployment, no need to validate
-        apps_in_fleet = self.apps_in_fleet()
-        if len(apps_in_fleet) <= 1:
-            return
-
-        n_cms = sum(app.planned_units for app in apps_in_fleet if "cluster_manager" in app.roles)
-        if n_cms >= 3:
-            # clear the blocked status if at least 3 cm-eligible units found
-            self._charm.status.clear(PClusterWrongNodesCountForQuorum, app=True)
 
     def apps_in_fleet(self) -> List[PeerClusterApp]:
         """Returns list of apps in cluster fleet"""
