@@ -10,13 +10,7 @@ from pytest_operator.plugin import OpsTest
 
 from ..ha.continuous_writes import ContinuousWrites
 from ..ha.helpers import assert_continuous_writes_consistency
-from ..helpers import (
-    APP_NAME,
-    CONFIG_OPTS,
-    IDLE_PERIOD,
-    MODEL_CONFIG,
-    run_action,
-)
+from ..helpers import APP_NAME, CONFIG_OPTS, IDLE_PERIOD, MODEL_CONFIG, run_action
 from ..helpers_deployments import get_application_units, wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 

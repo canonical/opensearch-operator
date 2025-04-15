@@ -9,13 +9,7 @@ from pytest_operator.plugin import OpsTest
 
 from ..ha.continuous_writes import ContinuousWrites
 from ..ha.helpers import app_name
-from ..helpers import (
-    APP_NAME,
-    IDLE_PERIOD,
-    MODEL_CONFIG,
-    run_action,
-    set_watermark,
-)
+from ..helpers import APP_NAME, IDLE_PERIOD, MODEL_CONFIG, run_action, set_watermark
 from ..helpers_deployments import get_application_units, wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import assert_upgrade_to_local, refresh
