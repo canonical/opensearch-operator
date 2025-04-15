@@ -25,7 +25,6 @@ from .helpers import (
     APP_NAME,
     CONFIG_OPTS,
     MODEL_CONFIG,
-    SERIES,
     get_application_unit_ids,
     get_conf_as_dict,
     get_leader_unit_id,
@@ -46,14 +45,14 @@ DEFAULT_NUM_UNITS = 2
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_deploy_and_remove_single_unit(charm, ops_test: OpsTest) -> None:
+async def test_deploy_and_remove_single_unit(charm, ubuntu_base, ops_test: OpsTest) -> None:
     """Build and deploy OpenSearch with a single unit and remove it."""
     await ops_test.model.set_config(MODEL_CONFIG)
 
     await ops_test.model.deploy(
         charm,
         num_units=1,
-        series=SERIES,
+        base=f"ubuntu@{ubuntu_base}",
         config=CONFIG_OPTS,
     )
     # Deploy TLS Certificates operator.
@@ -88,7 +87,7 @@ async def test_deploy_and_remove_single_unit(charm, ops_test: OpsTest) -> None:
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(charm, ops_test: OpsTest) -> None:
+async def test_build_and_deploy(charm, ubuntu_base, ops_test: OpsTest) -> None:
     """Build and deploy a couple of OpenSearch units."""
     model_config = MODEL_CONFIG
     model_config["update-status-hook-interval"] = "1m"
@@ -98,7 +97,7 @@ async def test_build_and_deploy(charm, ops_test: OpsTest) -> None:
     await ops_test.model.deploy(
         charm,
         num_units=DEFAULT_NUM_UNITS,
-        series=SERIES,
+        base=f"ubuntu@{ubuntu_base}",
         config=CONFIG_OPTS,
     )
     await wait_until(
