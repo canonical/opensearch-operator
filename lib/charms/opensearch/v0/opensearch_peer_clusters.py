@@ -396,7 +396,10 @@ class OpenSearchPeerClustersManager:
     def validate_roles(self, nodes: List[Node]) -> None:
         """Validate cluster-wide count for CM-eligible nodes is at least 3"""
         deployment_desc = self.deployment_desc()
-        if not set(deployment_desc.roles) & {"cluster_manager", "voting_only"}:
+        if (
+            not set(deployment_desc.config.roles) & {"cluster_manager", "voting_only"}
+            and not deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+        ):
             # the user is not adding any cm nor voting_only roles to the nodes
             return
 
