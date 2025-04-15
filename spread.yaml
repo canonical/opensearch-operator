@@ -83,15 +83,16 @@ backends:
     # HACK: spread does not pass environment variables set on runner
     # Manually pass specific environment variables
     environment:
-      CI: '$(HOST: echo $CI)'
-      CHARM_UBUNTU_BASE: '$(HOST: echo $CHARM_UBUNTU_BASE)'
-      AWS_ACCESS_KEY: '$(HOST: echo $AWS_ACCESS_KEY)'
-      AWS_SECRET_KEY: '$(HOST: echo $AWS_SECRET_KEY)'
-      AZURE_STORAGE_ACCOUNT: '$(HOST: echo $AZURE_STORAGE_ACCOUNT)'
-      AZURE_SECRET_KEY: '$(HOST: echo $AZURE_SECRET_KEY)'
-      GCP_ACCESS_KEY: '$(HOST: echo $GCP_ACCESS_KEY)'
-      GCP_SECRET_KEY: '$(HOST: echo $GCP_SECRET_KEY)'
-      GCP_SERVICE_ACCOUNT: '$(HOST: echo $GCP_SERVICE_ACCOUNT)'
+      CI: "$(HOST: echo $CI)"
+      CHARM_UBUNTU_BASE: "$(HOST: echo $CHARM_UBUNTU_BASE)"
+      AWS_ACCESS_KEY: "$(HOST: echo $AWS_ACCESS_KEY)"
+      AWS_SECRET_KEY: "$(HOST: echo $AWS_SECRET_KEY)"
+      AZURE_STORAGE_ACCOUNT: "$(HOST: echo $AZURE_STORAGE_ACCOUNT)"
+      AZURE_SECRET_KEY: "$(HOST: echo $AZURE_SECRET_KEY)"
+      GCP_ACCESS_KEY: "$(HOST: echo $GCP_ACCESS_KEY)"
+      GCP_SECRET_KEY: "$(HOST: echo $GCP_SECRET_KEY)"
+      GCP_SERVICE_ACCOUNT: "$(HOST: echo $GCP_SERVICE_ACCOUNT)"
+      SECRETS_FROM_GITHUB: "$(HOST: echo $SECRETS_FROM_GITHUB)"
     systems:
       - ubuntu-24.04:
           username: runner
@@ -132,4 +133,5 @@ prepare-each: |
   # Unable to set constraint on all models because of Juju bug:
   # https://bugs.launchpad.net/juju/+bug/2065050
   juju set-model-constraints arch="$(dpkg --print-architecture)"
+
 # Only restore on lxd backend—no need to restore on CI
