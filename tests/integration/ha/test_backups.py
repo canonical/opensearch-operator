@@ -17,6 +17,7 @@ different cloud.
 
 import asyncio
 import logging
+import os
 import random
 import string
 import subprocess
@@ -131,9 +132,7 @@ async def force_clear_cwrites_index():
 
 
 @pytest.fixture(scope="session")
-def cloud_configs(
-    github_secrets: Dict[str, str], microceph: Dict[str, str]
-) -> Dict[str, Dict[str, str]]:
+def cloud_configs(microceph: Dict[str, str]) -> Dict[str, Dict[str, str]]:
     # Figure out the address of the LXD host itself, where tests are executed
     # this is where microceph will be installed.
     ip = subprocess.check_output(["hostname", "-I"]).decode().split()[0]
@@ -145,14 +144,14 @@ def cloud_configs(
             "region": "default",
         },
     }
-    if "AWS_ACCESS_KEY" in github_secrets:
+    if os.environ["AWS_ACCESS_KEY"]:
         results["aws"] = {
             "endpoint": "https://s3.amazonaws.com",
             "bucket": "data-charms-testing",
             "path": BackupsPath,
             "region": "us-east-1",
         }
-    if "AZURE_SECRET_KEY" in github_secrets:
+    if os.environ["AZURE_SECRET_KEY"]:
         results["azure"] = {
             "connection-protocol": "abfss",
             "container": "data-charms-testing",
@@ -162,9 +161,7 @@ def cloud_configs(
 
 
 @pytest.fixture(scope="session")
-def cloud_credentials(
-    github_secrets: Dict[str, str], microceph: Dict[str, str]
-) -> Dict[str, Dict[str, str]]:
+def cloud_credentials(microceph: Dict[str, str]) -> Dict[str, Dict[str, str]]:
     """Read cloud credentials."""
     results = {
         "microceph": {
@@ -172,15 +169,15 @@ def cloud_credentials(
             "secret-key": microceph.secret_access_key,
         },
     }
-    if "AWS_ACCESS_KEY" in github_secrets:
+    if os.environ["AWS_ACCESS_KEY"]:
         results["aws"] = {
-            "access-key": github_secrets["AWS_ACCESS_KEY"],
-            "secret-key": github_secrets["AWS_SECRET_KEY"],
+            "access-key": os.environ["AWS_ACCESS_KEY"],
+            "secret-key": os.environ["AWS_SECRET_KEY"],
         }
-    if "AZURE_SECRET_KEY" in github_secrets:
+    if os.environ["AZURE_SECRET_KEY"]:
         results["azure"] = {
-            "secret-key": github_secrets["AZURE_SECRET_KEY"],
-            "storage-account": github_secrets["AZURE_STORAGE_ACCOUNT"],
+            "secret-key": os.environ["AZURE_SECRET_KEY"],
+            "storage-account": os.environ["AZURE_STORAGE_ACCOUNT"],
         }
     return results
 
