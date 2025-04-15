@@ -434,7 +434,7 @@ def opensearch_client(
         hosts=[{"host": ip, "port": 9200} for ip in hosts],
         http_auth=(user_name, password),
         http_compress=True,
-        sniff_on_start=True,  # sniff before doing anything
+        # sniff_on_start=True,  # sniff before doing anything
         sniff_on_connection_fail=True,  # refresh nodes after a node fails to respond
         sniffer_timeout=60.0,  # and also every 60 seconds
         sniff_timeout=5.0,  # and also every 60 seconds
