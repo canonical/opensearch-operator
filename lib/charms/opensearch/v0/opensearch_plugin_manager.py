@@ -17,9 +17,6 @@ import os
 from typing import Dict, List, Tuple, Type
 
 import boto3
-
-from ops import Object
-
 from charms.opensearch.v0.constants_charm import PLUGIN_FOLDER_RELATION
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.models import S3RelData
@@ -46,6 +43,7 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchS3Plugin,
     PluginState,
 )
+from ops import Object
 
 # The unique Charmhub library identifier, never change it
 LIBID = "da838485175f47dbbbb83d76c07cab4c"
@@ -506,6 +504,7 @@ class PluginRepositoryHandler(Object):
         return None
 
     def download(self, plugin: OpenSearchPlugin):
+        """Downloads the given plugin's artifacts from S3."""
         if not self._model:
             logger.warning("S3 relation data is not available.")
             return
@@ -548,15 +547,15 @@ class PluginRepositoryHandler(Object):
                 Prefix=s3_path,
                 Delimiter="/",
             )
-            if not objects.get('Contents'):
+            if not objects.get("Contents"):
                 logger.warning(f"No objects found in S3 for {plugin.name} on path: {s3_path}")
                 return
 
-            for obj in objects.get('Contents'):
-                local_file = os.path.join(local_path, obj['Key'])
+            for obj in objects.get("Contents"):
+                local_file = os.path.join(local_path, obj["Key"])
                 s3_client.download_file(
                     self._model.bucket,
-                    os.path.join(s3_path, obj['Key']),
+                    os.path.join(s3_path, obj["Key"]),
                     local_file,
                 )
                 self._charm.opensearch.setup_linux_perms(local_file)

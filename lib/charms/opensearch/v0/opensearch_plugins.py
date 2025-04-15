@@ -534,7 +534,6 @@ class OpenSearchMlCommons(OpenSearchPlugin):
 
     def config(self) -> OpenSearchPluginConfig:
         """Returns a plugin config object to be applied for enabling the current plugin."""
-
         config = {
             "plugins.ml_commons.enable_inhouse_python_model": self._extra_config[
                 "plugin_ml_commons_enable_inhouse_python_model"
@@ -571,11 +570,12 @@ class OpenSearchMlCommons(OpenSearchPlugin):
 
     @property
     def local_path(self) -> Optional[str]:
-        # Returns files with path /var.../model.<uuid>
+        """Returns the local folder path to receive any artifacts."""
         return "/var/snap/common/opensearch/var/lib/opensearch/ml_commons"
 
     @property
     def s3_path(self) -> Optional[str]:
+        """Returns the S3 path where the artifacts may be found."""
         return self._extra_config.get("plugin_ml_commons_s3_path")
 
     @property

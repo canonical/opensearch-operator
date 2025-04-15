@@ -218,7 +218,6 @@ class OpenSearchSnap(OpenSearchDistribution):
         os.chown(path, uid, gid)
 
 
-
 class OpenSearchTarball(OpenSearchDistribution):
     """Tarball distro of opensearch, only overrides properties and logic proper to the tar."""
 
