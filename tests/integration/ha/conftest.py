@@ -27,10 +27,7 @@ async def reset_restart_delay(ops_test: OpsTest):
 async def c_writes(ops_test: OpsTest):
     """Creates instance of the ContinuousWrites."""
     app = (await app_name(ops_test)) or APP_NAME
-    c_writes = ContinuousWrites(ops_test, app)
-    yield c_writes
-    # stop
-    await c_writes.stop()
+    return ContinuousWrites(ops_test, app)
 
 
 @pytest.fixture(scope="function")
