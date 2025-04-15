@@ -17,7 +17,6 @@ from charms.opensearch.v0.constants_charm import (
 from pytest_operator.plugin import OpsTest
 
 from .ha.continuous_writes import ContinuousWrites
-
 from .ha.helpers import (
     assert_continuous_writes_consistency,
     assert_continuous_writes_increasing,
