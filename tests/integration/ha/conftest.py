@@ -30,7 +30,7 @@ async def c_writes(ops_test: OpsTest):
     c_writes = ContinuousWrites(ops_test, app)
     yield c_writes
     # stop
-    await c_writes._stop_process()
+    await c_writes.stop()
 
 
 @pytest.fixture(scope="function")
