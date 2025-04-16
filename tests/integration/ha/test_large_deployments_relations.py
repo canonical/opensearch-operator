@@ -14,13 +14,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import (
-    CONFIG_OPTS,
-    MODEL_CONFIG,
-    SERIES,
-    get_leader_unit_ip,
-    scale_application,
-)
+from ..helpers import CONFIG_OPTS, MODEL_CONFIG, SERIES, get_leader_unit_ip
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .continuous_writes import ContinuousWrites
@@ -264,38 +258,38 @@ async def test_large_deployment_fully_formed(
 async def test_large_deployment_validate_cm_count(ops_test: OpsTest) -> None:
     """Test that scaling down to less than 3 cms triggers a status change"""
     # scale main down to 1
-    await scale_application(ops_test=ops_test, application_name=MAIN_APP, count=1)
+    await ops_test.model.remove_application(FAILOVER_APP, block_until_done=True)
 
-    failover_app = ops_test.model.applications[FAILOVER_APP]
-    units = [unit.name for unit in failover_app.units[:-1]]
-    await failover_app.destroy_units(*units)
+    main_app = ops_test.model.applications[MAIN_APP]
+    units = [unit.name for unit in main_app.units[:-1]]
+    await main_app.destroy_units(*units)
 
     await wait_until(
         ops_test,
-        apps=[MAIN_APP, FAILOVER_APP],
+        apps=[MAIN_APP, DATA_APP],
         apps_full_statuses={
-            MAIN_APP: {"active": []},
-            FAILOVER_APP: {"blocked": [PClusterWrongNodesCountForQuorum]},
+            DATA_APP: {"active": []},
+            MAIN_APP: {"blocked": [PClusterWrongNodesCountForQuorum]},
         },
         units_statuses=["active"],
         wait_for_exact_units={
             MAIN_APP: 1,
-            FAILOVER_APP: 1,
+            DATA_APP: APP_UNITS[DATA_APP],
         },
         idle_period=IDLE_PERIOD,
         timeout=1800,
     )
 
     # check that the status is cleared on scale up to >= 3 cms
-    await ops_test.model.applications[MAIN_APP].add_units(1)
+    await ops_test.model.applications[MAIN_APP].add_units(2)
     await wait_until(
         ops_test,
-        apps=[MAIN_APP, FAILOVER_APP],
+        apps=[MAIN_APP, DATA_APP],
         apps_statuses=["active"],
         units_statuses=["active"],
         wait_for_exact_units={
-            MAIN_APP: 2,
-            FAILOVER_APP: 1,
+            MAIN_APP: 3,
+            DATA_APP: APP_UNITS[DATA_APP],
         },
         idle_period=IDLE_PERIOD,
         timeout=1800,
