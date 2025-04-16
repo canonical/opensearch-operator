@@ -421,6 +421,7 @@ def test_on_s3_broken_steps(
     relation.units = s3_units
     harness.charm.model.get_relation = MagicMock(return_value=relation)
     event = MagicMock()
+    event.relation_name = "s3-credentials"
     harness.charm.backup._execute_s3_broken_calls = MagicMock()
     harness.charm.plugin_manager.apply_config = (
         MagicMock(side_effect=apply_config_exc) if apply_config_exc else MagicMock()
@@ -433,7 +434,7 @@ def test_on_s3_broken_steps(
     harness.charm.backup.backup_manager.clean = MagicMock()
 
     # Call the method
-    harness.charm.backup._on_backup_relation_broken(event)
+    harness.charm.backup._on_backup_disable(event)
 
     if test_type == "s3-still-units-present":
         event.defer.assert_called()

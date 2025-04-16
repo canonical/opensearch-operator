@@ -607,6 +607,25 @@ class _DisableBackupRelationEvent(EventBase):
         super().__init__(handle)
         self.relation_name = relation_name
 
+    @override
+    def snapshot(self) -> Dict[str, Any]:
+        """Return the snapshot data that should be persisted.
+
+        Subclasses must override to save any custom state.
+        """
+        result = super().snapshot()
+        result["relation_name"] = self.relation_name
+        return result
+
+    @override
+    def restore(self, snapshot: Dict[str, Any]):
+        """Restore the value state from the given snapshot.
+
+        Subclasses must override to restore their custom state.
+        """
+        super().restore(snapshot)
+        self.relation_name = snapshot["relation_name"]
+
 
 class OpenSearchBackupBase(Object):
     """Works as parent for all backup classes.
@@ -695,6 +714,10 @@ class OpenSearchBackupBase(Object):
             try:
                 self.charm.plugin_manager.apply_config(plug.disable())
             except OpenSearchKeystoreNotReadyError:
+                if self.charm.opensearch.is_service_started():
+                    # We have an application up and running but not responding
+                    # We cannot defer either, so we will fail and retry later
+                    raise
                 logger.debug("Backup broken relation: keystore not ready yet")
                 # No need to defer, we already cleaned the keystore.
                 return
@@ -706,10 +729,12 @@ class OpenSearchBackupBase(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelShouldNotExist, app=True)
 
-            if self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
+            if (
+                self.charm.opensearch_peer_cm.deployment_desc().typ
+                != DeploymentType.MAIN_ORCHESTRATOR
+            ):
                 # Nothing to do besides fixing the status
                 return
-
 
         if self.charm.upgrade_in_progress:
             logger.warning(
