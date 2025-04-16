@@ -123,7 +123,6 @@ from charms.opensearch.v0.opensearch_plugins import (
 from ops import (
     ActionEvent,
     BlockedStatus,
-    EventBase,
     MaintenanceStatus,
     Object,
     RelationEvent,
@@ -131,6 +130,7 @@ from ops import (
     SecretNotFoundError,
     WaitingStatus,
 )
+from ops.framework import EventBase, EventSource, Handle
 from overrides import override
 
 # The unique Charmhub library identifier, never change it
@@ -159,6 +159,7 @@ INDICES_TO_EXCLUDE_AT_RESTORE = {
     ".opensearch-observability",
     OpenSearchNodeLock.OPENSEARCH_INDEX,
 }
+
 
 REPO_NOT_CREATED_ERR = "repository type does not exist"
 REPO_NOT_ACCESS_ERR = "is not accessible"
@@ -588,11 +589,32 @@ class BackupManager:
         return BackupServiceState.SUCCESS
 
 
+class _DisableBackupRelationEvent(EventBase):
+    """Informs there is a backup relation going away and must be proceeded.
+
+    The main issue this event resolves is the fact we may have a relation going away during a
+    backup / restore. If that is the case, then we need to be able to defer the event until the
+    backup / restore is finished.
+
+    Why not deferring the RelationBroken?
+
+    Because the RelationBroken will carry relation data only at the moment the event is called.
+    After that, we cannot guarantee anything about the relation broken event. Therefore, we will
+    replace it with a custom event that will carry the relation name and the relation data.
+    """
+
+    def __init__(self, handle: Handle, relation_name: str):
+        super().__init__(handle)
+        self.relation_name = relation_name
+
+
 class OpenSearchBackupBase(Object):
     """Works as parent for all backup classes.
 
     This class does a smooth transition between orchestrator and non-orchestrator clusters.
     """
+
+    _disable_backup_event = EventSource(_DisableBackupRelationEvent)
 
     def __init__(self, charm: "OpenSearchBaseCharm", relation_name: str = PeerClusterRelationName):
         """Initializes the opensearch backup base.
@@ -604,6 +626,8 @@ class OpenSearchBackupBase(Object):
         self.charm = charm
         self.relation_name = relation_name
         self.backup_manager = BackupManager(charm, repository=self.repository)
+
+        self.framework.observe(self._disable_backup_event, self._on_backup_disable)
 
         # We can reuse the same method, as the plugin manager will apply configs accordingly.
         self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
@@ -645,8 +669,38 @@ class OpenSearchBackupBase(Object):
                 "Modifying relations during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
 
-    def _on_backup_relation_broken(self, event: RelationEvent) -> None:  # noqa C901
-        """Defers the backup relation broken events."""
+    def _on_backup_relation_broken(self, event: RelationEvent) -> None:
+        """Emits the backup disable event."""
+        if event.relation.name in [S3_RELATION, AZURE_RELATION]:
+            self._disable_backup_event.emit(
+                relation_name=(
+                    S3_RELATION if event.relation.name == S3_RELATION else AZURE_RELATION
+                ),
+            )
+            return
+
+        # We have a peer relation going away, so we still must clean up the keystore.
+        # In this case, we must disable all backup systems, as the peer cluster always
+        # carry all the information.
+
+        # We disable both plugins
+        plugins = [OpenSearchAzurePlugin(self.charm, None), OpenSearchS3Plugin(self.charm, None)]
+        for plug in plugins:
+            # We only catch the keystore not ready exception
+            # This exception happens after the keystore itself has been cleaned but the API call
+            # to reload failed.
+            # In this case, we can ignore the exception and continue, as it will be called for
+            # other units and the keystore is clean.
+            # Any other exception should result in actual errors.
+            try:
+                self.charm.plugin_manager.apply_config(plug.disable())
+            except OpenSearchKeystoreNotReadyError:
+                logger.debug("Backup broken relation: keystore not ready yet")
+                # No need to defer, we already cleaned the keystore.
+                return
+
+    def _on_backup_disable(self, event: _DisableBackupRelationEvent) -> None:  # noqa C901
+        """Disables the backup relation."""
         self.charm.status.clear(BackupRelDataIncomplete)
         self.charm.status.clear(BackupRelShouldNotExist)
         if self.charm.unit.is_leader():
@@ -658,9 +712,8 @@ class OpenSearchBackupBase(Object):
             )
 
         if (
-            self.charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR
-            and self.charm.model.get_relation(self.relation_name)
-            and self.charm.model.get_relation(self.relation_name).units
+            self.charm.model.get_relation(event.relation_name)
+            and self.charm.model.get_relation(event.relation_name).units
         ):
             # The main app units must defer this event
             # as they are related directly with the backup integrator
@@ -701,28 +754,33 @@ class OpenSearchBackupBase(Object):
             self.charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR
             and self.charm.unit.is_leader()
         ):
-            # 2) Run the API calls
+            # Run the API calls
             self.backup_manager.clean()
 
-        # We disable both plugins
-        plugins = [OpenSearchAzurePlugin(self.charm, None), OpenSearchS3Plugin(self.charm, None)]
-        for plug in plugins:
-            try:
-                self.charm.plugin_manager.apply_config(plug.disable())
-            except OpenSearchKeystoreNotReadyError:
-                logger.warning("Backup broken relation: keystore not ready yet")
-                event.defer()
-                return
-            except OpenSearchKeystoreError:
-                logger.info(f"Plugin {plug.name} not found: no keys present")
-                # The plugin is not present, we can ignore it
-                continue
-            except OpenSearchError as e:
-                self.charm.status.set(BlockedStatus(PluginConfigError))
-                # There was an unexpected error, log it and block the unit
-                logger.error(e)
-                event.defer()
-                return
+        plug = (
+            OpenSearchAzurePlugin(self.charm, None)
+            if event.relation_name == AZURE_RELATION
+            else OpenSearchS3Plugin(self.charm, None)
+        )
+
+        try:
+            self.charm.plugin_manager.apply_config(plug.disable())
+        except OpenSearchKeystoreError:
+            # The plugin is not present, we can ignore it
+            logger.info(f"Error while removing {plug.name}")
+            event.defer()
+            return
+        except OpenSearchError as e:
+            self.charm.status.set(BlockedStatus(PluginConfigError))
+            # There was an unexpected error, log it and block the unit
+            logger.error(e)
+            event.defer()
+            return
+
+        # Now, as this is related strictly to the MAIN orchestrator,
+        # we must update any peer relation.
+        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+            self.charm.peer_cluster_provider.refresh_relation_data(event)
 
         self.charm.status.clear(BackupInDisabling)
         self.charm.status.clear(PluginConfigError)
