@@ -72,7 +72,7 @@ ALL_GROUPS = {
         deploy_type,
         id=f"{cloud_name}-{deploy_type}",
         marks=[
-            pytest.mark.group(f"{cloud_name}-{deploy_type}"),
+            pytest.mark.group(id=f"{cloud_name}-{deploy_type}"),
             pytest.mark.runner(
                 [
                     "self-hosted",
@@ -776,7 +776,7 @@ async def test_restore_to_new_cluster(
 
 
 # -------------------------------------------------------------------------------------------
-# Tests for the "all" group
+# Tests for the "allgroup" group
 #
 # This group will iterate over each cloud, update its credentials via config and rerun
 # the backup and restore tests.
@@ -784,7 +784,7 @@ async def test_restore_to_new_cluster(
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group("all")
+@pytest.mark.group(id="all")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_deploy_and_test_status(ops_test: OpsTest, charm, ubuntu_base) -> None:
@@ -823,7 +823,7 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest, charm, ubuntu_bas
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group("all")
+@pytest.mark.group(id="all")
 @pytest.mark.abort_on_fail
 async def test_repo_missing_message(ops_test: OpsTest) -> None:
     """Check the repo is missing error returned by OpenSearch.
@@ -842,7 +842,7 @@ async def test_repo_missing_message(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group("all")
+@pytest.mark.group(id="all")
 @pytest.mark.abort_on_fail
 async def test_wrong_s3_credentials(ops_test: OpsTest) -> None:
     """Check the repo is misconfigured."""
@@ -893,7 +893,7 @@ async def test_wrong_s3_credentials(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group("all")
+@pytest.mark.group(id="all")
 @pytest.mark.abort_on_fail
 async def test_change_config_and_backup_restore(
     ops_test: OpsTest,
