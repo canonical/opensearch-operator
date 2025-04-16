@@ -418,7 +418,7 @@ class OpenSearchPeerClustersManager:
             # this is not the latest unit to be brought online, we can continue
             return
 
-        is_large_deployment = len(apps_in_fleet) > 1
+        is_large_deployment = self.is_provider() or self.is_consumer()
         cms = sum(1 for node in nodes if node.is_cm_eligible())
         if not is_large_deployment or (is_large_deployment and cms >= 3):
             # if validation called on large deployment,
@@ -444,7 +444,7 @@ class OpenSearchPeerClustersManager:
 
         try:
             self.validate_roles(nodes)
-            self._charm.status.clear(PClusterWrongNodesCountForQuorum)
+            self._charm.status.clear(PClusterWrongNodesCountForQuorum, app=True)
         except OpenSearchProvidedRolesException as e:
             logger.exception(e)
             self._charm.app.status = BlockedStatus(str(e))
