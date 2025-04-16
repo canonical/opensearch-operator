@@ -27,6 +27,7 @@ async def reset_restart_delay(ops_test: OpsTest):
 async def c_writes(ops_test: OpsTest):
     """Creates instance of the ContinuousWrites."""
     app = (await app_name(ops_test)) or APP_NAME
+    logger.debug(f"Creating ContinuousWrites instance for app with name {app}")
     return ContinuousWrites(ops_test, app)
 
 
