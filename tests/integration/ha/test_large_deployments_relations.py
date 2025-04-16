@@ -10,6 +10,8 @@ import pytest
 from charms.opensearch.v0.constants_charm import PClusterNoRelation, TLSRelationMissing
 from pytest_operator.plugin import OpsTest
 
+from lib.charms.opensearch.v0.constants_charm import PClusterWrongNodesCountForQuorum
+
 from ..helpers import CONFIG_OPTS, MODEL_CONFIG, SERIES, get_leader_unit_ip
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
@@ -246,3 +248,48 @@ async def test_large_deployment_fully_formed(
             assert (
                 temperature == "hot"
             ), f"Wrong temperature for {app}:{temperature} - expected:hot"
+
+
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_large_deployment_validate_cm_count(ops_test: OpsTest) -> None:
+    """Test that scaling down to less than 3 cms triggers a status change"""
+    # scale down to 2 cms
+    desired_counts = {MAIN_APP: 1, FAILOVER_APP: 1}
+    for app_name in (MAIN_APP, FAILOVER_APP):
+        app = ops_test.model.applications[app_name]
+        n_remove = len(app.units) - desired_counts[app_name]
+        units = [unit.name for unit in app.units[:n_remove]]
+        await app.destroy_units(*units)
+
+    await wait_until(
+        ops_test,
+        apps=[MAIN_APP, FAILOVER_APP],
+        apps_full_statuses={
+            MAIN_APP: {"active": []},
+            FAILOVER_APP: {"blocked": [PClusterWrongNodesCountForQuorum]},
+        },
+        units_statuses=["active"],
+        wait_for_exact_units={
+            MAIN_APP: 1,
+            FAILOVER_APP: 1,
+        },
+        idle_period=IDLE_PERIOD,
+        timeout=1800,
+    )
+
+    # check that the status is cleared on scale up to >= 3 cms
+    await ops_test.model.applications[MAIN_APP].add_units(1)
+    await wait_until(
+        ops_test,
+        apps=[MAIN_APP, FAILOVER_APP],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units={
+            MAIN_APP: 2,
+            FAILOVER_APP: 1,
+        },
+        idle_period=IDLE_PERIOD,
+        timeout=1800,
+    )
