@@ -528,8 +528,6 @@ async def test_large_setups_relations_with_misconfiguration(
 @pytest.mark.abort_on_fail
 async def test_create_backup_and_restore(
     ops_test: OpsTest,
-    c_writes: ContinuousWrites,
-    c_writes_runner,
     cloud_configs: Dict[str, Dict[str, str]],
     cloud_credentials: Dict[str, Dict[str, str]],
     cloud_name: str,
@@ -537,6 +535,8 @@ async def test_create_backup_and_restore(
 ) -> None:
     """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
     app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
+    c_writes = ContinuousWrites(ops_test, app)
+    await c_writes.start()
     apps = [app] if deploy_type == "small" else [app, APP_NAME]
     leader_id = await get_leader_unit_id(ops_test, app=app)
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
@@ -562,18 +562,22 @@ async def test_create_backup_and_restore(
         > date_before_backup
     )
     # continuous writes checks
-    await assert_continuous_writes_increasing(c_writes)
-    await assert_continuous_writes_consistency(ops_test, c_writes, apps)
-    await assert_restore_indices_and_compare_consistency(
-        ops_test, app, leader_id, unit_ip, backup_id
-    )
-    global cwrites_backup_doc_count
-    cwrites_backup_doc_count[backup_id] = await index_docs_count(
-        ops_test,
-        app,
-        unit_ip,
-        ContinuousWrites.INDEX_NAME,
-    )
+    try:
+        await assert_continuous_writes_increasing(c_writes)
+        await assert_continuous_writes_consistency(ops_test, c_writes, apps)
+        await assert_restore_indices_and_compare_consistency(
+            ops_test, app, leader_id, unit_ip, backup_id
+        )
+        global cwrites_backup_doc_count
+        cwrites_backup_doc_count[backup_id] = await index_docs_count(
+            ops_test,
+            app,
+            unit_ip,
+            ContinuousWrites.INDEX_NAME,
+        )
+    finally:
+        await c_writes.clear()
+        logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
 
 
 @pytest.mark.parametrize("cloud_name,deploy_type", ALL_DEPLOYMENTS_ALL_CLOUDS)
