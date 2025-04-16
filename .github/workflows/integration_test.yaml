@@ -42,6 +42,7 @@ jobs:
               _, runner, task, variant = job.split(":")
               # Example: "test_charm.py"
               task = task.removeprefix("tests/spread/")
+              task = task.replace("/", "_")
               if runner.endswith("-arm"):
                   architecture = "arm64"
               else:
@@ -171,7 +172,7 @@ jobs:
         if: ${{ !contains(matrix.job.spread_job, 'juju29') && (success() || (failure() && steps.spread.outcome == 'failure')) }}
         uses: actions/upload-artifact@v4
         with:
-          name: logs-integration-test-${{ matrix.job.name_in_artifact//\//- }}
+          name: logs-integration-test-${{ matrix.job.name_in_artifact }}
           path: ~/logs/
           if-no-files-found: error
       - name: Disk usage
