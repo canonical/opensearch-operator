@@ -14,7 +14,13 @@ from charms.opensearch.v0.constants_charm import (
 )
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import CONFIG_OPTS, MODEL_CONFIG, SERIES, get_leader_unit_ip
+from ..helpers import (
+    CONFIG_OPTS,
+    MODEL_CONFIG,
+    SERIES,
+    get_leader_unit_ip,
+    scale_application,
+)
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .continuous_writes import ContinuousWrites
@@ -257,13 +263,12 @@ async def test_large_deployment_fully_formed(
 @pytest.mark.abort_on_fail
 async def test_large_deployment_validate_cm_count(ops_test: OpsTest) -> None:
     """Test that scaling down to less than 3 cms triggers a status change"""
-    # scale down to 2 cms
-    desired_counts = {MAIN_APP: 1, FAILOVER_APP: 1}
-    for app_name in (MAIN_APP, FAILOVER_APP):
-        app = ops_test.model.applications[app_name]
-        n_remove = len(app.units) - desired_counts[app_name]
-        units = [unit.name for unit in app.units[:n_remove]]
-        await app.destroy_units(*units)
+    # scale main down to 1
+    await scale_application(ops_test=ops_test, application_name=MAIN_APP, count=1)
+
+    failover_app = ops_test.model.applications[FAILOVER_APP]
+    units = [unit.name for unit in failover_app.units[:-1]]
+    await failover_app.destroy_units(*units)
 
     await wait_until(
         ops_test,
