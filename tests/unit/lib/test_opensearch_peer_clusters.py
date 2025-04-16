@@ -117,7 +117,8 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
 
     @patch(f"{BASE_LIB_PATH}.models.PeerClusterApp.from_dict")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
-    def test_validate_roles(self, deployment_desc, peer_cluster_app_from_dict):
+    @patch(f"{PEER_CLUSTERS_MANAGER}.is_provider")
+    def test_validate_roles(self, is_provider, deployment_desc, peer_cluster_app_from_dict):
         """Test the roles' validation."""
         app = App(name="logs", model_uuid=self.charm.model.uuid)
 
@@ -137,6 +138,7 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
         )
         # mock unit count=0 to only account for nodes in nodes list for full_cluster_planned_units
         self.charm.app.planned_units = MagicMock(return_value=0)
+        is_provider.return_value = True
         # large deployment with 3 cms, should not raise an exception
         nodes = [
             Node(
