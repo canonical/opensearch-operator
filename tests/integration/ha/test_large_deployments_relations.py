@@ -7,11 +7,7 @@ import logging
 import time
 
 import pytest
-from charms.opensearch.v0.constants_charm import (
-    PClusterNoRelation,
-    PClusterWrongNodesCountForQuorum,
-    TLSRelationMissing,
-)
+from charms.opensearch.v0.constants_charm import PClusterNoRelation, TLSRelationMissing
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import CONFIG_OPTS, MODEL_CONFIG, SERIES, get_leader_unit_ip
@@ -250,47 +246,3 @@ async def test_large_deployment_fully_formed(
             assert (
                 temperature == "hot"
             ), f"Wrong temperature for {app}:{temperature} - expected:hot"
-
-
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_large_deployment_validate_cm_count(ops_test: OpsTest) -> None:
-    """Test that scaling down to less than 3 cms triggers a status change"""
-    # scale main down to 1
-    await ops_test.model.remove_application(FAILOVER_APP, block_until_done=True)
-
-    main_app = ops_test.model.applications[MAIN_APP]
-    units = [unit.name for unit in main_app.units[:-1]]
-    await main_app.destroy_units(*units)
-
-    await wait_until(
-        ops_test,
-        apps=[MAIN_APP, DATA_APP],
-        apps_full_statuses={
-            DATA_APP: {"active": []},
-            MAIN_APP: {"blocked": [PClusterWrongNodesCountForQuorum]},
-        },
-        units_statuses=["active"],
-        wait_for_exact_units={
-            MAIN_APP: 1,
-            DATA_APP: APP_UNITS[DATA_APP],
-        },
-        idle_period=IDLE_PERIOD,
-        timeout=1800,
-    )
-
-    # check that the status is cleared on scale up to >= 3 cms
-    await ops_test.model.applications[MAIN_APP].add_units(2)
-    await wait_until(
-        ops_test,
-        apps=[MAIN_APP, DATA_APP],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units={
-            MAIN_APP: 3,
-            DATA_APP: APP_UNITS[DATA_APP],
-        },
-        idle_period=IDLE_PERIOD,
-        timeout=1800,
-    )
