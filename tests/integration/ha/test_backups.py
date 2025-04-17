@@ -534,7 +534,7 @@ async def test_create_backup_and_restore(
     deploy_type: str,
 ) -> None:
     """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
-    logger.debug(f"App name from model {await app_name(ops_test)} vs default {APP_NAME}")
+    logger.info(f"App name from model {await app_name(ops_test)} vs default {APP_NAME}")
     app = APP_NAME if deploy_type == "small" else "main"
     c_writes = ContinuousWrites(ops_test, app)
     await c_writes.start()

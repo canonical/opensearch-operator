@@ -67,7 +67,7 @@ async def app_name(ops_test: OpsTest) -> Optional[str]:
         )
     )["applications"]
 
-    logger.debug(f"Apps inside app_name: {apps}")
+    logger.info(f"Apps inside app_name: {apps}")
 
     opensearch_apps = {
         name: desc for name, desc in apps.items() if desc["charm-name"] == "opensearch"
