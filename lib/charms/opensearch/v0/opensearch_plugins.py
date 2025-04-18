@@ -299,7 +299,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import AzureRelData, DeploymentType, S3RelData
+from charms.opensearch.v0.models import AzureRelData, DeploymentType, S3RelData, Node
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from jproperties import Properties
@@ -399,13 +399,13 @@ class OpenSearchPlugin:
     PLUGIN_PROPERTIES = "plugin-descriptor.properties"
     REMOVE_ON_DISABLE = False
 
-    def __init__(self, charm, node_roles: List[str] = None):
+    def __init__(self, charm, node_roles: List[Node] = None):
         """Creates the OpenSearchPlugin object."""
         self._plugins_path = (
             f"{charm.opensearch.paths.plugins}/{self.name}/{self.PLUGIN_PROPERTIES}"
         )
         self._extra_config = charm.config
-        self._node_roles = node_roles
+        self._nodes_roles = {node.name: node.roles for node in node_roles}
 
     @property
     def version(self) -> str:
@@ -530,7 +530,7 @@ class OpenSearchMlCommons(OpenSearchPlugin):
 
     def requested_to_enable(self) -> bool:
         """Returns True if at least one node is marked with "ml" role."""
-        return "ml" in self._node_roles
+        return "ml" in [item for roles in self._nodes_roles.values() for item in roles]
 
     def config(self) -> OpenSearchPluginConfig:
         """Returns a plugin config object to be applied for enabling the current plugin."""
@@ -542,13 +542,13 @@ class OpenSearchMlCommons(OpenSearchPlugin):
             "mlcommons.trust_url_regex": "^(https?|file)://(/var/snap/common/opensearch/var/lib/opensearch/ml_commons/|https://artifacts.opensearch.org/models/ml-models/)*",
         }
 
-        if self._extra_config["plugin_ml_commons_trust_url_regex"]:
+        if self._extra_config["plugin_ml_commons_override_trust_url_regex"]:
             return OpenSearchPluginConfig(
                 config_entries=config
                 | {
                     "plugins.ml_commons.allow_registering_model_via_url": True,
                     "mlcommons.trust_url_regex": self._extra_config[
-                        "plugin_ml_commons_trust_url_regex"
+                        "plugin_ml_commons_override_trust_url_regex"
                     ],
                 },
             )
@@ -562,7 +562,7 @@ class OpenSearchMlCommons(OpenSearchPlugin):
     def disable(self) -> OpenSearchPluginConfig:
         """Returns a plugin config object to be applied for disabling the current plugin.
 
-        This method disables the
+        This method disables the ml-commons plugin.
         """
         return OpenSearchPluginConfig(
             config_entries={"knn.plugin.enabled": False},
@@ -642,9 +642,9 @@ class OpenSearchS3Plugin(OpenSearchPlugin):
     MODEL = S3RelData
     DATA_PROVIDER = OpenSearchPluginS3DataProvider
 
-    def __init__(self, charm):
+    def __init__(self, charm, node_roles: List[Node] = None):
         """Creates the OpenSearchBackupPlugin object."""
-        super().__init__(charm)
+        super().__init__(charm, node_roles)
         self.dp = self.DATA_PROVIDER(charm)
         self.repo_name = "default"
         self.charm = charm
@@ -777,9 +777,9 @@ class OpenSearchAzurePlugin(OpenSearchPlugin):
     MODEL = AzureRelData
     DATA_PROVIDER = OpenSearchPluginAzureDataProvider
 
-    def __init__(self, charm):
+    def __init__(self, charm, node_roles: List[Node] = None):
         """Creates the OpenSearchAzurePlugin object."""
-        super().__init__(charm)
+        super().__init__(charm, node_roles)
         self.dp = self.DATA_PROVIDER(charm)
         self.repo_name = "default"
         self.charm = charm

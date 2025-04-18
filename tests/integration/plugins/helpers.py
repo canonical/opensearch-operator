@@ -188,6 +188,24 @@ async def mlcommons_load_model_to_node(
 
 
 @retry(
+    wait=wait_fixed(wait=10),
+    stop=stop_after_attempt(7),
+)
+async def mlcommons_deploy_model(
+    ops_test: OpsTest,
+    app: str,
+    unit_ip: str,
+    model_id: str,
+) -> Optional[List[Dict[str, Any]]]:
+    """Loads model_id to the node."""
+    endpoint = f"https://{unit_ip}:9200/_plugins/_ml/models/{model_id}/_deploy"
+
+    resp = await http_request(ops_test, "POST", endpoint, app=app)
+    logger.info(resp)
+    return resp
+
+
+@retry(
     wait=wait_fixed(wait=5),
     stop=stop_after_attempt(5),
 )
