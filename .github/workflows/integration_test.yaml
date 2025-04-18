@@ -179,7 +179,9 @@ jobs:
         timeout-minutes: 1
         if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
         run: df --human-readable
-
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: canonical/action-tmate@main
   allure-report:
     # TODO future improvement: use concurrency group for job
     name: Publish Allure report
