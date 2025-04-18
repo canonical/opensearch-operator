@@ -33,7 +33,7 @@ INVALID_CLUSTER_NAME = "timeseries"
 APP_UNITS = {MAIN_APP: 3, FAILOVER_APP: 3, DATA_APP: 2, INVALID_APP: 1}
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "2xlarge-extra"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -113,7 +113,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, ubuntu_base) -> None:
     )
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "2xlarge-extra"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_invalid_conditions(ops_test: OpsTest) -> None:
@@ -193,7 +193,7 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
     )
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "2xlarge-extra"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_large_deployment_fully_formed(

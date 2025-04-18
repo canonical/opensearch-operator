@@ -50,7 +50,7 @@ ALL_GROUPS = {
                     "linux",
                     "X64",
                     "jammy",
-                    "xlarge" if deploy_type == LARGE_DEPLOYMENT else "large",
+                    "2xlarge-extra" if deploy_type == LARGE_DEPLOYMENT else "large",
                 ]
             ),
         ],
@@ -94,7 +94,7 @@ async def test_build_and_deploy_active(ops_test: OpsTest, charm, ubuntu_base) ->
     )
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "2xlarge-extra"])
 @pytest.mark.group(id=LARGE_DEPLOYMENT)
 @pytest.mark.abort_on_fail
 async def test_build_large_deployment(ops_test: OpsTest, charm, ubuntu_base) -> None:

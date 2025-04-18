@@ -194,9 +194,9 @@ async def test_upgrade_to_local(
 @pytest.mark.parametrize("version", UPGRADE_INITIAL_VERSION)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_deploy_from_version(ops_test: OpsTest, version) -> None:
+async def test_deploy_from_version(ops_test: OpsTest, version, ubuntu_base) -> None:
     """Deploy OpenSearch."""
-    await _build_env(ops_test, version)
+    await _build_env(ops_test, version, ubuntu_base)
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
