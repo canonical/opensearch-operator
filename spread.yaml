@@ -130,9 +130,10 @@ prepare: |
   snap install --classic concierge
 
   # Install charmcraft & pipx (on lxd-vm backend)
-  concierge prepare --trace
+  concierge prepare --trace --extra-debs pipx
 
-  pipx install tox poetry
+  pipx install tox 
+  pipx install poetry
 prepare-each: |
   cd "$SPREAD_PATH"
   if [[ $SPREAD_VARIANT == *"juju29"* ]]
@@ -142,7 +143,7 @@ prepare-each: |
     poetry add --lock --group integration juju@^2
   fi
   # `concierge prepare` needs to be run for each spread job in case Juju version changed
-  concierge prepare --trace
+  concierge prepare --trace --extra-debs pipx
 
   # Unable to set constraint on all models because of Juju bug:
   # https://bugs.launchpad.net/juju/+bug/2065050
