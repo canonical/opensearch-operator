@@ -87,15 +87,15 @@ jobs:
     runs-on: ["self-hosted", "linux", "X64", "jammy", "xlarge"]
     timeout-minutes: 217 # Sum of steps `timeout-minutes` + 5
     steps:
-      - name: Free up disk space
-        timeout-minutes: 1
-        run: |
-          printf '\nDisk usage before cleanup\n'
-          df --human-readable
-          # Based on https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
-          rm -r /opt/hostedtoolcache/
-          printf '\nDisk usage after cleanup\n'
-          df --human-readable
+      # - name: Free up disk space
+      #   timeout-minutes: 1
+      #   run: |
+      #     printf '\nDisk usage before cleanup\n'
+      #     df --human-readable
+      #     # Based on https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+      #     rm -r /opt/hostedtoolcache/
+      #     printf '\nDisk usage after cleanup\n'
+      #     df --human-readable
       - name: Checkout
         timeout-minutes: 3
         uses: actions/checkout@v4
