@@ -54,7 +54,7 @@ ALL_GROUPS = {
         deploy_type,
         id=deploy_type,
         marks=[
-            pytest.mark.group(deploy_type),
+            pytest.mark.group(id=deploy_type),
             pytest.mark.runner(
                 [
                     "self-hosted",
