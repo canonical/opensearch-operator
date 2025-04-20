@@ -876,6 +876,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
     def apply_orchestrator_status(self) -> None:
         """Sets or clears status based on presence of local orchestrators."""
+        if not self.charm.unit.is_leader():
+            return
+
         deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
         orchestrators = PeerClusterOrchestrators.from_dict(
             self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
