@@ -129,7 +129,7 @@ async def test_large_deployment_sever_main_failover_relation(ops_test: OpsTest) 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_large_deployment_remove_app(ops_test: OpsTest) -> None:
+async def test_large_deployment_remove_orchestrators(ops_test: OpsTest) -> None:
     """Test that the orchestrator apps can be deleted."""
     # delete the main orchestrator
     await ops_test.model.remove_application(

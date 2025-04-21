@@ -253,9 +253,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         # if the trigger app is the failover orchestrator and there are no planned units, delete it
         if (
-            relation_departure_reason(
-                self.charm, self.relation_name, event.app.name if event.app else ""
-            )
+            relation_departure_reason(self.charm, self.relation_name, event.app.name)
             == RelDepartureReason.SCALE_DOWN
         ):
             return
@@ -266,16 +264,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if event.relation.id == orchestrators.failover_rel_id:
             orchestrators.delete("failover")
             self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
-            # update orchestrators in rel data
-            all_relation_ids = [
-                rel.id for rel in self.charm.model.relations[self.relation_name] if rel.units
-            ]
-            for rel_id in all_relation_ids:
-                orchestrators = PeerClusterOrchestrators.from_dict(
-                    self.get_obj_from_rel("orchestrators", rel_id=rel_id)
-                )
-                orchestrators.delete("failover")
-                self.put_in_rel(data={"orchestrators": orchestrators.to_str()}, rel_id=rel_id)
 
     def refresh_relation_data(  # noqa: C901
         self, event: EventBase, event_rel_id: int | None = None, can_defer: bool = True
@@ -1062,9 +1050,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # handle scale-down at the charm level storage detaching, or??
         if (
-            relation_departure_reason(
-                self.charm, self.relation_name, event.app.name if event.app else ""
-            )
+            relation_departure_reason(self.charm, self.relation_name, event.app.name)
             == RelDepartureReason.SCALE_DOWN
         ):
             return
