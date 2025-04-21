@@ -21,7 +21,6 @@ OPENSEARCH_ORIGINAL_CHARM_NAME = "opensearch"
 OPENSEARCH_CHANNEL = "2/edge"
 OPENSEARCH_STABLE_CHANNEL = "2/stable"
 
-
 STARTING_VERSION = "2.15.0"
 
 
@@ -39,7 +38,9 @@ UPGRADE_INITIAL_VERSION = [
         pytest.param(
             version,
             id=FROM_VERSION_PREFIX.format(version),
-            marks=pytest.mark.group(FROM_VERSION_PREFIX.format(version)),
+            marks=pytest.mark.group(
+                id="two_version_upgrade" if version == STARTING_VERSION else "one_version_upgrade"
+            ),
         )
     )
     for version in VERSION_TO_REVISION.keys()
@@ -95,7 +96,7 @@ async def _build_env(ops_test: OpsTest, version: str, ubuntu_base) -> None:
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group("happy_path_upgrade")
+@pytest.mark.group(id="happy_path_upgrade")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_deploy_latest_from_channel(ops_test: OpsTest, ubuntu_base) -> None:
@@ -103,7 +104,7 @@ async def test_deploy_latest_from_channel(ops_test: OpsTest, ubuntu_base) -> Non
     await _build_env(ops_test, STARTING_VERSION, ubuntu_base)
 
 
-@pytest.mark.group("happy_path_upgrade")
+@pytest.mark.group(id="happy_path_upgrade")
 @pytest.mark.abort_on_fail
 async def test_upgrade_between_versions(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -170,7 +171,7 @@ async def test_upgrade_between_versions(
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group("happy_path_upgrade")
+@pytest.mark.group(id="happy_path_upgrade")
 @pytest.mark.abort_on_fail
 async def test_upgrade_to_local(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, charm
