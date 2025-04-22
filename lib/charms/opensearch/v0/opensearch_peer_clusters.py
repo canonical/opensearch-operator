@@ -398,7 +398,7 @@ class OpenSearchPeerClustersManager:
         deployment_desc = self.deployment_desc()
         if (
             not set(deployment_desc.config.roles) & {"cluster_manager", "voting_only"}
-            and not deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+            and deployment_desc.start != StartMode.WITH_GENERATED_ROLES
         ):
             # the user is not adding any cm nor voting_only roles to the nodes
             return
