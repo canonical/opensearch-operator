@@ -42,8 +42,6 @@ SECRET_EXPIRY_TIME = 180
 SECRET_EXPIRY_WAIT_TIME = SECRET_EXPIRY_TIME + 60
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy_active(ops_test: OpsTest, charm, series) -> None:
@@ -76,8 +74,6 @@ async def test_build_and_deploy_active(ops_test: OpsTest, charm, series) -> None
     assert len(ops_test.model.applications[APP_NAME].units) == len(UNIT_IDS)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_security_index_initialised(ops_test: OpsTest) -> None:
     """Test that the security index is well initialised."""
@@ -86,8 +82,6 @@ async def test_security_index_initialised(ops_test: OpsTest) -> None:
     assert await check_security_index_initialised(ops_test, leader_unit_ip)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_tls_configured(ops_test: OpsTest) -> None:
     """Test that TLS is enabled when relating to the TLS Certificates Operator."""
@@ -95,8 +89,6 @@ async def test_tls_configured(ops_test: OpsTest) -> None:
         assert await check_unit_tls_configured(ops_test, unit_ip, unit_name)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_cluster_formation_after_tls(ops_test: OpsTest) -> None:
     """Test that the cluster formation is successful after TLS setup."""
@@ -106,8 +98,6 @@ async def test_cluster_formation_after_tls(ops_test: OpsTest) -> None:
     assert await check_cluster_formation_successful(ops_test, leader_unit_ip, unit_names)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_tls_renewal(ops_test: OpsTest) -> None:
     """Test that renewed TLS certificates are reloaded immediately without restarting."""
@@ -166,8 +156,6 @@ async def test_tls_renewal(ops_test: OpsTest) -> None:
     )
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_tls_expiration(ops_test: OpsTest, charm, series) -> None:
     """Test that expiring TLS certificates are renewed."""

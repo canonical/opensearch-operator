@@ -41,7 +41,6 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
@@ -70,7 +69,6 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_horizontal_scale_up(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -119,7 +117,6 @@ async def test_horizontal_scale_up(
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_safe_scale_down_shards_realloc(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -230,7 +227,6 @@ async def test_safe_scale_down_shards_realloc(
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 async def test_safe_scale_down_remove_leaders(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:

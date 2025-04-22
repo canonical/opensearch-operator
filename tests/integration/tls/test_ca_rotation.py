@@ -60,7 +60,6 @@ ALL_GROUPS = {
 ALL_DEPLOYMENTS = list(ALL_GROUPS.values())
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(id=SMALL_DEPLOYMENT)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed

@@ -26,8 +26,6 @@ logger = logging.getLogger(__name__)
 DEFAULT_NUM_UNITS = 3
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest, charm, series, lxd_spaces) -> None:
@@ -72,8 +70,6 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, series, lxd_spaces) ->
     assert len(ops_test.model.applications[APP_NAME].units) == DEFAULT_NUM_UNITS
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_check_opensearch_transport(ops_test: OpsTest) -> None:
     """Test which IP will be assigned to transport bind in the end."""

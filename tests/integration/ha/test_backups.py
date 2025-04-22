@@ -779,7 +779,6 @@ async def test_restore_to_new_cluster(
 # -------------------------------------------------------------------------------------------
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(id="all")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -816,7 +815,6 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest, charm, series) ->
     await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(id="all")
 @pytest.mark.abort_on_fail
 async def test_repo_missing_message(ops_test: OpsTest) -> None:
@@ -835,7 +833,6 @@ async def test_repo_missing_message(ops_test: OpsTest) -> None:
     assert "repository_missing_exception" in resp["error"]["type"]
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(id="all")
 @pytest.mark.abort_on_fail
 async def test_wrong_s3_credentials(ops_test: OpsTest) -> None:
@@ -886,7 +883,6 @@ async def test_wrong_s3_credentials(ops_test: OpsTest) -> None:
     assert "Could not determine repository generation from root blobs" in resp["error"]["reason"]
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(id="all")
 @pytest.mark.abort_on_fail
 async def test_change_config_and_backup_restore(
