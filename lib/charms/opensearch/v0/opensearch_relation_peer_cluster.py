@@ -42,7 +42,6 @@ from charms.opensearch.v0.models import (
     PeerClusterRelErrorData,
     S3RelDataCredentials,
     StartMode,
-    State,
 )
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
@@ -172,7 +171,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         # if this is a failover orchestrator, check if it should promote itself
         if (
             deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR
-            and deployment_desc.state.value == State.ACTIVE
             and self._should_promote_failover()
         ):
             logger.info("Promoting failover orchestrator to main orchestrator")
@@ -286,6 +284,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
     def _should_promote_failover(self) -> bool:
         """Check if majority of related apps are disconnected from main orhcestrator"""
+        if not (self.charm.is_admin_user_configured() and self.charm.tls.is_fully_configured()):
+            return False
         # check how many related apps are disconnected from main orchestrator
         target_relation_ids = [
             rel.id for rel in self.charm.model.relations[self.relation_name] if len(rel.units) > 0
@@ -326,13 +326,35 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         for rel_id in target_relation_ids:
             self.put_in_rel({"trigger": "main"}, rel_id=rel_id)
-            self.delete_from_rel("is_connected_to_main", rel_id=rel_id)
+
+        credentials_to_check = {
+            "s3-integrator": {"key": S3_CREDENTIALS, "relation_name": S3_RELATION},
+            "azure-storage-integrator": {
+                "key": AZURE_CREDENTIALS,
+                "relation_name": AZURE_RELATION,
+            },
+        }
+
+        should_block = [
+            name
+            for name, info in credentials_to_check.items()
+            if self._has_secret_and_no_relation(info["key"], info["relation_name"])
+        ]
+        if should_block:
+            message = f"Found credentials for un-related apps. Add relation with {", ".join(should_block)} and any client applications."
+            self.charm.status.set(BlockedStatus(message), app=True)
 
         # ensuring quorum
         deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
         cms = self._fetch_local_cm_nodes(deployment_desc)
         if len(cms) < 3:
-            self.charm.status.set(BlockedStatus(PClusterWrongNodesCountForQuorum))
+            self.charm.status.set(BlockedStatus(PClusterWrongNodesCountForQuorum), app=True)
+
+    def _has_secret_and_no_relation(self, key: str, relation_name: str) -> bool:
+        """Checks if the relation data has credentials for a non-related app"""
+        return self.charm.secrets.has(Scope.APP, key) and not self.charm.model.get_relation(
+            relation_name
+        )
 
     def refresh_relation_data(  # noqa: C901
         self, event: EventBase, event_rel_id: int | None = None, can_defer: bool = True
@@ -884,18 +906,21 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # fetch main and failover clusters relations ids if any
         orchestrators = self._orchestrators(event, data, trigger)
 
+        if self._is_promoted_failover(orchestrators):
+            # failover has been promoted to main, delete failover
+            self.delete_from_rel("is_connected_to_main", rel_id=orchestrators.failover_rel_id)
+            orchestrators.delete("failover")
+
         if orchestrators.failover_rel_id != -1:
             # should we add a check where the failover rel has data while the main has none yet?
             if not orchestrators.main_app:
                 self._update_main_orchestrator_connection_status(
-                    deployment_desc, orchestrators.failover_rel_id, False
+                    orchestrators.failover_rel_id, False
                 )
                 event.defer()
                 return
 
-            self._update_main_orchestrator_connection_status(
-                deployment_desc, orchestrators.failover_rel_id, True
-            )
+            self._update_main_orchestrator_connection_status(orchestrators.failover_rel_id, True)
 
         if self._error_set_from_providers(orchestrators, data, event.relation.id):
             # check errors sent by providers
@@ -971,10 +996,10 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             self.charm.status.set(BlockedStatus(PClusterOrchestratorsRemoved), app=True)
 
     def _update_main_orchestrator_connection_status(
-        self, deployment_dec: DeploymentDescription, failover_rel_id: int, connected: bool
+        self, failover_rel_id: int, connected: bool
     ) -> None:
         """Updates failover rel data on main orchestrator connection."""
-        if deployment_dec.state.value != State.ACTIVE:
+        if not (self.charm.is_admin_user_configured() and self.charm.tls.is_fully_configured()):
             return
         is_connected = "true" if connected else "false"
         self.put_in_rel(data={"is_connected_to_main": is_connected}, rel_id=failover_rel_id)
@@ -1077,6 +1102,14 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         return PeerClusterOrchestrators.from_dict(local_orchestrators)
 
+    def _is_promoted_failover(self, orchestrators: PeerClusterOrchestrators) -> bool:
+        """Checks if failover orchestrator was promoted to the main orchestrator"""
+        return (
+            orchestrators.failover_app
+            and orchestrators.main_app
+            and orchestrators.failover_app.id == orchestrators.main_app.id
+        )
+
     def set_security_index_initialised(self) -> None:
         """Set the security index as initialised."""
         # get the MAIN orchestrator
@@ -1176,9 +1209,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             and orchestrators.failover_app
             and orchestrators.failover_app.id != deployment_desc.app.id
         ):
-            self._update_main_orchestrator_connection_status(
-                deployment_desc, orchestrators.failover_rel_id, False
-            )
+            self._update_main_orchestrator_connection_status(orchestrators.failover_rel_id, False)
 
         # clear previously set errors due to this relation
         self._clear_errors(f"error_from_provider-{event.relation.id}")
