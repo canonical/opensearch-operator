@@ -36,7 +36,7 @@ jobs:
           cmd = ["charmcraft", "test", "--list", "github-ci"]
           if trigger == "pull_request":
               # only run ubuntu 22.04 jobs
-              cmd[-1] = "github-ci:ubuntu-24.04:ubuntu22"
+              cmd[-1] = "github-ci:...:ubuntu22"
 
           spread_jobs = (
               subprocess.run(
@@ -93,7 +93,7 @@ jobs:
     name: ${{ matrix.job.name }}
     needs:
       - collect-integration-tests
-    runs-on: ["self-hosted", "linux", "X64", "noble", "xlarge"]
+    runs-on: ${{ matrix.job.runner }}
     timeout-minutes: 217 # Sum of steps `timeout-minutes` + 5
     steps:
       # - name: Free up disk space
