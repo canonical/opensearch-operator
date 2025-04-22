@@ -13,7 +13,7 @@ def ubuntu_base():
 
 @pytest.fixture
 def series(ubuntu_base):
-    """Workaround: python-libjuju does not support deploy with base="ubuntu@20.04"; need to use series"""
+    """Workaround: python-libjuju does not support deploy base="ubuntu@22.04"; use series"""
     if ubuntu_base == "22.04":
         return "jammy"
     elif ubuntu_base == "24.04":
