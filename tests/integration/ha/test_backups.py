@@ -71,6 +71,9 @@ ALL_GROUPS = {
         cloud_name,
         deploy_type,
         id=f"{cloud_name}-{deploy_type}",
+        marks=[
+            pytest.mark.group(id=f"{cloud_name}-{deploy_type}"),
+        ],
     )
     for cloud_name in ["microceph", "aws", "azure"]
     for deploy_type in ["large", "small"]

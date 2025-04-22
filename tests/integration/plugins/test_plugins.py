@@ -53,6 +53,9 @@ ALL_GROUPS = {
     deploy_type: pytest.param(
         deploy_type,
         id=deploy_type,
+        marks=[
+            pytest.mark.group(id=deploy_type),
+        ],
     )
     for deploy_type in ["large_deployment", "small_deployment"]
 }
