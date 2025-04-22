@@ -327,6 +327,20 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         for rel_id in target_relation_ids:
             self.put_in_rel({"trigger": "main"}, rel_id=rel_id)
 
+        # check if any credentials exist without relations
+        self._has_credentials_with_missing_relations()
+
+        # ensuring quorum
+        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
+        cms = self._fetch_local_cm_nodes(deployment_desc)
+        if len(cms) < 3:
+            self.charm.status.set(BlockedStatus(PClusterWrongNodesCountForQuorum), app=True)
+
+    def _has_credentials_with_missing_relations(self) -> None:
+        """Checks if the relation data has credentials for non-related apps"""
+        if not self.charm.unit.is_leader():
+            return
+
         credentials_to_check = {
             "s3-integrator": {"key": S3_CREDENTIALS, "relation_name": S3_RELATION},
             "azure-storage-integrator": {
@@ -343,12 +357,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if should_block:
             message = f"Found credentials for un-related apps. Add relation with {", ".join(should_block)} and any client applications."
             self.charm.status.set(BlockedStatus(message), app=True)
-
-        # ensuring quorum
-        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
-        cms = self._fetch_local_cm_nodes(deployment_desc)
-        if len(cms) < 3:
-            self.charm.status.set(BlockedStatus(PClusterWrongNodesCountForQuorum), app=True)
 
     def _has_secret_and_no_relation(self, key: str, relation_name: str) -> bool:
         """Checks if the relation data has credentials for a non-related app"""
