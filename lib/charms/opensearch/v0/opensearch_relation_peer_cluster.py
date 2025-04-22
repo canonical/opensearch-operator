@@ -355,7 +355,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if self._has_secret_and_no_relation(info["key"], info["relation_name"])
         ]
         if should_block:
-            message = f"Found credentials for un-related apps. Add relation with {", ".join(should_block)} and any client applications."
+            message = f"Found credentials for un-related apps. Add relation with {', '.join(should_block)} and any client applications."
             self.charm.status.set(BlockedStatus(message), app=True)
 
     def _has_secret_and_no_relation(self, key: str, relation_name: str) -> bool:
