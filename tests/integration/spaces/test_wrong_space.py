@@ -30,7 +30,7 @@ DEFAULT_NUM_UNITS = 3
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, charm, ubuntu_base, lxd_spaces) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm, series, lxd_spaces) -> None:
     """Build and deploy OpenSearch.
 
     For this test, we will misconfigure space bindings and see if the charm still
@@ -45,7 +45,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, ubuntu_base, lxd_space
     await ops_test.model.deploy(
         charm,
         num_units=DEFAULT_NUM_UNITS,
-        base=f"ubuntu@{ubuntu_base}",
+        series=series,
         constraints="spaces=alpha,client,cluster,backup",
         bind={"": "cluster"},
         config=CONFIG_OPTS,

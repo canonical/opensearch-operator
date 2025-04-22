@@ -12,6 +12,17 @@ def ubuntu_base():
 
 
 @pytest.fixture
+def series(ubuntu_base):
+    """Workaround: python-libjuju does not support deploy with base="ubuntu@20.04"; need to use series"""
+    if ubuntu_base == "22.04":
+        return "jammy"
+    elif ubuntu_base == "24.04":
+        return "noble"
+    else:
+        raise NotImplementedError
+
+
+@pytest.fixture
 def charm(ubuntu_base):
     # TODO: use instead of ops_test.build_charm
     # Return str instead of pathlib.Path since python-libjuju's model.deploy(), juju deploy, and

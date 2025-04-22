@@ -56,7 +56,7 @@ charm = None
 #
 #######################################################################
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-async def _build_env(ops_test: OpsTest, version: str, ubuntu_base) -> None:
+async def _build_env(ops_test: OpsTest, version: str, series) -> None:
     """Deploy OpenSearch cluster from a given revision."""
     await ops_test.model.set_config(MODEL_CONFIG)
 
@@ -66,7 +66,7 @@ async def _build_env(ops_test: OpsTest, version: str, ubuntu_base) -> None:
         num_units=3,
         channel=OPENSEARCH_CHANNEL,
         revision=VERSION_TO_REVISION[version],
-        base=f"ubuntu@{ubuntu_base}",
+        series=series,
     )
 
     # Deploy TLS Certificates operator.
@@ -99,9 +99,9 @@ async def _build_env(ops_test: OpsTest, version: str, ubuntu_base) -> None:
 @pytest.mark.group(id="happy_path_upgrade")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_deploy_latest_from_channel(ops_test: OpsTest, ubuntu_base) -> None:
+async def test_deploy_latest_from_channel(ops_test: OpsTest, series) -> None:
     """Deploy OpenSearch."""
-    await _build_env(ops_test, STARTING_VERSION, ubuntu_base)
+    await _build_env(ops_test, STARTING_VERSION, series)
 
 
 @pytest.mark.group(id="happy_path_upgrade")
@@ -195,9 +195,9 @@ async def test_upgrade_to_local(
 @pytest.mark.parametrize("version", UPGRADE_INITIAL_VERSION)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_deploy_from_version(ops_test: OpsTest, version, ubuntu_base) -> None:
+async def test_deploy_from_version(ops_test: OpsTest, version, series) -> None:
     """Deploy OpenSearch."""
-    await _build_env(ops_test, version, ubuntu_base)
+    await _build_env(ops_test, version, series)
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])

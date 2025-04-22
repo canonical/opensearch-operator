@@ -38,7 +38,7 @@ WORKLOAD = {
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_large_deployment_deploy_original_charm(ops_test: OpsTest, ubuntu_base) -> None:
+async def test_large_deployment_deploy_original_charm(ops_test: OpsTest, series) -> None:
     """Build and deploy the charm for large deployment tests."""
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
@@ -64,7 +64,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest, ubuntu_
             OPENSEARCH_ORIGINAL_CHARM_NAME,
             application_name=OPENSEARCH_MAIN_APP_NAME,
             num_units=WORKLOAD[OPENSEARCH_MAIN_APP_NAME],
-            base=f"ubuntu@{ubuntu_base}",
+            series=series,
             channel=OPENSEARCH_INITIAL_CHANNEL,
             config=main_orchestrator_conf | CONFIG_OPTS,
         ),
@@ -72,7 +72,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest, ubuntu_
             OPENSEARCH_ORIGINAL_CHARM_NAME,
             application_name=OPENSEARCH_FAILOVER_APP_NAME,
             num_units=WORKLOAD[OPENSEARCH_FAILOVER_APP_NAME],
-            base=f"ubuntu@{ubuntu_base}",
+            series=series,
             channel=OPENSEARCH_INITIAL_CHANNEL,
             config=failover_orchestrator_conf | CONFIG_OPTS,
         ),
@@ -80,7 +80,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest, ubuntu_
             OPENSEARCH_ORIGINAL_CHARM_NAME,
             application_name=APP_NAME,
             num_units=WORKLOAD[APP_NAME],
-            base=f"ubuntu@{ubuntu_base}",
+            series=series,
             channel=OPENSEARCH_INITIAL_CHANNEL,
             config=data_hot_conf | CONFIG_OPTS,
         ),

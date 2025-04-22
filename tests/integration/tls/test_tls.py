@@ -46,14 +46,14 @@ SECRET_EXPIRY_WAIT_TIME = SECRET_EXPIRY_TIME + 60
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy_active(ops_test: OpsTest, charm, ubuntu_base) -> None:
+async def test_build_and_deploy_active(ops_test: OpsTest, charm, series) -> None:
     """Build and deploy one unit of OpenSearch."""
     await ops_test.model.set_config(MODEL_CONFIG)
 
     await ops_test.model.deploy(
         charm,
         num_units=len(UNIT_IDS),
-        base=f"ubuntu@{ubuntu_base}",
+        series=series,
         config=CONFIG_OPTS,
     )
 
@@ -169,7 +169,7 @@ async def test_tls_renewal(ops_test: OpsTest) -> None:
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_tls_expiration(ops_test: OpsTest, charm, ubuntu_base) -> None:
+async def test_tls_expiration(ops_test: OpsTest, charm, series) -> None:
     """Test that expiring TLS certificates are renewed."""
     # before we can run this test, need to clean up and deploy with different config
     if APP_NAME in ops_test.model.applications:
@@ -194,7 +194,7 @@ async def test_tls_expiration(ops_test: OpsTest, charm, ubuntu_base) -> None:
     await ops_test.model.deploy(
         charm,
         num_units=1,
-        base=f"ubuntu@{ubuntu_base}",
+        series=series,
         config=CONFIG_OPTS,
     )
 

@@ -59,7 +59,7 @@ PROTECTED_INDICES = [
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_create_relation(ops_test: OpsTest, application_charm, charm, ubuntu_base):
+async def test_create_relation(ops_test: OpsTest, application_charm, charm, series):
     """Test basic functionality of relation interface."""
     # Deploy both charms (multiple units for each application to test that later they correctly
     # set data in the relation application databag using only the leader unit).
@@ -87,7 +87,7 @@ async def test_create_relation(ops_test: OpsTest, application_charm, charm, ubun
             charm,
             application_name=OPENSEARCH_APP_NAME,
             num_units=NUM_UNITS,
-            base=f"ubuntu@{ubuntu_base}",
+            series=series,
             config=CONFIG_OPTS,
         ),
     )

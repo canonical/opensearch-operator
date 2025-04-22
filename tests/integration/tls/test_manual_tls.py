@@ -19,14 +19,14 @@ logger = logging.getLogger(__name__)
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy_with_manual_tls(ops_test: OpsTest, charm, ubuntu_base) -> None:
+async def test_build_and_deploy_with_manual_tls(ops_test: OpsTest, charm, series) -> None:
     """Build and deploy prod cluster of OpenSearch with Manual TLS Operator integration."""
     await ops_test.model.set_config(MODEL_CONFIG)
 
     os_app: Application = await ops_test.model.deploy(
         charm,
         num_units=len(UNIT_IDS),
-        base=f"ubuntu@{ubuntu_base}",
+        series=series,
         application_name=APP_NAME,
         config=CONFIG_OPTS,
     )

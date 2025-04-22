@@ -64,14 +64,14 @@ ALL_DEPLOYMENTS = list(ALL_GROUPS.values())
 @pytest.mark.group(id=SMALL_DEPLOYMENT)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy_active(ops_test: OpsTest, charm, ubuntu_base) -> None:
+async def test_build_and_deploy_active(ops_test: OpsTest, charm, series) -> None:
     """Build and deploy one unit of OpenSearch."""
     await ops_test.model.set_config(MODEL_CONFIG)
 
     await ops_test.model.deploy(
         charm,
         num_units=len(UNIT_IDS),
-        base=f"ubuntu@{ubuntu_base}",
+        series=series,
         config=CONFIG_OPTS,
     )
 
@@ -97,7 +97,7 @@ async def test_build_and_deploy_active(ops_test: OpsTest, charm, ubuntu_base) ->
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "2xlarge-extra"])
 @pytest.mark.group(id=LARGE_DEPLOYMENT)
 @pytest.mark.abort_on_fail
-async def test_build_large_deployment(ops_test: OpsTest, charm, ubuntu_base) -> None:
+async def test_build_large_deployment(ops_test: OpsTest, charm, series) -> None:
     """Setup a large deployments cluster."""
     # deploy new cluster
     await asyncio.gather(
@@ -105,14 +105,14 @@ async def test_build_large_deployment(ops_test: OpsTest, charm, ubuntu_base) -> 
             charm,
             application_name=MAIN_APP,
             num_units=3,
-            base=f"ubuntu@{ubuntu_base}",
+            series=series,
             config={"cluster_name": CLUSTER_NAME, "roles": "cluster_manager,data"} | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
             charm,
             application_name=FAILOVER_APP,
             num_units=1,
-            base=f"ubuntu@{ubuntu_base}",
+            series=series,
             config={
                 "cluster_name": CLUSTER_NAME,
                 "init_hold": True,
@@ -124,7 +124,7 @@ async def test_build_large_deployment(ops_test: OpsTest, charm, ubuntu_base) -> 
             charm,
             application_name=DATA_APP,
             num_units=1,
-            base=f"ubuntu@{ubuntu_base}",
+            series=series,
             config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "data"}
             | CONFIG_OPTS,
         ),

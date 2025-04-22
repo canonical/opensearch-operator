@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest, charm, ubuntu_base) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
@@ -46,7 +46,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, ubuntu_base) -> None:
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
         ops_test.model.deploy(
-            charm, num_units=1, base=f"ubuntu@{ubuntu_base}", storage=storage, config=CONFIG_OPTS
+            charm, num_units=1, series=series, storage=storage, config=CONFIG_OPTS
         ),
     )
 

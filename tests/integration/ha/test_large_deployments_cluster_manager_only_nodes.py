@@ -35,7 +35,7 @@ APP_UNITS = {MAIN_APP: 1, FAILOVER_APP: 1, DATA_APP: 2}
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, charm, ubuntu_base) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
@@ -51,14 +51,14 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, ubuntu_base) -> None:
             charm,
             application_name=MAIN_APP,
             num_units=1,
-            base=f"ubuntu@{ubuntu_base}",
+            series=series,
             config={"cluster_name": CLUSTER_NAME, "roles": "cluster_manager"} | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
             charm,
             application_name=FAILOVER_APP,
             num_units=1,
-            base=f"ubuntu@{ubuntu_base}",
+            series=series,
             config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "cluster_manager"}
             | CONFIG_OPTS,
         ),
@@ -66,7 +66,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, ubuntu_base) -> None:
             charm,
             application_name=DATA_APP,
             num_units=2,
-            base=f"ubuntu@{ubuntu_base}",
+            series=series,
             config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "data"}
             | CONFIG_OPTS,
         ),

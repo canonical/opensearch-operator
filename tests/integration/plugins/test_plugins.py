@@ -166,7 +166,7 @@ async def _wait_for_units(
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy_small_deployment(
-    ops_test: OpsTest, charm, ubuntu_base, deploy_type: str
+    ops_test: OpsTest, charm, series, deploy_type: str
 ) -> None:
     """Build and deploy an OpenSearch cluster."""
     if await app_name(ops_test):
@@ -186,7 +186,7 @@ async def test_build_and_deploy_small_deployment(
         ops_test.model.deploy(
             charm,
             num_units=3,
-            base="ubuntu@{ubuntu_base}",
+            series=series,
             config={"plugin_opensearch_knn": False} | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
@@ -248,9 +248,9 @@ async def test_prometheus_exporter_enabled_by_default(ops_test, deploy_type: str
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_small_deployments_prometheus_exporter_cos_relation(
-    ops_test, ubuntu_base, deploy_type: str
+    ops_test, series, deploy_type: str
 ):
-    await ops_test.model.deploy(COS_APP_NAME, channel="edge", base=f"ubuntu@{ubuntu_base}"),
+    await ops_test.model.deploy(COS_APP_NAME, channel="edge", series=series),
     await ops_test.model.integrate(APP_NAME, COS_APP_NAME)
     await _wait_for_units(ops_test, deploy_type, wait_for_cos=True)
 
@@ -279,7 +279,7 @@ async def test_small_deployments_prometheus_exporter_cos_relation(
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_large_deployment_build_and_deploy(
-    ops_test: OpsTest, charm, ubuntu_base, deploy_type: str
+    ops_test: OpsTest, charm, series, deploy_type: str
 ) -> None:
     """Build and deploy a large deployment for OpenSearch."""
     await ops_test.model.set_config(MODEL_CONFIG)
@@ -306,21 +306,21 @@ async def test_large_deployment_build_and_deploy(
             charm,
             application_name=MAIN_ORCHESTRATOR_NAME,
             num_units=1,
-            base=f"ubuntu@{ubuntu_base}",
+            series=series,
             config=main_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
             charm,
             application_name=FAILOVER_ORCHESTRATOR_NAME,
             num_units=2,
-            base=f"ubuntu@{ubuntu_base}",
+            series=series,
             config=failover_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
             charm,
             application_name=APP_NAME,
             num_units=1,
-            base=f"ubuntu@{ubuntu_base}",
+            series=series,
             config=data_hot_conf | CONFIG_OPTS,
         ),
     )
@@ -344,10 +344,10 @@ async def test_large_deployment_build_and_deploy(
 @pytest.mark.parametrize("deploy_type", LARGE_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_large_deployment_prometheus_exporter_cos_relation(
-    ops_test, ubuntu_base, deploy_type: str
+    ops_test, series, deploy_type: str
 ):
     # Check that the correct settings were successfully communicated to grafana-agent
-    await ops_test.model.deploy(COS_APP_NAME, channel="edge", base=f"ubuntu@{ubuntu_base}"),
+    await ops_test.model.deploy(COS_APP_NAME, channel="edge", series=series),
     await ops_test.model.integrate(FAILOVER_ORCHESTRATOR_NAME, COS_APP_NAME)
     await ops_test.model.integrate(MAIN_ORCHESTRATOR_NAME, COS_APP_NAME)
     await ops_test.model.integrate(APP_NAME, COS_APP_NAME)
