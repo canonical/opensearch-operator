@@ -24,14 +24,23 @@ jobs:
       - name: Collect spread jobs
         id: collect-jobs
         shell: python
+        env:
+          TRIGGER: ${{ github.event_name }}
         run: |
           import json
           import os
           import subprocess
 
+          trigger = os.environ["TRIGGER"]
+
+          cmd = ["charmcraft", "test", "--list", "github-ci"]
+          if trigger == "pull_request":
+              # only run ubuntu 22.04 jobs
+              cmd[-1] = "github-ci:ubuntu-24.04:ubuntu22"
+
           spread_jobs = (
               subprocess.run(
-                  ["charmcraft", "test", "--list", "github-ci"], capture_output=True, check=True, text=True
+                  cmd, capture_output=True, check=True, text=True
               )
               .stdout.strip()
               .split("\n")
