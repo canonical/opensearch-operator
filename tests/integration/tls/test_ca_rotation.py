@@ -44,15 +44,6 @@ ALL_GROUPS = {
         id=deploy_type,
         marks=[
             pytest.mark.group(id=deploy_type),
-            pytest.mark.runner(
-                [
-                    "self-hosted",
-                    "linux",
-                    "X64",
-                    "jammy",
-                    "2xlarge-extra" if deploy_type == LARGE_DEPLOYMENT else "large",
-                ]
-            ),
         ],
     )
     for deploy_type in [LARGE_DEPLOYMENT, SMALL_DEPLOYMENT]
@@ -93,7 +84,6 @@ async def test_build_and_deploy_active(ops_test: OpsTest, charm, series) -> None
     )
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "2xlarge-extra"])
 @pytest.mark.group(id=LARGE_DEPLOYMENT)
 @pytest.mark.abort_on_fail
 async def test_build_large_deployment(ops_test: OpsTest, charm, series) -> None:

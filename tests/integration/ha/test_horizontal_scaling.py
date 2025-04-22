@@ -40,7 +40,6 @@ from .helpers_data import create_dummy_docs, create_dummy_indexes, delete_dummy_
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
@@ -68,7 +67,6 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 1
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.abort_on_fail
 async def test_horizontal_scale_up(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -116,7 +114,6 @@ async def test_horizontal_scale_up(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.abort_on_fail
 async def test_safe_scale_down_shards_realloc(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -226,7 +223,6 @@ async def test_safe_scale_down_shards_realloc(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 async def test_safe_scale_down_remove_leaders(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:

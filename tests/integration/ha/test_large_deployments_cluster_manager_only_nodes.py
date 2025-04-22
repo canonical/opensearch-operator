@@ -31,7 +31,6 @@ CLUSTER_NAME = "log-app"
 APP_UNITS = {MAIN_APP: 1, FAILOVER_APP: 1, DATA_APP: 2}
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
@@ -105,7 +104,6 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
     )
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.abort_on_fail
 async def test_correct_startup_after_integration(ops_test: OpsTest) -> None:
     """After integrating the cluster manager with the data application, both should start up."""
@@ -135,7 +133,6 @@ async def test_correct_startup_after_integration(ops_test: OpsTest) -> None:
     assert len(nodes) == 3, f"Wrong node count. Expecting 3 online nodes, found: {len(nodes)}."
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.abort_on_fail
 async def test_integrate_failover(ops_test: OpsTest) -> None:
     """After integrating the failover app to the others, all should be started and fine."""

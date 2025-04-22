@@ -71,18 +71,6 @@ ALL_GROUPS = {
         cloud_name,
         deploy_type,
         id=f"{cloud_name}-{deploy_type}",
-        marks=[
-            pytest.mark.group(id=f"{cloud_name}-{deploy_type}"),
-            pytest.mark.runner(
-                [
-                    "self-hosted",
-                    "linux",
-                    "X64",
-                    "jammy",
-                    "xlarge" if deploy_type == "large" else "large",
-                ]
-            ),
-        ],
     )
     for cloud_name in ["microceph", "aws", "azure"]
     for deploy_type in ["large", "small"]

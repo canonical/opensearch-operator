@@ -25,7 +25,6 @@ from .continuous_writes import ContinuousWrites
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
     """Build and deploy one unit of OpenSearch."""
@@ -66,7 +65,6 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 1
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.abort_on_fail
 async def test_storage_reuse_after_scale_down(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -152,7 +150,6 @@ async def test_storage_reuse_after_scale_down(
     assert testfile == subprocess.getoutput(check_testfile_cmd)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.abort_on_fail
 async def test_storage_reuse_after_scale_to_zero(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -213,7 +210,6 @@ async def test_storage_reuse_after_scale_to_zero(
     await assert_continuous_writes_increasing(c_writes)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.abort_on_fail
 async def test_storage_reuse_in_new_cluster_after_app_removal(
     ops_test: OpsTest, charm, c_writes: ContinuousWrites, c_balanced_writes_runner
