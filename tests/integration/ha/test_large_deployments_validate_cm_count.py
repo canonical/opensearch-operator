@@ -98,7 +98,7 @@ async def test_large_deployment_validate_cm_count(ops_test: OpsTest) -> None:
     """Test that scaling down to less than 3 cms triggers a status change"""
     # scale main down to 1 units
     main_app = ops_test.model.applications[MAIN_APP]
-    await main_app.destroy_units(main_app.units[-1])
+    await main_app.destroy_units(main_app.units[-1].name)
 
     await wait_until(
         ops_test,
