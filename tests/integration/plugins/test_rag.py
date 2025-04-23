@@ -23,10 +23,10 @@ from ..helpers import (
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import (
+    mlcommons_deploy_model,
     mlcommons_model_predict,
     mlcommons_register_model,
     mlcommons_wait_task_model,
-    mlcommons_deploy_model,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ RAG_GROUP_NAME = "rag-model-group"
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy_large_RAG_deployment(ops_test: OpsTest, charm) -> None:
+async def test_build_and_deploy_large_rag_deployment(ops_test: OpsTest, charm) -> None:
     """Build and deploy an OpenSearch cluster."""
     if await app_name(ops_test):
         return
@@ -77,7 +77,6 @@ async def test_build_and_deploy_large_RAG_deployment(ops_test: OpsTest, charm) -
             series=SERIES,
             config=main_orchestrator_conf | CONFIG_OPTS,
         ),
-
         ops_test.model.deploy(
             charm,
             application_name="failover",
@@ -85,7 +84,6 @@ async def test_build_and_deploy_large_RAG_deployment(ops_test: OpsTest, charm) -
             series=SERIES,
             config=failover_orchestrator_conf | CONFIG_OPTS,
         ),
-
         ops_test.model.deploy(
             charm,
             application_name="ingest",
@@ -93,7 +91,6 @@ async def test_build_and_deploy_large_RAG_deployment(ops_test: OpsTest, charm) -
             series=SERIES,
             config=app_conf | {"roles": "ingest,ml"} | CONFIG_OPTS,
         ),
-
         ops_test.model.deploy(
             charm,
             application_name="vectordb",
@@ -101,7 +98,6 @@ async def test_build_and_deploy_large_RAG_deployment(ops_test: OpsTest, charm) -
             series=SERIES,
             config=app_conf | {"roles": "data"} | CONFIG_OPTS,
         ),
-
         ops_test.model.deploy(
             charm,
             application_name=APP_NAME,
@@ -109,7 +105,6 @@ async def test_build_and_deploy_large_RAG_deployment(ops_test: OpsTest, charm) -
             series=SERIES,
             config=app_conf | {"roles": "ml"} | CONFIG_OPTS,
         ),
-
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
@@ -117,22 +112,12 @@ async def test_build_and_deploy_large_RAG_deployment(ops_test: OpsTest, charm) -
 
     # Large deployment setup
     await ops_test.model.integrate("main:peer-cluster-orchestrator", "failover:peer-cluster")
-    await ops_test.model.integrate(
-        "main:peer-cluster-orchestrator", f"ingest:peer-cluster"
-    )
-    await ops_test.model.integrate(
-        "main:peer-cluster-orchestrator", f"vectordb:peer-cluster"
-    )
-    await ops_test.model.integrate(
-        "main:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster"
-    )
+    await ops_test.model.integrate("main:peer-cluster-orchestrator", "ingest:peer-cluster")
+    await ops_test.model.integrate("main:peer-cluster-orchestrator", "vectordb:peer-cluster")
+    await ops_test.model.integrate("main:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster")
 
-    await ops_test.model.integrate(
-        "failover:peer-cluster-orchestrator", f"ingest:peer-cluster"
-    )
-    await ops_test.model.integrate(
-        "failover:peer-cluster-orchestrator", f"vectordb:peer-cluster"
-    )
+    await ops_test.model.integrate("failover:peer-cluster-orchestrator", "ingest:peer-cluster")
+    await ops_test.model.integrate("failover:peer-cluster-orchestrator", "vectordb:peer-cluster")
     await ops_test.model.integrate(
         "failover:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster"
     )
@@ -209,7 +194,9 @@ async def test_rag_part1_embedding_pipeline(ops_test: OpsTest) -> None:
     print(task_id)
     global rag_embedding_id
     rag_embedding_id = await mlcommons_wait_task_model(ops_test, app, leader_unit_ip, task_id)
-    assert rag_embedding_id is not None, "The embedding_id is None when registering embedding model"
+    assert (
+        rag_embedding_id is not None
+    ), "The embedding_id is None when registering embedding model"
     task_id = (await mlcommons_deploy_model(ops_test, app, leader_unit_ip, rag_embedding_id)).get(
         "task_id", None
     )
@@ -252,13 +239,11 @@ async def test_rag_part2_create_ingest_pipeline(ops_test: OpsTest) -> None:
             "processors": [
                 {
                     "text_embedding": {
-                            "model_id": rag_embedding_id,
-                            "field_map": {
-                            "text": "sentence_embedding"
-                        }
+                        "model_id": rag_embedding_id,
+                        "field_map": {"text": "sentence_embedding"},
                     }
                 }
-            ]
+            ],
         },
     )
     print(output)
@@ -273,31 +258,22 @@ async def test_rag_part2_create_ingest_pipeline(ops_test: OpsTest) -> None:
         extra_index_settings={"knn": "true", "default_pipeline": RAG_INGEST_PIPELINE_NAME},
         extra_mappings={
             "properties": {
-                "id": {
-                    "type": "text"
-                },
+                "id": {"type": "text"},
                 "sentence_embedding": {
                     "type": "knn_vector",
                     "dimension": 768,
                     "method": {
-                    "name": "hnsw",
-                    "engine": "faiss",
-                    "space_type": "l2",
-                    "parameters": {
-                            "encoder": {
-                                "name": "sq",
-                                "parameters": {
-                                    "type": "fp16"
-                                }
-                            },
+                        "name": "hnsw",
+                        "engine": "faiss",
+                        "space_type": "l2",
+                        "parameters": {
+                            "encoder": {"name": "sq", "parameters": {"type": "fp16"}},
                             "ef_construction": 256,
-                            "m": 8
-                        }
-                    }
+                            "m": 8,
+                        },
+                    },
                 },
-                "text": {
-                    "type": "text"
-                }
+                "text": {"type": "text"},
             }
         },
     )
@@ -319,20 +295,16 @@ async def test_rag_part2_create_ingest_pipeline(ops_test: OpsTest) -> None:
         f"https://{leader_unit_ip}:9200/{RAG_INGEST_PIPELINE_INDEX}/_search",
         app=app,
         payload={
-            "_source": {
-                "excludes": [
-                    "sentence_embedding"
-                ]
-            },
+            "_source": {"excludes": ["sentence_embedding"]},
             "query": {
-                    "neural": {
+                "neural": {
                     "sentence_embedding": {
                         "query_text": "What is Ubuntu?",
                         "model_id": rag_embedding_id,
-                        "k": 15
+                        "k": 15,
                     }
                 }
-            }
+            },
         },
     )
     print(result)
@@ -342,6 +314,6 @@ async def test_rag_part2_create_ingest_pipeline(ops_test: OpsTest) -> None:
 @pytest.mark.skip(reason="This test is too large for local CI")
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_rag_part3_connect_to_LLM_model(ops_test: OpsTest) -> None:
+async def test_rag_part3_connect_to_llm_model(ops_test: OpsTest) -> None:
     """Set the connector and test the LLM model."""
     return

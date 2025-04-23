@@ -9,7 +9,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from ..ha.helpers import app_name
-from ..ha.helpers_data import create_index
+from ..ha.helpers_data import bulk_insert, create_index
 from ..ha.test_horizontal_scaling import IDLE_PERIOD
 from ..helpers import (
     APP_NAME,
@@ -23,6 +23,7 @@ from ..helpers import (
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import (
+    generate_bulk_training_data,
     mlcommons_load_model_to_node,
     mlcommons_model_predict,
     mlcommons_register_model,

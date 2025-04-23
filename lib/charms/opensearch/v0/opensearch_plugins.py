@@ -299,7 +299,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import AzureRelData, DeploymentType, S3RelData, Node
+from charms.opensearch.v0.models import AzureRelData, DeploymentType, S3RelData
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from jproperties import Properties
@@ -399,13 +399,12 @@ class OpenSearchPlugin:
     PLUGIN_PROPERTIES = "plugin-descriptor.properties"
     REMOVE_ON_DISABLE = False
 
-    def __init__(self, charm, node_roles: List[Node] = None):
+    def __init__(self, charm):
         """Creates the OpenSearchPlugin object."""
         self._plugins_path = (
             f"{charm.opensearch.paths.plugins}/{self.name}/{self.PLUGIN_PROPERTIES}"
         )
         self._extra_config = charm.config
-        self._nodes_roles = {node.name: node.roles for node in node_roles}
 
     @property
     def version(self) -> str:
@@ -530,7 +529,7 @@ class OpenSearchMlCommons(OpenSearchPlugin):
 
     def requested_to_enable(self) -> bool:
         """Returns True if at least one node is marked with "ml" role."""
-        return "ml" in [item for roles in self._nodes_roles.values() for item in roles]
+        return True
 
     def config(self) -> OpenSearchPluginConfig:
         """Returns a plugin config object to be applied for enabling the current plugin."""
@@ -642,9 +641,9 @@ class OpenSearchS3Plugin(OpenSearchPlugin):
     MODEL = S3RelData
     DATA_PROVIDER = OpenSearchPluginS3DataProvider
 
-    def __init__(self, charm, node_roles: List[Node] = None):
+    def __init__(self, charm):
         """Creates the OpenSearchBackupPlugin object."""
-        super().__init__(charm, node_roles)
+        super().__init__(charm)
         self.dp = self.DATA_PROVIDER(charm)
         self.repo_name = "default"
         self.charm = charm
@@ -777,9 +776,9 @@ class OpenSearchAzurePlugin(OpenSearchPlugin):
     MODEL = AzureRelData
     DATA_PROVIDER = OpenSearchPluginAzureDataProvider
 
-    def __init__(self, charm, node_roles: List[Node] = None):
+    def __init__(self, charm):
         """Creates the OpenSearchAzurePlugin object."""
-        super().__init__(charm, node_roles)
+        super().__init__(charm)
         self.dp = self.DATA_PROVIDER(charm)
         self.repo_name = "default"
         self.charm = charm

@@ -118,17 +118,10 @@ class OpenSearchPluginManager:
     @functools.cached_property
     def plugins(self) -> List[OpenSearchPlugin]:
         """Returns List of installed plugins."""
-        nodes = []
-        try:
-            nodes = ClusterTopology.nodes(self._charm.opensearch, use_localhost=True, hosts=self._charm.alt_hosts)
-        except OpenSearchHttpError as e:
-            logger.error(f"Failed to get cluster topology: {e}")
-
         plugins_list = []
         for plugin_data in ConfigExposedPlugins.values():
             new_plugin = plugin_data["class"](
                 self._charm,
-                node_roles=nodes,
             )
             plugins_list.append(new_plugin)
         return plugins_list
