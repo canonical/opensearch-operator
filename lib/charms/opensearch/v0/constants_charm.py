@@ -57,6 +57,9 @@ DataRoleRemovalForbidden = (
     "Removal of data role from current deployment not allowed - the data cannot be reallocated."
 )
 PClusterNoRelation = "Cannot start. Waiting for peer cluster relation..."
+PClusterOrchestratorsRemoved = (
+    "Main-cluster-orchestrator removed, and no failover cluster related."
+)
 PClusterWrongRelation = "Cluster name don't match with related cluster. Remove relation."
 PClusterWrongRolesProvided = "Cannot start cluster with current set of roles."
 PClusterNoDataNode = "Cannot run cluster with current roles. Waiting for data node..."
@@ -73,6 +76,9 @@ BackupRelUneligible = "Only orchestrator clusters should relate to backup relati
 # Wait status
 RequestUnitServiceOps = "Requesting lock on operation: {}"
 BackupDeferRelBrokenAsInProgress = "Backup service cannot be stopped: backup in progress."
+PClusterWaitingForFailoverPromotion = (
+    "Main-cluster-orchestrator removed, waiting for failover promotion."
+)
 
 
 # Maintenance statuses
