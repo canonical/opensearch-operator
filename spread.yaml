@@ -88,17 +88,15 @@ backends:
     # HACK: spread does not pass environment variables set on runner
     # Manually pass specific environment variables
     environment:
-      CI: "$(HOST: echo $CI)"
-      CHARM_UBUNTU_BASE: "$(HOST: echo $CHARM_UBUNTU_BASE)"
-      AWS_ACCESS_KEY: "$(HOST: echo $AWS_ACCESS_KEY)"
-      AWS_SECRET_KEY: "$(HOST: echo $AWS_SECRET_KEY)"
-      AZURE_STORAGE_ACCOUNT: "$(HOST: echo $AZURE_STORAGE_ACCOUNT)"
-      AZURE_SECRET_KEY: "$(HOST: echo $AZURE_SECRET_KEY)"
-      GCP_ACCESS_KEY: "$(HOST: echo $GCP_ACCESS_KEY)"
-      GCP_SECRET_KEY: "$(HOST: echo $GCP_SECRET_KEY)"
-      GCP_SERVICE_ACCOUNT: "$(HOST: echo $GCP_SERVICE_ACCOUNT)"
-      CONCIERGE_EXTRA_SNAPS: charmcraft
-      CONCIERGE_EXTRA_DEBS: pipx
+      CI: '$(HOST: echo $CI)'
+      CHARM_UBUNTU_BASE: '$(HOST: echo $CHARM_UBUNTU_BASE)'
+      AWS_ACCESS_KEY: '$(HOST: echo $AWS_ACCESS_KEY)'
+      AWS_SECRET_KEY: '$(HOST: echo $AWS_SECRET_KEY)'
+      AZURE_STORAGE_ACCOUNT: '$(HOST: echo $AZURE_STORAGE_ACCOUNT)'
+      AZURE_SECRET_KEY: '$(HOST: echo $AZURE_SECRET_KEY)'
+      GCP_ACCESS_KEY: '$(HOST: echo $GCP_ACCESS_KEY)'
+      GCP_SECRET_KEY: '$(HOST: echo $GCP_SECRET_KEY)'
+      GCP_SERVICE_ACCOUNT: '$(HOST: echo $GCP_SERVICE_ACCOUNT)'
     systems:
       - self-hosted-linux-amd64-noble-large:
           username: spread
@@ -134,10 +132,9 @@ prepare: |
   snap install --classic concierge
 
   # Install charmcraft & pipx (on lxd-vm backend)
-  concierge prepare --trace --extra-debs pipx
+  concierge prepare --trace
 
-  pipx install tox 
-  pipx install poetry
+  pipx install tox poetry
 prepare-each: |
   cd "$SPREAD_PATH"
   if [[ $SPREAD_VARIANT == *"juju29"* ]]
@@ -147,7 +144,7 @@ prepare-each: |
     poetry add --lock --group integration juju@^2
   fi
   # `concierge prepare` needs to be run for each spread job in case Juju version changed
-  concierge prepare --trace --extra-debs pipx
+  concierge prepare --trace
 
   # Unable to set constraint on all models because of Juju bug:
   # https://bugs.launchpad.net/juju/+bug/2065050

@@ -42,7 +42,6 @@ jobs:
               _, runner, task, variant = job.split(":")
               # Example: "test_charm.py"
               task = task.removeprefix("tests/spread/")
-              task = task.replace("/", "_")
               if runner.endswith("-arm"):
                   architecture = "arm64"
               else:
@@ -50,7 +49,7 @@ jobs:
               # Example: "test_charm.py:juju36 | amd64"
               name = f"{task}:{variant} | {architecture}"
               # ":" character not valid in GitHub Actions artifact
-              name_in_artifact = f"{task}-{variant}-{architecture}"
+              name_in_artifact = f"{task.replace('/', '-')}-{architecture}"
               jobs.append({
                   "spread_job": job,
                   "name": name,
@@ -87,15 +86,9 @@ jobs:
     runs-on: ${{ matrix.job.runner }}
     timeout-minutes: 217 # Sum of steps `timeout-minutes` + 5
     steps:
-      # - name: Free up disk space
-      #   timeout-minutes: 1
-      #   run: |
-      #     printf '\nDisk usage before cleanup\n'
-      #     df --human-readable
-      #     # Based on https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
-      #     rm -r /opt/hostedtoolcache/
-      #     printf '\nDisk usage after cleanup\n'
-      #     df --human-readable
+      - name: Disk usage
+        timeout-minutes: 1
+        run: df --human-readable
       - name: Checkout
         timeout-minutes: 3
         uses: actions/checkout@v4
