@@ -84,6 +84,9 @@ backends:
       sudo systemctl daemon-reload
       sudo systemctl restart ssh
 
+      echo "ubuntu:$SPREAD_PASSWORD" | sudo chpasswd || true
+      echo 'ubuntu ALL=(ALL) NOPASSWD:ALL ' | sudo tee /etc/sudoers.d/99-ubuntu-user || true
+
       ADDRESS localhost
     # HACK: spread does not pass environment variables set on runner
     # Manually pass specific environment variables
@@ -100,9 +103,9 @@ backends:
       CONCIERGE_EXTRA_DEBS: pipx
     systems:
       - self-hosted-linux-amd64-noble-large:
-          username: runner
+          username: ubuntu
       - self-hosted-linux-amd64-noble-xlarge:
-          username: runner
+          username: ubuntu
 
 suites:
   tests/spread/:
