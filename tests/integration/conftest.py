@@ -7,7 +7,7 @@ import pytest
 
 @pytest.fixture
 def ubuntu_base():
-    """charm base version to use for testing."""
+    """Charm base version to use for testing."""
     return os.environ["CHARM_UBUNTU_BASE"]
 
 
