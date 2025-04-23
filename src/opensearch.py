@@ -205,6 +205,18 @@ class OpenSearchSnap(OpenSearchDistribution):
         gid = grp.getgrnam("root").gr_gid
         os.chown(path, uid, gid)
 
+    def create_directories(self, dirs: list[str] = []) -> None:
+        """Create the directories defined in self.paths."""
+        for dir_path in dirs:
+            Path(dir_path).mkdir(parents=True, exist_ok=True)
+            self.setup_linux_perms(dir_path)
+
+    def setup_linux_perms(self, path):
+        """Create ubuntu:ubuntu user:group."""
+        uid = pwd.getpwnam("snap_daemon").pw_uid
+        gid = grp.getgrnam("root").gr_gid
+        os.chown(path, uid, gid)
+
 
 class OpenSearchTarball(OpenSearchDistribution):
     """Tarball distro of opensearch, only overrides properties and logic proper to the tar."""

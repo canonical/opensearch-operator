@@ -13,9 +13,13 @@ config-changed, upgrade, s3-credentials-changed, etc.
 import copy
 import functools
 import logging
+import os
 from typing import Dict, List, Tuple, Type
 
+import boto3
+from charms.opensearch.v0.constants_charm import PLUGIN_FOLDER_RELATION
 from charms.opensearch.v0.helper_cluster import ClusterTopology
+from charms.opensearch.v0.models import S3RelData
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchHttpError,
@@ -28,6 +32,7 @@ from charms.opensearch.v0.opensearch_keystore import (
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchAzurePlugin,
     OpenSearchKnn,
+    OpenSearchMlCommons,
     OpenSearchPlugin,
     OpenSearchPluginConfig,
     OpenSearchPluginError,
@@ -38,6 +43,7 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchS3Plugin,
     PluginState,
 )
+from ops import Object
 
 # The unique Charmhub library identifier, never change it
 LIBID = "da838485175f47dbbbb83d76c07cab4c"
@@ -54,6 +60,10 @@ logger = logging.getLogger(__name__)
 
 
 ConfigExposedPlugins = {
+    "ml-commons": {
+        "class": OpenSearchMlCommons,
+        "config": None,
+    },
     "opensearch-knn": {
         "class": OpenSearchKnn,
         "config": "plugin_opensearch_knn",
@@ -74,7 +84,18 @@ class OpenSearchPluginManagerNotReadyYetError(OpenSearchPluginError):
 
 
 class OpenSearchPluginManager:
-    """Manages plugins."""
+    """Manages plugins.
+
+    This class is in charge of handling:
+    * cluster settings for plugins
+    * keystore management using the OpenSearchKeystore class for plugin secrets
+    * /_plugins API
+    * Interact with `opensearch-plugin` CLI
+    * s3 repository to download plugin artifacts and install on the right folders
+
+    If another component needs to interact with either of these components of OpenSearch,
+    they can use the `apply_config` API in this class to enforce a given configuration.
+    """
 
     def __init__(self, charm):
         """Creates the plugin manager object based on the charm and home_path.
@@ -87,6 +108,7 @@ class OpenSearchPluginManager:
         self._opensearch_config = charm.opensearch_config
         self._charm_config = self._charm.model.config
         self._keystore = OpenSearchKeystore(self._charm)
+        self._repository = PluginRepositoryHandler(self._charm)
 
     @functools.cached_property
     def cluster_config(self):
@@ -98,7 +120,9 @@ class OpenSearchPluginManager:
         """Returns List of installed plugins."""
         plugins_list = []
         for plugin_data in ConfigExposedPlugins.values():
-            new_plugin = plugin_data["class"](self._charm)
+            new_plugin = plugin_data["class"](
+                self._charm,
+            )
             plugins_list.append(new_plugin)
         return plugins_list
 
@@ -459,3 +483,90 @@ class OpenSearchPluginManager:
             return self._opensearch.run_bin("plugin", "list").split("\n")
         except OpenSearchCmdError as e:
             raise OpenSearchPluginError("Failed to list plugins: " + str(e))
+
+
+class PluginRepositoryHandler(Object):
+    """Manages the repositories for the plugins."""
+
+    def __init__(self, charm):
+        """Creates the plugin repository manager object based on the charm."""
+        super().__init__(charm, PLUGIN_FOLDER_RELATION)
+        self._charm = charm
+
+        self.framework.observe(
+            self._charm.on[PLUGIN_FOLDER_RELATION].relation_changed,
+            self._on_plugin_folder_relation_changed,
+        )
+
+    @property
+    def _model(self) -> S3RelData | None:
+        if relation := self._charm.model.get_relation(PLUGIN_FOLDER_RELATION):
+            if data := S3RelData.from_relation(dict(relation.data[relation.app])):
+                return data
+        return None
+
+    def download(self, plugin: OpenSearchPlugin):
+        """Downloads the given plugin's artifacts from S3."""
+        if not self._model:
+            logger.warning("S3 relation data is not available.")
+            return
+
+        if not self._model.credentials.access_key or not self._model.credentials.secret_key:
+            logger.debug("S3 credentials are not available.")
+            return
+
+        if not plugin.local_path:
+            logger.debug(f"{plugin.name} plugin does not have a local path set.")
+            return
+
+        try:
+            s3_client = boto3.client(
+                "s3",
+                region_name=self._model.region,
+                verify=False,
+                endpoint_url=self._model.endpoint,
+                aws_access_key_id=self._model.credentials.access_key,
+                aws_secret_access_key=self._model.credentials.secret_key,
+            )
+        except Exception as e:
+            logger.error(f"Failed to connect with S3: {e}")
+            return
+
+        s3_path = (
+            os.path.join(self._model.base_path, plugin.s3_path)
+            if os.path.join(self._model.base_path, plugin.s3_path) != "/"
+            else plugin.s3_path
+        )
+        local_path = plugin.local_path
+
+        try:
+            logger.debug(f"Try to create local_path {local_path}")
+            self._charm.opensearch.create_directories([local_path])
+
+            logger.debug(f"Downloading plugin from S3: {s3_path} to {local_path}")
+            objects = s3_client.list_objects(
+                Bucket=self._model.bucket,
+                Prefix=s3_path,
+                Delimiter="/",
+            )
+            if not objects.get("Contents"):
+                logger.warning(f"No objects found in S3 for {plugin.name} on path: {s3_path}")
+                return
+
+            for obj in objects.get("Contents"):
+                local_file = os.path.join(local_path, obj["Key"])
+                s3_client.download_file(
+                    self._model.bucket,
+                    os.path.join(s3_path, obj["Key"]),
+                    local_file,
+                )
+                self._charm.opensearch.setup_linux_perms(local_file)
+                logger.debug(f"Plugin downloaded successfully to {local_file}")
+        except Exception as e:
+            logger.error(f"Failed to download plugin {plugin.name} from S3: {e}")
+
+    def _on_plugin_folder_relation_changed(self, event):
+        """Handles the plugin folder relation changed event."""
+        for plugin in self._charm.plugin_manager.plugins:
+            # Download the plugin
+            self.download(plugin)

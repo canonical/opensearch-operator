@@ -32,11 +32,6 @@ options:
         cluster_manager, data, data.hot, data.warm, data.cold, ingest, coordinating, voting_only, ml.
       Other dynamic roles are not validated.
 
-  plugin_opensearch_knn:
-    default: true
-    type: boolean
-    description: Enable opensearch-knn
-
   profile:
     type: string
     default: "production"
@@ -46,3 +41,32 @@ options:
       Production will tune opensearch for maximum performance while default will tune for
       minimal running performance.
       Performance tuning is described on: https://opensearch.org/docs/latest/tuning-your-cluster/performance/
+
+  plugin_opensearch_knn:
+    default: true
+    type: boolean
+    description: Enable opensearch-knn
+
+  plugin_ml_commons_override_trust_url_regex:
+    default: "^(https?|file)://(/var/snap/common/opensearch/var/lib/opensearch/ml_commons/|https://artifacts.opensearch.org/models/ml-models/)*"
+    type: string
+    description: |
+      URL regex to trust for ML commons plugin. By default, this option is left empty and only `opensearch.org`
+      and the path /var/snap/common/opensearch/var/lib/opensearch/ml_commons/ are trusted.
+
+      This is a security risk, and should only be used in trusted environments and trusted URLs.
+      See https://opensearch.org/docs/latest/ml-commons-plugin/cluster-settings/#add-trusted-url
+
+  plugin_ml_commons_enable_inhouse_python_model:
+    default: false
+    type: boolean
+    description: |
+      Enable in-house python model for ML commons plugin. By default, this option is disabled.
+      See https://opensearch.org/docs/latest/ml-commons-plugin/cluster-settings/#run-python-based-models
+
+  plugin_ml_commons_s3_path:
+    default: ""
+    type: string
+    description: |
+      S3 path to store ML commons plugin data.
+      If set, the charm will download the data from the S3 bucket and store it in the local path.

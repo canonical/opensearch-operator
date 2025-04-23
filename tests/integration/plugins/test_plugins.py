@@ -491,7 +491,11 @@ async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest, deploy_type: str) -
         },
     )
     payload, payload_list = generate_bulk_training_data(
-        index_name, vector_name, docs_count=100, dimensions=4, has_result=True
+        index_name,
+        docs_count=100,
+        dimensions=4,
+        has_result=True,
+        vector_name=vector_name,
     )
     # Insert data in bulk
     await bulk_insert(ops_test, app, leader_unit_ip, payload)
@@ -535,7 +539,11 @@ async def test_knn_search_with_hnsw_nmslib(ops_test: OpsTest, deploy_type: str) 
         },
     )
     payload, payload_list = generate_bulk_training_data(
-        index_name, vector_name, docs_count=100, dimensions=4, has_result=True
+        index_name,
+        docs_count=100,
+        dimensions=4,
+        has_result=True,
+        vector_name=vector_name,
     )
     # Insert data in bulk
     await bulk_insert(ops_test, app, leader_unit_ip, payload)
