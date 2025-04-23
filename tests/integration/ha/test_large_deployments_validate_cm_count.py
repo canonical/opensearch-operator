@@ -9,7 +9,7 @@ import pytest
 from charms.opensearch.v0.constants_charm import PClusterWrongNodesCountForQuorum
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import CONFIG_OPTS, MODEL_CONFIG, SERIES, get_leader_unit_ip
+from ..helpers import CONFIG_OPTS, MODEL_CONFIG, SERIES
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .test_horizontal_scaling import IDLE_PERIOD
@@ -89,6 +89,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         idle_period=IDLE_PERIOD,
         timeout=1800,
     )
+
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
 @pytest.mark.group(1)
