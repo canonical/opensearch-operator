@@ -61,12 +61,14 @@ jobs:
           with open(os.environ["GITHUB_OUTPUT"], "a") as file:
               file.write(output)
       - name: Generate Allure default test results
-        if: ${{ github.event_name == 'schedule' && github.run_attempt == '1' }}
+        # TODO switch back to schedule before merging
+        # if: ${{ github.event_name == 'schedule' && github.run_attempt == '1' }}
         run: tox run -e integration -- tests/integration --allure-default-dir=allure-default-results
       - name: Upload Allure default results
         # Default test results in case the integration tests time out or runner set up fails
         # (So that Allure report will show "unknown"/"failed" test result, instead of omitting the test)
-        if: ${{ github.event_name == 'schedule' && github.run_attempt == '1' }}
+        # TODO switch back to schedule before merging
+        # if: ${{ github.event_name == 'schedule' && github.run_attempt == '1' }}
         uses: actions/upload-artifact@v4
         with:
           name: allure-default-results-integration-test
@@ -126,7 +128,9 @@ jobs:
         # Only upload results from one spread system & one spread variant
         # Allure can only process one result per pytest test ID. If parameterization is done via
         # spread instead of pytest, there will be overlapping pytest test IDs.
-        if: ${{ (success() || (failure() && steps.spread.outcome == 'failure')) && startsWith(matrix.job.spread_job, 'github-ci:ubuntu-24.04:') && endsWith(matrix.job.spread_job, ':ubuntu24') && github.event_name == 'schedule' && github.run_attempt == '1' }}
+        # TODO switch back to schedule before merging
+        # if: ${{ (success() || (failure() && steps.spread.outcome == 'failure')) && startsWith(matrix.job.spread_job, 'github-ci:') && endsWith(matrix.job.spread_job, ':ubuntu24') && github.event_name == 'schedule' && github.run_attempt == '1' }}
+        if: ${{ (success() || (failure() && steps.spread.outcome == 'failure')) && startsWith(matrix.job.spread_job, 'github-ci:') && endsWith(matrix.job.spread_job, ':ubuntu24') }}
         uses: actions/upload-artifact@v4
         with:
           name: allure-results-integration-test-${{ matrix.job.name_in_artifact }}
