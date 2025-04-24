@@ -210,7 +210,7 @@ def remove_backups(  # noqa C901
             session = boto3.session.Session(
                 aws_access_key_id=cloud_credentials[cloud_name]["access-key"],
                 aws_secret_access_key=cloud_credentials[cloud_name]["secret-key"],
-                region_name=config["region"],
+                region_name=config.get("region"),
             )
             s3 = session.resource("s3", endpoint_url=config["endpoint"])
             bucket = s3.Bucket(config["bucket"])
