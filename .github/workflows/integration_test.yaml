@@ -176,7 +176,9 @@ jobs:
   allure-report:
     # TODO future improvement: use concurrency group for job
     name: Publish Allure report
-    if: ${{ !cancelled() && github.event_name == 'schedule' && github.run_attempt == '1' }}
+    # TODO switch back to schedule before merging
+    # if: ${{ !cancelled() && github.event_name == 'schedule' && github.run_attempt == '1' }}
+    if: ${{ !cancelled() }}
     needs:
       - integration-test
     runs-on: ubuntu-latest
@@ -307,4 +309,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Allure report ${{ github.run_number }}"
           # Uses token set in checkout step
-          git push origin gh-pages-beta
+          git push origin gh-pages-beta-spread
