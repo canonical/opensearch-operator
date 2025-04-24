@@ -1113,8 +1113,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
     def _is_promoted_failover(self, orchestrators: PeerClusterOrchestrators) -> bool:
         """Checks if failover orchestrator was promoted to the main orchestrator"""
         return (
-            orchestrators.failover_app
-            and orchestrators.main_app
+            orchestrators.failover_app is not None
+            and orchestrators.main_app is not None
             and orchestrators.failover_app.id == orchestrators.main_app.id
         )
 
@@ -1160,8 +1160,12 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         self.put_in_rel(data={"app": current_app.to_str()}, rel_id=rel_id)
 
         # update content of fleet in the current app's peer databag
-        cluster_fleet_apps = self.get_obj_from_rel("cluster_fleet_apps", rel_id=rel_id)
-        cluster_fleet_apps.update({deployment_desc.app.id: current_app.to_dict()})
+        cluster_fleet_apps = (
+            self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
+        )
+        rel_cluster_fleet_apps = self.get_obj_from_rel("cluster_fleet_apps", rel_id=rel_id)
+        rel_cluster_fleet_apps.update({deployment_desc.app.id: current_app.to_dict()})
+        cluster_fleet_apps.update(rel_cluster_fleet_apps)
         self.charm.peers_data.put_object(Scope.APP, "cluster_fleet_apps", cluster_fleet_apps)
 
     def _on_peer_cluster_relation_departed(self, event: RelationDepartedEvent):
@@ -1235,15 +1239,13 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             return
 
         # the current is an orchestrator, let's broadcast the new conf to all related apps
+        cluster_fleet_apps = self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps")
+        cluster_fleet_apps.pop(orchestrator_app_id, None)
+        self.charm.peers_data.put_object(Scope.APP, "cluster_fleet_apps", cluster_fleet_apps)
+
         for rel_id in [
             rel.id for rel in self.charm.model.relations[PeerClusterOrchestratorRelationName]
         ]:
-            rel_orchestrators = PeerClusterOrchestrators.from_dict(
-                self.get_obj_from_rel("orchestrators", rel_id, remote_app=False)
-            )
-
-            rel_orchestrators.delete(event_src_cluster_type)
-            self.put_in_rel(data={"orchestrators": rel_orchestrators.to_str()}, rel_id=rel_id)
             self.put_in_rel(
                 data={"cluster_fleet_apps": json.dumps(cluster_fleet_apps)},
                 rel_id=rel_id,
