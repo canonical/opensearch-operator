@@ -151,7 +151,6 @@ def cloud_configs(
             "endpoint": "https://s3.amazonaws.com",
             "bucket": "data-charms-testing",
             "path": BackupsPath,
-            "region": "us-east-1",
         }
     if "AZURE_SECRET_KEY" in github_secrets:
         results["azure"] = {
