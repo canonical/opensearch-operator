@@ -258,6 +258,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         ):
             return
 
+        cluster_fleet_apps = self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps")
+        cluster_fleet_apps.pop(trigger_app.app.id, None)
+        self.charm.peers_data.put_object(Scope.APP, "cluster_fleet_apps", cluster_fleet_apps)
+
         orchestrators = PeerClusterOrchestrators.from_dict(
             self.charm.peers_data.get_object(Scope.APP, "orchestrators")
         )
@@ -1022,8 +1026,12 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         self.put_in_rel(data={"app": current_app.to_str()}, rel_id=rel_id)
 
         # update content of fleet in the current app's peer databag
-        cluster_fleet_apps = self.get_obj_from_rel("cluster_fleet_apps", rel_id=rel_id)
-        cluster_fleet_apps.update({deployment_desc.app.id: current_app.to_dict()})
+        cluster_fleet_apps = (
+            self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
+        )
+        rel_cluster_fleet_apps = self.get_obj_from_rel("cluster_fleet_apps", rel_id=rel_id)
+        rel_cluster_fleet_apps.update({deployment_desc.app.id: current_app.to_dict()})
+        cluster_fleet_apps.update(rel_cluster_fleet_apps)
         self.charm.peers_data.put_object(Scope.APP, "cluster_fleet_apps", cluster_fleet_apps)
 
     def _on_peer_cluster_relation_departed(self, event: RelationDepartedEvent):
