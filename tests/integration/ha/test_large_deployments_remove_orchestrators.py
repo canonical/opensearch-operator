@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import asyncio
+import json
 import logging
 
 import pytest
@@ -137,7 +138,7 @@ async def test_large_deployment_remove_orchestrators(ops_test: OpsTest) -> None:
     deployment_desc = await get_application_relation_data(
         ops_test, unit_name=unit.name, relation_name=PeerRelationName, key="deployment-description"
     )
-    deployment_desc = DeploymentDescription.from_dict(deployment_desc)
+    deployment_desc = DeploymentDescription.from_dict(json.loads(deployment_desc))
 
     assert deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
 
@@ -168,7 +169,7 @@ async def test_large_deployment_remove_orchestrators(ops_test: OpsTest) -> None:
     deployment_desc = await get_application_relation_data(
         ops_test, unit_name=unit.name, relation_name=PeerRelationName, key="deployment-description"
     )
-    deployment_desc = DeploymentDescription.from_dict(deployment_desc)
+    deployment_desc = DeploymentDescription.from_dict(json.loads(deployment_desc))
 
     assert deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
 
