@@ -79,13 +79,7 @@ backends:
       PermitEmptyPasswords yes
       EOF
 
-      sudo rm -f /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
-
-      sudo systemctl daemon-reload
       sudo systemctl restart ssh
-
-      echo "ubuntu:$SPREAD_PASSWORD" | sudo chpasswd || true
-      echo 'ubuntu ALL=(ALL) NOPASSWD:ALL ' | sudo tee /etc/sudoers.d/99-ubuntu-user || true
 
       ADDRESS localhost
     # HACK: spread does not pass environment variables set on runner
@@ -100,6 +94,7 @@ backends:
       GCP_ACCESS_KEY: '$(HOST: echo $GCP_ACCESS_KEY)'
       GCP_SECRET_KEY: '$(HOST: echo $GCP_SECRET_KEY)'
       GCP_SERVICE_ACCOUNT: '$(HOST: echo $GCP_SERVICE_ACCOUNT)'
+      # To install pipx for self-hosted runners
       CONCIERGE_EXTRA_DEBS: pipx
     systems:
       - self-hosted-linux-amd64-noble-large:
