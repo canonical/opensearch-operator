@@ -15,8 +15,8 @@ from pytest_operator.plugin import OpsTest
 
 from ..helpers import CONFIG_OPTS, MODEL_CONFIG, SERIES
 from ..helpers_deployments import wait_until
+from ..relations.helpers import get_application_relation_data
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
-from .helpers import get_application_relation_data
 from .test_horizontal_scaling import IDLE_PERIOD
 
 logger = logging.getLogger(__name__)
