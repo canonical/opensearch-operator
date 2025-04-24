@@ -29,6 +29,7 @@ class OAuthHandler(Object):
 
         # NOTE: Placeholder config options, not really needed by Opensearch
         client_config = ClientConfig(
+            audience=["opensearch"],
             redirect_uri="http://opensearch.local",
             scope="openid email profile",
             grant_types=["client_credentials"],
@@ -86,14 +87,14 @@ class OAuthHandler(Object):
 
     def _on_oauth_relation_departed(self, event: RelationDepartedEvent) -> None:
         if event.departing_unit == self.charm.unit and self.charm.peers_data is not None:
-            self.charm.peers_data.put(Scope.UNIT, "departing", True)
+            self.charm.peers_data.put(Scope.UNIT, "departing_oauth", True)
         pass
 
     def _on_oauth_relation_broken(self, event: RelationBrokenEvent) -> None:
         if (
             not self.charm.unit.is_leader()
             or self.charm.peers_data is None
-            or self.charm.peers_data.get(Scope.UNIT, "departing")
+            or self.charm.peers_data.get(Scope.UNIT, "departing_oauth")
             or not self.charm.peers_data.get(Scope.APP, "security_index_initialised")
             or (
                 "data" not in self.charm.opensearch_peer_cm.deployment_desc().config.roles
