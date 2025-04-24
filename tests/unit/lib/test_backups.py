@@ -213,7 +213,7 @@ def mock_request():
 def test_restore_finished_true(harness, mock_request, leader, request_value, result_value):
     harness.charm.backup.charm.unit.is_leader = MagicMock(return_value=leader)
     mock_request.return_value = request_value
-    assert harness.charm.backup.backup_manager.is_restore_complete() == result_value
+    assert harness.charm.backup.backup_manager.is_restore_in_progress() != result_value
 
 
 @pytest.mark.parametrize(
@@ -544,8 +544,8 @@ class TestBackups(unittest.TestCase):
             "index2": {"shards": [{"type": "SNAPSHOT", "stage": "DONE"}]},
             "index3": {"shards": [{"type": "PRIMARY", "stage": "DONE"}]},
         }
-        result = self.charm.backup.backup_manager.is_restore_complete()
-        self.assertTrue(result)
+        result = self.charm.backup.backup_manager.is_restore_in_progress()
+        self.assertFalse(result)
 
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchS3Backup.apply_api_config_if_needed")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.apply_config")
@@ -641,7 +641,7 @@ class TestBackups(unittest.TestCase):
 
         # Mocking helper methods
         self.charm.backup.backup_manager.is_set = MagicMock(return_value=True)
-        self.charm.backup.backup_manager.is_restore_complete = MagicMock(return_value=True)
+        self.charm.backup.backup_manager.is_restore_in_progress = MagicMock(return_value=False)
         self.charm.backup.backup_manager.is_backup_available_for_restore = MagicMock(
             return_value=True
         )
@@ -695,7 +695,7 @@ class TestBackups(unittest.TestCase):
         event.params = {"backup-id": "2023-01-01T00:00:00Z"}
         self.charm.backup.backup_manager.is_set = MagicMock(return_value=True)
         self.charm.backup._close_indices_if_needed = MagicMock(return_value=set())
-        self.charm.backup.backup_manager.is_restore_complete = MagicMock(return_value=False)
+        self.charm.backup.backup_manager.is_idle = MagicMock(return_value=False)
         self.charm.backup._restore = MagicMock()
         self.charm.status = MagicMock()
 
@@ -704,7 +704,7 @@ class TestBackups(unittest.TestCase):
         self.charm.status.clear.assert_not_called()
         self.charm.backup._close_indices_if_needed.assert_not_called()
         self.charm.backup._restore.assert_not_called()
-        event.fail.assert_called_once_with("Failed: previous restore is still in progress")
+        event.fail.assert_called_once_with("Failed: backup or restore is still in progress")
         event.set_results.assert_not_called()
 
     def test_on_restore_backup_action_backup_id_not_available(self, _):
@@ -712,7 +712,7 @@ class TestBackups(unittest.TestCase):
         event.params = {"backup-id": "2023-01-01T00:00:00Z"}
         self.charm.backup.backup_manager.is_set = MagicMock(return_value=True)
         self.charm.backup.backup_manager.close_indices_if_needed = MagicMock(return_value=set())
-        self.charm.backup.backup_manager.is_restore_complete = MagicMock(return_value=True)
+        self.charm.backup.backup_manager.is_restore_in_progress = MagicMock(return_value=False)
         self.charm.backup.backup_manager.is_backup_available_for_restore = MagicMock(
             return_value=False
         )
@@ -732,7 +732,7 @@ class TestBackups(unittest.TestCase):
         event.params = {"backup-id": "2023-01-01T00:00:00Z"}
         self.charm.backup.backup_manager.is_set = MagicMock(return_value=True)
         self.charm.backup.backup_manager.close_indices_if_needed = MagicMock(return_value=set())
-        self.charm.backup.backup_manager.is_restore_complete = MagicMock(return_value=True)
+        self.charm.backup.backup_manager.is_restore_in_progress = MagicMock(return_value=False)
         self.charm.backup.backup_manager.is_backup_available_for_restore = MagicMock(
             return_value=True
         )

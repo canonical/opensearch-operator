@@ -298,7 +298,7 @@ class S3RelData(Model):
 
     bucket: str = Field(default="")
     endpoint: str = Field(default="")
-    region: Optional[str] = None
+    region: str = Field(default="")
     base_path: Optional[str] = Field(alias="path", default=S3_REPO_BASE_PATH)
     protocol: Optional[str] = None
     storage_class: Optional[str] = Field(alias="storage-class")
@@ -328,6 +328,8 @@ class S3RelData(Model):
             raise ValueError("Missing field: endpoint")
         if values.get("endpoint") and not values.get("bucket"):
             raise ValueError("Missing field: bucket")
+        if values.get("region"):
+            raise ValueError("Missing field: region")
 
         return values
 

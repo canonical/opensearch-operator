@@ -310,7 +310,7 @@ class BackupManager:
         We filter the _query_backup_status() and seek for the following states:
         - SNAPSHOT_IN_PROGRESS
         """
-        if self._query_backup_status() in [
+        if self.is_set() and self._query_backup_status() in [
             BackupServiceState.SNAPSHOT_IN_PROGRESS,
             BackupServiceState.RESPONSE_FAILED_NETWORK,
         ]:
@@ -321,7 +321,7 @@ class BackupManager:
 
     def is_restore_in_progress(self) -> bool:
         """Checks if the restore is currently in progress."""
-        if self._query_restore_status() in [
+        if self.is_set() and self._query_restore_status() in [
             BackupServiceState.RESTORE_IN_PROGRESS,
             BackupServiceState.RESPONSE_FAILED_NETWORK,
         ]:
@@ -436,25 +436,6 @@ class BackupManager:
                 if shard["type"] == "SNAPSHOT" and shard["stage"] != "DONE":
                     return BackupServiceState.RESTORE_IN_PROGRESS
         return BackupServiceState.SUCCESS
-
-    def is_restore_complete(self) -> bool:
-        """Checks if the restore is finished.
-
-        Essentially, check for each index shard: for all type=SNAPSHOT and stage=DONE, return True.
-        """
-        try:
-            indices_status = self.charm.opensearch.request(
-                "GET",
-                "/_recovery?human",
-                retries=6,
-                timeout=10,
-            )
-        except OpenSearchHttpError:
-            raise OpenSearchRestoreCheckError("is_restore_complete: failed to get indices status")
-        if not indices_status:
-            # No restore has happened. Raise an exception
-            raise OpenSearchRestoreCheckError("is_restore_complete: failed to get indices status")
-        return not self.is_restore_in_progress()
 
     def _query_backup_status(self, backup_id: Optional[str] = None) -> BackupServiceState:
         try:
@@ -729,12 +710,9 @@ class OpenSearchBackupBase(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelShouldNotExist, app=True)
 
-            if (
-                self.charm.opensearch_peer_cm.deployment_desc().typ
-                != DeploymentType.MAIN_ORCHESTRATOR
-            ):
-                # Nothing to do besides fixing the status
-                return
+        if self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
+            # Nothing to do besides fixing the status
+            return
 
         if self.charm.upgrade_in_progress:
             logger.warning(
@@ -986,10 +964,6 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
 
     def _on_list_backups_action(self, event: ActionEvent) -> None:
         """Returns the list of available backups to the user."""
-        if not self.charm.opensearch_peer_cm.deployment_desc():
-            event.fail("The action can only be run once the deployment is complete.")
-            return
-
         backups = {}
         try:
             backups = self.backup_manager.list_backups()
@@ -1006,9 +980,6 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
 
     def _on_restore_backup_action(self, event: ActionEvent) -> None:  # noqa #C901
         """Restores a backup to the current cluster."""
-        if not self.charm.opensearch_peer_cm.deployment_desc():
-            event.fail("The action can only be run once the deployment is complete.")
-            return
         if self.charm.upgrade_in_progress:
             event.fail("Restore not supported while upgrade in-progress")
             return
@@ -1016,8 +987,8 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
             event.fail("Failed: backup service is not configured yet")
             return
         try:
-            if not self.backup_manager.is_restore_complete():
-                event.fail("Failed: previous restore is still in progress")
+            if not self.backup_manager.is_idle():
+                event.fail("Failed: backup or restore is still in progress")
                 return
         except OpenSearchRestoreCheckError:
             event.fail("Failed: error connecting to the cluster")
@@ -1033,7 +1004,6 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
         # Restore will try to close indices if there is a matching name.
         # The goal is to leave the cluster in a running state, even if the restore fails.
         # In case of failure, then restore action must return a list of closed indices
-        closed_idx = set()
         try:
             closed_idx = self.backup_manager.close_indices_if_needed(backup_id)
             output = self.backup_manager.restore(backup_id)
@@ -1064,9 +1034,9 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
 
         try:
             msg = (
-                "Restore is complete"
-                if self.backup_manager.is_restore_complete()
-                else "Restore in progress..."
+                "Restore in progress..."
+                if self.backup_manager.is_restore_in_progress()
+                else "Restore is complete"
             )
         except OpenSearchRestoreCheckError:
             event.fail("Failed: error connecting to the cluster")
@@ -1078,9 +1048,6 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:  # noqa: C901
         """Creates a backup from the current cluster."""
-        if not self.charm.opensearch_peer_cm.deployment_desc():
-            event.fail("The action can only be run once the deployment is complete.")
-            return
         if self.charm.upgrade_in_progress:
             event.fail("Backup not supported while upgrade in-progress")
             return
@@ -1160,9 +1127,15 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
         # Leader configures this plugin
         try:
             self.apply_api_config_if_needed()
-        except OpenSearchBackupError:
+        except OpenSearchBackupError as e:
             # Finish here and wait for the user to reconfigure it and retrigger a new event
+            logger.error(e)
             event.defer()
+            return
+        except ValueError as e:
+            # It means we are missing some data in the relation
+            self.charm.status.set(BlockedStatus(BackupRelDataIncomplete))
+            logger.error(e)
             return
         self.charm.status.clear(PluginConfigError)
         self.charm.status.clear(BackupSetupStart)
