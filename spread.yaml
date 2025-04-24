@@ -82,6 +82,8 @@ backends:
       sudo systemctl daemon-reload
       sudo systemctl restart ssh
 
+      echo "ubuntu:$SPREAD_PASSWORD" | sudo chpasswd || true
+
       ADDRESS localhost
     # HACK: spread does not pass environment variables set on runner
     # Manually pass specific environment variables
