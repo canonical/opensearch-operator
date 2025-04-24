@@ -275,6 +275,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         ):
             return
 
+        cluster_fleet_apps = self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps")
+        cluster_fleet_apps.pop(trigger_app.app.id, None)
+        self.charm.peers_data.put_object(Scope.APP, "cluster_fleet_apps", cluster_fleet_apps)
+
         orchestrators = PeerClusterOrchestrators.from_dict(
             self.charm.peers_data.get_object(Scope.APP, "orchestrators")
         )

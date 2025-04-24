@@ -393,39 +393,26 @@ class OpenSearchPeerClustersManager:
             Scope.APP, "deployment-description", deployment_desc.to_dict()
         )
 
-    def validate_roles(self, nodes: List[Node]) -> None:
+    def has_recommended_cm_count(self, nodes: List[Node]) -> bool:
         """Validate cluster-wide count for CM-eligible nodes is at least 3"""
         deployment_desc = self.deployment_desc()
         if (
             not set(deployment_desc.config.roles) & {"cluster_manager", "voting_only"}
             and deployment_desc.start != StartMode.WITH_GENERATED_ROLES
         ):
-            # the user is not adding any cm nor voting_only roles to the nodes
-            return
-
-        # validate the full-cluster wide count of cm+voting_only nodes to keep the quorum
-        full_cluster_planned_units = self._charm.app.planned_units()
-        apps_in_fleet = self.apps_in_fleet()
-        full_cluster_planned_units += sum(
-            [
-                p_cluster_app.planned_units
-                for p_cluster_app in apps_in_fleet
-                if p_cluster_app.app.id != deployment_desc.app.id
-            ]
-        )
-
-        if len(nodes) < full_cluster_planned_units - 1:
-            # this is not the latest unit to be brought online, we can continue
-            return
+            # only CM-eligible nodes run the validations
+            return True
 
         is_large_deployment = self.is_provider() or self.is_consumer()
         cms = sum(1 for node in nodes if node.is_cm_eligible())
         if not is_large_deployment or (is_large_deployment and cms >= 3):
-            # if validation called on large deployment,
-            # start if there are at least 3 cm eligible nodes
-            return
+            # validation is only needed in large deployments
+            # we can start with any number of cms but set a blocked status
+            # if CMS < 3 when a CM-eligible application is scaled down or removed
+            return True
 
-        raise OpenSearchProvidedRolesException(PClusterWrongNodesCountForQuorum)
+        logger.info("Less than 3 CM-eligible units in this cluster")
+        return False
 
     def validate_recommended_cm_unit_count(
         self, nodes: Optional[List[Node]] = None, only_validate_if_blocked: bool = False
@@ -442,12 +429,11 @@ class OpenSearchPeerClustersManager:
                 self._charm.opensearch, self._opensearch.is_node_up(), self._charm.alt_hosts
             )
 
-        try:
-            self.validate_roles(nodes)
+        if self.has_recommended_cm_count(nodes):
             self._charm.status.clear(PClusterWrongNodesCountForQuorum, app=True)
-        except OpenSearchProvidedRolesException as e:
-            logger.exception(e)
-            self._charm.app.status = BlockedStatus(str(e))
+            return
+
+        self._charm.status.set(BlockedStatus(PClusterWrongNodesCountForQuorum), app=True)
 
     def apps_in_fleet(self) -> List[PeerClusterApp]:
         """Returns list of apps in cluster fleet"""
