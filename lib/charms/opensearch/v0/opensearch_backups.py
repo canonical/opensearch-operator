@@ -78,6 +78,7 @@ import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, Optional, Set
 
+import pydantic
 from charms.data_platform_libs.v0.data_interfaces import RequirerData
 from charms.data_platform_libs.v0.object_storage import AzureStorageRequires
 from charms.data_platform_libs.v0.s3 import S3Requirer
@@ -254,6 +255,9 @@ class BackupManager:
             BackupManager.get_service_status(output)
             == BackupServiceState.SNAPSHOT_RESTORE_ERROR_INDEX_NOT_CLOSED
         ):
+            # expected format for `reason`:
+            # "[my-opensearch-repo:my-first-snapshot/dCK4Qth-TymRQ7Tu7Iga0g]
+            #     cannot restore index [.opendistro-reports-definitions] because ..."
             to_close = output["error"]["reason"].split("[")[2].split("]")[0]
             raise OpenSearchRestoreIndexClosingError(f"_restore: fails to close {to_close}")
 
@@ -795,6 +799,10 @@ class OpenSearchBackupBase(Object):
 
     def _on_backup_action(self, event: ActionEvent) -> None:
         """No deployment description yet, fail any actions."""
+        if not self.active_relation:
+            event.fail("Failed: charm is not related to neither s3 nor azure")
+            return
+
         logger.info("Deployment description not yet available, failing actions.")
         event.fail("Failed: deployment description not yet available")
 
@@ -1132,10 +1140,10 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
             logger.error(e)
             event.defer()
             return
-        except ValueError as e:
+        except pydantic.error_wrappers.ValidationError as e:
+            logger.error(f"Failed to parse S3 relation data: {e}")
             # It means we are missing some data in the relation
             self.charm.status.set(BlockedStatus(BackupRelDataIncomplete))
-            logger.error(e)
             return
         self.charm.status.clear(PluginConfigError)
         self.charm.status.clear(BackupSetupStart)
@@ -1195,9 +1203,12 @@ class OpenSearchS3Backup(OpenSearchMainBackup):
     @override
     def plugin(self) -> OpenSearchS3Plugin:
         """Returns the plugin for this class."""
-        if relation := self.charm.model.get_relation(S3_RELATION):
-            if data := S3RelData.from_relation(dict(relation.data[relation.app])):
-                return OpenSearchS3Plugin(self.charm, data.credentials)
+        try:
+            if relation := self.charm.model.get_relation(S3_RELATION):
+                if data := S3RelData.from_relation(dict(relation.data[relation.app])):
+                    return OpenSearchS3Plugin(self.charm, data.credentials)
+        except pydantic.error_wrappers.ValidationError as e:
+            logger.error(f"Failed to parse S3 relation data: {e}")
         return OpenSearchS3Plugin(self.charm, relation_data=None)
 
     @property
@@ -1233,10 +1244,6 @@ class OpenSearchAzureBackup(OpenSearchMainBackup):
         self.client = AzureStorageRequires(self.charm, AZURE_RELATION)
         self.framework.observe(
             self.client.on.storage_connection_info_changed,
-            self._on_backup_credentials_changed,
-        )
-        self.framework.observe(
-            self.client.on.storage_connection_info_gone,
             self._on_backup_credentials_changed,
         )
         self._relation = self.charm.model.get_relation(AZURE_RELATION)
