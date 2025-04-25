@@ -157,66 +157,69 @@ async def test_rollout_new_ca(ops_test: OpsTest, deploy_type) -> None:
     else:
         app = DATA_APP
     c_writes = ContinuousWrites(ops_test, app)
-    await c_writes.start()
+    try:
+        await c_writes.start()
 
-    # trigger a rollout of the new CA by changing the config on TLS Provider side
-    new_config = {"ca-common-name": "NEW_CA"}
-    await ops_test.model.applications[TLS_CERTIFICATES_APP_NAME].set_config(new_config)
+        # trigger a rollout of the new CA by changing the config on TLS Provider side
+        new_config = {"ca-common-name": "NEW_CA"}
+        await ops_test.model.applications[TLS_CERTIFICATES_APP_NAME].set_config(new_config)
 
-    start_count = await c_writes.count()
+        start_count = await c_writes.count()
 
-    if deploy_type == SMALL_DEPLOYMENT:
-        await wait_until(
-            ops_test,
-            apps=[APP_NAME],
-            apps_statuses=["active"],
-            units_statuses=["active"],
-            wait_for_exact_units=len(UNIT_IDS),
-            timeout=2400,
-            idle_period=IDLE_PERIOD,
-        )
-    else:
-        await wait_until(
-            ops_test,
-            apps=[MAIN_APP, DATA_APP, FAILOVER_APP],
-            apps_full_statuses={
-                MAIN_APP: {"active": []},
-                DATA_APP: {"active": []},
-                FAILOVER_APP: {"active": []},
-            },
-            units_statuses=["active"],
-            wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
-            timeout=2400,
-            idle_period=IDLE_PERIOD,
-        )
+        if deploy_type == SMALL_DEPLOYMENT:
+            await wait_until(
+                ops_test,
+                apps=[APP_NAME],
+                apps_statuses=["active"],
+                units_statuses=["active"],
+                wait_for_exact_units=len(UNIT_IDS),
+                timeout=2400,
+                idle_period=IDLE_PERIOD,
+            )
+        else:
+            await wait_until(
+                ops_test,
+                apps=[MAIN_APP, DATA_APP, FAILOVER_APP],
+                apps_full_statuses={
+                    MAIN_APP: {"active": []},
+                    DATA_APP: {"active": []},
+                    FAILOVER_APP: {"active": []},
+                },
+                units_statuses=["active"],
+                wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
+                timeout=2400,
+                idle_period=IDLE_PERIOD,
+            )
 
-    # Check if the continuous-writes client works with the new certs as well
-    with open(ContinuousWrites.CERT_PATH, "r") as f:
-        orig_cert = f.read()
-    await c_writes.stop()
+        # Check if the continuous-writes client works with the new certs as well
+        with open(ContinuousWrites.CERT_PATH, "r") as f:
+            orig_cert = f.read()
+        await c_writes.stop()
 
-    await c_writes.start()  # Forces the Cont. Writes to pick the new cert
+        await c_writes.start()  # Forces the Cont. Writes to pick the new cert
 
-    with open(ContinuousWrites.CERT_PATH, "r") as f:
-        new_cert = f.read()
+        with open(ContinuousWrites.CERT_PATH, "r") as f:
+            new_cert = f.read()
 
-    assert orig_cert != new_cert, "New cert was not picked up"
-    await asyncio.sleep(30)
-    final_count = await c_writes.count()
-    await c_writes.stop()
-    assert final_count > start_count, "Writes have not continued during CA rotation"
+        assert orig_cert != new_cert, "New cert was not picked up"
+        await asyncio.sleep(30)
+        final_count = await c_writes.count()
+        await c_writes.stop()
+        assert final_count > start_count, "Writes have not continued during CA rotation"
 
-    # using the SSL API requires authentication with app-admin cert and key
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app)
-    url = f"https://{leader_unit_ip}:9200/_plugins/_security/api/ssl/certs"
-    admin_secret = await get_secret_by_label(ops_test, f"{app}:app:app-admin")
+        # using the SSL API requires authentication with app-admin cert and key
+        leader_unit_ip = await get_leader_unit_ip(ops_test, app)
+        url = f"https://{leader_unit_ip}:9200/_plugins/_security/api/ssl/certs"
+        admin_secret = await get_secret_by_label(ops_test, f"{app}:app:app-admin")
 
-    with open("admin.cert", "w") as cert:
-        cert.write(admin_secret["cert"])
+        with open("admin.cert", "w") as cert:
+            cert.write(admin_secret["cert"])
 
-    with open("admin.key", "w") as key:
-        key.write(admin_secret["key"])
+        with open("admin.key", "w") as key:
+            key.write(admin_secret["key"])
 
-    response = requests.get(url, cert=("admin.cert", "admin.key"), verify=False)
-    data = response.json()
-    assert new_config["ca-common-name"] in data["http_certificates_list"][0]["issuer_dn"]
+        response = requests.get(url, cert=("admin.cert", "admin.key"), verify=False)
+        data = response.json()
+        assert new_config["ca-common-name"] in data["http_certificates_list"][0]["issuer_dn"]
+    finally:
+        await c_writes.stop()
