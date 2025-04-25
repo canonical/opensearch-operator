@@ -61,14 +61,12 @@ jobs:
           with open(os.environ["GITHUB_OUTPUT"], "a") as file:
               file.write(output)
       - name: Generate Allure default test results
-        # TODO switch back to schedule before merging
-        # if: ${{ github.event_name == 'schedule' && github.run_attempt == '1' }}
+        if: ${{ github.event_name == 'schedule' && github.run_attempt == '1' }}
         run: tox run -e integration -- tests/integration --allure-default-dir=allure-default-results
       - name: Upload Allure default results
         # Default test results in case the integration tests time out or runner set up fails
         # (So that Allure report will show "unknown"/"failed" test result, instead of omitting the test)
-        # TODO switch back to schedule before merging
-        # if: ${{ github.event_name == 'schedule' && github.run_attempt == '1' }}
+        if: ${{ github.event_name == 'schedule' && github.run_attempt == '1' }}
         uses: actions/upload-artifact@v4
         with:
           name: allure-default-results-integration-test
@@ -128,9 +126,7 @@ jobs:
         # Only upload results from one spread system & one spread variant
         # Allure can only process one result per pytest test ID. If parameterization is done via
         # spread instead of pytest, there will be overlapping pytest test IDs.
-        # TODO switch back to schedule before merging
-        # if: ${{ (success() || (failure() && steps.spread.outcome == 'failure')) && startsWith(matrix.job.spread_job, 'github-ci:') && endsWith(matrix.job.spread_job, ':ubuntu24') && github.event_name == 'schedule' && github.run_attempt == '1' }}
-        if: ${{ (success() || (failure() && steps.spread.outcome == 'failure')) && startsWith(matrix.job.spread_job, 'github-ci:') && endsWith(matrix.job.spread_job, ':ubuntu24') }}
+        if: ${{ (success() || (failure() && steps.spread.outcome == 'failure')) && startsWith(matrix.job.spread_job, 'github-ci:') && endsWith(matrix.job.spread_job, ':ubuntu24') && github.event_name == 'schedule' && github.run_attempt == '1' }}
         uses: actions/upload-artifact@v4
         with:
           name: allure-results-integration-test-${{ matrix.job.name_in_artifact }}
@@ -180,9 +176,7 @@ jobs:
   allure-report:
     # TODO future improvement: use concurrency group for job
     name: Publish Allure report
-    # TODO switch back to schedule before merging
-    # if: ${{ !cancelled() && github.event_name == 'schedule' && github.run_attempt == '1' }}
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && github.event_name == 'schedule' && github.run_attempt == '1' }}
     needs:
       - integration-test
     runs-on: ubuntu-latest
@@ -313,4 +307,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Allure report ${{ github.run_number }}"
           # Uses token set in checkout step
-          git push origin gh-pages-beta:test-gh-pages-spread
+          git push origin gh-pages-beta
