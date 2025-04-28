@@ -88,7 +88,6 @@ class OAuthHandler(Object):
     def _on_oauth_relation_departed(self, event: RelationDepartedEvent) -> None:
         if event.departing_unit == self.charm.unit and self.charm.peers_data is not None:
             self.charm.peers_data.put(Scope.UNIT, "departing_oauth", True)
-        pass
 
     def _on_oauth_relation_broken(self, event: RelationBrokenEvent) -> None:
         if (
