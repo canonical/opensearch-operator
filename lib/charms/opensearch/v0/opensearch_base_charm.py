@@ -763,7 +763,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.config.get(PERFORMANCE_PROFILE)
         )
 
-        self.opensearch_provider.update_relations_roles_mapping()
+        if not self.opensearch_provider.update_relations_roles_mapping():
+            event.defer()
 
         if self.opensearch.is_service_started() and (
             plugin_needs_restart or perf_profile_needs_restart

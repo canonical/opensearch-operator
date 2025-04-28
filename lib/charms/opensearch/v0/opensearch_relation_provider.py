@@ -532,18 +532,29 @@ class OpenSearchProvider(Object):
 
         self.charm.peers_data.put_object(Scope.APP, ClientUsersDict, relation_users)
 
-    def update_relations_roles_mapping(self) -> None:
-        """Updates all the relations roles mapping due to config change."""
-        if (
-            not self.unit.is_leader()
-            or not self.opensearch.is_node_up()
-            or not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False)
-        ):
-            return
+    def update_relations_roles_mapping(self) -> bool:
+        """Updates all the relations roles mapping due to config change.
 
-        users = self.charm.peers_data.get_object(Scope.APP, ClientUsersDict)
-        for rel_id, user in users.items():
-            self.user_manager.create_role_mapping(user, self._get_relation_mapped_users(user))
+        Returns:
+            Whether operation was successful. If negative value returned, processing event should be deferred.
+        """
+        if not self.unit.is_leader():
+            return True
+        if not self.opensearch.is_node_up():
+            logger.debug(
+                "Cannot update relations roles mapping as node is not active. Deferring event"
+            )
+            return False
+        users = self.charm.peers_data.get_object(Scope.APP, ClientUsersDict) or {}
+        for _, user in users.items():
+            try:
+                self.user_manager.create_role_mapping(user, self._get_relation_mapped_users(user))
+            except OpenSearchUserMgmtError as err:
+                logger.error(
+                    f"Failed to create role mapping for user {user}: {err}. Deferring event"
+                )
+                return False
+        return True
 
     def _get_relation_mapped_users(self, role: str) -> list[str]:
         config_roles_mapping = self.charm.config.get("roles_mapping")
