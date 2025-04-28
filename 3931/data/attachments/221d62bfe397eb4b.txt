@@ -1,0 +1,356 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'grafana-agent': {'charm': 'grafana-agent', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'grafana-agent', 'charm-rev': 468, 'charm-channel': 'latest/edge', 'charm-version': '11591b8', 'exposed': False, 'application-status': {'current': 'blocked', 'message': "Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-agent", 'since': '28 Apr 2025 01:58:07Z'}, 'relations': {'cos-agent': [{'related-application': 'opensearch', 'interface': 'cos_agent', 'scope': 'container'}], 'peers': [{'related-application': 'grafana-agent', 'interface': 'grafana_agent_replica', 'scope': 'global'}]}, 'subordinate-to': ['opensearch'], 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'grafana-cloud-config': 'alpha', 'grafana-dashboards-provider': 'alpha', 'juju-info': 'alpha', 'logging-consumer': 'alpha', 'peers': 'alpha', 'receive-ca-cert': 'alpha', 'send-remote-write': 'alpha', 'tracing': 'alpha'}}, 'opensearch': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'active', 'since': '28 Apr 2025 01:55:38Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'cos-agent': [{'related-application': 'grafana-agent', 'interface': 'cos_agent', 'scope': 'container'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/0': {'workload-status': {'current': 'active', 'since': '28 Apr 2025 02:04:59Z'}, 'juju-status': {'current': 'idle', 'since': '28 Apr 2025 02:06:50Z', 'version': '3.6.5'}, 'leader': True, 'machine': '1', 'open-ports': ['9200/tcp'], 'public-address': '10.209.20.140', 'subordinates': {'grafana-agent/0': {'workload-status': {'current': 'blocked', 'message': "Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-agent", 'since': '28 Apr 2025 01:58:07Z'}, 'juju-status': {'current': 'idle', 'since': '28 Apr 2025 01:59:47Z', 'version': '3.6.5'}, 'leader': True, 'public-address': '10.209.20.140'}}}, 'opensearch/1': {'workload-status': {'current': 'active', 'since': '28 Apr 2025 02:04:59Z'}, 'juju-status': {'current': 'idle', 'since': '28 Apr 2025 02:06:33Z', 'version': '3.6.5'}, 'machine': '2', 'open-ports': ['9200/tcp'], 'public-address': '10.209.20.20', 'subordinates': {'grafana-agent/2': {'workload-status': {'current': 'blocked', 'message': "Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-agent", 'since': '28 Apr 2025 01:58:05Z'}, 'juju-status': {'current': 'idle', 'since': '28 Apr 2025 01:59:50Z', 'version': '3.6.5'}, 'public-address': '10.209.20.20'}}}, 'opensearch/2': {'workload-status': {'current': 'active', 'since': '28 Apr 2025 02:04:58Z'}, 'juju-status': {'current': 'idle', 'since': '28 Apr 2025 02:06:54Z', 'version': '3.6.5'}, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.209.20.169', 'subordinates': {'grafana-agent/1': {'workload-status': {'current': 'blocked', 'message': "Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-agent", 'since': '28 Apr 2025 01:57:56Z'}, 'juju-status': {'current': 'idle', 'since': '28 Apr 2025 01:59:50Z', 'version': '3.6.5'}, 'public-address': '10.209.20.169'}}}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'node-lock-fallback': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '22.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 264, 'charm-channel': 'latest/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '28 Apr 2025 01:44:01Z'}, 'relations': {'certificates': [{'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '28 Apr 2025 01:44:01Z'}, 'juju-status': {'current': 'idle', 'since': '28 Apr 2025 01:53:13Z', 'version': '3.6.5'}, 'leader': True, 'machine': '0', 'public-address': '10.209.20.79'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: PUT -- https://10.209.20.140:9200/test_end_to_end_with_ivf_faiss_training
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: PUT -- https://10.209.20.140:9200/_bulk
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: POST -- https://10.209.20.140:9200/_plugins/_knn/models/test_end_to_end_with_ivf_faiss_model/_train
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.209.20.140:9200/_plugins/_knn/models/test_end_to_end_with_ivf_faiss_model
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: PUT -- https://10.209.20.140:9200/test_end_to_end_with_ivf_faiss_target
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: PUT -- https://10.209.20.140:9200/_bulk
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:600 KNN test starting with False
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:393 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:394 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.5    unsupported  02:07:21Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+grafana-agent                      blocked      3  grafana-agent             latest/edge    468  no       Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch                         active       3  opensearch                                 0  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch/0*                active    executing  1        10.209.20.140   9200/tcp  (config-changed) 
+  grafana-agent/0*           blocked   idle                10.209.20.140             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/1                 active    executing  2        10.209.20.20    9200/tcp  (config-changed) 
+  grafana-agent/2            blocked   idle                10.209.20.20              Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/2                 active    executing  3        10.209.20.169   9200/tcp  (config-changed) 
+  grafana-agent/1            blocked   idle                10.209.20.169             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+self-signed-certificates/0*  active    idle       0        10.209.20.79              
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.209.20.79   juju-a4c4b1-0  ubuntu@22.04      Running
+1        started  10.209.20.140  juju-a4c4b1-1  ubuntu@24.04      Running
+2        started  10.209.20.20   juju-a4c4b1-2  ubuntu@24.04      Running
+3        started  10.209.20.169  juju-a4c4b1-3  ubuntu@24.04      Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:07:21 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [executing (since: 02:07:21)] active: 
+		opensearch-1.813  -- (10.209.20.20) -- [executing (since: 02:07:21)] active: 
+		opensearch-2.813  -- (10.209.20.169) -- [executing (since: 02:07:21)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:07:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [executing (since: 02:07:21)] maintenance: Plugin configuration check.
+		opensearch-1.813  -- (10.209.20.20) -- [executing (since: 02:07:21)] maintenance: Plugin configuration check.
+		opensearch-2.813  -- (10.209.20.169) -- [executing (since: 02:07:21)] maintenance: Plugin configuration check.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:07:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [executing (since: 02:07:21)] maintenance: Plugin configuration check.
+		opensearch-1.813  -- (10.209.20.20) -- [executing (since: 02:07:21)] maintenance: Plugin configuration check.
+		opensearch-2.813  -- (10.209.20.169) -- [executing (since: 02:07:21)] maintenance: Plugin configuration check.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:07:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [executing (since: 02:07:21)] maintenance: Plugin configuration check.
+		opensearch-1.813  -- (10.209.20.20) -- [executing (since: 02:07:21)] maintenance: Plugin configuration check.
+		opensearch-2.813  -- (10.209.20.169) -- [executing (since: 02:07:21)] maintenance: Plugin configuration check.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:08:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [executing (since: 02:07:21)] active: 
+		opensearch-1.813  -- (10.209.20.20) -- [idle (since: 02:08:10)] active: 
+		opensearch-2.813  -- (10.209.20.169) -- [idle (since: 02:08:07)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:08:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [idle (since: 02:08:11)] active: 
+		opensearch-1.813  -- (10.209.20.20) -- [idle (since: 02:08:10)] active: 
+		opensearch-2.813  -- (10.209.20.169) -- [idle (since: 02:08:07)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:08:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [idle (since: 02:08:11)] active: 
+		opensearch-1.813  -- (10.209.20.20) -- [idle (since: 02:08:10)] active: 
+		opensearch-2.813  -- (10.209.20.169) -- [idle (since: 02:08:07)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:08:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [idle (since: 02:08:11)] active: 
+		opensearch-1.813  -- (10.209.20.20) -- [idle (since: 02:08:10)] active: 
+		opensearch-2.813  -- (10.209.20.169) -- [idle (since: 02:08:07)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:09:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [idle (since: 02:08:11)] active: 
+		opensearch-1.813  -- (10.209.20.20) -- [idle (since: 02:08:10)] active: 
+		opensearch-2.813  -- (10.209.20.169) -- [idle (since: 02:08:07)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:09:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [idle (since: 02:08:11)] active: 
+		opensearch-1.813  -- (10.209.20.20) -- [idle (since: 02:08:10)] active: 
+		opensearch-2.813  -- (10.209.20.169) -- [idle (since: 02:08:07)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:09:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:412 02:09:27 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.209.20.140:9200/_cluster/settings?flat_settings=true
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.209.20.140:9200/_nodes
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:614 Config updated and was successful
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.209.20.140:9200/test_end_to_end_with_ivf_faiss_target/_search
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.209.20.140:9200/test_end_to_end_with_ivf_faiss_target/_search
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.209.20.140:9200/test_end_to_end_with_ivf_faiss_target/_search
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:600 KNN test starting with True
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:393 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:394 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.5    unsupported  02:11:51Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+grafana-agent                      blocked      3  grafana-agent             latest/edge    468  no       Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch                         active       3  opensearch                                 0  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch/0*                active    executing  1        10.209.20.140   9200/tcp  (config-changed) 
+  grafana-agent/0*           blocked   idle                10.209.20.140             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/1                 active    executing  2        10.209.20.20    9200/tcp  (config-changed) 
+  grafana-agent/2            blocked   idle                10.209.20.20              Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/2                 active    executing  3        10.209.20.169   9200/tcp  (config-changed) 
+  grafana-agent/1            blocked   idle                10.209.20.169             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+self-signed-certificates/0*  active    idle       0        10.209.20.79              
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.209.20.79   juju-a4c4b1-0  ubuntu@22.04      Running
+1        started  10.209.20.140  juju-a4c4b1-1  ubuntu@24.04      Running
+2        started  10.209.20.20   juju-a4c4b1-2  ubuntu@24.04      Running
+3        started  10.209.20.169  juju-a4c4b1-3  ubuntu@24.04      Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:11:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [executing (since: 02:11:51)] active: 
+		opensearch-1.813  -- (10.209.20.20) -- [executing (since: 02:11:51)] active: 
+		opensearch-2.813  -- (10.209.20.169) -- [executing (since: 02:11:51)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:12:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [executing (since: 02:11:51)] maintenance: Plugin configuration check.
+		opensearch-1.813  -- (10.209.20.20) -- [executing (since: 02:11:51)] maintenance: Plugin configuration check.
+		opensearch-2.813  -- (10.209.20.169) -- [executing (since: 02:11:51)] maintenance: Plugin configuration check.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:12:16 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [executing (since: 02:11:51)] maintenance: Plugin configuration check.
+		opensearch-1.813  -- (10.209.20.20) -- [executing (since: 02:11:51)] maintenance: Plugin configuration check.
+		opensearch-2.813  -- (10.209.20.169) -- [executing (since: 02:11:51)] maintenance: Plugin configuration check.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:12:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [executing (since: 02:11:51)] maintenance: Plugin configuration check.
+		opensearch-1.813  -- (10.209.20.20) -- [executing (since: 02:11:51)] maintenance: Plugin configuration check.
+		opensearch-2.813  -- (10.209.20.169) -- [executing (since: 02:11:51)] maintenance: Plugin configuration check.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:12:41 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [idle (since: 02:12:40)] active: 
+		opensearch-1.813  -- (10.209.20.20) -- [idle (since: 02:12:40)] active: 
+		opensearch-2.813  -- (10.209.20.169) -- [idle (since: 02:12:38)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:12:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [idle (since: 02:12:40)] active: 
+		opensearch-1.813  -- (10.209.20.20) -- [idle (since: 02:12:40)] active: 
+		opensearch-2.813  -- (10.209.20.169) -- [idle (since: 02:12:38)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:13:05 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [idle (since: 02:12:40)] active: 
+		opensearch-1.813  -- (10.209.20.20) -- [idle (since: 02:12:40)] active: 
+		opensearch-2.813  -- (10.209.20.169) -- [idle (since: 02:12:38)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:13:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [idle (since: 02:12:40)] active: 
+		opensearch-1.813  -- (10.209.20.20) -- [idle (since: 02:12:40)] active: 
+		opensearch-2.813  -- (10.209.20.169) -- [idle (since: 02:12:38)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:13:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [idle (since: 02:12:40)] active: 
+		opensearch-1.813  -- (10.209.20.20) -- [idle (since: 02:12:40)] active: 
+		opensearch-2.813  -- (10.209.20.169) -- [idle (since: 02:12:38)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:13:41 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch active -- message: None
+		opensearch-0.813* -- (10.209.20.140) -- [idle (since: 02:12:40)] active: 
+		opensearch-1.813  -- (10.209.20.20) -- [idle (since: 02:12:40)] active: 
+		opensearch-2.813  -- (10.209.20.169) -- [idle (since: 02:12:38)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+02:13:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:412 02:13:55 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.209.20.140:9200/_cluster/settings?flat_settings=true
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.209.20.140:9200/_nodes
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:614 Config updated and was successful
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.209.20.140:9200/test_end_to_end_with_ivf_faiss_target/_search
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.5    unsupported  02:15:44Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+grafana-agent                      blocked      3  grafana-agent             latest/edge    468  no       Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch                         active       3  opensearch                                 0  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0*                active    idle   1        10.209.20.140   9200/tcp  
+  grafana-agent/0*           blocked   idle            10.209.20.140             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/1                 active    idle   2        10.209.20.20    9200/tcp  
+  grafana-agent/2            blocked   idle            10.209.20.20              Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/2                 active    idle   3        10.209.20.169   9200/tcp  
+  grafana-agent/1            blocked   idle            10.209.20.169             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+self-signed-certificates/0*  active    idle   0        10.209.20.79              
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.209.20.79   juju-a4c4b1-0  ubuntu@22.04      Running
+1        started  10.209.20.140  juju-a4c4b1-1  ubuntu@24.04      Running
+2        started  10.209.20.20   juju-a4c4b1-2  ubuntu@24.04      Running
+3        started  10.209.20.169  juju-a4c4b1-3  ubuntu@24.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-1: 01:42:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:42:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:42:47 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:42:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:42:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 01:42:53 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:43:00 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:43:00 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 01:43:00 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:43:01 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:43:01 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:43:01 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-grafana-agent-0: 01:57:21 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-468" for grafana-agent/0: failed to download charm "ch:amd64/grafana-agent-468" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-1: 01:57:21 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-468" for grafana-agent/1: failed to download charm "ch:amd64/grafana-agent-468" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-2: 01:57:21 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-468" for grafana-agent/2: failed to download charm "ch:amd64/grafana-agent-468" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-1: 01:57:22 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-grafana-agent-0: 01:57:22 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-grafana-agent-2: 01:57:22 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
