@@ -1209,12 +1209,13 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
 
         # the 'main' cluster orchestrator is the one being removed
-        if (
-            event_src_cluster_type == "main"
-            and orchestrators.failover_app
-            and orchestrators.failover_app.id != deployment_desc.app.id
-        ):
-            self._put_main_orchestrator_registered(orchestrators.failover_rel_id, False)
+        if event_src_cluster_type == "main" and orchestrators.failover_app:
+            if orchestrators.failover_app.id != deployment_desc.app.id:
+                self._put_main_orchestrator_registered(orchestrators.failover_rel_id, False)
+            elif self.charm.peer_cluster_provider._should_promote_failover():
+                logger.info("Promoting failover orchestrator to main orchestrator")
+                self.charm.peer_cluster_provider._promote_failover()
+                self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
         # clear previously set errors due to this relation
         self._clear_errors(f"error_from_provider-{event.relation.id}")
