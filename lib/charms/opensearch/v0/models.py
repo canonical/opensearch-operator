@@ -329,7 +329,7 @@ class S3RelData(Model):
             raise ValueError("Missing field: endpoint")
         if values.get("endpoint") and not values.get("bucket"):
             raise ValueError("Missing field: bucket")
-        if values.get("region"):
+        if not values.get("region"):
             raise ValueError("Missing field: region")
 
         if values.get("s3-uri-style") == "path":
