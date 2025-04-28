@@ -129,7 +129,7 @@ async def test_upgrade_between_versions(
         )
         assert action.status == "completed"
 
-        async with ops_test.fast_forward():
+        async with ops_test.fast_forward("60s"):
             logger.info("Refresh the charm")
             await refresh(ops_test, app, revision=rev)
 
@@ -142,7 +142,7 @@ async def test_upgrade_between_versions(
                     APP_NAME: 3,
                 },
                 timeout=1400,
-                idle_period=IDLE_PERIOD,
+                idle_period=30,
             )
 
             logger.info("Upgrade finished")
@@ -166,7 +166,7 @@ async def test_upgrade_between_versions(
                     APP_NAME: 3,
                 },
                 timeout=1400,
-                idle_period=IDLE_PERIOD,
+                idle_period=30,
             )
 
 
@@ -218,7 +218,7 @@ async def test_upgrade_rollback_from_local(
 
     logger.info("Build charm locally")
 
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         logger.info("Refresh the charm")
         await refresh(ops_test, app, path=charm, config={"profile": "testing"})
 
@@ -231,7 +231,7 @@ async def test_upgrade_rollback_from_local(
                 APP_NAME: 3,
             },
             timeout=1400,
-            idle_period=IDLE_PERIOD,
+            idle_period=30,
         )
 
         logger.info(f"Rolling back to {version}")
@@ -255,7 +255,7 @@ async def test_upgrade_rollback_from_local(
                 APP_NAME: 3,
             },
             timeout=1400,
-            idle_period=IDLE_PERIOD,
+            idle_period=30,
         )
         await refresh(
             ops_test,
@@ -272,7 +272,7 @@ async def test_upgrade_rollback_from_local(
                 APP_NAME: 3,
             },
             timeout=1400,
-            idle_period=IDLE_PERIOD,
+            idle_period=30,
         )
 
 
