@@ -536,7 +536,8 @@ class OpenSearchProvider(Object):
         """Updates all the relations roles mapping due to config change.
 
         Returns:
-            Whether operation was successful. If negative value returned, processing event should be deferred.
+            Whether operation was successful. If negative value returned,
+            processing event should be deferred.
         """
         if not self.unit.is_leader():
             return True

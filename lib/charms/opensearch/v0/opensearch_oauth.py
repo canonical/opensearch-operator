@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from charms.hydra.v0.oauth import ClientConfig, OAuthRequirer
 from charms.opensearch.v0.constants_charm import OAUTH_RELATION
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.models import DeploymentDescription, StartMode
+from charms.opensearch.v0.models import StartMode
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import EventBase, Object, RelationBrokenEvent, RelationDepartedEvent

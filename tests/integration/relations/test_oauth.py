@@ -33,6 +33,11 @@ logger = logging.getLogger(__name__)
 
 @pytest.fixture(scope="module")
 async def microk8s_cloud(ops_test: OpsTest) -> AsyncGenerator[None, Any]:
+    """Install and configure MicroK8s as second cloud on the same juju controller.
+
+    Skips if it configured already. Automatically removes connection to the created
+    cloud and removes MicroK8s from system unless keep models parameter is used.
+    """
     controller_name = next(
         iter(yaml.safe_load(subprocess.check_output(["juju", "show-controller"])))
     )
@@ -106,6 +111,13 @@ async def microk8s_cloud(ops_test: OpsTest) -> AsyncGenerator[None, Any]:
 
 @pytest.fixture(scope="module")
 async def microk8s_model(ops_test: OpsTest, microk8s_cloud: None) -> AsyncGenerator[Model, Any]:
+    """Create new Juju model on the connected MicroK8s cloud.
+
+    Automatically destroys that model unless keep models parameter is used.
+
+    Returns:
+        Connected Juju model.
+    """
     model_name = f"{ops_test.model_name}-uk8s"
     controller = Controller()
     await controller.connect()
@@ -129,6 +141,7 @@ async def microk8s_model(ops_test: OpsTest, microk8s_cloud: None) -> AsyncGenera
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_deploy(ops_test: OpsTest, opensearch_charm, microk8s_model: Model):
+    """Deploy OpenSearch, data integrator and identity platform (K8s) simultaneously."""
     await gather(
         ops_test.model.deploy(
             opensearch_charm,
@@ -153,6 +166,10 @@ async def test_deploy(ops_test: OpsTest, opensearch_charm, microk8s_model: Model
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_setup_relations(ops_test: OpsTest, microk8s_model: Model):
+    """Establish all the required relations.
+
+    Connects OpenSearch, data integrator and identity platform (cross-model).
+    """
     await microk8s_model.create_offer("certificates", "certificates", "self-signed-certificates")
     await ops_test.model.consume(f"admin/{microk8s_model.name}.certificates")
     await ops_test.model.integrate("opensearch:certificates", "certificates")
@@ -172,6 +189,10 @@ async def test_setup_relations(ops_test: OpsTest, microk8s_model: Model):
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_setup_oauth(ops_test: OpsTest, microk8s_model: Model):
+    """Configure new OAuth client on Hydra (identity platform).
+
+    Also, acquire corresponding access token for the further testing.
+    """
     action: Action = (
         await microk8s_model.applications["hydra"]
         .units[0]
@@ -217,6 +238,11 @@ async def test_setup_oauth(ops_test: OpsTest, microk8s_model: Model):
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_oauth_access(ops_test: OpsTest, microk8s_model: Model):
+    """Check access to the OpenSearch with an access token, acquired earlier.
+
+    Ensure that roles mapping works correctly by elevating user
+    to the admin role and checking access to the admin endpoint.
+    """
     opensearch_address = await get_leader_unit_ip(ops_test, "opensearch")
     opensearch_url = f"https://{opensearch_address}:9200/_cat/indices"
     result = requests.get(
