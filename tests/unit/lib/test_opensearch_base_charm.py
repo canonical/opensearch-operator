@@ -388,7 +388,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             _post_start_init.assert_called_once()
 
     @patch(f"{BASE_LIB_PATH}.opensearch_backups.BackupManager.is_backup_in_progress")
-    @patch(f"{BASE_LIB_PATH}.opensearch_backups.BackupManager.is_restore_complete")
+    @patch(f"{BASE_LIB_PATH}.opensearch_backups.BackupManager.is_restore_in_progress")
     @patch(f"{BASE_CHARM_CLASS}._stop_opensearch")
     @patch(f"{BASE_LIB_PATH}.opensearch_base_charm.cert_expiration_remaining_hours")
     @patch(

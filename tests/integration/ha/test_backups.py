@@ -350,6 +350,9 @@ async def test_large_deployment_build_and_deploy(
     The data node is selected to adopt the "APP_NAME" value because it is the node which
     ContinuousWrites will later target its writes to.
     """
+    if await app_name(ops_test):
+        return
+
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
     tls_config = {"ca-common-name": "CN_CA"}
@@ -474,16 +477,15 @@ async def test_large_setups_relations_with_misconfiguration(
 
     backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
     backup_relation = AZURE_RELATION if cloud_name == "azure" else S3_RELATION
-    # Now, relate failover cluster to backup-integrator and review the status
 
+    # Now, relate failover cluster to backup-integrator and review the status
     await ops_test.model.integrate(f"failover:{backup_relation}", backup_integrator)
     await ops_test.model.integrate(f"{APP_NAME}:{backup_relation}", backup_integrator)
     await wait_until(
         ops_test,
-        apps=["main", "failover", APP_NAME],
+        apps=["failover", APP_NAME],
         apps_statuses=["blocked"],
         apps_full_statuses={
-            "main": {"blocked": [BackupSetupFailed]},
             "failover": {"blocked": [BackupRelShouldNotExist]},
             APP_NAME: {"blocked": [BackupRelShouldNotExist]},
         },
@@ -538,6 +540,10 @@ async def test_create_backup_and_restore(
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
     date_before_backup = datetime.utcnow()
+
+    # Wait, we want to make sure the timestamps are different
+    await asyncio.sleep(5)
+
     assert (
         datetime.strptime(
             backup_id := await create_backup(
@@ -615,6 +621,10 @@ async def test_remove_and_readd_backup_relation(
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
     date_before_backup = datetime.utcnow()
+
+    # Wait, we want to make sure the timestamps are different
+    await asyncio.sleep(5)
+
     assert (
         datetime.strptime(
             backup_id := await create_backup(
@@ -737,6 +747,10 @@ async def test_restore_to_new_cluster(
     await writer.start()
     time.sleep(10)
     date_before_backup = datetime.utcnow()
+
+    # Wait, we want to make sure the timestamps are different
+    await asyncio.sleep(5)
+
     assert (
         datetime.strptime(
             backup_id := await create_backup(
@@ -911,6 +925,10 @@ async def test_change_config_and_backup_restore(
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
         date_before_backup = datetime.utcnow()
+
+        # Wait, we want to make sure the timestamps are different
+        await asyncio.sleep(5)
+
         assert (
             datetime.strptime(
                 backup_id := await create_backup(

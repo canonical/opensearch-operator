@@ -65,7 +65,6 @@ PClusterWrongNodesCountForQuorum = (
 )
 PluginConfigError = "Unexpected error during plugin configuration, check the logs"
 BackupSetupFailed = "Backup setup failed, check logs for details"
-BackupRelMissing = "Backup failover cluster missing backup relation."
 BackupRelShouldNotExist = "This unit should not be related to backup relation"
 BackupRelDataIncomplete = "Backup relation data missing or incomplete."
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."

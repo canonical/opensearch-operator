@@ -26,7 +26,6 @@ from charms.opensearch.v0.opensearch_keystore import (
     OpenSearchKeystoreNotReadyError,
 )
 from charms.opensearch.v0.opensearch_plugins import (
-    OpenSearchAzurePlugin,
     OpenSearchKnn,
     OpenSearchPlugin,
     OpenSearchPluginConfig,
@@ -35,7 +34,6 @@ from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchPluginMissingConfigError,
     OpenSearchPluginMissingDepsError,
     OpenSearchPluginRemoveError,
-    OpenSearchS3Plugin,
     PluginState,
 )
 
@@ -57,14 +55,6 @@ ConfigExposedPlugins = {
     "opensearch-knn": {
         "class": OpenSearchKnn,
         "config": "plugin_opensearch_knn",
-    },
-    "repository-s3": {
-        "class": OpenSearchS3Plugin,
-        "config": None,
-    },
-    "repository-azure": {
-        "class": OpenSearchAzurePlugin,
-        "config": None,
     },
 }
 
