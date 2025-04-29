@@ -77,7 +77,6 @@ from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
 from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchPeerClustersManager,
-    OpenSearchProvidedRolesException,
     StartMode,
 )
 from charms.opensearch.v0.opensearch_performance_profile import OpenSearchPerformance
@@ -444,12 +443,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # check possibility to start
         if self.opensearch_peer_cm.can_start(deployment_desc):
             try:
-                nodes = self._get_nodes(False)
-                self.opensearch_peer_cm.validate_roles(nodes, on_new_unit=True)
+                self._get_nodes(False)
             except OpenSearchHttpError:
-                return False
-            except OpenSearchProvidedRolesException as e:
-                self.unit.status = BlockedStatus(str(e))
                 return False
 
             return True
@@ -475,7 +470,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 "Adding units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
 
-    def _on_peer_relation_changed(self, event: RelationChangedEvent):
+    def _on_peer_relation_changed(self, event: RelationChangedEvent):  # noqa C901
         """Handle peer relation changes."""
         if self.unit.is_leader() and self.opensearch.is_node_up():
             health = self.health.apply()
@@ -494,6 +489,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch_peer_cm.is_provider():
             self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
+        # update any orchestrators about planned units
+        if self.opensearch_peer_cm.is_consumer():
+            self.peer_cluster_requirer.refresh_requirer_relation_data()
+            self.peer_cluster_requirer.apply_orchestrator_status()
+
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
 
@@ -503,6 +503,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.unit.is_leader():
             # Recompute the node roles in case self-healing didn't trigger leader related event
             self._recompute_roles_if_needed(event)
+            if self.peers_data.get(Scope.APP, "is_expecting_cm_unit"):
+                # indicates we previously scaled down to <3 CM-eligible units in the cluster
+                self.opensearch_peer_cm.validate_recommended_cm_unit_count()
         elif event.relation.data.get(event.app):
             # if app_data + app_data["nodes_config"]: Reconfigure + restart node on the unit
             self._reconfigure_and_restart_unit_if_needed()
@@ -525,23 +528,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not (self.unit.is_leader() and self.opensearch.is_node_up()):
             return
 
-        current_app = self.opensearch_peer_cm.deployment_desc().app
-        remaining_nodes = [
-            node
-            for node in self._get_nodes(True)
-            if node.name != format_unit_name(event.departing_unit, app=current_app)
-        ]
-
-        self.health.apply(wait_for_green_first=True)
-
-        if len(remaining_nodes) == self.app.planned_units():
-            self._compute_and_broadcast_updated_topology(remaining_nodes)
-        else:
-            event.defer()
-
-        if not self.unit.is_leader():
-            return
-
         # Now, we register in the leader application the presence of departing unit's name
         # We need to save them as we have a count limit
         if (
@@ -551,11 +537,32 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # No deployment description present
             # that happens in the very last stages of the application removal
             return
+
+        current_app = self.opensearch_peer_cm.deployment_desc().app
+        remaining_nodes = [
+            node
+            for node in self._get_nodes(True)
+            if node.name != format_unit_name(event.departing_unit, app=current_app)
+        ]
+
+        self.health.apply(wait_for_green_first=True)
+
+        n_units = sum(app.planned_units for app in self.opensearch_peer_cm.apps_in_fleet())
+        if len(remaining_nodes) == n_units:
+            self._compute_and_broadcast_updated_topology(remaining_nodes)
+        else:
+            event.defer()
+
+        if not self.unit.is_leader():
+            return
+
+        self.opensearch_peer_cm.validate_recommended_cm_unit_count(remaining_nodes)
+
         self.opensearch_exclusions.add_to_cleanup_list(
             unit_name=format_unit_name(event.departing_unit.name, deployment_desc.app)
         )
 
-    def _on_opensearch_data_storage_detaching(self, _: StorageDetachingEvent):  # noqa: C901
+    def _on_opensearch_data_storage_detaching(self, event: StorageDetachingEvent):  # noqa: C901
         """Triggered when removing unit, Prior to the storage being detached."""
         if self.upgrade_in_progress:
             logger.warning(
@@ -570,16 +577,22 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # if the leader is departing, and this hook fails "leader elected" won"t trigger,
         # so we want to re-balance the node roles from here
         if self.unit.is_leader():
-            if self.app.planned_units() > 1 and (self.opensearch.is_node_up() or self.alt_hosts):
+            if self.app.planned_units() >= 1 and (self.opensearch.is_node_up() or self.alt_hosts):
                 remaining_nodes = [
                     node
                     for node in self._get_nodes(self.opensearch.is_node_up())
                     if node.name != self.unit_name
                 ]
                 self._compute_and_broadcast_updated_topology(remaining_nodes)
-            elif self.app.planned_units() == 0 and self.model.get_relation(PeerRelationName):
-                self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")
-                self.peers_data.delete(Scope.APP, "nodes_config")
+                self.opensearch_peer_cm.validate_recommended_cm_unit_count(remaining_nodes)
+            elif self.app.planned_units() == 0:
+                if self.model.get_relation(PeerRelationName):
+                    self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")
+                    self.peers_data.delete(Scope.APP, "nodes_config")
+                if self.opensearch_peer_cm.is_provider():
+                    self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+                if self.opensearch_peer_cm.is_consumer():
+                    self.peer_cluster_requirer.refresh_requirer_relation_data()
 
         # we attempt to flush the translog to disk
         if self.opensearch.is_node_up():
@@ -1036,21 +1049,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # Retrieve the nodes of the cluster, needed to configure this node
             nodes = self._get_nodes(False)
 
-            # validate the roles prior to starting
-            self.opensearch_peer_cm.validate_roles(nodes, on_new_unit=True)
-
             # Set the configuration of the node
             self._set_node_conf(nodes)
         except OpenSearchHttpError as e:
             logger.debug(f"error getting the nodes: {e}")
             self.node_lock.release()
             event.defer()
-            return
-        except OpenSearchProvidedRolesException as e:
-            logger.exception(e)
-            self.node_lock.release()
-            event.defer()
-            self.unit.status = BlockedStatus(str(e))
             return
 
         try:
@@ -1643,13 +1647,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     unit_number=self.unit_id,
                     temperature=temperature,
                 )
-
-            # TODO: remove this when we get rid of roles recomputing logic
-            try:
-                self.opensearch_peer_cm.validate_roles(current_nodes, on_new_unit=False)
-            except OpenSearchProvidedRolesException as e:
-                logger.exception(e)
-                self.app.status = BlockedStatus(str(e))
 
         if current_reported_nodes == updated_nodes:
             return
