@@ -1,139 +1,30 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
 import json
 import logging
-import pathlib
-import subprocess
 from asyncio import gather
-from typing import Any, AsyncGenerator
 
 import pytest
 import requests
-import yaml
 from integration.helpers import CONFIG_OPTS, SERIES, get_leader_unit_ip
 from juju.client.client import Action
-from juju.controller import Controller
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
-from tenacity import Retrying, stop_after_delay, wait_fixed
 
 IDENTITY_PLATFORM_NAME = "identity-platform"
 DATA_INTEGRATOR_NAME = "data-integrator"
-MICROK8S_CLOUD_NAME = "uk8s"
+SECOND_DATA_INTEGRATOR_NAME = "second-data-integrator"
 
 DATA_INTEGRATOR_CONFIG = {
     "index-name": "admin-index",
     "extra-user-roles": "admin",
 }
+SECOND_DATA_INTEGRATOR_CONFIG = {
+    "index-name": "dev-index",
+}
 
 logger = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="module")
-async def microk8s_cloud(ops_test: OpsTest) -> AsyncGenerator[None, Any]:
-    """Install and configure MicroK8s as second cloud on the same juju controller.
-
-    Skips if it configured already. Automatically removes connection to the created
-    cloud and removes MicroK8s from system unless keep models parameter is used.
-    """
-    controller_name = next(
-        iter(yaml.safe_load(subprocess.check_output(["juju", "show-controller"])))
-    )
-
-    clouds = await ops_test._controller.clouds()
-    if f"cloud-{MICROK8S_CLOUD_NAME}" in clouds.clouds:
-        yield None
-        return
-
-    try:
-        subprocess.run(["sudo", "snap", "install", "--classic", "microk8s"], check=True)
-        subprocess.run(["sudo", "snap", "install", "--classic", "kubectl"], check=True)
-        subprocess.run(["sudo", "microk8s", "enable", "dns"], check=True)
-        subprocess.run(["sudo", "microk8s", "enable", "hostpath-storage"], check=True)
-        subprocess.run(
-            ["sudo", "microk8s", "enable", "metallb:10.64.140.43-10.64.140.49"],
-            check=True,
-        )
-
-        # Configure kubectl now
-        subprocess.run(["mkdir", "-p", str(pathlib.Path.home() / ".kube")], check=True)
-        kubeconfig = subprocess.check_output(["sudo", "microk8s", "config"])
-        with open(str(pathlib.Path.home() / ".kube" / "config"), "w") as f:
-            f.write(kubeconfig.decode())
-        for attempt in Retrying(stop=stop_after_delay(150), wait=wait_fixed(15)):
-            with attempt:
-                if (
-                    len(
-                        subprocess.check_output(
-                            "kubectl get po -A  --field-selector=status.phase!=Running",
-                            shell=True,
-                            stderr=subprocess.DEVNULL,
-                        ).decode()
-                    )
-                    != 0
-                ):  # We got sth different from "No resources found." in stderr
-                    raise Exception()
-
-        # Add microk8s to the kubeconfig
-        subprocess.run(
-            [
-                "juju",
-                "add-k8s",
-                MICROK8S_CLOUD_NAME,
-                "--client",
-                "--controller",
-                controller_name,
-            ],
-            check=True,
-        )
-    except subprocess.CalledProcessError as e:
-        pytest.exit(str(e))
-
-    yield None
-
-    if not ops_test.keep_model:
-        subprocess.run(
-            [
-                "juju",
-                "remove-cloud",
-                "--client",
-                "--controller",
-                controller_name,
-                MICROK8S_CLOUD_NAME,
-            ],
-            check=True,
-        )
-        subprocess.run(["sudo", "snap", "remove", "--purge", "microk8s"], check=True)
-        subprocess.run(["sudo", "snap", "remove", "--purge", "kubectl"], check=True)
-
-
-@pytest.fixture(scope="module")
-async def microk8s_model(ops_test: OpsTest, microk8s_cloud: None) -> AsyncGenerator[Model, Any]:
-    """Create new Juju model on the connected MicroK8s cloud.
-
-    Automatically destroys that model unless keep models parameter is used.
-
-    Returns:
-        Connected Juju model.
-    """
-    model_name = f"{ops_test.model_name}-uk8s"
-    controller = Controller()
-    await controller.connect()
-    if model_name in await controller.list_models():
-        model = await controller.get_model(model_name)
-    else:
-        model = await controller.add_model(model_name, cloud_name=MICROK8S_CLOUD_NAME)
-
-    yield model
-
-    await model.disconnect()
-    if not ops_test.keep_model:
-        await controller.destroy_model(model_name, destroy_storage=True, force=True)
-        while model_name in await controller.list_models():
-            await asyncio.sleep(5)
-    await controller.disconnect()
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
@@ -159,7 +50,9 @@ async def test_deploy(ops_test: OpsTest, opensearch_charm, microk8s_model: Model
             trust=True,
         ),
     )
-    await gather(ops_test.model.wait_for_idle(), microk8s_model.wait_for_idle())
+    await gather(
+        ops_test.model.wait_for_idle(timeout=1000), microk8s_model.wait_for_idle(timeout=1000)
+    )
 
 
 @pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
@@ -243,6 +136,7 @@ async def test_oauth_access(ops_test: OpsTest, microk8s_model: Model):
     Ensure that roles mapping works correctly by elevating user
     to the admin role and checking access to the admin endpoint.
     """
+    global opensearch_address
     opensearch_address = await get_leader_unit_ip(ops_test, "opensearch")
     opensearch_url = f"https://{opensearch_address}:9200/_cat/indices"
     result = requests.get(
@@ -259,8 +153,9 @@ async def test_oauth_access(ops_test: OpsTest, microk8s_model: Model):
     data_integrator_user = action.results.get("opensearch", {}).get("username")
     assert data_integrator_user, "failed to retrieve data integrator user"
 
-    config_without_roles = await ops_test.model.applications["opensearch"].get_config()
-    config_with_roles = config_without_roles.copy()
+    global original_opensearch_config
+    original_opensearch_config = await ops_test.model.applications["opensearch"].get_config()
+    config_with_roles = original_opensearch_config.copy()
     config_with_roles["roles_mapping"] = json.dumps({oauth_client_id: data_integrator_user})
     await ops_test.model.applications["opensearch"].set_config(config_with_roles)
     await ops_test.model.wait_for_idle(status="active")
@@ -270,10 +165,82 @@ async def test_oauth_access(ops_test: OpsTest, microk8s_model: Model):
     )
     assert result.status_code == 200, "request expected to succeed with roles mapping"
 
-    await ops_test.model.applications["opensearch"].set_config(config_without_roles)
+
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_deploy_second_client(ops_test: OpsTest, microk8s_model: Model):
+    """Deploy and configure second data integrator."""
+    await ops_test.model.deploy(
+        DATA_INTEGRATOR_NAME,
+        application_name=SECOND_DATA_INTEGRATOR_NAME,
+        config=SECOND_DATA_INTEGRATOR_CONFIG,
+    )
+    await ops_test.model.wait_for_idle()
+    await ops_test.model.integrate(SECOND_DATA_INTEGRATOR_NAME, "opensearch")
+    await ops_test.model.wait_for_idle()
+
+
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_oauth_access_second_client(ops_test: OpsTest, microk8s_model: Model):
+    """Change roles mapping from first data integrator user to second one.
+
+    Ensure, that admin permissions from the first one is removed, while role
+    from the second one is added.
+    """
+    action = (
+        await ops_test.model.applications[SECOND_DATA_INTEGRATOR_NAME]
+        .units[0]
+        .run_action("get-credentials")
+    )
+    await action.wait()
+    second_data_integrator_user = action.results.get("opensearch", {}).get("username")
+    assert second_data_integrator_user, "failed to retrieve second data integrator user"
+
+    config_with_roles = original_opensearch_config.copy()
+    config_with_roles["roles_mapping"] = json.dumps({oauth_client_id: second_data_integrator_user})
+    await ops_test.model.applications["opensearch"].set_config(config_with_roles)
+    await ops_test.model.wait_for_idle(status="active")
+
+    # Ensure first data integrator admin role is removed
+    result = requests.get(
+        f"https://{opensearch_address}:9200/_cat/indices",
+        headers={"Authorization": f"Bearer {oauth_access_token}"},
+        verify=False,
+    )
+    assert (
+        result.json().get("status") == 403
+    ), "no permissions error expected as admin role should be removed"
+
+    # Ensure second data integrator role is configured
+    result = requests.get(
+        f"https://{opensearch_address}:9200/_plugins/_security/authinfo",
+        headers={"Authorization": f"Bearer {oauth_access_token}"},
+        verify=False,
+    )
+    assert result.status_code == 200, "request for authinfo should success"
+    assert sorted(result.json().get("roles")) == sorted(
+        [
+            "own_index",
+            second_data_integrator_user,
+        ]
+    ), "second data integrator role should be enabled"
+
+
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_oauth_access_cleanup(ops_test: OpsTest, microk8s_model: Model):
+    """Ensure that all of the oauth clients permissions are removed with clean roles mapping."""
+    await ops_test.model.applications["opensearch"].set_config(original_opensearch_config)
     await ops_test.model.wait_for_idle(status="active")
 
     result = requests.get(
-        opensearch_url, headers={"Authorization": f"Bearer {oauth_access_token}"}, verify=False
+        f"https://{opensearch_address}:9200/_plugins/_security/authinfo",
+        headers={"Authorization": f"Bearer {oauth_access_token}"},
+        verify=False,
     )
-    assert result.json().get("status") == 403, "no permissions error expected"
+    assert result.status_code == 200, "request for authinfo should success"
+    assert result.json().get("roles") == ["own_index"], "all the mapped roles should be removed"

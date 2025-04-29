@@ -499,7 +499,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         mock_response_root(self.charm.unit_name, self.charm.opensearch.host)
         mock_response_nodes(self.charm.unit_name, self.charm.opensearch.host)
 
-        mock_get_relation_mapped_users.return_value = None
+        mock_get_relation_mapped_users.return_value = []
         # 1. Testing relation user creation
         self.harness.charm.opensearch_provider.create_opensearch_users(
             username=relation_user1,
@@ -510,7 +510,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         )
         mock_create_user.assert_called_with(relation_user1, [relation_user1], "pw1")
         mock_create_role.assert_called_with(role_name=relation_user1, permissions=ANY)
-        mock_create_role_mapping.assert_called_with(relation_user1, None)
+        mock_create_role_mapping.assert_called_with(relation_user1, [])
 
         mapped_users = ["test_oidc"]
         mock_get_relation_mapped_users.return_value = mapped_users

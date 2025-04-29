@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from charms.hydra.v0.oauth import ClientConfig, OAuthRequirer
 from charms.opensearch.v0.constants_charm import OAUTH_RELATION
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.models import StartMode
+from charms.opensearch.v0.models import DeploymentType, StartMode
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import EventBase, Object, RelationBrokenEvent, RelationDepartedEvent
@@ -67,9 +67,7 @@ class OAuthHandler(Object):
             openid_connect_url=f"{relation.data[relation.app].get('issuer_url')}/.well-known/openid-configuration"
         )
 
-        if not self.charm.unit.is_leader() or not self.charm.opensearch_peer_cm.is_provider(
-            typ="main"
-        ):
+        if not self.charm.unit.is_leader() or not self._is_admin_script_eligible():
             return
 
         if not (admin_secrets := self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)):
@@ -98,9 +96,7 @@ class OAuthHandler(Object):
 
         self.charm.opensearch_config.remove_oidc_auth()
 
-        if not self.charm.unit.is_leader() or not self.charm.opensearch_peer_cm.is_provider(
-            typ="main"
-        ):
+        if not self.charm.unit.is_leader() or not self._is_admin_script_eligible():
             return
 
         if not (admin_secrets := self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)):
@@ -116,16 +112,16 @@ class OAuthHandler(Object):
             return
 
     def _is_unit_ready(self) -> bool:
-        # Deployment
-        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
-            return False
-        # Security index
-        if not self.charm.peers_data.get(Scope.APP, "security_index_initialised"):
-            return False
-        # Small deployment
-        if (
-            "data" not in deployment_desc.config.roles
-            and deployment_desc.start != StartMode.WITH_GENERATED_ROLES
-        ):
-            return False
-        return True
+        return bool(self.charm.opensearch_peer_cm.deployment_desc()) and bool(
+            self.charm.peers_data.get(Scope.APP, "security_index_initialised")
+        )
+
+    def _is_admin_script_eligible(self) -> bool:
+        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
+        return (
+            deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+            and (
+                "data" in deployment_desc.config.roles
+                or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+            )
+        ) or self.charm.opensearch_peer_cm.is_provider(typ="main")
