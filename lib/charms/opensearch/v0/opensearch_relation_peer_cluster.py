@@ -842,7 +842,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # store the app admin TLS resources if not stored
         self.charm.tls.store_new_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
-        self.charm.tls.update_request_ca_bundle()
+        if self.charm.tls.ca_rotation_complete_in_cluster():
+            # must only happen if no CA-rotation, otherwise will cause TLS errors for API-requests
+            self.charm.tls.update_request_ca_bundle()
 
         # take over the internal users from the main orchestrator
         self.charm.user_manager.put_internal_user(AdminUser, data.credentials.admin_password_hash)
