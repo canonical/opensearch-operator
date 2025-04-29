@@ -7,7 +7,7 @@ from asyncio import gather
 
 import pytest
 import requests
-from integration.helpers import CONFIG_OPTS, SERIES, get_leader_unit_ip
+from integration.helpers import CONFIG_OPTS, get_leader_unit_ip
 from juju.client.client import Action
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
@@ -27,17 +27,15 @@ SECOND_DATA_INTEGRATOR_CONFIG = {
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_deploy(ops_test: OpsTest, opensearch_charm, microk8s_model: Model):
+async def test_deploy(ops_test: OpsTest, charm, series, microk8s_model: Model):
     """Deploy OpenSearch, data integrator and identity platform (K8s) simultaneously."""
     await gather(
         ops_test.model.deploy(
-            opensearch_charm,
+            charm,
             num_units=2,
-            series=SERIES,
+            series=series,
             config=CONFIG_OPTS,
         ),
         ops_test.model.deploy(
@@ -55,8 +53,6 @@ async def test_deploy(ops_test: OpsTest, opensearch_charm, microk8s_model: Model
     )
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_setup_relations(ops_test: OpsTest, microk8s_model: Model):
     """Establish all the required relations.
@@ -78,8 +74,6 @@ async def test_setup_relations(ops_test: OpsTest, microk8s_model: Model):
     await gather(ops_test.model.wait_for_idle(status="active"), microk8s_model.wait_for_idle())
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_setup_oauth(ops_test: OpsTest, microk8s_model: Model):
     """Configure new OAuth client on Hydra (identity platform).
@@ -127,8 +121,6 @@ async def test_setup_oauth(ops_test: OpsTest, microk8s_model: Model):
     assert oauth_access_token, "failed to retrieve access token from hydra"
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_oauth_access(ops_test: OpsTest, microk8s_model: Model):
     """Check access to the OpenSearch with an access token, acquired earlier.
@@ -166,8 +158,6 @@ async def test_oauth_access(ops_test: OpsTest, microk8s_model: Model):
     assert result.status_code == 200, "request expected to succeed with roles mapping"
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy_second_client(ops_test: OpsTest, microk8s_model: Model):
     """Deploy and configure second data integrator."""
@@ -181,8 +171,6 @@ async def test_deploy_second_client(ops_test: OpsTest, microk8s_model: Model):
     await ops_test.model.wait_for_idle()
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_oauth_access_second_client(ops_test: OpsTest, microk8s_model: Model):
     """Change roles mapping from first data integrator user to second one.
@@ -229,8 +217,6 @@ async def test_oauth_access_second_client(ops_test: OpsTest, microk8s_model: Mod
     ), "second data integrator role should be enabled"
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_oauth_access_cleanup(ops_test: OpsTest, microk8s_model: Model):
     """Ensure that all of the oauth clients permissions are removed with clean roles mapping."""
