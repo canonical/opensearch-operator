@@ -422,7 +422,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         ignore_lock = (
             "data" in deployment_desc.config.roles
             and self.unit.is_leader()
-            and deployment_desc.typ == DeploymentType.OTHER
+            and deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
             and (
                 not self.peers_data.get(Scope.APP, "security_index_initialised", False)
                 or (
@@ -1011,7 +1011,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.peers_data.delete(Scope.UNIT, "started")
 
         if event.ignore_lock:
-            # Only used for force upgrades
+            # Only used for force upgrades and starting data nodes for cluster-manager-only nodes
             logger.debug("Starting without lock")
         elif not self.node_lock.acquired:
             logger.debug("Lock to start opensearch not acquired. Will retry next event")
@@ -1246,6 +1246,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         ):
             logger.info("post_start_init: Detected CA rotation complete in cluster")
             self.tls.on_ca_certs_rotation_complete()
+
+        if self._is_failover_only_data_node() and self.peers_data.get(
+            Scope.UNIT, "cluster_manager_remove", default=False
+        ):
+            # restore cluster_manager role and restart the service
+            self.peers_data.delete(Scope.UNIT, "cluster_manager_remove")
+            self._restart_opensearch_event.emit()
 
     def _stop_opensearch(self, *, restart: bool = False) -> None:
         """Stop OpenSearch if possible."""
@@ -1503,6 +1510,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         else:
             computed_roles = ClusterTopology.generated_roles()
 
+        # If the failover orchestrator is the only data node in the cluster, remove the
+        # cluster-manager role from it to avoid it bootstrapping the cluster
+        if self._is_failover_only_data_node() and not self.peers_data.get(
+            Scope.APP, "security_index_initialised", False
+        ):
+            self.peers_data.put(Scope.UNIT, "cluster_manager_removed", True)
+            computed_roles.remove("cluster_manager")
+
         cm_names = ClusterTopology.get_cluster_managers_names(nodes)
         cm_ips = ClusterTopology.get_cluster_managers_ips(nodes)
 
@@ -1756,6 +1771,22 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         else:
             # notify the main orchestrator that the security index is initialized
             self.peer_cluster_requirer.set_security_index_initialised()
+
+    def _is_failover_only_data_node(self) -> bool:
+        """Check if the current node is a failover and the only data node in the cluster."""
+        deployment_desc = self.opensearch_peer_cm.deployment_desc()
+        if (
+            deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR
+            and "data" in deployment_desc.config.roles
+        ):
+            # check if it's the only data node in the cluster
+            cluster_fleet_apps = self.peers_data.get_object(Scope.APP, "cluster_fleet_apps")
+            for app in cluster_fleet_apps:
+                if self.app.name != cluster_fleet_apps[app].get("app", {}).get(
+                    "name"
+                ) and "data" in cluster_fleet_apps[app].get("roles"):
+                    return False
+            return True
 
     @property
     def unit_ip(self) -> str:
