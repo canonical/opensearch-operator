@@ -415,11 +415,17 @@ class OpenSearchPeerClustersManager:
         return False
 
     def validate_recommended_cm_unit_count(
-        self, nodes: Optional[List[Node]] = None, only_validate_if_blocked: bool = False
+        self, nodes: Optional[List[Node]] = None, skip_if_not_blocked: bool = False
     ) -> None:
-        """Sets blocked status if validate_roles fails"""
+        """Validates that the cluster has at least 3 CM-eligible units.
+
+        If validation fails, set the application status to Blocked.
+
+        If `skip_if_not_blocked` is True, skip validation unless the application
+        is already blocked with `PClusterWrongNodesCountForQuorum`.
+        """
         if (
-            only_validate_if_blocked
+            skip_if_not_blocked
             and self._charm.app.status.message != PClusterWrongNodesCountForQuorum
         ):
             return

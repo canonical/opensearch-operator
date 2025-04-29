@@ -498,9 +498,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.unit.is_leader():
             # Recompute the node roles in case self-healing didn't trigger leader related event
             self._recompute_roles_if_needed(event)
-            self.opensearch_peer_cm.validate_recommended_cm_unit_count(
-                only_validate_if_blocked=True
-            )
+            self.opensearch_peer_cm.validate_recommended_cm_unit_count(skip_if_not_blocked=True)
         elif event.relation.data.get(event.app):
             # if app_data + app_data["nodes_config"]: Reconfigure + restart node on the unit
             self._reconfigure_and_restart_unit_if_needed()
