@@ -13,7 +13,6 @@ from ..helpers import (
     APP_NAME,
     CONFIG_OPTS,
     MODEL_CONFIG,
-    SERIES,
     cluster_health,
     cluster_voting_config_exclusions,
     execute_update_status_manually,
@@ -33,18 +32,15 @@ from .test_horizontal_scaling import IDLE_PERIOD
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
     if await app_name(ops_test):
         return
 
-    my_charm = await ops_test.build_charm(".")
     # This test will manually issue update-status hooks, as we want to see the change in behavior
     # when applying `settle_voting` during start/stop and during update-status.
     MODEL_CONFIG["update-status-hook-interval"] = "360m"
@@ -57,7 +53,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
-        ops_test.model.deploy(my_charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
+        ops_test.model.deploy(charm, num_units=3, series=series, config=CONFIG_OPTS),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -74,8 +70,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await set_watermark(ops_test, app=APP_NAME)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_scale_down(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_0_repl_writes_runner
@@ -136,8 +130,6 @@ async def test_scale_down(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_scale_back_up(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_0_repl_writes_runner
@@ -188,8 +180,6 @@ async def test_scale_back_up(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_gracefully_cluster_remove(ops_test: OpsTest) -> None:
     """Tests removing the entire application at once."""

@@ -88,7 +88,7 @@ def _dump_juju_logs(model: str, unit: Optional[str] = None, lines: int = 500) ->
             unit = f"{unit[:pos]}/{unit[pos+1:]}"  # noqa
         cmd = f"{cmd} --include={unit}"
 
-    cmd = f"{cmd} --model={model} -n {lines} > {target_file}; cat {target_file}"
+    cmd = f"{cmd} --model={model} --limit {lines} > {target_file}; cat {target_file}"
     logger.error(f"Dumping juju logs for {unit if unit else 'all'}:")
     logger.error(subprocess.check_output(cmd, shell=True).decode("utf-8"))
     logger.error("\n\n")

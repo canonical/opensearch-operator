@@ -4,7 +4,6 @@
 
 import asyncio
 import pathlib
-import shutil
 import subprocess
 from typing import Any, AsyncGenerator
 
@@ -19,14 +18,9 @@ MICROK8S_CLOUD_NAME = "uk8s"
 
 
 @pytest.fixture(scope="module")
-async def application_charm(ops_test: OpsTest):
+async def application_charm() -> str:
     """Build the application charm."""
-    shutil.copyfile(
-        "./lib/charms/data_platform_libs/v0/data_interfaces.py",
-        "./tests/integration/relations/opensearch_provider/application-charm/lib/charms/data_platform_libs/v0/data_interfaces.py",
-    )
-    test_charm_path = "./tests/integration/relations/opensearch_provider/application-charm"
-    return await ops_test.build_charm(test_charm_path)
+    return "./tests/integration/relations/opensearch_provider/application-charm/application_ubuntu@22.04-amd64.charm"
 
 
 @pytest.fixture(scope="module")

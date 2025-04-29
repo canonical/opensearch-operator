@@ -17,13 +17,7 @@ from ..ha.helpers import (
     storage_type,
 )
 from ..ha.test_horizontal_scaling import IDLE_PERIOD
-from ..helpers import (
-    APP_NAME,
-    CONFIG_OPTS,
-    MODEL_CONFIG,
-    SERIES,
-    get_application_unit_ids,
-)
+from ..helpers import APP_NAME, CONFIG_OPTS, MODEL_CONFIG, get_application_unit_ids
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .continuous_writes import ContinuousWrites
@@ -31,17 +25,14 @@ from .continuous_writes import ContinuousWrites
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
     if await app_name(ops_test):
         return
 
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
     # this assumes the test is run on a lxd cloud
     await ops_test.model.create_storage_pool("opensearch-pool", "lxd")
@@ -53,7 +44,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
         ops_test.model.deploy(
-            my_charm, num_units=1, series=SERIES, storage=storage, config=CONFIG_OPTS
+            charm, num_units=1, series=series, storage=storage, config=CONFIG_OPTS
         ),
     )
 
@@ -68,14 +59,12 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         idle_period=IDLE_PERIOD,
         wait_for_exact_units={
             TLS_CERTIFICATES_APP_NAME: 1,
-            my_charm: 1,
+            "opensearch": 1,
         },
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 1
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_storage_reuse_after_scale_down(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -161,8 +150,6 @@ async def test_storage_reuse_after_scale_down(
     assert testfile == subprocess.getoutput(check_testfile_cmd)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_storage_reuse_after_scale_to_zero(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
@@ -223,11 +210,9 @@ async def test_storage_reuse_after_scale_to_zero(
     await assert_continuous_writes_increasing(c_writes)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_storage_reuse_in_new_cluster_after_app_removal(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
+    ops_test: OpsTest, charm, c_writes: ContinuousWrites, c_balanced_writes_runner
 ):
     """Check storage is reused and data accessible after removing app and deploying new cluster."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -290,9 +275,8 @@ async def test_storage_reuse_in_new_cluster_after_app_removal(
     await ops_test.model.remove_application(app, block_until_done=True)
 
     # deploy new cluster, attaching the storage from the previous leader to the new leader
-    my_charm = await ops_test.build_charm(".")
     deploy_cluster_with_storage_cmd = (
-        f"deploy {my_charm} --model={ops_test.model.info.name} --attach-storage={storage_ids[0]}"
+        f"deploy {charm} --model={ops_test.model.info.name} --attach-storage={storage_ids[0]}"
         " --config profile=testing"
     )
     return_code, _, _ = await ops_test.juju(*deploy_cluster_with_storage_cmd.split())
