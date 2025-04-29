@@ -786,7 +786,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         if not self.charm.unit.is_leader():
             return
 
-        if not event.relation.units:  # ensure not a deferred event from a departed orchestrator
+        if (
+            len(event.relation.units) == 0
+        ):  # ensure not a deferred event from a departed orchestrator
             return
 
         # check if current cluster ready
@@ -966,13 +968,13 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         cm_relations = [
             rel.id
             for rel in self.model.relations[self.relation_name]
-            if rel.id != event.relation.id and rel.units
+            if rel.id != event.relation.id and len(rel.units) > 0
         ]
         for rel_id in cm_relations:
             remote_orchestrators.update(self.get_obj_from_rel(key="orchestrators", rel_id=rel_id))
 
         local_orchestrators = self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
-        if trigger in {"main", "failover"} and event.relation.units:
+        if trigger in {"main", "failover"} and len(event.relation.units) > 0:
             local_orchestrators.update(
                 {
                     f"{trigger}_rel_id": event.relation.id,
@@ -1004,7 +1006,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             return
 
         deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
-        all_relations = [rel for rel in self.model.relations[self.relation_name] if rel.units]
+        all_relations = [
+            rel for rel in self.model.relations[self.relation_name] if len(rel.units) > 0
+        ]
         for rel in all_relations:
             self._put_current_app(rel.id, deployment_desc)
 
