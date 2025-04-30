@@ -212,12 +212,17 @@ async def test_config_switch_before_cluster_ready(ops_test: OpsTest, deploy_type
         timeout=3400,
         idle_period=IDLE_PERIOD,
     )
-    await assert_knn_config_updated(ops_test, True, check_api=False)
+    # disabled as plugins can currently only be activated after Opensearch has started
+    # see https://github.com/canonical/opensearch-operator/pull/633
+    # await assert_knn_config_updated(ops_test, True, check_api=False)
 
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await _wait_for_units(ops_test, deploy_type)
     assert len(ops_test.model.applications[APP_NAME].units) == 3
+
+    # to be removed here once enabling plugins before startup is possible again
+    await assert_knn_config_updated(ops_test, True, check_api=False)
 
 
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
