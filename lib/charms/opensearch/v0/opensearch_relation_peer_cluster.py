@@ -406,18 +406,14 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(AZURE_RELATION):
                 return None
 
-            if not self.charm.backup.azure_client.get_azure_connection_info().get(
-                "storage-account"
-            ):
+            if not self.charm.backup.client.get_azure_connection_info().get("storage-account"):
                 return None
 
             # As the main orchestrator, this application must set the S3 information.
-            storage_account = self.charm.backup.azure_client.get_azure_connection_info().get(
+            storage_account = self.charm.backup.client.get_azure_connection_info().get(
                 "storage-account"
             )
-            secret_key = self.charm.backup.azure_client.get_azure_connection_info().get(
-                "secret-key"
-            )
+            secret_key = self.charm.backup.client.get_azure_connection_info().get("secret-key")
 
             # set the secrets in the charm
             # TODO Move this to azure relation and include both in one secret
@@ -442,12 +438,12 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(S3_RELATION):
                 return None
 
-            if not self.charm.backup.s3_client.get_s3_connection_info().get("access-key"):
+            if not self.charm.backup.client.get_s3_connection_info().get("access-key"):
                 return None
 
             # As the main orchestrator, this application must set the S3 information.
-            access_key = self.charm.backup.s3_client.get_s3_connection_info().get("access-key")
-            secret_key = self.charm.backup.s3_client.get_s3_connection_info().get("secret-key")
+            access_key = self.charm.backup.client.get_s3_connection_info().get("access-key")
+            secret_key = self.charm.backup.client.get_s3_connection_info().get("secret-key")
 
             # set the secrets in the charm
             # TODO Move this to s3 relation and include both in one secret
@@ -842,7 +838,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # store the app admin TLS resources if not stored
         self.charm.tls.store_new_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
-        self.charm.tls.update_request_ca_bundle()
+        if self.charm.tls.ca_rotation_complete_in_cluster():
+            # must only happen if no CA-rotation, otherwise will cause TLS errors for API-requests
+            self.charm.tls.update_request_ca_bundle()
 
         # take over the internal users from the main orchestrator
         self.charm.user_manager.put_internal_user(AdminUser, data.credentials.admin_password_hash)

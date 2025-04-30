@@ -10,7 +10,7 @@ import pytest
 from charms.opensearch.v0.constants_charm import PClusterNoRelation, TLSRelationMissing
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import CONFIG_OPTS, MODEL_CONFIG, SERIES, get_leader_unit_ip
+from ..helpers import CONFIG_OPTS, MODEL_CONFIG, get_leader_unit_ip
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .continuous_writes import ContinuousWrites
@@ -33,15 +33,12 @@ INVALID_CLUSTER_NAME = "timeseries"
 APP_UNITS = {MAIN_APP: 3, FAILOVER_APP: 3, DATA_APP: 2, INVALID_APP: 1}
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
     # Deploy TLS Certificates operator.
@@ -51,32 +48,32 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=MAIN_APP,
             num_units=3,
-            series=SERIES,
+            series=series,
             config={"cluster_name": CLUSTER_NAME} | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=FAILOVER_APP,
             num_units=3,
-            series=SERIES,
+            series=series,
             config={"cluster_name": CLUSTER_NAME, "init_hold": True} | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=DATA_APP,
             num_units=2,
-            series=SERIES,
+            series=series,
             config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "data.hot,ml"}
             | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=INVALID_APP,
             num_units=1,
-            series=SERIES,
+            series=series,
             config={"cluster_name": INVALID_CLUSTER_NAME, "init_hold": True, "roles": "data.cold"}
             | CONFIG_OPTS,
         ),
@@ -114,8 +111,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     )
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_invalid_conditions(ops_test: OpsTest) -> None:
     """Check invalid conditions under different states."""
@@ -194,8 +189,6 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
     )
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_large_deployment_fully_formed(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner

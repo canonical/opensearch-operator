@@ -20,11 +20,11 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v29.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v31.0.1
 
   unit-test:
     name: Unit test charm
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
@@ -109,14 +109,14 @@ jobs:
           sg 'lxd' -c "juju bootstrap 'localhost' --config model-logs-size=10G"
           juju model-defaults logging-config='<root>=INFO; unit=DEBUG'
           juju add-model test
-          
+
           sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
           vm.max_map_count=262144
           vm.swappiness=0
           net.ipv4.tcp_retries2=5
           fs.file-max=1048576
           EOT
-          
+
           sudo sysctl -p
 
       - name: Terraform deploy - simple deployments product module
@@ -140,7 +140,7 @@ jobs:
 
   lib-check:
     name: Check libraries
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Checkout
@@ -164,9 +164,8 @@ jobs:
           - .
           - tests/integration/relations/opensearch_provider/application-charm
     name: Build charm | ${{ matrix.path }}
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v29.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v31.0.1
     with:
-      cache: false
       path-to-charm-directory: ${{ matrix.path }}
 
   integration-test:
@@ -175,22 +174,9 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v29.0.0
+    uses: ./.github/workflows/integration_test.yaml
     with:
-      juju-snap-channel: 3.6/candidate
-      _beta_allure_report: true
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
-      cloud: lxd
-    secrets:
-      # GitHub appears to redact each line of a multi-line secret
-      # Avoid putting `{` or `}` on a line by itself so that it doesn't get redacted in logs
-      integration-test: |
-        { "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
-          "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
-          "AZURE_STORAGE_ACCOUNT": "${{ secrets.AZURE_STORAGE_ACCOUNT }}",
-          "AZURE_SECRET_KEY": "${{ secrets.AZURE_SECRET_KEY }}",
-          "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
-          "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
-          "GCP_SERVICE_ACCOUNT": "${{ secrets.GCP_SERVICE_ACCOUNT }}", }
+    secrets: inherit
     permissions:
-      contents: write
+      contents: write # Needed for Allure Report

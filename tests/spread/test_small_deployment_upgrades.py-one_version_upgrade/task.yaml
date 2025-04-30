@@ -1,0 +1,11 @@
+summary: test_small_deployment_upgrades.py
+environment:
+  TEST_MODULE: upgrades/test_small_deployment_upgrades.py
+variants:
+  - -ubuntu24
+systems:
+  - self-hosted-linux-amd64-noble-large
+execute: |
+  tox run -e integration -- "tests/integration/$TEST_MODULE" --model testing --alluredir="$SPREAD_TASK/allure-results" -m 'group(id="one_version_upgrade")'
+artifacts:
+  - allure-results

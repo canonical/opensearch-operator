@@ -8,26 +8,23 @@ import pytest
 from juju.application import Application
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import APP_NAME, CONFIG_OPTS, MODEL_CONFIG, SERIES, UNIT_IDS
+from ..helpers import APP_NAME, CONFIG_OPTS, MODEL_CONFIG, UNIT_IDS
 from ..helpers_deployments import wait_until
 from .helpers_manual_tls import MANUAL_TLS_CERTIFICATES_APP_NAME, ManualTLSAgent
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy_with_manual_tls(ops_test: OpsTest) -> None:
+async def test_build_and_deploy_with_manual_tls(ops_test: OpsTest, charm, series) -> None:
     """Build and deploy prod cluster of OpenSearch with Manual TLS Operator integration."""
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
     os_app: Application = await ops_test.model.deploy(
-        my_charm,
+        charm,
         num_units=len(UNIT_IDS),
-        series=SERIES,
+        series=series,
         application_name=APP_NAME,
         config=CONFIG_OPTS,
     )

@@ -56,10 +56,8 @@ PROTECTED_INDICES = [
 
 
 @pytest.mark.skip(reason="Merge 2.18 change")
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_charm):
+async def test_create_relation(ops_test: OpsTest, application_charm, charm, series):
     """Test basic functionality of relation interface."""
     # Deploy both charms (multiple units for each application to test that later they correctly
     # set data in the relation application databag using only the leader unit).
@@ -84,10 +82,10 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
             series=SERIES,
         ),
         ops_test.model.deploy(
-            opensearch_charm,
+            charm,
             application_name=OPENSEARCH_APP_NAME,
             num_units=NUM_UNITS,
-            series=SERIES,
+            series=series,
             config=CONFIG_OPTS,
         ),
     )
@@ -114,8 +112,6 @@ async def test_create_relation(ops_test: OpsTest, application_charm, opensearch_
 
 
 @pytest.mark.skip(reason="Merge 2.18 change")
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_index_usage(ops_test: OpsTest):
     """Check we can update and delete things.
@@ -154,8 +150,6 @@ async def test_index_usage(ops_test: OpsTest):
 
 
 @pytest.mark.skip(reason="Merge 2.18 change")
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_bulk_index_usage(ops_test: OpsTest):
     """Check we can update and delete things using bulk api."""
@@ -197,8 +191,6 @@ async def test_bulk_index_usage(ops_test: OpsTest):
 
 
 @pytest.mark.skip(reason="Merge 2.18 change")
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_version(ops_test: OpsTest):
     """Check version reported in the databag is consistent with the version on the charm."""
@@ -227,8 +219,6 @@ async def get_secret_data(ops_test, secret_uri):
 
 
 @pytest.mark.skip(reason="Merge 2.18 change")
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_dashboard_relation(ops_test: OpsTest):
     """Test we can create relations with admin permissions."""
@@ -261,8 +251,6 @@ async def test_dashboard_relation(ops_test: OpsTest):
 
 
 @pytest.mark.skip(reason="Merge 2.18 change")
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_dashboard_relation_password_change(ops_test: OpsTest):
     """Test we can create relations with admin permissions."""
@@ -292,8 +280,6 @@ async def test_dashboard_relation_password_change(ops_test: OpsTest):
 
 
 @pytest.mark.skip(reason="Merge 2.18 change")
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_scaling(ops_test: OpsTest):
     """Test that scaling correctly updates endpoints in databag.
@@ -358,8 +344,6 @@ async def test_scaling(ops_test: OpsTest):
 
 
 @pytest.mark.skip(reason="Merge 2.18 change")
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_multiple_relations(ops_test: OpsTest, application_charm):
     """Test that two different applications can connect to the database."""
@@ -425,8 +409,6 @@ async def test_multiple_relations(ops_test: OpsTest, application_charm):
 
 
 @pytest.mark.skip(reason="Merge 2.18 change")
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
     """Test that two different applications can connect to the database."""
@@ -464,8 +446,6 @@ async def test_multiple_relations_accessing_same_index(ops_test: OpsTest):
 
 
 @pytest.mark.skip(reason="Merge 2.18 change")
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_admin_relation(ops_test: OpsTest):
     """Test we can create relations with admin permissions."""
@@ -503,8 +483,6 @@ async def test_admin_relation(ops_test: OpsTest):
 
 
 @pytest.mark.skip(reason="Merge 2.18 change")
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_admin_permissions(ops_test: OpsTest):
     """Test admin permissions behave the way we want.
@@ -573,8 +551,6 @@ async def test_admin_permissions(ops_test: OpsTest):
 
 
 @pytest.mark.skip(reason="Merge 2.18 change")
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_normal_user_permissions(ops_test: OpsTest):
     """Test normal user permissions behave the way we want.
@@ -636,8 +612,6 @@ async def test_normal_user_permissions(ops_test: OpsTest):
 
 
 @pytest.mark.skip(reason="Merge 2.18 change")
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_relation_broken(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
@@ -693,8 +667,6 @@ async def test_relation_broken(ops_test: OpsTest):
 
 
 @pytest.mark.skip(reason="Merge 2.18 change")
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_data_persists_on_relation_rejoin(ops_test: OpsTest):
     """Verify that if we recreate a relation, we can access the same index."""

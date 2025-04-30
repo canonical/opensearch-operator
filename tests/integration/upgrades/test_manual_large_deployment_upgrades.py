@@ -10,14 +10,7 @@ from pytest_operator.plugin import OpsTest
 
 from ..ha.continuous_writes import ContinuousWrites
 from ..ha.helpers import assert_continuous_writes_consistency
-from ..helpers import (
-    APP_NAME,
-    CONFIG_OPTS,
-    IDLE_PERIOD,
-    MODEL_CONFIG,
-    SERIES,
-    run_action,
-)
+from ..helpers import APP_NAME, CONFIG_OPTS, IDLE_PERIOD, MODEL_CONFIG, run_action
 from ..helpers_deployments import get_application_units, wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 
@@ -41,11 +34,9 @@ WORKLOAD = {
 
 
 @pytest.mark.skip(reason="Fix with DPE-4528")
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_large_deployment_deploy_original_charm(ops_test: OpsTest) -> None:
+async def test_large_deployment_deploy_original_charm(ops_test: OpsTest, series) -> None:
     """Build and deploy the charm for large deployment tests."""
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
@@ -71,7 +62,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest) -> None
             OPENSEARCH_ORIGINAL_CHARM_NAME,
             application_name=OPENSEARCH_MAIN_APP_NAME,
             num_units=WORKLOAD[OPENSEARCH_MAIN_APP_NAME],
-            series=SERIES,
+            series=series,
             channel=OPENSEARCH_INITIAL_CHANNEL,
             config=main_orchestrator_conf | CONFIG_OPTS,
         ),
@@ -79,7 +70,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest) -> None
             OPENSEARCH_ORIGINAL_CHARM_NAME,
             application_name=OPENSEARCH_FAILOVER_APP_NAME,
             num_units=WORKLOAD[OPENSEARCH_FAILOVER_APP_NAME],
-            series=SERIES,
+            series=series,
             channel=OPENSEARCH_INITIAL_CHANNEL,
             config=failover_orchestrator_conf | CONFIG_OPTS,
         ),
@@ -87,7 +78,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest) -> None
             OPENSEARCH_ORIGINAL_CHARM_NAME,
             application_name=APP_NAME,
             num_units=WORKLOAD[APP_NAME],
-            series=SERIES,
+            series=series,
             channel=OPENSEARCH_INITIAL_CHANNEL,
             config=data_hot_conf | CONFIG_OPTS,
         ),
@@ -128,11 +119,9 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest) -> None
 
 
 @pytest.mark.skip(reason="Fix with DPE-4528")
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_manually_upgrade_to_local(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, charm
 ) -> None:
     """Test upgrade from usptream to currently locally built version."""
     units = await get_application_units(ops_test, OPENSEARCH_MAIN_APP_NAME)
@@ -147,9 +136,6 @@ async def test_manually_upgrade_to_local(
     assert action.status == "completed"
 
     logger.info("Build charm locally")
-    global charm
-    if not charm:
-        charm = await ops_test.build_charm(".")
 
     async with ops_test.fast_forward():
         for app, unit_count in WORKLOAD.items():

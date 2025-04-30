@@ -1,0 +1,9 @@
+summary: test_roles_managements.py
+environment:
+  TEST_MODULE: ha/test_roles_managements.py
+systems:
+  - self-hosted-linux-amd64-noble-large
+execute: |
+  tox run -e integration -- "tests/integration/$TEST_MODULE" --model testing --alluredir="$SPREAD_TASK/allure-results"
+artifacts:
+  - allure-results
