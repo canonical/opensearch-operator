@@ -414,25 +414,22 @@ class OpenSearchPeerClustersManager:
         logger.info("Less than 3 CM-eligible units in this cluster")
         return False
 
-    def validate_recommended_cm_unit_count(
-        self, nodes: Optional[List[Node]] = None, only_validate_if_blocked: bool = False
-    ) -> None:
-        """Sets blocked status if validate_roles fails"""
-        if (
-            only_validate_if_blocked
-            and self._charm.app.status.message != PClusterWrongNodesCountForQuorum
-        ):
-            return
+    def validate_recommended_cm_unit_count(self, nodes: Optional[List[Node]] = None) -> None:
+        """Validates that the cluster has at least 3 CM-eligible units.
 
+        If validation fails, sets the application status to Blocked.
+        """
         if nodes is None:
             nodes = ClusterTopology.nodes(
                 self._charm.opensearch, self._opensearch.is_node_up(), self._charm.alt_hosts
             )
 
         if self.has_recommended_cm_count(nodes):
+            self._charm.peers_data.delete(Scope.APP, "is_expecting_cm_unit")
             self._charm.status.clear(PClusterWrongNodesCountForQuorum, app=True)
             return
 
+        self._charm.peers_data.put(Scope.APP, "is_expecting_cm_unit", True)
         self._charm.status.set(BlockedStatus(PClusterWrongNodesCountForQuorum), app=True)
 
     def apps_in_fleet(self) -> List[PeerClusterApp]:

@@ -4,18 +4,16 @@
 
 In this step, we will set up a development environment with the required components for deploying Charmed OpenSearch.
 
-[note]
-Before you start, make sure your machine meets the [minimum system requirements](/t/14565).
-[/note]
+>Before you start, make sure your machine meets the [minimum system requirements](/t/14565).
 
 ## Summary
-* [Set up LXD](#heading--set-up-lxd)
-* [Set up Juju](#heading--set-up-juju)
-* [Set kernel parameters](#heading--kernel-parameters)
+* [Set up LXD](#set-up-lxd)
+* [Set up Juju](#set-up-juju)
+* [Set kernel parameters](#set-kernel-parameters)
 
 ---
 
-<a href="#heading--set-up-lxd"><h2 id="heading--set-up-lxd"> Set up LXD </h2></a>
+## Set up LXD
 
 The simplest way to get started with Charmed OpenSearch is to set up a local LXD cloud. [LXD](https://documentation.ubuntu.com/lxd/en/latest/) is a system container and virtual machine manager that comes pre-installed on Ubuntu. Juju interfaces with LXD to control the containers on which Charmed OpenSearch runs.
 
@@ -40,7 +38,7 @@ You can list all LXD containers by executing the command `lxc list`. At this poi
 +------+-------+------+------+------+-----------+
 ```
 
-<a href="#heading--set-up-juju"><h2 id="heading--set-up-juju"> Set up Juju </h2></a>
+## Set up Juju
 
 [Juju](https://juju.is/docs/juju) is an Operator Lifecycle Manager (OLM) for clouds, bare metal, LXD or Kubernetes. We will be using it to deploy and manage Charmed OpenSearch. 
 
@@ -107,7 +105,7 @@ Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  11:26:13Z
 ```
 
-<a href="#heading--kernel-parameters"><h2 id="heading--kernel-parameters"> Set kernel parameters </h2></a>
+## Set kernel parameters
 
 Before deploying Charmed OpenSearch, we need to set some [kernel parameters](https://www.kernel.org/doc/Documentation/sysctl/vm.txt). These are requirements for OpenSearch to function correctly. 
 

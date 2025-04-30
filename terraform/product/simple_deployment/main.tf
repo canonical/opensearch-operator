@@ -21,6 +21,7 @@ module "opensearch" {
   storage           = var.opensearch.storage
   endpoint_bindings = var.opensearch.endpoint_bindings
   machines          = var.opensearch.machines
+  expose            = var.opensearch.expose
 
   self-signed-certificates = var.self-signed-certificates
 }
@@ -40,6 +41,7 @@ module "opensearch-dashboards" {
   constraints       = var.opensearch-dashboards.constraints
   endpoint_bindings = var.opensearch-dashboards.endpoint_bindings
   machines          = var.opensearch-dashboards.machines
+  expose            = var.opensearch-dashboards.expose
 }
 
 # Integrator apps and grafana-agent

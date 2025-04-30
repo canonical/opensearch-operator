@@ -22,6 +22,7 @@ The module offers the following configurable inputs:
 | `units`       | number      | Number of units to be deployed                            | False      |
 | `constraints` | string      | Machine constraints for the charm                         | False      |
 | `storage`     | map(string) | Storage description, must follow the juju provider schema | False      |
+| `expose`      | bool        | Expose block, if set to true, opens to anyone's access    | False      |
 
 
 ### Outputs

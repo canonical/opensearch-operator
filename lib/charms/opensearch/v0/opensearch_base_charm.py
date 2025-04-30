@@ -489,6 +489,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch_peer_cm.is_provider():
             self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
+        # update any orchestrators about planned units
+        if self.opensearch_peer_cm.is_consumer():
+            self.peer_cluster_requirer.refresh_requirer_relation_data()
+            self.peer_cluster_requirer.apply_orchestrator_status()
+
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
 
@@ -498,9 +503,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.unit.is_leader():
             # Recompute the node roles in case self-healing didn't trigger leader related event
             self._recompute_roles_if_needed(event)
-            self.opensearch_peer_cm.validate_recommended_cm_unit_count(
-                only_validate_if_blocked=True
-            )
+            if self.peers_data.get(Scope.APP, "is_expecting_cm_unit"):
+                # indicates we previously scaled down to <3 CM-eligible units in the cluster
+                self.opensearch_peer_cm.validate_recommended_cm_unit_count()
+
         elif event.relation.data.get(event.app):
             # if app_data + app_data["nodes_config"]: Reconfigure + restart node on the unit
             self._reconfigure_and_restart_unit_if_needed()
@@ -732,6 +738,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
+        if not self.opensearch_peer_cm.deployment_desc():
+            logger.info("Deployment description not ready yet, deferring and trying later.")
+            event.defer()
+            return
+
         perf_profile_needs_restart = False
         plugin_needs_restart = False
 
@@ -765,13 +776,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if original_status:
                 self.status.set(original_status)
 
-        if self.opensearch_peer_cm.deployment_desc():
-            perf_profile_needs_restart = self.performance_profile.apply(
-                self.config.get(PERFORMANCE_PROFILE)
-            )
-        else:
-            event.defer()
-            return
+        perf_profile_needs_restart = self.performance_profile.apply(
+            self.config.get(PERFORMANCE_PROFILE)
+        )
 
         if self.opensearch.is_service_started() and (
             plugin_needs_restart or perf_profile_needs_restart
