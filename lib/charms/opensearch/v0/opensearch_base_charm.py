@@ -721,6 +721,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         if not self.opensearch.is_node_up():
             logger.debug("Node not up yet, deferring plugin check")
+            # possible enhancement:
+            # currently we wait for Opensearch to be started before applying any plugin
+            # this could be improved as some plugins don't require the service to run
             event.defer()
             return
 
