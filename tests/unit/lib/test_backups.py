@@ -99,7 +99,7 @@ def harness(active_relation):
         harness_obj.begin()
         charm = harness_obj.charm
         # Override the config to simulate the TestPlugin
-        # As config.yaml does not exist, the setup below simulates it
+        # As config.yml does not exist, the setup below simulates it
         charm.plugin_manager._charm_config = harness_obj.model._config
         # Override the ConfigExposedPlugins
         charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
@@ -478,7 +478,7 @@ class TestBackups(unittest.TestCase):
 
             self.charm = self.harness.charm
             # Override the config to simulate the TestPlugin
-            # As config.yaml does not exist, the setup below simulates it
+            # As config.yml does not exist, the setup below simulates it
             self.charm.plugin_manager._charm_config = self.harness.model._config
             self.plugin_manager = self.charm.plugin_manager
             # Override the ConfigExposedPlugins

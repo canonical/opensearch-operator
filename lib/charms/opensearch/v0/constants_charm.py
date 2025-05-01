@@ -123,4 +123,6 @@ S3_RELATION = "s3-credentials"
 AZURE_REPO_BASE_PATH = "/"
 AZURE_RELATION = "azure-credentials"
 
+OAUTH_RELATION = "oauth"
+
 PERFORMANCE_PROFILE = "profile"
