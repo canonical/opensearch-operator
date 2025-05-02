@@ -3,13 +3,13 @@
 name: Tests
 
 concurrency:
-  group: "${{ github.workflow }}-${{ github.ref }}"
+  group: '${{ github.workflow }}-${{ github.ref }}'
   cancel-in-progress: true
 
 on:
   pull_request:
   schedule:
-    - cron: "53 0 * * *" # Daily at 00:53 UTC
+    - cron: '53 0 * * *' # Daily at 00:53 UTC
   # Triggered on push to branch "main" by .github/workflows/release.yaml
   workflow_call:
     outputs:
@@ -56,6 +56,8 @@ jobs:
 
   terraform-test:
     name: Terraform - Validation and Simple Deployment product
+    # TODO remove this when terraform units=0 bug is fixed
+    continue-on-error: true
     runs-on: ubuntu-22.04
     timeout-minutes: 120
     steps:

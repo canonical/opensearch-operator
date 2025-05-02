@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Class for Setting configuration in opensearch config files."""
+
 import logging
 from collections import namedtuple
 from typing import Any, Dict, List, Optional
@@ -69,6 +70,44 @@ class OpenSearchConfig:
             "-Djdk.tls.client.protocols=TLSv1.2",
         )
 
+    def add_oidc_auth(self, openid_connect_url: str):
+        """Adds OIDC auth scheme on the security config."""
+        oidc_config = {
+            "http_enabled": True,
+            "transport_enabled": True,
+            # NOTE: Order value needs to be lower than basic_internal_auth_domain section, which
+            # is set to 4 by default. Only available number is 1, if we want a different number,
+            # all other numbers need to be reshuffled.
+            "order": 1,
+            "http_authenticator": {
+                "type": "openid",
+                "challenge": False,
+                "config": {
+                    "subject_key": "sub",
+                    "openid_connect_url": openid_connect_url,
+                    "openid_connect_idp": {
+                        "enable_ssl": True,
+                        "verify_hostnames": False,
+                        # NOTE: this assumes Hydra and Opensearch are using the same certificates
+                        # relation.
+                        "pemtrustedcas_filepath": f"{self._opensearch.paths.certs}/chain.pem",
+                    },
+                },
+            },
+            "authentication_backend": {"type": "noop"},
+        }
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML,
+            "config/dynamic/authc/openid_auth_domain",
+            oidc_config,
+        )
+
+    def remove_oidc_auth(self):
+        """Removes the OIDC auth scheme from security config."""
+        self._opensearch.config.delete(
+            self.SECURITY_CONFIG_YML, "config/dynamic/authc/openid_auth_domain"
+        )
+
     def apply_performance_profile(self, profile: OpenSearchPerfProfile):
         """Apply the performance profile to the opensearch config."""
         self._opensearch.config.replace(
@@ -124,7 +163,10 @@ class OpenSearchConfig:
             keystore_pwd,
         )
 
-        for store_type, pwd in [("keystore", keystore_pwd), ("truststore", truststore_pwd)]:
+        for store_type, pwd in [
+            ("keystore", keystore_pwd),
+            ("truststore", truststore_pwd),
+        ]:
             self._opensearch.config.put(
                 self.CONFIG_YML,
                 f"plugins.security.ssl.{target_conf_layer}.{store_type}_password",
@@ -209,7 +251,9 @@ class OpenSearchConfig:
         self._opensearch.config.put(self.CONFIG_YML, "plugins.security.disabled", False)
         self._opensearch.config.put(self.CONFIG_YML, "plugins.security.ssl.http.enabled", True)
         self._opensearch.config.put(
-            self.CONFIG_YML, "plugins.security.ssl.transport.enforce_hostname_verification", True
+            self.CONFIG_YML,
+            "plugins.security.ssl.transport.enforce_hostname_verification",
+            True,
         )
 
         # security plugin rest API access

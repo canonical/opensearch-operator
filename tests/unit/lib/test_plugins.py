@@ -118,7 +118,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.rel_id = self.harness.add_relation(PeerRelationName, self.charm.app.name)
 
         # Override the config to simulate the TestPlugin
-        # As config.yaml does not exist, the setup below simulates it
+        # As config.yml does not exist, the setup below simulates it
         self.harness.model._config = {"plugin_test": True, "plugin_test_already_installed": False}
         self.charm.plugin_manager._charm_config = self.harness.model._config
         # Override the plugins folder path

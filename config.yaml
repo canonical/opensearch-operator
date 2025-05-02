@@ -32,6 +32,16 @@ options:
         cluster_manager, data, data.hot, data.warm, data.cold, ingest, coordinating, voting_only, ml.
       Other dynamic roles are not validated.
 
+  roles_mapping:
+    type: string
+    default: "{}"
+    description: |
+      Mapping between IAM user ids and data-integrator created roles. The mapping
+      will be a json with the following format: `{<hydra-id>: <opensearch-role>, ...}`
+      This option will always represent a complete state of expected assignments, passing
+      an empty json will result on all roles/users to be unmapped on OpenSearch. Any
+      hydra-id that is not found on the mapping will be revoked.
+
   plugin_opensearch_knn:
     default: true
     type: boolean
@@ -42,7 +52,7 @@ options:
     default: "production"
     description: |
       Profile representing the scope of deployment, and used to tune resource allocation.
-      Allowed values are: "production", "staging" or "testing"
-      Production will tune opensearch for maximum performance while default will tune for
-      minimal running performance.
+      Allowed values are: "production", "staging" or "testing".
+      "production" will tune opensearch for maximum performance while "testing" will tune for
+      minimal resources footprint.
       Performance tuning is described on: https://opensearch.org/docs/latest/tuning-your-cluster/performance/

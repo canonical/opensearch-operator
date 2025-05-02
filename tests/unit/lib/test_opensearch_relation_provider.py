@@ -210,8 +210,19 @@ class TestOpenSearchProvider(unittest.TestCase):
 
     @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_user")
     @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_role")
+    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_role_mapping")
+    @patch(
+        "charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider._get_relation_mapped_users"
+    )
     @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.patch_user")
-    def test_create_opensearch_users(self, _patch_user, _create_role, _create_user):
+    def test_create_opensearch_users(
+        self,
+        _patch_user,
+        _get_relation_mapped_users,
+        _create_role_mapping,
+        _create_role,
+        _create_user,
+    ):
         username = "username"
         hashed_pw = "my_cool_hash"
         extra_user_roles = "admin"
@@ -220,6 +231,8 @@ class TestOpenSearchProvider(unittest.TestCase):
         patches = [
             {"op": "replace", "path": "/opendistro_security_roles", "value": roles},
         ]
+        mapped_users = ["test_oidc"]
+        _get_relation_mapped_users.return_value = mapped_users
         self.opensearch_provider.create_opensearch_users(
             username, hashed_pw, index, extra_user_roles, relation_id=0
         )
@@ -232,6 +245,8 @@ class TestOpenSearchProvider(unittest.TestCase):
             ),
         )
         _create_user.assert_called_with(username, roles, hashed_pw)
+        _get_relation_mapped_users.assert_called_with(username)
+        _create_role_mapping.assert_called_with(username, mapped_users)
         _patch_user.assert_called_with(username, patches)
         assert self.harness.get_relation_data(self.peers_rel_id, self.charm.app.name)[
             ClientUsersDict
@@ -416,11 +431,22 @@ class TestOpenSearchProvider(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_role")
     @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_role")
     @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.remove_user")
+    @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_role_mapping")
+    @patch(
+        "charms.opensearch.v0.opensearch_relation_provider.OpenSearchProvider._get_relation_mapped_users"
+    )
     @patch("charms.opensearch.v0.opensearch_users.OpenSearchUserManager.create_user")
     # Mocks to remove network operations
     @patch("socket.socket.connect")
     def test_avoid_removing_non_charmed_users_and_roles(
-        self, _, mock_create_user, mock_remove_user, mock_create_role, mock_remove_role
+        self,
+        _,
+        mock_create_user,
+        mock_get_relation_mapped_users,
+        mock_create_role_mapping,
+        mock_remove_user,
+        mock_create_role,
+        mock_remove_role,
     ):
 
         self.client_second_rel_id = self.harness.add_relation(ClientRelationName, "application")
@@ -473,6 +499,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         mock_response_root(self.charm.unit_name, self.charm.opensearch.host)
         mock_response_nodes(self.charm.unit_name, self.charm.opensearch.host)
 
+        mock_get_relation_mapped_users.return_value = []
         # 1. Testing relation user creation
         self.harness.charm.opensearch_provider.create_opensearch_users(
             username=relation_user1,
@@ -483,7 +510,10 @@ class TestOpenSearchProvider(unittest.TestCase):
         )
         mock_create_user.assert_called_with(relation_user1, [relation_user1], "pw1")
         mock_create_role.assert_called_with(role_name=relation_user1, permissions=ANY)
+        mock_create_role_mapping.assert_called_with(relation_user1, [])
 
+        mapped_users = ["test_oidc"]
+        mock_get_relation_mapped_users.return_value = mapped_users
         self.harness.charm.opensearch_provider.create_opensearch_users(
             username=relation_user2,
             hashed_pwd="pw2",
@@ -493,6 +523,7 @@ class TestOpenSearchProvider(unittest.TestCase):
         )
         mock_create_user.assert_called_with(relation_user2, [relation_user2], "pw2")
         mock_create_role.assert_called_with(role_name=relation_user2, permissions=ANY)
+        mock_create_role_mapping.assert_called_with(relation_user2, mapped_users)
 
         assert self.harness.get_relation_data(self.peers_rel_id, f"{self.charm.app.name}") == {
             ClientUsersDict: json.dumps(
