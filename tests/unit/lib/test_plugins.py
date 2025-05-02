@@ -169,9 +169,31 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.plugin_manager.run = MagicMock(return_value=False)
         self.charm.opensearch_config.update_host_if_needed = MagicMock(return_value=False)
         self.charm.opensearch.is_started = MagicMock(return_value=True)
+        self.charm.opensearch.is_node_up = MagicMock(return_value=True)
         self.plugin_manager.check_plugin_manager_ready_for_api = MagicMock(return_value=True)
         self.harness.update_config({})
         self.plugin_manager.run.assert_called()
+
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
+    )
+    @patch(
+        "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
+        new_callable=PropertyMock,
+    )
+    def test_check_plugin_not_called_if_not_started(self, mock_version, deployment_desc) -> None:
+        """Plugin manager should not be called if node not started."""
+        self.harness.set_leader(True)
+        self.peers_data.put(Scope.APP, "security_index_initialised", True)
+        self.harness.set_leader(False)
+        deployment_desc.return_value = "something"
+
+        self.plugin_manager.run = MagicMock(return_value=False)
+        self.charm.opensearch_config.update_host_if_needed = MagicMock(return_value=False)
+        self.charm.opensearch.is_started = MagicMock(return_value=False)
+        self.charm.opensearch.is_node_up = MagicMock(return_value=False)
+        self.harness.update_config({})
+        self.plugin_manager.run.assert_not_called()
 
     @patch("charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.update")
     @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")

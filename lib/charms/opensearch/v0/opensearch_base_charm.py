@@ -721,8 +721,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
-        if not self.opensearch_peer_cm.deployment_desc():
-            logger.info("Deployment description not ready yet, deferring and trying later.")
+        if not self.opensearch.is_node_up():
+            logger.debug("Node not up yet, deferring plugin check")
+            # possible enhancement:
+            # currently we wait for Opensearch to be started before applying any plugin
+            # this could be improved as some plugins don't require the service to run
             event.defer()
             return
 
@@ -740,7 +743,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.status.set(MaintenanceStatus(PluginConfigCheck))
 
             plugin_needs_restart = self.plugin_manager.run()
-
         except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
             if isinstance(e, OpenSearchNotFullyReadyError):
                 logger.warning("Plugin management: cluster not ready yet at config changed")
