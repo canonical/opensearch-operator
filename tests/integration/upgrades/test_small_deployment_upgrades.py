@@ -25,7 +25,7 @@ PROFILES_REVISION = 185
 STARTING_VERSION = "2.17.0"
 
 VERSION_TO_REVISION = {
-    STARTING_VERSION: 162,
+    STARTING_VERSION: 168,
     "2.18.0": 209,
 }
 
@@ -242,7 +242,6 @@ async def test_upgrade_rollback_from_local(
             app,
             switch=OPENSEARCH_ORIGINAL_CHARM_NAME,
             channel=OPENSEARCH_CHANNEL,
-            revision=VERSION_TO_REVISION[version],
             config=CONFIG_OPTS if VERSION_TO_REVISION[version] > PROFILES_REVISION else {},
         )
         # Wait until we are set in an idle state and can rollback the revision.
