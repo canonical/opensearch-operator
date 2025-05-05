@@ -171,7 +171,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         # if this is a failover orchestrator, check if it should promote itself
         if (
             deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR
-            and self._should_promote_failover()
+            and self.should_promote_failover_to_main()
         ):
             logger.info("Promoting failover orchestrator to main orchestrator")
             self._promote_failover()
@@ -286,9 +286,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             orchestrators.delete("failover")
             self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
 
-    def _should_promote_failover(self) -> bool:
-        """Check if majority of related apps are disconnected from main orhcestrator"""
-        if not (self.charm.is_admin_user_configured() and self.charm.tls.is_fully_configured()):
+    def should_promote_failover_to_main(self) -> bool:
+        """Check if majority of related apps are disconnected from main orchestrator"""
+        if not self.charm.tls.is_fully_configured():
             return False
         # check how many related apps are disconnected from main orchestrator
         target_relation_ids = [
@@ -332,7 +332,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             self.put_in_rel({"trigger": "main"}, rel_id=rel_id)
 
         # check if any credentials exist without relations
-        self._has_credentials_with_missing_relations()
+        self._block_if_has_credentials_with_missing_relations()
 
         # ensuring quorum
         deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
@@ -340,7 +340,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if len(cms) < 3:
             self.charm.status.set(BlockedStatus(PClusterWrongNodesCountForQuorum), app=True)
 
-    def _has_credentials_with_missing_relations(self) -> None:
+    def _block_if_has_credentials_with_missing_relations(self) -> None:
         """Checks if the relation data has credentials for non-related apps"""
         if not self.charm.unit.is_leader():
             return
@@ -1216,7 +1216,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         if event_src_cluster_type == "main" and orchestrators.failover_app:
             if orchestrators.failover_app.id != deployment_desc.app.id:
                 self._put_main_orchestrator_registered(orchestrators.failover_rel_id, False)
-            elif self.charm.peer_cluster_provider._should_promote_failover():
+            elif self.charm.peer_cluster_provider.should_promote_failover_to_main():
                 logger.info("Promoting failover orchestrator to main orchestrator")
                 self.charm.peer_cluster_provider._promote_failover()
                 self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
