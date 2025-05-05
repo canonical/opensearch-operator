@@ -582,6 +582,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             elif self.app.planned_units() == 0 and self.model.get_relation(PeerRelationName):
                 self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")
                 self.peers_data.delete(Scope.APP, "nodes_config")
+                self.peers_data.delete(Scope.APP, "security_index_initialised")
+                self.peers_data.delete(Scope.APP, "bootstrapped")
 
         # we attempt to flush the translog to disk
         if self.opensearch.is_node_up():
@@ -1421,8 +1423,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         hashed_pwd, pwd = generate_hashed_password(pwd)
 
         # Updating security index
-        # We need to do this for all credential changes
-        if secret:
+        # We need to do this for all credential changes if the node is up
+        if secret and self.opensearch.is_node_up():
             self.user_manager.update_user_password(user, hashed_pwd)
 
         # In case it's a new user, OR it's a system user (that has an entry in internal_users.yml)
