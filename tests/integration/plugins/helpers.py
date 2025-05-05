@@ -124,7 +124,7 @@ async def create_index_and_bulk_insert(
         extra_mappings=extra_mappings,
     )
     payload, payload_list = generate_bulk_training_data(
-        index_name, vector_name, docs_count=100, dimensions=4, has_result=True
+        index_name, vector_name, docs_count=1000, dimensions=4, has_result=True
     )
     # Insert data in bulk
     await bulk_insert(ops_test, app, endpoint, payload)

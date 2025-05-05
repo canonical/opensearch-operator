@@ -9,7 +9,7 @@ from pytest_operator.plugin import OpsTest
 
 from ..ha.continuous_writes import ContinuousWrites
 from ..ha.helpers import app_name
-from ..helpers import APP_NAME, MODEL_CONFIG, run_action, set_watermark
+from ..helpers import APP_NAME, CONFIG_OPTS, MODEL_CONFIG, run_action, set_watermark
 from ..helpers_deployments import get_application_units, wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import assert_upgrade_to_local, refresh
@@ -21,12 +21,12 @@ OPENSEARCH_ORIGINAL_CHARM_NAME = "opensearch"
 OPENSEARCH_CHANNEL = "2/edge"
 OPENSEARCH_STABLE_CHANNEL = "2/stable"
 
-STARTING_VERSION = "2.15.0"
-
+PROFILES_REVISION = 185
+STARTING_VERSION = "2.17.0"
 
 VERSION_TO_REVISION = {
-    STARTING_VERSION: 144,
-    "2.16.0": 160,
+    STARTING_VERSION: 168,
+    "2.18.0": 209,
 }
 
 
@@ -68,6 +68,7 @@ async def _build_env(ops_test: OpsTest, version: str, series) -> None:
         channel=OPENSEARCH_CHANNEL,
         revision=VERSION_TO_REVISION[version],
         series=series,
+        config=CONFIG_OPTS if VERSION_TO_REVISION[version] > PROFILES_REVISION else {},
     )
 
     # Deploy TLS Certificates operator.
@@ -131,7 +132,9 @@ async def test_upgrade_between_versions(
 
         async with ops_test.fast_forward("60s"):
             logger.info("Refresh the charm")
-            await refresh(ops_test, app, revision=rev)
+            await refresh(
+                ops_test, app, revision=rev, config=CONFIG_OPTS if rev > PROFILES_REVISION else {}
+            )
 
             await wait_until(
                 ops_test,
@@ -176,7 +179,6 @@ async def test_upgrade_to_local(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, charm
 ) -> None:
     """Test upgrade from usptream to currently locally built version."""
-    logger.info("Build charm locally")
     await assert_upgrade_to_local(ops_test, c_writes, charm)
 
 
@@ -220,7 +222,7 @@ async def test_upgrade_rollback_from_local(
 
     async with ops_test.fast_forward("60s"):
         logger.info("Refresh the charm")
-        await refresh(ops_test, app, path=charm, config={"profile": "testing"})
+        await refresh(ops_test, app, path=charm, config=CONFIG_OPTS)
 
         await wait_until(
             ops_test,
@@ -235,13 +237,12 @@ async def test_upgrade_rollback_from_local(
         )
 
         logger.info(f"Rolling back to {version}")
-        # TODO: return to 2/edge channel instead once this channel's latest 2.17 charm
-        # revision points to snap rev. 65 instead of snap rev. 62.
         await refresh(
             ops_test,
             app,
             switch=OPENSEARCH_ORIGINAL_CHARM_NAME,
-            channel=OPENSEARCH_STABLE_CHANNEL,
+            channel=OPENSEARCH_CHANNEL,
+            config=CONFIG_OPTS if VERSION_TO_REVISION[version] > PROFILES_REVISION else {},
         )
         # Wait until we are set in an idle state and can rollback the revision.
         # app status blocked: that will happen if we are jumping N-2 versions in our test
@@ -261,6 +262,7 @@ async def test_upgrade_rollback_from_local(
             ops_test,
             app,
             revision=VERSION_TO_REVISION[version],
+            config=CONFIG_OPTS if VERSION_TO_REVISION[version] > PROFILES_REVISION else {},
         )
 
         await wait_until(
@@ -282,5 +284,4 @@ async def test_upgrade_from_version_to_local(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, version, charm
 ) -> None:
     """Test upgrade from usptream to currently locally built version."""
-    logger.info("Build charm locally")
     await assert_upgrade_to_local(ops_test, c_writes, charm)
