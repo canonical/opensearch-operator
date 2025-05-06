@@ -492,7 +492,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # update any orchestrators about planned units
         if self.opensearch_peer_cm.is_consumer():
             self.peer_cluster_requirer.refresh_requirer_relation_data()
-            self.peer_cluster_requirer.apply_orchestrator_status()
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -506,6 +505,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.peers_data.get(Scope.APP, "is_expecting_cm_unit"):
                 # indicates we previously scaled down to <3 CM-eligible units in the cluster
                 self.opensearch_peer_cm.validate_recommended_cm_unit_count()
+            self.peer_cluster_requirer.apply_orchestrator_status()
         elif event.relation.data.get(event.app):
             # if app_data + app_data["nodes_config"]: Reconfigure + restart node on the unit
             self._reconfigure_and_restart_unit_if_needed()

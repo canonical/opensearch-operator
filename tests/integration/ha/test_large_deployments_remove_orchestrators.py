@@ -11,7 +11,7 @@ from charms.opensearch.v0.constants_charm import (
     PClusterOrchestratorsRemoved,
     PeerRelationName,
 )
-from charms.opensearch.v0.models import DeploymentDescription, DeploymentType
+from charms.opensearch.v0.models import DeploymentDescription, DeploymentType, PeerClusterOrchestrators
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import CONFIG_OPTS, MODEL_CONFIG, SERIES
@@ -172,6 +172,16 @@ async def test_large_deployment_remove_orchestrators(ops_test: OpsTest) -> None:
     deployment_desc = DeploymentDescription.from_dict(json.loads(deployment_desc))
 
     assert deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+
+    # get orchestrators registered in data app
+    unit = ops_test.model.applications[DATA_APP].units[-1]
+    orchestrators = await get_application_relation_data(
+        ops_test, unit_name=unit.name, relation_name=PeerRelationName, key="orchestrators"
+    )
+    # ensure failover is the new main and that no failover is registered
+    orchestrators = PeerClusterOrchestrators.from_dict(json.loads(orchestrators))
+    assert orchestrators.main_app.name == FAILOVER_APP
+    assert orchestrators.failover_app is None
 
     # delete the main orchestrator (which is now failover)
     await ops_test.model.remove_application(
