@@ -505,7 +505,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.peers_data.get(Scope.APP, "is_expecting_cm_unit"):
                 # indicates we previously scaled down to <3 CM-eligible units in the cluster
                 self.opensearch_peer_cm.validate_recommended_cm_unit_count()
-            if self.model.get_relation(PeerClusterRelationName):
+            if self.model.relations[PeerClusterRelationName]:
                 self.peer_cluster_requirer.apply_orchestrator_status()
         elif event.relation.data.get(event.app):
             # if app_data + app_data["nodes_config"]: Reconfigure + restart node on the unit
