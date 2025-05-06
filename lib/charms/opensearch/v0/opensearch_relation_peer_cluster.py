@@ -21,10 +21,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.helper_charm import (
-    all_units,
-    format_unit_name,
-)
+from charms.opensearch.v0.helper_charm import all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.models import (
     AzureRelDataCredentials,
@@ -71,6 +68,7 @@ LIBAPI = 0
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
 LIBPATCH = 1
+
 
 class OpenSearchPeerClusterRelation(Object):
     """Base class for Peer cluster relations."""
@@ -155,7 +153,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         self.refresh_relation_data(event, event_rel_id=event.relation.id, can_defer=False)
         remote_app_units = self.charm.peers_data.get_object(Scope.APP, "remote_app_units") or {}
         n_units = remote_app_units.get(event.app.name, 0)
-        remote_app_units.update({ event.app.name: n_units + 1 })
+        remote_app_units.update({event.app.name: n_units + 1})
         self.charm.peers_data.put_object(Scope.APP, "remote_app_units", remote_app_units)
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):
@@ -262,7 +260,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         remote_app_units = self.charm.peers_data.get_object(Scope.APP, "remote_app_units")
         n_units = remote_app_units[event.app.name] - 1
-        remote_app_units.update({ event.app.name: n_units })
+        remote_app_units.update({event.app.name: n_units})
         self.charm.peers_data.put_object(Scope.APP, "remote_app_units", remote_app_units)
 
         trigger_app = PeerClusterApp.from_dict(trigger_app)
@@ -886,7 +884,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         remote_app_units = self.charm.peers_data.get_object(Scope.APP, "remote_app_units") or {}
         n_units = remote_app_units.get(event.app.name, 0) + 1
-        remote_app_units.update({ event.app.name: n_units })
+        remote_app_units.update({event.app.name: n_units})
         self.charm.peers_data.put_object(Scope.APP, "remote_app_units", remote_app_units)
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):  # noqa: C901
@@ -1191,7 +1189,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         remote_app_units = self.charm.peers_data.get_object(Scope.APP, "remote_app_units")
         n_units = remote_app_units[event.app.name] - 1
-        remote_app_units.update({ event.app.name: n_units })
+        remote_app_units.update({event.app.name: n_units})
         self.charm.peers_data.put_object(Scope.APP, "remote_app_units", remote_app_units)
         # handle scale-down at the charm level storage detaching, or??
         if n_units > 0:

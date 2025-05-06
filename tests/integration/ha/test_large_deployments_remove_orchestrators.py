@@ -11,7 +11,11 @@ from charms.opensearch.v0.constants_charm import (
     PClusterOrchestratorsRemoved,
     PeerRelationName,
 )
-from charms.opensearch.v0.models import DeploymentDescription, DeploymentType, PeerClusterOrchestrators
+from charms.opensearch.v0.models import (
+    DeploymentDescription,
+    DeploymentType,
+    PeerClusterOrchestrators,
+)
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import CONFIG_OPTS, MODEL_CONFIG, SERIES
