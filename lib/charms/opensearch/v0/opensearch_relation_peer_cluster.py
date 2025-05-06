@@ -935,7 +935,11 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             units=[
                 format_unit_name(unit, app=deployment_desc.app) for unit in all_units(self.charm)
             ],
-            roles=deployment_desc.config.roles if deployment_desc.start == StartMode.WITH_PROVIDED_ROLES else ClusterTopology.generated_roles()
+            roles=(
+                deployment_desc.config.roles
+                if deployment_desc.start == StartMode.WITH_PROVIDED_ROLES
+                else ClusterTopology.generated_roles()
+            ),
         )
         self.put_in_rel(data={"app": current_app.to_str()}, rel_id=event.relation.id)
 
