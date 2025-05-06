@@ -989,13 +989,10 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             return
 
         deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
-        if not (
-            orchestrators := PeerClusterOrchestrators.from_dict(
-                self.charm.peers_data.get_object(Scope.APP, "orchestrators")
-            )
-        ):
+        if not (orchestrators := self._charm.peers_data.get_object(Scope.APP, "orchestrators")):
             return
 
+        orchestrators = PeerClusterOrchestrators.from_dict(orchestrators)
         if orchestrators.failover_app and orchestrators.failover_app.id == deployment_desc.app.id:
             return
 
