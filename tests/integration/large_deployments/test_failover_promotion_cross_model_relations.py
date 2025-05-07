@@ -20,8 +20,7 @@ from charms.opensearch.v0.models import (
 from ops import Model
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import CONFIG_OPTS, IDLE_PERIOD, MODEL_CONFIG, SERIES
-from ..helpers_deployments import wait_until
+from ..helpers import CONFIG_OPTS, MODEL_CONFIG, SERIES
 from ..relations.helpers import get_application_relation_data
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 
@@ -32,7 +31,7 @@ DATA_APP = "opensearch-data"
 
 CLUSTER_NAME = "app"
 
-APP_UNITS = {MAIN_APP: 1, FAILOVER_APP: 3, DATA_APP: 1}
+APP_UNITS = {MAIN_APP: 1, FAILOVER_APP: 1, DATA_APP: 1}
 
 MAIN_ORCHESTRATOR_OFFER = "main-integration"
 FAILOVER_ORCHESTRATOR_OFFER = "failover-integration"
@@ -65,27 +64,9 @@ async def test_build_and_deploy(
             config={"cluster_name": CLUSTER_NAME} | CONFIG_OPTS,
         ),
     )
-
-    await wait_until(
-        ops_test,
-        apps=[TLS_CERTIFICATES_APP_NAME],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units={TLS_CERTIFICATES_APP_NAME: 1},
-        idle_period=IDLE_PERIOD,
-    )
     await ops_test.model.integrate(MAIN_APP, TLS_CERTIFICATES_APP_NAME)
 
-    await wait_until(
-        ops_test,
-        apps=[MAIN_APP],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units={MAIN_APP: APP_UNITS[MAIN_APP]},
-        idle_period=IDLE_PERIOD,
-        timeout=TIMEOUT,
-    )
-
+    ops_test.model.wait_for_idle(apps=[MAIN_APP, TLS_CERTIFICATES_APP_NAME], timeout=TIMEOUT)
     main_peer_cluster_orchestrator_offer = f"offer {ops_test.model.info.name}.{MAIN_APP}:{PeerClusterOrchestratorRelationName} {MAIN_ORCHESTRATOR_OFFER}"
     logger.info("Offering relations in main model...")
     await ops_test.juju(*main_peer_cluster_orchestrator_offer.split())
