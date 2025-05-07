@@ -989,7 +989,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             return
 
         deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
-        if not (orchestrators := self._charm.peers_data.get_object(Scope.APP, "orchestrators")):
+        if not (orchestrators := self.charm.peers_data.get_object(Scope.APP, "orchestrators")):
             return
 
         orchestrators = PeerClusterOrchestrators.from_dict(orchestrators)
