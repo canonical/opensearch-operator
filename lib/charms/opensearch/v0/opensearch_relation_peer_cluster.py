@@ -151,10 +151,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             return
 
         self.refresh_relation_data(event, event_rel_id=event.relation.id, can_defer=False)
-        remote_app_units = self.charm.peers_data.get_object(Scope.APP, "remote_app_units") or {}
-        n_units = remote_app_units.get(event.app.name, 0)
-        remote_app_units.update({event.app.name: n_units + 1})
-        self.charm.peers_data.put_object(Scope.APP, "remote_app_units", remote_app_units)
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):
         """Event received by all units in sub-cluster when a new sub-cluster joins the relation."""
@@ -258,11 +254,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if not (trigger_app := cluster_fleet_apps_rels.get(str(event.relation.id))):
             return
 
-        remote_app_units = self.charm.peers_data.get_object(Scope.APP, "remote_app_units")
-        n_units = remote_app_units[event.app.name] - 1
-        remote_app_units.update({event.app.name: n_units})
-        self.charm.peers_data.put_object(Scope.APP, "remote_app_units", remote_app_units)
-
         trigger_app = PeerClusterApp.from_dict(trigger_app)
         self._put_fleet_apps(
             deployment_desc=self.charm.opensearch_peer_cm.deployment_desc(),
@@ -272,7 +263,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         )
 
         # if the trigger app is the failover orchestrator and there are no planned units, delete it
-        if n_units > 0:
+        if len(event.relation.units) > 0:
             return
 
         cluster_fleet_apps = self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps")
@@ -879,13 +870,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
     def _on_peer_cluster_relation_joined(self, event: RelationJoinedEvent):
         """Event received when a new main-failover cluster unit joins the fleet."""
-        if not self.charm.unit.is_leader():
-            return
-
-        remote_app_units = self.charm.peers_data.get_object(Scope.APP, "remote_app_units") or {}
-        n_units = remote_app_units.get(event.app.name, 0) + 1
-        remote_app_units.update({event.app.name: n_units})
-        self.charm.peers_data.put_object(Scope.APP, "remote_app_units", remote_app_units)
+        pass
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):  # noqa: C901
         """Peer cluster relation change hook. Crucial to capture changes from the provider side."""
@@ -1188,12 +1173,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             self._clear_errors(f"error_from_requirer-{event.relation.id}")
             return
 
-        remote_app_units = self.charm.peers_data.get_object(Scope.APP, "remote_app_units")
-        n_units = remote_app_units[event.app.name] - 1
-        remote_app_units.update({event.app.name: n_units})
-        self.charm.peers_data.put_object(Scope.APP, "remote_app_units", remote_app_units)
         # handle scale-down at the charm level storage detaching, or??
-        if n_units > 0:
+        if len(event.relation.units) > 0:
             return
 
         # check the departed cluster which triggered this hook
