@@ -37,6 +37,7 @@ LIBPATCH = 1
 
 USER_ENDPOINT = "/_plugins/_security/api/internalusers"
 ROLE_ENDPOINT = "/_plugins/_security/api/roles"
+ROLESMAPPING_ENDPOINT = "/_plugins/_security/api/rolesmapping"
 
 
 class OpenSearchUserMgmtError(Exception):
@@ -243,6 +244,59 @@ class OpenSearchUserManager:
             raise OpenSearchUserMgmtError(f"patching user {user_name} failed")
 
         return resp
+
+    def create_role_mapping(self, role: str, mapped_users: List[str]) -> None:
+        """Creates or replaces role mapping for selected role with all of its users mapped to it.
+
+        Args:
+            role: name of the role for users being mapped to.
+            mapped_users: all the users, that should be mapped to the specified role.
+
+        Raises:
+            OpenSearchUserMgmtError: If the request fails.
+        """
+        try:
+            resp = self.opensearch.request(
+                "PUT",
+                f"{ROLESMAPPING_ENDPOINT}/{role}",
+                payload={"users": mapped_users, "backend_roles": [role]},
+            )
+        except OpenSearchHttpError as e:
+            logger.error(f"Couldn't create role mapping {str(e)}")
+            raise OpenSearchUserMgmtError(e)
+
+        if resp.get("status") != "CREATED" and not (
+            resp.get("status") == "OK" and "updated" in resp.get("message")
+        ):
+            raise OpenSearchUserMgmtError(f"creating role mapping {role} failed")
+
+    def remove_role_mapping(self, role: str) -> None:
+        """Remove the given role mapping if it exists.
+
+        Args:
+            role: name of the role mapping to be removed.
+
+        Raises:
+            OpenSearchUserMgmtError: If the request fails, or if role is empty
+        """
+        if not role:
+            raise OpenSearchUserMgmtError(
+                "role name empty - sending a DELETE request to endpoint root isn't permitted"
+            )
+
+        try:
+            resp = self.opensearch.request("DELETE", f"{ROLESMAPPING_ENDPOINT}/{role}")
+        except OpenSearchHttpError as e:
+            if e.response_code == 404:
+                resp = {
+                    "status": "OK",
+                    "response": "role mapping does not exist, and therefore has not been removed",
+                }
+            else:
+                raise OpenSearchUserMgmtError(e)
+
+        if resp.get("status") != "OK":
+            raise OpenSearchUserMgmtError(f"removing role mapping {role} failed")
 
     def update_user_password(self, username: str, hashed_pwd: str = None):
         """Change user hashed password."""

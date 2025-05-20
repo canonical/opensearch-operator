@@ -90,7 +90,6 @@ resource "juju_application" "grafana_agents" {
   }
   model  = each.value
   config = var.grafana-agent.config
-  units  = 0
 }
 
 #--------------------------------------------------------

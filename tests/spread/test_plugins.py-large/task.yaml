@@ -1,0 +1,9 @@
+summary: test_plugins.py
+environment:
+  TEST_MODULE: plugins/test_plugins.py
+systems:
+  - self-hosted-linux-amd64-noble-xlarge
+execute: |
+  tox run -e integration -- "tests/integration/$TEST_MODULE" --model testing --alluredir="$SPREAD_TASK/allure-results" -m 'group(id="large_deployment")'
+artifacts:
+  - allure-results

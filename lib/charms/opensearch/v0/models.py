@@ -298,12 +298,13 @@ class S3RelData(Model):
 
     bucket: str = Field(default="")
     endpoint: str = Field(default="")
-    region: Optional[str] = None
+    region: str = Field(default="")
     base_path: Optional[str] = Field(alias="path", default=S3_REPO_BASE_PATH)
     protocol: Optional[str] = None
     storage_class: Optional[str] = Field(alias="storage-class")
     tls_ca_chain: Optional[str] = Field(alias="tls-ca-chain")
     credentials: S3RelDataCredentials = Field(alias=S3_CREDENTIALS, default=S3RelDataCredentials())
+    path_style_access: Optional[bool] = False
 
     class Config:
         """Model config of this pydantic model."""
@@ -328,6 +329,11 @@ class S3RelData(Model):
             raise ValueError("Missing field: endpoint")
         if values.get("endpoint") and not values.get("bucket"):
             raise ValueError("Missing field: bucket")
+        if not values.get("region"):
+            raise ValueError("Missing field: region")
+
+        if values.get("s3-uri-style") == "path":
+            values["bucket_path_style"] = True
 
         return values
 

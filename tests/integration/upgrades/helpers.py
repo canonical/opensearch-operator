@@ -14,7 +14,7 @@ from ..ha.helpers import (
     assert_continuous_writes_consistency,
     assert_continuous_writes_increasing,
 )
-from ..helpers import APP_NAME, IDLE_PERIOD, app_name, run_action
+from ..helpers import APP_NAME, app_name, run_action
 from ..helpers_deployments import get_application_units, wait_until
 
 OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
@@ -81,7 +81,7 @@ async def assert_upgrade_to_local(
     )
     assert action.status == "completed"
 
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         logger.info("Refresh the charm")
 
         await refresh(ops_test, app, path=local_charm, config={"profile": "testing"})
@@ -95,7 +95,7 @@ async def assert_upgrade_to_local(
                 APP_NAME: 3,
             },
             timeout=2800,
-            idle_period=IDLE_PERIOD,
+            idle_period=30,
         )
 
         logger.info("Upgrade finished")
@@ -119,7 +119,7 @@ async def assert_upgrade_to_local(
                 APP_NAME: 3,
             },
             timeout=2800,
-            idle_period=IDLE_PERIOD,
+            idle_period=30,
         )
 
     # continuous writes checks

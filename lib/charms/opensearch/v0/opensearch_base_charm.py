@@ -75,6 +75,7 @@ from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Sco
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyError
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
+from charms.opensearch.v0.opensearch_oauth import OAuthHandler
 from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchPeerClustersManager,
     StartMode,
@@ -198,6 +199,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.tls = OpenSearchTLS(
             self, PeerRelationName, self.opensearch.paths.jdk, self.opensearch.paths.certs
         )
+        self.oauth = OAuthHandler(self)
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
         self.node_lock = OpenSearchNodeLock(self)
@@ -732,8 +734,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
-        if not self.opensearch_peer_cm.deployment_desc():
-            logger.info("Deployment description not ready yet, deferring and trying later.")
+        if not self.opensearch.is_node_up():
+            logger.debug("Node not up yet, deferring plugin check")
+            # possible enhancement:
+            # currently we wait for Opensearch to be started before applying any plugin
+            # this could be improved as some plugins don't require the service to run
             event.defer()
             return
 
@@ -751,7 +756,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.status.set(MaintenanceStatus(PluginConfigCheck))
 
             plugin_needs_restart = self.plugin_manager.run()
-
         except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
             if isinstance(e, OpenSearchNotFullyReadyError):
                 logger.warning("Plugin management: cluster not ready yet at config changed")
@@ -773,6 +777,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         perf_profile_needs_restart = self.performance_profile.apply(
             self.config.get(PERFORMANCE_PROFILE)
         )
+
+        if not self.opensearch_provider.update_relations_roles_mapping():
+            event.defer()
 
         if self.opensearch.is_service_started() and (
             plugin_needs_restart or perf_profile_needs_restart
@@ -1475,6 +1482,31 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             "plugins/opensearch-security/tools/securityadmin.sh", " ".join(args)
         )
         self.status.clear(SecurityIndexInitProgress)
+
+    def update_security_config(self, admin_secrets: Dict[str, any], file: str) -> None:
+        """Run the security_admin script for specified config file, avoiding changes to others."""
+        if not file.startswith("opensearch-security"):
+            raise ValueError("security config is expected")
+
+        args = [
+            f"-f {self.opensearch.paths.conf}/{file}",
+            f"-cn {self.opensearch_peer_cm.deployment_desc().config.cluster_name}",
+            f"-h {self.unit_ip}",
+            f"-ts {self.opensearch.paths.certs}/ca.p12",
+            f"-tspass {admin_secrets['truststore-password']}",
+            "-tst PKCS12",
+            f"-ks {self.opensearch.paths.certs}/{CertType.APP_ADMIN}.p12",
+            f"-kspass {admin_secrets['keystore-password']}",
+            "-kst PKCS12",
+        ]
+
+        admin_key_pwd = admin_secrets.get("key-password", None)
+        if admin_key_pwd is not None:
+            args.append(f"-keypass {admin_key_pwd}")
+
+        self.opensearch.run_script(
+            "plugins/opensearch-security/tools/securityadmin.sh", " ".join(args)
+        )
 
     def _get_nodes(self, use_localhost: bool) -> List[Node]:
         """Fetch the list of nodes of the cluster, depending on the requester."""
