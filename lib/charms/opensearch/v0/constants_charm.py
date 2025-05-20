@@ -68,7 +68,6 @@ PClusterWrongNodesCountForQuorum = (
 )
 PluginConfigError = "Unexpected error during plugin configuration, check the logs"
 BackupSetupFailed = "Backup setup failed, check logs for details"
-BackupRelMissing = "Backup failover cluster missing backup relation."
 BackupRelShouldNotExist = "This unit should not be related to backup relation"
 BackupRelDataIncomplete = "Backup relation data missing or incomplete."
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
@@ -120,7 +119,7 @@ ClientUsersDict = "client_relation_users"
 
 
 # Opensearch Snap revision
-OPENSEARCH_SNAP_REVISION = 68  # Keep in sync with `workload_version` file
+OPENSEARCH_SNAP_REVISION = 70  # Keep in sync with `workload_version` file
 
 # User-face Backup ID format
 OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
@@ -129,5 +128,7 @@ S3_REPO_BASE_PATH = "/"
 S3_RELATION = "s3-credentials"
 AZURE_REPO_BASE_PATH = "/"
 AZURE_RELATION = "azure-credentials"
+
+OAUTH_RELATION = "oauth"
 
 PERFORMANCE_PROFILE = "profile"

@@ -15,7 +15,6 @@ from ..helpers import (
     CONFIG_OPTS,
     IDLE_PERIOD,
     MODEL_CONFIG,
-    SERIES,
     UNIT_IDS,
     get_leader_unit_ip,
     get_secret_by_label,
@@ -44,16 +43,7 @@ ALL_GROUPS = {
         deploy_type,
         id=deploy_type,
         marks=[
-            pytest.mark.group(deploy_type),
-            pytest.mark.runner(
-                [
-                    "self-hosted",
-                    "linux",
-                    "X64",
-                    "jammy",
-                    "xlarge" if deploy_type == LARGE_DEPLOYMENT else "large",
-                ]
-            ),
+            pytest.mark.group(id=deploy_type),
         ],
     )
     for deploy_type in [LARGE_DEPLOYMENT, SMALL_DEPLOYMENT]
@@ -61,19 +51,17 @@ ALL_GROUPS = {
 ALL_DEPLOYMENTS = list(ALL_GROUPS.values())
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group(SMALL_DEPLOYMENT)
+@pytest.mark.group(id=SMALL_DEPLOYMENT)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
+async def test_build_and_deploy_active(ops_test: OpsTest, charm, series) -> None:
     """Build and deploy one unit of OpenSearch."""
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
     await ops_test.model.deploy(
-        my_charm,
+        charm,
         num_units=len(UNIT_IDS),
-        series=SERIES,
+        series=series,
         config=CONFIG_OPTS,
     )
 
@@ -96,26 +84,24 @@ async def test_build_and_deploy_active(ops_test: OpsTest) -> None:
     )
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(LARGE_DEPLOYMENT)
+@pytest.mark.group(id=LARGE_DEPLOYMENT)
 @pytest.mark.abort_on_fail
-async def test_build_large_deployment(ops_test: OpsTest) -> None:
+async def test_build_large_deployment(ops_test: OpsTest, charm, series) -> None:
     """Setup a large deployments cluster."""
     # deploy new cluster
-    my_charm = await ops_test.build_charm(".")
     await asyncio.gather(
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=MAIN_APP,
             num_units=3,
-            series=SERIES,
+            series=series,
             config={"cluster_name": CLUSTER_NAME, "roles": "cluster_manager,data"} | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=FAILOVER_APP,
             num_units=1,
-            series=SERIES,
+            series=series,
             config={
                 "cluster_name": CLUSTER_NAME,
                 "init_hold": True,
@@ -124,10 +110,10 @@ async def test_build_large_deployment(ops_test: OpsTest) -> None:
             | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=DATA_APP,
             num_units=1,
-            series=SERIES,
+            series=series,
             config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "data"}
             | CONFIG_OPTS,
         ),
@@ -171,66 +157,69 @@ async def test_rollout_new_ca(ops_test: OpsTest, deploy_type) -> None:
     else:
         app = DATA_APP
     c_writes = ContinuousWrites(ops_test, app)
-    await c_writes.start()
+    try:
+        await c_writes.start()
 
-    # trigger a rollout of the new CA by changing the config on TLS Provider side
-    new_config = {"ca-common-name": "NEW_CA"}
-    await ops_test.model.applications[TLS_CERTIFICATES_APP_NAME].set_config(new_config)
+        # trigger a rollout of the new CA by changing the config on TLS Provider side
+        new_config = {"ca-common-name": "NEW_CA"}
+        await ops_test.model.applications[TLS_CERTIFICATES_APP_NAME].set_config(new_config)
 
-    start_count = await c_writes.count()
+        start_count = await c_writes.count()
 
-    if deploy_type == SMALL_DEPLOYMENT:
-        await wait_until(
-            ops_test,
-            apps=[APP_NAME],
-            apps_statuses=["active"],
-            units_statuses=["active"],
-            wait_for_exact_units=len(UNIT_IDS),
-            timeout=2400,
-            idle_period=IDLE_PERIOD,
-        )
-    else:
-        await wait_until(
-            ops_test,
-            apps=[MAIN_APP, DATA_APP, FAILOVER_APP],
-            apps_full_statuses={
-                MAIN_APP: {"active": []},
-                DATA_APP: {"active": []},
-                FAILOVER_APP: {"active": []},
-            },
-            units_statuses=["active"],
-            wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
-            timeout=2400,
-            idle_period=IDLE_PERIOD,
-        )
+        if deploy_type == SMALL_DEPLOYMENT:
+            await wait_until(
+                ops_test,
+                apps=[APP_NAME],
+                apps_statuses=["active"],
+                units_statuses=["active"],
+                wait_for_exact_units=len(UNIT_IDS),
+                timeout=2400,
+                idle_period=IDLE_PERIOD,
+            )
+        else:
+            await wait_until(
+                ops_test,
+                apps=[MAIN_APP, DATA_APP, FAILOVER_APP],
+                apps_full_statuses={
+                    MAIN_APP: {"active": []},
+                    DATA_APP: {"active": []},
+                    FAILOVER_APP: {"active": []},
+                },
+                units_statuses=["active"],
+                wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
+                timeout=2400,
+                idle_period=IDLE_PERIOD,
+            )
 
-    # Check if the continuous-writes client works with the new certs as well
-    with open(ContinuousWrites.CERT_PATH, "r") as f:
-        orig_cert = f.read()
-    await c_writes.stop()
+        # Check if the continuous-writes client works with the new certs as well
+        with open(ContinuousWrites.CERT_PATH, "r") as f:
+            orig_cert = f.read()
+        await c_writes.stop()
 
-    await c_writes.start()  # Forces the Cont. Writes to pick the new cert
+        await c_writes.start()  # Forces the Cont. Writes to pick the new cert
 
-    with open(ContinuousWrites.CERT_PATH, "r") as f:
-        new_cert = f.read()
+        with open(ContinuousWrites.CERT_PATH, "r") as f:
+            new_cert = f.read()
 
-    assert orig_cert != new_cert, "New cert was not picked up"
-    await asyncio.sleep(30)
-    final_count = await c_writes.count()
-    await c_writes.stop()
-    assert final_count > start_count, "Writes have not continued during CA rotation"
+        assert orig_cert != new_cert, "New cert was not picked up"
+        await asyncio.sleep(30)
+        final_count = await c_writes.count()
+        await c_writes.stop()
+        assert final_count > start_count, "Writes have not continued during CA rotation"
 
-    # using the SSL API requires authentication with app-admin cert and key
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app)
-    url = f"https://{leader_unit_ip}:9200/_plugins/_security/api/ssl/certs"
-    admin_secret = await get_secret_by_label(ops_test, f"{app}:app:app-admin")
+        # using the SSL API requires authentication with app-admin cert and key
+        leader_unit_ip = await get_leader_unit_ip(ops_test, app)
+        url = f"https://{leader_unit_ip}:9200/_plugins/_security/api/ssl/certs"
+        admin_secret = await get_secret_by_label(ops_test, f"{app}:app:app-admin")
 
-    with open("admin.cert", "w") as cert:
-        cert.write(admin_secret["cert"])
+        with open("admin.cert", "w") as cert:
+            cert.write(admin_secret["cert"])
 
-    with open("admin.key", "w") as key:
-        key.write(admin_secret["key"])
+        with open("admin.key", "w") as key:
+            key.write(admin_secret["key"])
 
-    response = requests.get(url, cert=("admin.cert", "admin.key"), verify=False)
-    data = response.json()
-    assert new_config["ca-common-name"] in data["http_certificates_list"][0]["issuer_dn"]
+        response = requests.get(url, cert=("admin.cert", "admin.key"), verify=False)
+        data = response.json()
+        assert new_config["ca-common-name"] in data["http_certificates_list"][0]["issuer_dn"]
+    finally:
+        await c_writes.stop()

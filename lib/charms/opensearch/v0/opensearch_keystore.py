@@ -141,6 +141,8 @@ class OpenSearchKeystore(Keystore):
     def reload_keystore(self) -> None:
         """Updates the keystore value (adding or removing) and reload.
 
+        This method targets only the local unit as alt_hosts is not set.
+
         Raises:
             OpenSearchHttpError: If the reload fails.
         """

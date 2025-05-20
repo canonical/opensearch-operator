@@ -68,7 +68,6 @@ resource "juju_application" "grafana-agent" {
   }
   model  = var.opensearch.model
   config = var.grafana-agent.config
-  units  = 0
 }
 
 resource "juju_application" "backups-integrator" {

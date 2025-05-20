@@ -33,7 +33,7 @@ def get_host_ip(charm: CharmBase, peer_relation_name: str) -> str:
 
 def get_host_public_ip() -> Optional[str]:
     """Fetches the Public IP address of the current unit."""
-    cmd = "dig +short myip.opendns.com @resolver1.opendns.com"
+    cmd = "unit-get public-address"
     output = subprocess.run(
         cmd,
         stdout=subprocess.PIPE,

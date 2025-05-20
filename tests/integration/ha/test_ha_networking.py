@@ -24,7 +24,6 @@ from ..helpers import (
     APP_NAME,
     CONFIG_OPTS,
     MODEL_CONFIG,
-    SERIES,
     app_name,
     check_cluster_formation_successful,
     get_application_unit_ids_hostnames,
@@ -42,11 +41,9 @@ from .test_horizontal_scaling import IDLE_PERIOD
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
@@ -60,7 +57,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
-        ops_test.model.deploy(charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
+        ops_test.model.deploy(charm, num_units=3, series=series, config=CONFIG_OPTS),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -74,8 +71,6 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_with_ip_change_node_with_elected_cm(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
@@ -177,8 +172,6 @@ async def test_full_network_cut_with_ip_change_node_with_elected_cm(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_with_ip_change_node_with_primary_shard(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
@@ -296,8 +289,6 @@ async def test_full_network_cut_with_ip_change_node_with_primary_shard(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_without_ip_change_node_with_elected_cm(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner
@@ -385,8 +376,6 @@ async def test_full_network_cut_without_ip_change_node_with_elected_cm(
     await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_full_network_cut_without_ip_change_node_with_primary_shard(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_balanced_writes_runner

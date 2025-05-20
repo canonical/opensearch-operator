@@ -665,6 +665,7 @@ class OpenSearchTLS(Object):
 
     def update_request_ca_bundle(self) -> None:
         """Create a new chain.pem file for requests module"""
+        logger.debug("Updating requests TLS CA bundle")
         admin_secret = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val, peek=True)
 
         # we store the pem format to make it easier for the python requests lib

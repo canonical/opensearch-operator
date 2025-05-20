@@ -17,6 +17,7 @@ different cloud.
 
 import asyncio
 import logging
+import os
 import random
 import string
 import subprocess
@@ -42,7 +43,6 @@ from ..helpers import (
     APP_NAME,
     CONFIG_OPTS,
     MODEL_CONFIG,
-    SERIES,
     get_leader_unit_id,
     get_leader_unit_ip,
     http_request,
@@ -72,16 +72,7 @@ ALL_GROUPS = {
         deploy_type,
         id=f"{cloud_name}-{deploy_type}",
         marks=[
-            pytest.mark.group(f"{cloud_name}-{deploy_type}"),
-            pytest.mark.runner(
-                [
-                    "self-hosted",
-                    "linux",
-                    "X64",
-                    "jammy",
-                    "xlarge" if deploy_type == "large" else "large",
-                ]
-            ),
+            pytest.mark.group(id=f"{cloud_name}-{deploy_type}"),
         ],
     )
     for cloud_name in ["microceph", "aws", "azure"]
@@ -132,9 +123,7 @@ async def force_clear_cwrites_index():
 
 
 @pytest.fixture(scope="session")
-def cloud_configs(
-    github_secrets: Dict[str, str], microceph: Dict[str, str]
-) -> Dict[str, Dict[str, str]]:
+def cloud_configs(microceph: Dict[str, str]) -> Dict[str, Dict[str, str]]:
     # Figure out the address of the LXD host itself, where tests are executed
     # this is where microceph will be installed.
     ip = subprocess.check_output(["hostname", "-I"]).decode().split()[0]
@@ -146,14 +135,14 @@ def cloud_configs(
             "region": "default",
         },
     }
-    if "AWS_ACCESS_KEY" in github_secrets:
+    if os.environ["AWS_ACCESS_KEY"]:
         results["aws"] = {
             "endpoint": "https://s3.amazonaws.com",
             "bucket": "data-charms-testing",
             "path": BackupsPath,
             "region": "us-east-1",
         }
-    if "AZURE_SECRET_KEY" in github_secrets:
+    if os.environ["AZURE_SECRET_KEY"]:
         results["azure"] = {
             "connection-protocol": "abfss",
             "container": "data-charms-testing",
@@ -163,9 +152,7 @@ def cloud_configs(
 
 
 @pytest.fixture(scope="session")
-def cloud_credentials(
-    github_secrets: Dict[str, str], microceph: Dict[str, str]
-) -> Dict[str, Dict[str, str]]:
+def cloud_credentials(microceph: Dict[str, str]) -> Dict[str, Dict[str, str]]:
     """Read cloud credentials."""
     results = {
         "microceph": {
@@ -173,15 +160,15 @@ def cloud_credentials(
             "secret-key": microceph.secret_access_key,
         },
     }
-    if "AWS_ACCESS_KEY" in github_secrets:
+    if os.environ["AWS_ACCESS_KEY"]:
         results["aws"] = {
-            "access-key": github_secrets["AWS_ACCESS_KEY"],
-            "secret-key": github_secrets["AWS_SECRET_KEY"],
+            "access-key": os.environ["AWS_ACCESS_KEY"],
+            "secret-key": os.environ["AWS_SECRET_KEY"],
         }
-    if "AZURE_SECRET_KEY" in github_secrets:
+    if os.environ["AZURE_SECRET_KEY"]:
         results["azure"] = {
-            "secret-key": github_secrets["AZURE_SECRET_KEY"],
-            "storage-account": github_secrets["AZURE_STORAGE_ACCOUNT"],
+            "secret-key": os.environ["AZURE_SECRET_KEY"],
+            "storage-account": os.environ["AZURE_STORAGE_ACCOUNT"],
         }
     return results
 
@@ -311,7 +298,7 @@ async def _configure_azure(
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_small_deployment_build_and_deploy(
-    ops_test: OpsTest, charm, cloud_name: str, deploy_type: str
+    ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
 ) -> None:
     """Build and deploy an HA cluster of OpenSearch and corresponding S3 integration."""
     if await app_name(ops_test):
@@ -331,7 +318,7 @@ async def test_small_deployment_build_and_deploy(
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
         ops_test.model.deploy(backup_integrator, channel=backup_integrator_channel),
-        ops_test.model.deploy(charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
+        ops_test.model.deploy(charm, num_units=3, series=series, config=CONFIG_OPTS),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -351,7 +338,7 @@ async def test_small_deployment_build_and_deploy(
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_large_deployment_build_and_deploy(
-    ops_test: OpsTest, charm, cloud_name: str, deploy_type: str
+    ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
 ) -> None:
     """Build and deploy a large deployment for OpenSearch.
 
@@ -363,6 +350,9 @@ async def test_large_deployment_build_and_deploy(
     The data node is selected to adopt the "APP_NAME" value because it is the node which
     ContinuousWrites will later target its writes to.
     """
+    if await app_name(ops_test):
+        return
+
     await ops_test.model.set_config(MODEL_CONFIG)
     # Deploy TLS Certificates operator.
     tls_config = {"ca-common-name": "CN_CA"}
@@ -393,21 +383,21 @@ async def test_large_deployment_build_and_deploy(
             charm,
             application_name="main",
             num_units=1,
-            series=SERIES,
+            series=series,
             config=main_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
             charm,
             application_name="failover",
             num_units=2,
-            series=SERIES,
+            series=series,
             config=failover_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
             charm,
             application_name=APP_NAME,
             num_units=1,
-            series=SERIES,
+            series=series,
             config=data_hot_conf | CONFIG_OPTS,
         ),
     )
@@ -487,16 +477,15 @@ async def test_large_setups_relations_with_misconfiguration(
 
     backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
     backup_relation = AZURE_RELATION if cloud_name == "azure" else S3_RELATION
-    # Now, relate failover cluster to backup-integrator and review the status
 
+    # Now, relate failover cluster to backup-integrator and review the status
     await ops_test.model.integrate(f"failover:{backup_relation}", backup_integrator)
     await ops_test.model.integrate(f"{APP_NAME}:{backup_relation}", backup_integrator)
     await wait_until(
         ops_test,
-        apps=["main", "failover", APP_NAME],
+        apps=["failover", APP_NAME],
         apps_statuses=["blocked"],
         apps_full_statuses={
-            "main": {"blocked": [BackupSetupFailed]},
             "failover": {"blocked": [BackupRelShouldNotExist]},
             APP_NAME: {"blocked": [BackupRelShouldNotExist]},
         },
@@ -551,6 +540,10 @@ async def test_create_backup_and_restore(
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
     date_before_backup = datetime.utcnow()
+
+    # Wait, we want to make sure the timestamps are different
+    await asyncio.sleep(5)
+
     assert (
         datetime.strptime(
             backup_id := await create_backup(
@@ -628,6 +621,10 @@ async def test_remove_and_readd_backup_relation(
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
     date_before_backup = datetime.utcnow()
+
+    # Wait, we want to make sure the timestamps are different
+    await asyncio.sleep(5)
+
     assert (
         datetime.strptime(
             backup_id := await create_backup(
@@ -661,6 +658,7 @@ async def test_remove_and_readd_backup_relation(
 async def test_restore_to_new_cluster(
     ops_test: OpsTest,
     charm,
+    series,
     cloud_configs: Dict[str, Dict[str, str]],
     cloud_credentials: Dict[str, Dict[str, str]],
     cloud_name: str,
@@ -697,7 +695,7 @@ async def test_restore_to_new_cluster(
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
         ops_test.model.deploy(backup_integrator, channel=backup_integrator_channel),
-        ops_test.model.deploy(charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
+        ops_test.model.deploy(charm, num_units=3, series=series, config=CONFIG_OPTS),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -749,6 +747,10 @@ async def test_restore_to_new_cluster(
     await writer.start()
     time.sleep(10)
     date_before_backup = datetime.utcnow()
+
+    # Wait, we want to make sure the timestamps are different
+    await asyncio.sleep(5)
+
     assert (
         datetime.strptime(
             backup_id := await create_backup(
@@ -775,18 +777,17 @@ async def test_restore_to_new_cluster(
 
 
 # -------------------------------------------------------------------------------------------
-# Tests for the "all" group
+# Tests for the "allgroup" group
 #
 # This group will iterate over each cloud, update its credentials via config and rerun
 # the backup and restore tests.
 # -------------------------------------------------------------------------------------------
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group("all")
+@pytest.mark.group(id="all")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_deploy_and_test_status(ops_test: OpsTest, charm) -> None:
+async def test_build_deploy_and_test_status(ops_test: OpsTest, charm, series) -> None:
     """Build, deploy and test status of an HA cluster of OpenSearch and corresponding backups.
 
     This test group will iterate over each cloud, update its credentials via config and rerun
@@ -803,7 +804,7 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest, charm) -> None:
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
         ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL),
-        ops_test.model.deploy(charm, num_units=3, series=SERIES, config=CONFIG_OPTS),
+        ops_test.model.deploy(charm, num_units=3, series=series, config=CONFIG_OPTS),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -819,8 +820,7 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest, charm) -> None:
     await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR)
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group("all")
+@pytest.mark.group(id="all")
 @pytest.mark.abort_on_fail
 async def test_repo_missing_message(ops_test: OpsTest) -> None:
     """Check the repo is missing error returned by OpenSearch.
@@ -838,8 +838,7 @@ async def test_repo_missing_message(ops_test: OpsTest) -> None:
     assert "repository_missing_exception" in resp["error"]["type"]
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group("all")
+@pytest.mark.group(id="all")
 @pytest.mark.abort_on_fail
 async def test_wrong_s3_credentials(ops_test: OpsTest) -> None:
     """Check the repo is misconfigured."""
@@ -889,8 +888,7 @@ async def test_wrong_s3_credentials(ops_test: OpsTest) -> None:
     assert "Could not determine repository generation from root blobs" in resp["error"]["reason"]
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
-@pytest.mark.group("all")
+@pytest.mark.group(id="all")
 @pytest.mark.abort_on_fail
 async def test_change_config_and_backup_restore(
     ops_test: OpsTest,
@@ -927,6 +925,10 @@ async def test_change_config_and_backup_restore(
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
         date_before_backup = datetime.utcnow()
+
+        # Wait, we want to make sure the timestamps are different
+        await asyncio.sleep(5)
+
         assert (
             datetime.strptime(
                 backup_id := await create_backup(
