@@ -1248,10 +1248,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.tls.on_ca_certs_rotation_complete()
 
         if self._is_failover_only_data_node() and self.peers_data.get(
-            Scope.UNIT, "cluster_manager_remove", default=False
+            Scope.UNIT, "cluster_manager_removed", default=False
         ):
             # restore cluster_manager role and restart the service
-            self.peers_data.delete(Scope.UNIT, "cluster_manager_remove")
+            self.peers_data.delete(Scope.UNIT, "cluster_manager_removed")
             self._restart_opensearch_event.emit()
 
     def _stop_opensearch(self, *, restart: bool = False) -> None:
