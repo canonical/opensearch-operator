@@ -18,7 +18,7 @@ from charms.opensearch.v0.models import (
 )
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import CONFIG_OPTS, MODEL_CONFIG, SERIES
+from ..helpers import CONFIG_OPTS, MODEL_CONFIG
 from ..helpers_deployments import wait_until
 from ..relations.helpers import get_application_relation_data
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
@@ -38,13 +38,10 @@ CLUSTER_NAME = "app"
 APP_UNITS = {MAIN_APP: 1, FAILOVER_APP: 3, DATA_APP: 1}
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
     """Build and deploy one unit of OpenSearch."""
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
     # Deploy TLS Certificates operator.
@@ -54,24 +51,24 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=MAIN_APP,
             num_units=APP_UNITS[MAIN_APP],
-            series=SERIES,
+            series=series,
             config={"cluster_name": CLUSTER_NAME} | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=FAILOVER_APP,
             num_units=APP_UNITS[FAILOVER_APP],
-            series=SERIES,
+            series=series,
             config={"cluster_name": CLUSTER_NAME, "init_hold": True} | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=DATA_APP,
             num_units=APP_UNITS[DATA_APP],
-            series=SERIES,
+            series=series,
             config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "data.hot,ml"}
             | CONFIG_OPTS,
         ),
@@ -103,8 +100,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     )
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_large_deployment_sever_main_failover_relation(ops_test: OpsTest) -> None:
     """Test that the main-failover relation can be removed and re-added."""
@@ -133,8 +128,6 @@ async def test_large_deployment_sever_main_failover_relation(ops_test: OpsTest) 
     )
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_large_deployment_remove_orchestrators(ops_test: OpsTest) -> None:
     """Test that the orchestrator apps can be deleted."""
