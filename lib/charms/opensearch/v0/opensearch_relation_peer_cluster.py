@@ -507,7 +507,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             units=[format_unit_name(u, app=deployment_desc.app) for u in all_units(self.charm)],
             roles=deployment_desc.config.roles,
         )
-
         self._update_fleet(cluster_fleet_apps, current_app)
 
         if p_cluster_app:
@@ -526,7 +525,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             cluster_fleet_apps_rels = (
                 self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps_rels") or {}
             )
-
             self._update_fleet(cluster_fleet_apps_rels, p_cluster_app, key=str(trigger_rel_id))
 
             self.charm.peers_data.put_object(
@@ -905,7 +903,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             )
             orchestrators.delete("failover")
 
-        if orchestrators.failover_rel_id != -1:
+        if orchestrators.failover_app:
             # should we add a check where the failover rel has data while the main has none yet?
             if not orchestrators.main_app:
                 self._put_main_orchestrator_registered(orchestrators.failover_rel_id, False)
@@ -992,6 +990,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
     def _put_main_orchestrator_registered(self, failover_rel_id: int, is_registered: bool) -> None:
         """Updates failover rel data on main orchestrator connection."""
+        if failover_rel_id == -1:
+            return
+
         if not (self.charm.is_admin_user_configured() and self.charm.tls.is_fully_configured()):
             return
         self.put_in_rel(
