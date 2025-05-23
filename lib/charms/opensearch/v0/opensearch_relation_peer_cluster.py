@@ -907,7 +907,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             # should we add a check where the failover rel has data while the main has none yet?
             if not orchestrators.main_app:
                 self._put_main_orchestrator_registered(orchestrators.failover_rel_id, False)
-                logger.debug("Current cluster only has a failover orchestrator. Deferring event.")
+                logger.debug("Current cluster has no main orchestrator. Deferring event.")
                 event.defer()
                 return
 
