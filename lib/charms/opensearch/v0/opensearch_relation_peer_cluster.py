@@ -159,7 +159,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         # the current app is not ready
         if not (deployment_desc := self.peer_cm.deployment_desc()):
-            logger.debug("Current cluster not ready. Deferring peer-cluster-orchestrator event.")
+            logger.debug("Current cluster not ready. Deferring event.")
             event.defer()
             return
 
@@ -882,7 +882,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # check if current cluster ready
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
-            logger.debug("Current cluster not ready. Deferring peer-cluster event.")
+            logger.debug("Current cluster not ready. Deferring event.")
             event.defer()
             return
 
