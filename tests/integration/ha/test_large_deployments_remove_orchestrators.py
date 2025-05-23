@@ -55,14 +55,15 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
             application_name=MAIN_APP,
             num_units=APP_UNITS[MAIN_APP],
             series=series,
-            config={"cluster_name": CLUSTER_NAME} | CONFIG_OPTS,
+            config={"cluster_name": CLUSTER_NAME, "roles": "cluster_manager"} | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
             charm,
             application_name=FAILOVER_APP,
             num_units=APP_UNITS[FAILOVER_APP],
             series=series,
-            config={"cluster_name": CLUSTER_NAME, "init_hold": True} | CONFIG_OPTS,
+            config={"cluster_name": CLUSTER_NAME, "roles": "cluster_manager", "init_hold": True}
+            | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
             charm,
@@ -142,8 +143,6 @@ async def test_large_deployment_remove_orchestrators(ops_test: OpsTest) -> None:
     # delete the main orchestrator
     await ops_test.model.remove_application(
         MAIN_APP,
-        block_until_done=True,
-        destroy_storage=True,
     )
     # failover should be promoted
     await wait_until(
