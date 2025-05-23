@@ -159,6 +159,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         # the current app is not ready
         if not (deployment_desc := self.peer_cm.deployment_desc()):
+            logger.debug("Current cluster not ready. Deferring peer-cluster-orchestrator event.")
             event.defer()
             return
 
@@ -449,6 +450,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 self._delete_rel_data(rel_id)
 
         if can_defer and should_defer:
+            logger.debug("Event deferred after refreshing relation data.")
             event.defer()
 
     def _notify_if_wrong_integration(
@@ -880,6 +882,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # check if current cluster ready
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+            logger.debug("Current cluster not ready. Deferring peer-cluster event.")
             event.defer()
             return
 
@@ -906,6 +909,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             # should we add a check where the failover rel has data while the main has none yet?
             if not orchestrators.main_app:
                 self._put_main_orchestrator_registered(orchestrators.failover_rel_id, False)
+                logger.debug("Current cluster only has a failover orchestrator. Deferring event.")
                 event.defer()
                 return
 
@@ -955,6 +959,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # check if there are any security misconfigurations / violations
         if self._error_set_from_tls(data):
+            logger.debug("TLS/Security misconfigurations detected. Deferring event.")
             event.defer()
             return
 

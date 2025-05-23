@@ -483,6 +483,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
             if health in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]:
                 # we defer because we want the temporary status to be updated
+                logger.debug("Cluster health temp yellow or unknown. Deferring event.")
                 event.defer()
                 # If the handler is called again within this Juju hook, we will abandon the event
                 self._is_peer_rel_changed_deferred = True
@@ -550,12 +551,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.health.apply(wait_for_green_first=True)
 
-        if (
-            len([node for node in remaining_nodes if node.app.id == current_app.id])
-            == self.app.planned_units()
-        ):
+        n_units = sum(1 for node in remaining_nodes if node.app.id == current_app.id)
+        if n_units == self.app.planned_units():
             self._compute_and_broadcast_updated_topology(remaining_nodes)
         else:
+            logger.debug(
+                f"Waiting for units to leave: expecting {self.app.planned_units()}, currently {n_units}. Deferring event."
+            )
             event.defer()
 
         if not self.unit.is_leader():
