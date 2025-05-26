@@ -551,12 +551,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.health.apply(wait_for_green_first=True)
 
-        n_units = sum(app.planned_units for app in self.opensearch_peer_cm.apps_in_fleet())
-        if n_units == len(remaining_nodes):
+        n_units = sum(1 for node in remaining_nodes if node.app.id == current_app.id)
+        if n_units == self.app.planned_units():
             self._compute_and_broadcast_updated_topology(remaining_nodes)
         else:
             logger.debug(
-                f"Waiting for units to leave: expecting {n_units}, currently {len(remaining_nodes)}. Deferring event."
+                f"Waiting for units to leave: expecting {self.app.planned_units()}, currently {n_units}. Deferring event."
             )
             event.defer()
 
