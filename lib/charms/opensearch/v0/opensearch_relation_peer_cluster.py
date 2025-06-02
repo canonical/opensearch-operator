@@ -300,9 +300,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             n_disconnected += 1
 
         # if majority are disconnected, promote failover
-        if n_disconnected > (len(target_relation_ids) + 1) // 2:
-            return True
-        return False
+        return n_disconnected > (len(target_relation_ids) + 1) // 2
 
     def _promote_failover(self) -> None:
         """Handle failover promotion to main orchestrator."""
