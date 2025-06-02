@@ -1254,7 +1254,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             logger.info("post_start_init: Detected CA rotation complete in cluster")
             self.tls.on_ca_certs_rotation_complete()
 
-        if self._is_failover_only_data_node() and self.peers_data.get(
+        if self._is_failover_and_only_data_node() and self.peers_data.get(
             Scope.UNIT, "cluster_manager_removed", default=False
         ):
             # restore cluster_manager role and restart the service
@@ -1544,7 +1544,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # If the failover orchestrator is the only data node in the cluster, remove the
         # cluster-manager role from it to avoid it bootstrapping the cluster
-        if self._is_failover_only_data_node() and not self.peers_data.get(
+        # which is the responsibility of the main orchestrator
+        # who then broadcasts `security_index_initialized` to the peer clusters.
+        if self._is_failover_and_only_data_node() and not self.peers_data.get(
             Scope.APP, "security_index_initialised", False
         ):
             self.peers_data.put(Scope.UNIT, "cluster_manager_removed", True)
@@ -1804,7 +1806,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # notify the main orchestrator that the security index is initialized
             self.peer_cluster_requirer.set_security_index_initialised()
 
-    def _is_failover_only_data_node(self) -> bool:
+    def _is_failover_and_only_data_node(self) -> bool:
         """Check if the current node is a failover and the only data node in the cluster."""
         deployment_desc = self.opensearch_peer_cm.deployment_desc()
         if (
