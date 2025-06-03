@@ -365,7 +365,7 @@ class OpenSearchPeerClustersManager:
 
         return DeploymentDescription.from_dict(current_deployment_desc)
 
-    def promote_to_main_orchestrator(self) -> None:
+    def promote_deployment_type(self) -> None:
         """Update the deployment type of the current deployment desc."""
         if not (deployment_desc := self.deployment_desc()):
             return
@@ -379,7 +379,7 @@ class OpenSearchPeerClustersManager:
             Scope.APP, "deployment-description", deployment_desc.to_dict()
         )
 
-    def demote_to_failover_orchestrator(self) -> None:
+    def demote_deployment_type(self) -> None:
         """Update the deployment type of the current deployment desc."""
         if not (deployment_desc := self.deployment_desc()):
             return

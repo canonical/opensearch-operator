@@ -3,17 +3,24 @@
 # See LICENSE file for licensing details.
 
 import asyncio
+import json
 import logging
 
 import pytest
 from charms.opensearch.v0.constants_charm import (
     PClusterOrchestratorsRemoved,
-    PClusterWaitingForFailoverPromotion,
+    PeerRelationName,
+)
+from charms.opensearch.v0.models import (
+    DeploymentDescription,
+    DeploymentType,
+    PeerClusterOrchestrators,
 )
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import CONFIG_OPTS, MODEL_CONFIG, SERIES
+from ..helpers import CONFIG_OPTS, MODEL_CONFIG
 from ..helpers_deployments import wait_until
+from ..relations.helpers import get_application_relation_data
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .test_horizontal_scaling import IDLE_PERIOD
 
@@ -28,16 +35,13 @@ DATA_APP = "opensearch-data"
 
 CLUSTER_NAME = "app"
 
-APP_UNITS = {MAIN_APP: 1, FAILOVER_APP: 2, DATA_APP: 1}
+APP_UNITS = {MAIN_APP: 1, FAILOVER_APP: 3, DATA_APP: 1}
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
     """Build and deploy one unit of OpenSearch."""
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
     # Deploy TLS Certificates operator.
@@ -47,24 +51,25 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=MAIN_APP,
             num_units=APP_UNITS[MAIN_APP],
-            series=SERIES,
-            config={"cluster_name": CLUSTER_NAME} | CONFIG_OPTS,
+            series=series,
+            config={"cluster_name": CLUSTER_NAME, "roles": "cluster_manager"} | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=FAILOVER_APP,
             num_units=APP_UNITS[FAILOVER_APP],
-            series=SERIES,
-            config={"cluster_name": CLUSTER_NAME, "init_hold": True} | CONFIG_OPTS,
+            series=series,
+            config={"cluster_name": CLUSTER_NAME, "roles": "cluster_manager", "init_hold": True}
+            | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=DATA_APP,
             num_units=APP_UNITS[DATA_APP],
-            series=SERIES,
+            series=series,
             config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "data.hot,ml"}
             | CONFIG_OPTS,
         ),
@@ -96,8 +101,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     )
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_large_deployment_sever_main_failover_relation(ops_test: OpsTest) -> None:
     """Test that the main-failover relation can be removed and re-added."""
@@ -126,23 +129,28 @@ async def test_large_deployment_sever_main_failover_relation(ops_test: OpsTest) 
     )
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "xlarge"])
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_large_deployment_remove_orchestrators(ops_test: OpsTest) -> None:
     """Test that the orchestrator apps can be deleted."""
+    unit = ops_test.model.applications[MAIN_APP].units[-1]
+    deployment_desc = await get_application_relation_data(
+        ops_test, unit_name=unit.name, relation_name=PeerRelationName, key="deployment-description"
+    )
+    deployment_desc = DeploymentDescription.from_dict(json.loads(deployment_desc))
+
+    assert deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+
     # delete the main orchestrator
     await ops_test.model.remove_application(
         MAIN_APP,
-        block_until_done=True,
-        destroy_storage=True,
     )
+    # failover should be promoted
     await wait_until(
         ops_test,
         apps=[FAILOVER_APP, DATA_APP],
         apps_full_statuses={
             FAILOVER_APP: {"active": []},
-            DATA_APP: {"waiting": [PClusterWaitingForFailoverPromotion]},
+            DATA_APP: {"active": []},
         },
         units_statuses=["active"],
         wait_for_exact_units={
@@ -153,7 +161,25 @@ async def test_large_deployment_remove_orchestrators(ops_test: OpsTest) -> None:
         timeout=1800,
     )
 
-    # delete the failover orchestrator
+    unit = ops_test.model.applications[FAILOVER_APP].units[-1]
+    deployment_desc = await get_application_relation_data(
+        ops_test, unit_name=unit.name, relation_name=PeerRelationName, key="deployment-description"
+    )
+    deployment_desc = DeploymentDescription.from_dict(json.loads(deployment_desc))
+
+    assert deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+
+    # get orchestrators registered in data app
+    unit = ops_test.model.applications[DATA_APP].units[-1]
+    orchestrators = await get_application_relation_data(
+        ops_test, unit_name=unit.name, relation_name=PeerRelationName, key="orchestrators"
+    )
+    # ensure failover is the new main and that no failover is registered
+    orchestrators = PeerClusterOrchestrators.from_dict(json.loads(orchestrators))
+    assert orchestrators.main_app.name == FAILOVER_APP
+    assert orchestrators.failover_app is None
+
+    # delete the main orchestrator (which is now failover)
     await ops_test.model.remove_application(
         FAILOVER_APP,
     )

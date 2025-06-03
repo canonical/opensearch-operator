@@ -483,6 +483,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
             if health in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]:
                 # we defer because we want the temporary status to be updated
+                logger.debug("Cluster health temp yellow or unknown. Deferring event.")
                 event.defer()
                 # If the handler is called again within this Juju hook, we will abandon the event
                 self._is_peer_rel_changed_deferred = True
@@ -494,7 +495,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # update any orchestrators about planned units
         if self.opensearch_peer_cm.is_consumer():
             self.peer_cluster_requirer.refresh_requirer_relation_data()
-            self.peer_cluster_requirer.apply_orchestrator_status()
 
         for relation in self.model.relations.get(ClientRelationName, []):
             self.opensearch_provider.update_endpoints(relation)
@@ -508,6 +508,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if self.peers_data.get(Scope.APP, "is_expecting_cm_unit"):
                 # indicates we previously scaled down to <3 CM-eligible units in the cluster
                 self.opensearch_peer_cm.validate_recommended_cm_unit_count()
+            if self.model.relations[PeerClusterRelationName]:
+                self.peer_cluster_requirer.apply_orchestrator_status()
         elif event.relation.data.get(event.app):
             # if app_data + app_data["nodes_config"]: Reconfigure + restart node on the unit
             self._reconfigure_and_restart_unit_if_needed()
@@ -549,10 +551,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.health.apply(wait_for_green_first=True)
 
-        n_units = sum(app.planned_units for app in self.opensearch_peer_cm.apps_in_fleet())
-        if len(remaining_nodes) == n_units:
+        n_units = sum(1 for node in remaining_nodes if node.app.id == current_app.id)
+        if n_units == self.app.planned_units():
             self._compute_and_broadcast_updated_topology(remaining_nodes)
         else:
+            logger.debug(
+                f"Waiting for units to leave: expecting {self.app.planned_units()}, currently {n_units}. Deferring event."
+            )
             event.defer()
 
         if not self.unit.is_leader():
