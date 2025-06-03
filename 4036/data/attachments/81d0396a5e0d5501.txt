@@ -1,0 +1,114 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'opensearch': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'blocked', 'message': 'Backup setup failed, check logs for details', 'since': '03 Jun 2025 01:45:42Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 's3-credentials': [{'related-application': 's3-integrator', 'interface': 's3', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/0': {'workload-status': {'current': 'blocked', 'message': 'Backup setup failed, check logs for details', 'since': '03 Jun 2025 01:46:02Z'}, 'juju-status': {'current': 'idle', 'since': '03 Jun 2025 01:46:02Z', 'version': '3.6.6'}, 'leader': True, 'machine': '2', 'open-ports': ['9200/tcp'], 'public-address': '10.113.5.137'}, 'opensearch/1': {'workload-status': {'current': 'active', 'since': '03 Jun 2025 01:45:46Z'}, 'juju-status': {'current': 'idle', 'since': '03 Jun 2025 01:46:35Z', 'version': '3.6.6'}, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.113.5.21'}, 'opensearch/2': {'workload-status': {'current': 'active', 'since': '03 Jun 2025 01:45:46Z'}, 'juju-status': {'current': 'idle', 'since': '03 Jun 2025 01:45:46Z', 'version': '3.6.6'}, 'machine': '4', 'open-ports': ['9200/tcp'], 'public-address': '10.113.5.39'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 's3-integrator': {'charm': 's3-integrator', 'base': {'name': 'ubuntu', 'channel': '22.04'}, 'charm-origin': 'charmhub', 'charm-name': 's3-integrator', 'charm-rev': 155, 'charm-channel': 'latest/edge', 'exposed': False, 'application-status': {'current': 'active', 'since': '03 Jun 2025 01:45:21Z'}, 'relations': {'s3-credentials': [{'related-application': 'opensearch', 'interface': 's3', 'scope': 'global'}], 's3-integrator-peers': [{'related-application': 's3-integrator', 'interface': 's3-integrator-peers', 'scope': 'global'}]}, 'units': {'s3-integrator/0': {'workload-status': {'current': 'active', 'since': '03 Jun 2025 01:45:21Z'}, 'juju-status': {'current': 'idle', 'since': '03 Jun 2025 01:45:22Z', 'version': '3.6.6'}, 'leader': True, 'machine': '1', 'public-address': '10.113.5.26'}}, 'endpoint-bindings': {'': 'alpha', 's3-credentials': 'alpha', 's3-integrator-peers': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '22.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 264, 'charm-channel': 'latest/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '03 Jun 2025 01:40:45Z'}, 'relations': {'certificates': [{'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '03 Jun 2025 01:40:45Z'}, 'juju-status': {'current': 'idle', 'since': '03 Jun 2025 01:41:40Z', 'version': '3.6.6'}, 'leader': True, 'machine': '0', 'public-address': '10.113.5.205'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:923 Syncing credentials for microceph
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  s3-integrator/0 [executing] active: 
+  opensearch/0 [executing] maintenance: Backup setup started.
+  opensearch/1 [executing] maintenance: Backup setup started.
+  opensearch/2 [executing] maintenance: Backup setup started.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  opensearch/0 [executing] maintenance: Configuring backup service...
+  opensearch/1 [idle] active: 
+  opensearch/2 [idle] active: 
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.113.5.137:9200/_recovery?human
+[32mINFO    [0m integration.ha.helpers:helpers.py:248 Continuous writes result: namespace(max_stored_id=209, count=210, last_expected_id=209)
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.113.5.137:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: POST -- https://10.113.5.137:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.113.5.137:9200/series_index/_count
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.113.5.137:9200/_recovery?human
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: POST -- https://10.113.5.137:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.113.5.137:9200/series_index/_count
+[32mINFO    [0m integration.ha.helpers:helpers.py:592 Testing restore for series_index - original count pre-restore: 210, and now, new count: 171
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:923 Syncing credentials for aws
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  s3-integrator/0 [executing] active: 
+  opensearch/0 [executing] maintenance: Backup setup started.
+  opensearch/1 [executing] maintenance: Backup setup started.
+  opensearch/2 [executing] maintenance: Backup setup started.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  opensearch/0 [executing] maintenance: Backup setup started.
+  opensearch/1 [idle] active: 
+  opensearch/2 [idle] active: 
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.113.5.137:9200/_recovery?human
+[32mINFO    [0m integration.ha.helpers:helpers.py:248 Continuous writes result: namespace(max_stored_id=212, count=213, last_expected_id=212)
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.113.5.137:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: POST -- https://10.113.5.137:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.113.5.137:9200/series_index/_count
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.113.5.137:9200/_recovery?human
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: POST -- https://10.113.5.137:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.113.5.137:9200/series_index/_count
+[32mINFO    [0m integration.ha.helpers:helpers.py:592 Testing restore for series_index - original count pre-restore: 213, and now, new count: 175
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.6    unsupported  01:52:49Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         active      3  opensearch                                 0  no       
+s3-integrator                      active      1  s3-integrator             latest/edge    155  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0*                active    idle   2        10.113.5.137    9200/tcp  
+opensearch/1                 active    idle   3        10.113.5.21     9200/tcp  
+opensearch/2                 active    idle   4        10.113.5.39     9200/tcp  
+s3-integrator/0*             active    idle   1        10.113.5.26               
+self-signed-certificates/0*  active    idle   0        10.113.5.205              
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.113.5.205  juju-40c93b-0  ubuntu@22.04      Running
+1        started  10.113.5.26   juju-40c93b-1  ubuntu@22.04      Running
+2        started  10.113.5.137  juju-40c93b-2  ubuntu@24.04      Running
+3        started  10.113.5.21   juju-40c93b-3  ubuntu@24.04      Running
+4        started  10.113.5.39   juju-40c93b-4  ubuntu@24.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-2: 01:39:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:39:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:39:13 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:39:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:39:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 01:39:18 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:39:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:39:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 01:39:27 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:39:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:39:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-s3-integrator-0: 01:39:43 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:40:36 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:40:36 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:40:36 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-0: 01:45:42 ERROR unit.opensearch/0.juju-log s3-credentials:5: Failed to setup backup service with exception: HTTP error self.response_code=500
+self.response_body={'error': {'root_cause': [{'type': 'repository_verification_exception', 'reason': '[s3-repository] path [/] is not accessible on cluster-manager node'}], 'type': 'repository_verification_exception', 'reason': '[s3-repository] path [/] is not accessible on cluster-manager node', 'caused_by': {'type': 'i_o_exception', 'reason': 'Unable to upload object [//tests-VM-9MMB8RGuZuWjxHrBmBg/master.dat] using a single upload', 'caused_by': {'type': 'sdk_client_exception', 'reason': 'Unable to execute HTTP request: Connect to error.localhost:80 [error.localhost/127.0.0.1, error.localhost/0:0:0:0:0:0:0:1] failed: Connection refused', 'caused_by': {'type': 'http_host_connect_exception', 'reason': 'Connect to error.localhost:80 [error.localhost/127.0.0.1, error.localhost/0:0:0:0:0:0:0:1] failed: Connection refused', 'caused_by': {'type': 'connect_exception', 'reason': 'Connection refused'}}, 'suppressed': [{'type': 'sdk_client_exception', 'reason': 'Request attempt 1 failure: Unable to execute HTTP request: Connect to error.localhost:80 [error.localhost/127.0.0.1, error.localhost/0:0:0:0:0:0:0:1] failed: Connection refused'}, {'type': 'sdk_client_exception', 'reason': 'Request attempt 2 failure: Unable to execute HTTP request: Connect to error.localhost:80 [error.localhost/127.0.0.1, error.localhost/0:0:0:0:0:0:0:1] failed: Connection refused'}, {'type': 'sdk_client_exception', 'reason': 'Request attempt 3 failure: Unable to execute HTTP request: Connect to error.localhost:80 [error.localhost/127.0.0.1, error.localhost/0:0:0:0:0:0:0:1] failed: Connection refused'}]}}}, 'status': 500}
+unit-opensearch-0: 01:45:42 ERROR unit.opensearch/0.juju-log s3-credentials:5: Failed to setup backup service with state Repository exception: unknown
+unit-opensearch-0: 01:46:02 ERROR unit.opensearch/0.juju-log s3-credentials:5: Failed to setup backup service with exception: HTTP error self.response_code=500
+self.response_body={'error': {'root_cause': [{'type': 'repository_verification_exception', 'reason': '[s3-repository] path [/] is not accessible on cluster-manager node'}], 'type': 'repository_verification_exception', 'reason': '[s3-repository] path [/] is not accessible on cluster-manager node', 'caused_by': {'type': 'i_o_exception', 'reason': 'Unable to upload object [//tests-lX7yj_bwQFGpR5kgmZKZVQ/master.dat] using a single upload', 'caused_by': {'type': 'sdk_client_exception', 'reason': 'Unable to execute HTTP request: Connect to error.localhost:80 [error.localhost/127.0.0.1, error.localhost/0:0:0:0:0:0:0:1] failed: Connection refused', 'caused_by': {'type': 'http_host_connect_exception', 'reason': 'Connect to error.localhost:80 [error.localhost/127.0.0.1, error.localhost/0:0:0:0:0:0:0:1] failed: Connection refused', 'caused_by': {'type': 'connect_exception', 'reason': 'Connection refused'}}, 'suppressed': [{'type': 'sdk_client_exception', 'reason': 'Request attempt 1 failure: Unable to execute HTTP request: Connect to error.localhost:80 [error.localhost/127.0.0.1, error.localhost/0:0:0:0:0:0:0:1] failed: Connection refused'}, {'type': 'sdk_client_exception', 'reason': 'Request attempt 2 failure: Unable to execute HTTP request: Connect to error.localhost:80 [error.localhost/127.0.0.1, error.localhost/0:0:0:0:0:0:0:1] failed: Connection refused'}, {'type': 'sdk_client_exception', 'reason': 'Request attempt 3 failure: Unable to execute HTTP request: Connect to error.localhost:80 [error.localhost/127.0.0.1, error.localhost/0:0:0:0:0:0:0:1] failed: Connection refused'}]}}}, 'status': 500}
+unit-opensearch-0: 01:46:02 ERROR unit.opensearch/0.juju-log s3-credentials:5: Failed to setup backup service with state Repository exception: unknown
+unit-opensearch-0: 01:47:13 ERROR unit.opensearch/0.juju-log s3-credentials:5: Failed to setup backup service with exception: HTTP error self.response_code=500
+self.response_body={'error': {'root_cause': [{'type': 'repository_verification_exception', 'reason': '[s3-repository] path [opensearch/5c87fcc4-bc7f-41e0-a87d-8660f2de219a] is not accessible on cluster-manager node'}], 'type': 'repository_verification_exception', 'reason': '[s3-repository] path [opensearch/5c87fcc4-bc7f-41e0-a87d-8660f2de219a] is not accessible on cluster-manager node', 'caused_by': {'type': 'i_o_exception', 'reason': 'Unable to upload object [opensearch/5c87fcc4-bc7f-41e0-a87d-8660f2de219a/tests-XxGi7FMcR4yF1cwnBdrSxw/master.dat] using a single upload', 'caused_by': {'type': 's3_exception', 'reason': ' (Service: S3, Status Code: 403, Request ID: tx00000dae0d22f508e813b-00683e5421-14160-default)'}}}, 'status': 500}
+unit-opensearch-0: 01:47:13 ERROR unit.opensearch/0.juju-log s3-credentials:5: Failed to setup backup service with state Repository exception: unknown
+unit-opensearch-0: 01:50:18 ERROR unit.opensearch/0.juju-log s3-credentials:5: Failed to setup backup service with exception: HTTP error self.response_code=500
+self.response_body={'error': {'root_cause': [{'type': 'repository_verification_exception', 'reason': '[s3-repository] path [opensearch/5c87fcc4-bc7f-41e0-a87d-8660f2de219a] is not accessible on cluster-manager node'}], 'type': 'repository_verification_exception', 'reason': '[s3-repository] path [opensearch/5c87fcc4-bc7f-41e0-a87d-8660f2de219a] is not accessible on cluster-manager node', 'caused_by': {'type': 'i_o_exception', 'reason': 'Unable to upload object [opensearch/5c87fcc4-bc7f-41e0-a87d-8660f2de219a/tests-SSWgWUZBS0GIXrxhElXCRw/master.dat] using a single upload', 'caused_by': {'type': 's3_exception', 'reason': 'The AWS Access Key Id you provided does not exist in our records. (Service: S3, Status Code: 403, Request ID: T9HRW4QB1RGT9RHR, Extended Request ID: GEMBCN+yY0KJqP1AU0Kv4qzycvp5oQ8Kd3A5tUiTe9So2sQxAEPAt9KRNaoM/1TOqsNFE4aC3Ls=)'}}}, 'status': 500}
+unit-opensearch-0: 01:50:18 ERROR unit.opensearch/0.juju-log s3-credentials:5: Failed to setup backup service with state Repository exception: unknown
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:185 Cleaning backups from cloud buckets
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:511 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.25.1 Python/3.12.3 (Linux-6.11.0-26-generic-x86_64-with-glibc2.39)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': '756c16b6-401d-11f0-be67-00163ef806c3'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:547 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'bf0569f1-f01e-0083-732a-d4acb0000000'
+    'x-ms-client-request-id': '756c16b6-401d-11f0-be67-00163ef806c3'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Tue, 03 Jun 2025 01:52:51 GMT'
