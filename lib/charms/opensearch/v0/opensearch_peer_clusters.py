@@ -332,7 +332,6 @@ class OpenSearchPeerClustersManager:
             CmVoRolesProvidedInvalid,
             DataRoleRemovalForbidden,
             PClusterNoRelation,
-            PClusterWrongNodesCountForQuorum,
             PClusterWrongRelation,
             PClusterWrongRolesProvided,
         ]
@@ -366,7 +365,7 @@ class OpenSearchPeerClustersManager:
 
         return DeploymentDescription.from_dict(current_deployment_desc)
 
-    def promote_to_main_orchestrator(self) -> None:
+    def promote_deployment_type(self) -> None:
         """Update the deployment type of the current deployment desc."""
         if not (deployment_desc := self.deployment_desc()):
             return
@@ -380,7 +379,7 @@ class OpenSearchPeerClustersManager:
             Scope.APP, "deployment-description", deployment_desc.to_dict()
         )
 
-    def demote_to_failover_orchestrator(self) -> None:
+    def demote_deployment_type(self) -> None:
         """Update the deployment type of the current deployment desc."""
         if not (deployment_desc := self.deployment_desc()):
             return
@@ -394,45 +393,51 @@ class OpenSearchPeerClustersManager:
             Scope.APP, "deployment-description", deployment_desc.to_dict()
         )
 
-    def validate_roles(self, nodes: List[Node], on_new_unit: bool = False) -> None:
-        """Validate full-cluster wide the quorum for CM/voting_only nodes on services start."""
+    def has_recommended_cm_count(self, nodes: List[Node]) -> bool:
+        """Validate cluster-wide count for CM-eligible nodes is at least 3"""
         deployment_desc = self.deployment_desc()
-        if not set(deployment_desc.config.roles) & {"cluster_manager", "voting_only"}:
-            # the user is not adding any cm nor voting_only roles to the nodes
-            return
+        if (
+            not set(deployment_desc.config.roles) & {"cluster_manager", "voting_only"}
+            and deployment_desc.start != StartMode.WITH_GENERATED_ROLES
+        ):
+            # only CM-eligible nodes run the validations
+            return True
 
-        if deployment_desc.start == StartMode.WITH_GENERATED_ROLES:
-            # the roles are automatically generated, we trust the correctness
-            return
+        is_large_deployment = self.is_provider() or self.is_consumer()
+        cms = sum(1 for node in nodes if node.is_cm_eligible())
+        if not is_large_deployment or (is_large_deployment and cms >= 3):
+            # validation is only needed in large deployments
+            # we can start with any number of cms but set a blocked status
+            # if CMS < 3 when a CM-eligible application is scaled down or removed
+            return True
 
-        # validate the full-cluster wide count of cm+voting_only nodes to keep the quorum
-        full_cluster_planned_units = self._charm.app.planned_units()
-        if apps_in_fleet := self._charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps"):
-            apps_in_fleet = [PeerClusterApp.from_dict(app) for app in apps_in_fleet.values()]
-            full_cluster_planned_units += sum(
-                [
-                    p_cluster_app.planned_units
-                    for p_cluster_app in apps_in_fleet
-                    if p_cluster_app.app.id != deployment_desc.app.id
-                ]
+        logger.info("Less than 3 CM-eligible units in this cluster")
+        return False
+
+    def validate_recommended_cm_unit_count(self, nodes: Optional[List[Node]] = None) -> None:
+        """Validates that the cluster has at least 3 CM-eligible units.
+
+        If validation fails, sets the application status to Blocked.
+        """
+        if nodes is None:
+            nodes = ClusterTopology.nodes(
+                self._charm.opensearch, self._opensearch.is_node_up(), self._charm.alt_hosts
             )
 
-        current_cluster_online_nodes = [
-            node for node in nodes if node.app.id == deployment_desc.app.id
-        ]
-
-        if len(current_cluster_online_nodes) < full_cluster_planned_units - 1:
-            # this is not the latest unit to be brought online, we can continue
+        if self.has_recommended_cm_count(nodes):
+            self._charm.peers_data.delete(Scope.APP, "is_expecting_cm_unit")
+            self._charm.status.clear(PClusterWrongNodesCountForQuorum, app=True)
             return
 
-        voters = sum(1 for node in nodes if node.is_cm_eligible() or node.is_voting_only())
-        if voters % 2 == (0 if on_new_unit else 1):
-            # if validation called on new unit: it means it will start and maintain the quorum
-            #    (called on the latest unit to be configured and brought online)
-            # if validation called on existing cluster we should expect an odd number in the sum
-            return
+        self._charm.peers_data.put(Scope.APP, "is_expecting_cm_unit", True)
+        self._charm.status.set(BlockedStatus(PClusterWrongNodesCountForQuorum), app=True)
 
-        raise OpenSearchProvidedRolesException(PClusterWrongNodesCountForQuorum)
+    def apps_in_fleet(self) -> List[PeerClusterApp]:
+        """Returns list of apps in cluster fleet"""
+        cluster_fleet_apps = (
+            self._charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
+        )
+        return [PeerClusterApp.from_dict(app) for app in cluster_fleet_apps.values()]
 
     def is_provider(self, typ: Optional[Literal["main", "failover"]] = None) -> bool:
         """Return whether the current app is a related to provider / orchestrator."""

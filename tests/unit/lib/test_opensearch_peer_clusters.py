@@ -115,19 +115,17 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             can_start = self.peer_cm.can_start(deployment_desc)
             self.assertEqual(can_start, expected)
 
-    @patch(f"{PEER_CLUSTERS_MANAGER}.is_peer_cluster_orchestrator_relation_set")
-    @patch("ops.model.Model.get_relation")
+    @patch(f"{BASE_LIB_PATH}.models.PeerClusterApp.from_dict")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
-    def test_validate_roles(
-        self, deployment_desc, get_relation, is_peer_cluster_orchestrator_relation_set
-    ):
+    @patch(f"{PEER_CLUSTERS_MANAGER}.is_provider")
+    def test_validate_roles(self, is_provider, deployment_desc, peer_cluster_app_from_dict):
         """Test the roles' validation."""
-        is_peer_cluster_orchestrator_relation_set.return_value = False
-        get_relation.return_value.units = set(self.p_units)
-
         app = App(name="logs", model_uuid=self.charm.model.uuid)
 
         self.peers_data.get_object = MagicMock()
+        peer_cluster_app_from_dict.side_effect = lambda app: MagicMock(
+            planned_units=app["planned_units"]
+        )
 
         deployment_desc.return_value = DeploymentDescription(
             config=self.user_configs["roles_ok"],
@@ -138,46 +136,61 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             state=DeploymentState(value=State.ACTIVE),
             profile="production",
         )
-        with self.assertRaises(OpenSearchProvidedRolesException):
-            # on scale up
-            self.charm.app.planned_units = MagicMock(return_value=4)
-            nodes = [
-                Node(
-                    name=node.name.replace("/", "-"),
-                    roles=["cluster_manager", "data"],
-                    ip="1.1.1.1",
-                    app=App(model_uuid=self.charm.model.uuid, name=app.name),
-                    unit_number=int(node.name.split("/")[-1]),
-                )
-                for node in self.p_units[0:3]
-            ]
+        # mock unit count=0 to only account for nodes in nodes list for full_cluster_planned_units
+        self.charm.app.planned_units = MagicMock(return_value=0)
+        is_provider.return_value = True
+        # large deployment with 3 cms, should not raise an exception
+        nodes = [
+            Node(
+                name=node.name.replace("/", "-"),
+                roles=["cluster_manager"],
+                ip="1.1.1.1",
+                app=App(model_uuid=self.charm.model.uuid, name=app.name),
+                unit_number=int(node.name.split("/")[-1]),
+            )
+            for node in self.p_units[0:3]
+        ] + [
+            Node(
+                name="node",
+                roles=["data"],
+                ip="1.1.1.1",
+                app=App(model_uuid=self.charm.model.uuid, name=app.name),
+                unit_number=3,
+            )
+        ]
 
-            self.peers_data.get_object.return_value = None
-            self.peer_cm.validate_roles(nodes=nodes, on_new_unit=True)
+        self.peers_data.get_object.return_value = {
+            "main": {"planned_units": 3},
+            "data": {"planned_units": 1},
+        }
+        # sufficient cms in deployment
+        assert self.peer_cm.has_recommended_cm_count(nodes=nodes)
 
-        with self.assertRaises(OpenSearchProvidedRolesException):
-            # on rebalance
-            self.charm.app.planned_units = MagicMock(return_value=5)
-            nodes = [
-                Node(
-                    name=node.name.replace("/", "-"),
-                    roles=["cluster_manager", "data"],
-                    ip="1.1.1.1",
-                    app=App(model_uuid=self.charm.model.uuid, name=app.name),
-                    unit_number=int(node.name.split("/")[-1]),
-                )
-                for node in self.p_units[0:4]
-            ] + [
-                Node(
-                    name="node",
-                    roles=["ml"],
-                    ip="0.0.0.0",
-                    app=App(model_uuid=self.charm.model.uuid, name="logs"),
-                    unit_number=7,
-                )
-            ]
-            self.peers_data.get_object.return_value = None
-            self.peer_cm.validate_roles(nodes=nodes, on_new_unit=False)
+        # large deployment with < 3 cms, should raise an exception on final unit
+        nodes = [
+            Node(
+                name=node.name.replace("/", "-"),
+                roles=["cluster_manager"],
+                ip="1.1.1.1",
+                app=App(model_uuid=self.charm.model.uuid, name=app.name),
+                unit_number=int(node.name.split("/")[-1]),
+            )
+            for node in self.p_units[0:2]
+        ] + [
+            Node(
+                name="node",
+                roles=["data"],
+                ip="0.0.0.0",
+                app=App(model_uuid=self.charm.model.uuid, name="logs"),
+                unit_number=2,
+            )
+        ]
+        self.peers_data.get_object.return_value = {
+            "main": {"planned_units": 2},
+            "data": {"planned_units": 1},
+        }
+
+        assert not self.peer_cm.has_recommended_cm_count(nodes=nodes)
 
     @patch("ops.model.Model.get_relation")
     @patch(f"{BASE_LIB_PATH}.helper_cluster.ClusterTopology.nodes")

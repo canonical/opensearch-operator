@@ -273,7 +273,6 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             self.charm._start_opensearch_event.emit.assert_called_once()
 
     @patch(f"{BASE_LIB_PATH}.opensearch_locking.OpenSearchNodeLock.acquired")
-    @patch(f"{PEER_CLUSTERS_MANAGER}.validate_roles")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     @patch(f"{PEER_CLUSTERS_MANAGER}.can_start")
     @patch(f"{BASE_CHARM_CLASS}.is_admin_user_configured")
@@ -302,7 +301,6 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         is_admin_user_configured,
         can_start,
         deployment_desc,
-        validate_roles,
         lock_acquired,
     ):
         """Test on start event."""
@@ -381,8 +379,6 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
             _get_nodes.side_effect = None
             _get_nodes.assert_called()
-            validate_roles.side_effect = None
-            validate_roles.assert_called()
             _set_node_conf.assert_called()
             start.assert_called_once()
             _post_start_init.assert_called_once()
