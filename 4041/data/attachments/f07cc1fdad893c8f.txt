@@ -1,0 +1,183 @@
+[32mINFO    [0m integration.large_deployments.test_failover_promotion_cross_model_relations:test_failover_promotion_cross_model_relations.py:142 Removing failover-main relation...
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  opensearch-failover/0 [executing] active: 
+[32mINFO    [0m integration.large_deployments.test_failover_promotion_cross_model_relations:test_failover_promotion_cross_model_relations.py:154 Ensuring failover was not promoted...
+[32mINFO    [0m integration.large_deployments.test_failover_promotion_cross_model_relations:test_failover_promotion_cross_model_relations.py:165 Removing data-main relation...
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  opensearch-data/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  opensearch-data/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  opensearch-data/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  opensearch-data/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  opensearch-data/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  opensearch-data/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  opensearch-data/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  opensearch-data/0 [executing] active: 
+[32mINFO    [0m integration.large_deployments.test_failover_promotion_cross_model_relations:test_failover_promotion_cross_model_relations.py:176 Ensuring failover was promoted to main...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model                                               Controller     Cloud/Region         Version  SLA          Timestamp
+test-failover-promotion-cross-model-relations-0x2j  concierge-lxd  localhost/localhost  3.6.6    unsupported  02:01:00Z
+
+SAAS                  Status   Store          URL
+certs-integration     active   concierge-lxd  admin/testing.certs-integration
+failover-integration  blocked  concierge-lxd  admin/test-failover-promotion-cross-model-relations-39r6.failover-integration
+
+App              Version  Status  Scale  Charm       Channel  Rev  Exposed  Message
+opensearch-data           active      1  opensearch             0  no       
+
+Unit                Workload  Agent  Machine  Public address  Ports     Message
+opensearch-data/0*  active    idle   0        10.238.201.143  9200/tcp  
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.238.201.143  juju-c3369e-0  ubuntu@24.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:54:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:54:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-data-0: 01:54:28 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:971 Resetting model test-failover-promotion-cross-model-relations-0x2j...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:960    Destroying applications opensearch-data
+[32mINFO    [0m pytest_operator.plugin:plugin.py:960    Destroying machines 0
+[32mINFO    [0m pytest_operator.plugin:plugin.py:995 Reset test-failover-promotion-cross-model-relations-0x2j completed successfully.
+[33mWARNING [0m pytest_operator.plugin:plugin.py:940 Waiting for model test-failover-promotion-cross-model-relations-0x2j to die...
+[31m[1mERROR   [0m juju.model:jasyncio.py:115 Task tmp raised an exception: watcher was stopped
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/jasyncio.py", line 103, in _task_result_exp_handler
+    task.result()
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/facade.py", line 483, in wrapper
+    reply = await f(*args, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/_client3.py", line 126, in Next
+    reply = await self.rpc(msg)
+            ^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/overrides.py", line 116, in rpc
+    result = await self.connection.rpc(msg, encoder=TypeEncoder)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 597, in rpc
+    raise errors.JujuAPIError(result)
+juju.errors.JujuAPIError: watcher was stopped
+[33mWARNING [0m juju.model:model.py:1323 Watcher: watcher stopped, restarting
+[33mWARNING [0m juju.client.connection:connection.py:579 RPC: Connection closed, reconnecting
+[31m[1mERROR   [0m asyncio:base_events.py:1821 Task exception was never retrieved
+future: <Task finished name='Task-11232' coro=<Connection.reconnect() done, defined at /root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py:697> exception=JujuAPIError('unknown model: "2ea77696-3e10-490a-8f6a-81d571c3369e"')>
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 709, in reconnect
+    res = await connector(
+          ^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 805, in _connect_with_login
+    result = (await self.login())["response"]
+              ^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 886, in login
+    return await self.rpc({
+           ^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 597, in rpc
+    raise errors.JujuAPIError(result)
+juju.errors.JujuAPIError: unknown model: "2ea77696-3e10-490a-8f6a-81d571c3369e"
+[31m[1mERROR   [0m juju.client.connection:connection.py:587 RPC: Automatic reconnect failed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model data...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model                                               Controller     Cloud/Region         Version  SLA          Timestamp
+test-failover-promotion-cross-model-relations-39r6  concierge-lxd  localhost/localhost  3.6.6    unsupported  02:01:08Z
+
+SAAS               Status  Store          URL
+certs-integration  active  concierge-lxd  admin/testing.certs-integration
+
+App                  Version  Status   Scale  Charm       Channel  Rev  Exposed  Message
+opensearch-failover           blocked      1  opensearch             0  no       Less than 3 cluster-manager-eligible units in this cluster. Add more units.
+
+Unit                    Workload  Agent      Machine  Public address  Ports     Message
+opensearch-failover/0*  active    executing  0        10.238.201.8    9200/tcp  
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.238.201.8  juju-58dd2b-0  ubuntu@24.04      Running
+
+Offer                 Application          Charm       Rev  Connected  Endpoint                   Interface     Role
+failover-integration  opensearch-failover  opensearch  0    0/0        peer-cluster-orchestrator  peer_cluster  provider
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:38:21 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:38:21 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-failover-0: 01:38:21 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:971 Resetting model test-failover-promotion-cross-model-relations-39r6...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:960    Destroying applications opensearch-failover
+[32mINFO    [0m pytest_operator.plugin:plugin.py:960    Destroying machines 0
+[32mINFO    [0m pytest_operator.plugin:plugin.py:995 Reset test-failover-promotion-cross-model-relations-39r6 completed successfully.
+[33mWARNING [0m pytest_operator.plugin:plugin.py:940 Waiting for model test-failover-promotion-cross-model-relations-39r6 to die...
+[31m[1mERROR   [0m juju.model:jasyncio.py:115 Task tmp raised an exception: watcher was stopped
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/jasyncio.py", line 103, in _task_result_exp_handler
+    task.result()
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/facade.py", line 483, in wrapper
+    reply = await f(*args, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/_client3.py", line 126, in Next
+    reply = await self.rpc(msg)
+            ^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/overrides.py", line 116, in rpc
+    result = await self.connection.rpc(msg, encoder=TypeEncoder)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 597, in rpc
+    raise errors.JujuAPIError(result)
+juju.errors.JujuAPIError: watcher was stopped
+[33mWARNING [0m juju.model:model.py:1323 Watcher: watcher stopped, restarting
+[33mWARNING [0m juju.client.connection:connection.py:579 RPC: Connection closed, reconnecting
+[31m[1mERROR   [0m asyncio:base_events.py:1821 Task exception was never retrieved
+future: <Task finished name='Task-11373' coro=<Connection.reconnect() done, defined at /root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py:697> exception=JujuAPIError('unknown model: "7dacb475-1db1-482a-875a-f4194458dd2b"')>
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 709, in reconnect
+    res = await connector(
+          ^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 805, in _connect_with_login
+    result = (await self.login())["response"]
+              ^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 886, in login
+    return await self.rpc({
+           ^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 597, in rpc
+    raise errors.JujuAPIError(result)
+juju.errors.JujuAPIError: unknown model: "7dacb475-1db1-482a-875a-f4194458dd2b"
+[31m[1mERROR   [0m juju.client.connection:connection.py:587 RPC: Automatic reconnect failed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model failover...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.6    unsupported  02:01:16Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch-main                    active      1  opensearch                                 0  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch-main/0*           active    idle   1        10.238.201.121  9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.238.201.54             
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.238.201.54   juju-77e518-0  ubuntu@22.04      Running
+1        started  10.238.201.121  juju-77e518-1  ubuntu@24.04      Running
+
+Offer              Application               Charm                     Rev  Connected  Endpoint                   Interface         Role
+certs-integration  self-signed-certificates  self-signed-certificates  264  0/0        certificates               tls-certificates  provider
+main-integration   opensearch-main           opensearch                0    0/0        peer-cluster-orchestrator  peer_cluster      provider
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-1: 01:35:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:35:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-main-0: 01:35:40 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:35:50 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:35:50 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:35:50 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
