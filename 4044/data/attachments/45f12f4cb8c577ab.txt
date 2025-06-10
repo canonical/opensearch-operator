@@ -1,0 +1,49 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.7    unsupported  02:15:35Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch-data                    waiting      1  opensearch                                 0  no       Waiting for every unit in related 'main-orchestrator' to start.
+opensearch-failover                waiting      3  opensearch                                 2  no       Waiting for every unit in related 'main-orchestrator' to start.
+opensearch-main                    blocked      1  opensearch                                 1  no       Cannot run cluster with current roles. Waiting for data node...
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports  Message
+opensearch-data/0*           active    idle       4        10.134.178.33          
+opensearch-failover/0        waiting   executing  1        10.134.178.90          Requesting lock on operation: start
+opensearch-failover/1        waiting   executing  2        10.134.178.12          Requesting lock on operation: start
+opensearch-failover/2*       waiting   executing  3        10.134.178.6           Requesting lock on operation: start
+opensearch-main/0*           blocked   idle       5        10.134.178.210         Cannot run cluster with current roles. Waiting for data node...
+self-signed-certificates/0*  active    idle       0        10.134.178.113         
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.134.178.113  juju-9b6dc0-0  ubuntu@22.04      Running
+1        started  10.134.178.90   juju-9b6dc0-1  ubuntu@24.04      Running
+2        started  10.134.178.12   juju-9b6dc0-2  ubuntu@24.04      Running
+3        started  10.134.178.6    juju-9b6dc0-3  ubuntu@24.04      Running
+4        started  10.134.178.33   juju-9b6dc0-4  ubuntu@24.04      Running
+5        started  10.134.178.210  juju-9b6dc0-5  ubuntu@24.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:42:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:42:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:42:52 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:44:12 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:44:12 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-data-0: 01:44:12 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-5: 01:44:31 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:44:31 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-main-0: 01:44:31 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:44:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:44:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-failover-2: 01:44:33 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:44:37 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:44:37 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-failover-0: 01:44:37 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:44:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:44:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-failover-1: 01:44:39 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
