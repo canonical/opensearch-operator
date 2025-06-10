@@ -715,8 +715,8 @@ class OpenSearchBackupBase(Object):
             self.charm.status.clear(BackupRelShouldNotExist, app=True)
 
         if (
-            not (deplopyment_desc := self.charm.opensearch_peer_cm.deployment_desc())
-            or deplopyment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
+            not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc())
+            or deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
         ):
             # Nothing to do besides fixing the status
             return
