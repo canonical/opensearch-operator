@@ -379,18 +379,28 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         # compute the data that needs to be broadcast to all related clusters (success or error)
         # if rel_data is an error, prepare to broadcast it to all related clusters
-        rel_data = self._rel_data(deployment_desc, orchestrators)
-
-        # if rel_data is NOT an error, we will replace the plaintext credentials in
-        # the object, with their corresponding secret IDs
-        if isinstance(rel_data, PeerClusterRelData):
+        rel_data_redacted_dict = None
+        if self.charm.is_admin_user_configured():
+            rel_data = self._rel_data(deployment_desc)
+            # replace the plaintext credentials in
+            # rel_data with their corresponding secret IDs
             rel_data_redacted_dict = self._rel_data_redacted_dict(rel_data)
 
             # grant the secrets inside the rel_data to all the related clusters
             self._grant_rel_data_secrets(rel_data_redacted_dict, all_relation_ids)
 
+        rel_err_data = self._rel_err_data(deployment_desc, orchestrators)
+        if rel_err_data is None and len(rel_data.cm_nodes) == 0:
+            rel_err_data = PeerClusterRelErrorData(
+                cluster_name=deployment_desc.config.cluster_name,
+                should_sever_relation=False,
+                should_wait=True,
+                blocked_message=f"Could not fetch nodes in related {deployment_desc.typ} sub-cluster.",
+                deployment_desc=deployment_desc,
+            )
+
         # exit if current cluster should not have been considered a provider
-        if self._notify_if_wrong_integration(rel_data, all_relation_ids) and event_rel_id:
+        if self._notify_if_wrong_integration(rel_err_data, all_relation_ids) and event_rel_id:
             self.delete_from_rel("trigger", rel_id=event_rel_id)
             return
 
@@ -410,9 +420,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         orchestrators[f"{cluster_type}_app"] = deployment_desc.app.to_dict()
         self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators)
 
-        should_defer = False
-        if isinstance(rel_data, PeerClusterRelErrorData):
-            should_defer = rel_data.should_wait
+        should_defer = rel_err_data and rel_err_data.should_wait
 
         # save the orchestrators of this fleet
         has_units = self.charm.app.planned_units() > 0
@@ -426,11 +434,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             )
             self.put_in_rel(data={"orchestrators": json.dumps(orchestrators)}, rel_id=rel_id)
 
-            # there is no error to broadcast - we clear any previously broadcasted error
-            if isinstance(rel_data, PeerClusterRelData):
-                self.delete_from_rel("error_data", rel_id=rel_id)
-                # we add the hash of the rel_data to only emit a change event
-                # if the data has actually changed
+            # we add the hash of the rel_data to only emit a change event
+            # if the data has actually changed
+            if rel_data_redacted_dict:
                 self.put_in_rel(
                     data={
                         "data": json.dumps(rel_data_redacted_dict),
@@ -440,8 +446,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                     },
                     rel_id=rel_id,
                 )
+            # there is no error to broadcast - we clear any previously broadcasted error
+            if not rel_err_data:
+                self.delete_from_rel("error_data", rel_id=rel_id)
             else:
-                self.put_in_rel(data={"error_data": rel_data.to_str()}, rel_id=rel_id)
+                self.put_in_rel(data={"error_data": rel_err_data.to_str()}, rel_id=rel_id)
 
             # if no planned units, delete relation data as it won't get updated
             if not has_units:
@@ -453,18 +462,18 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
     def _notify_if_wrong_integration(
         self,
-        rel_data: Union[PeerClusterRelData, PeerClusterRelErrorData],
+        rel_err_data: Optional[PeerClusterRelErrorData],
         target_relation_ids: List[int],
     ) -> bool:
         """Check if relation is invalid and notify related sub-clusters."""
-        if not isinstance(rel_data, PeerClusterRelErrorData):
+        if rel_err_data is None:
             return False
 
-        if not rel_data.should_sever_relation:
+        if not rel_err_data.should_sever_relation:
             return False
 
         for rel_id in target_relation_ids:
-            self.put_in_rel(data={"error_data": rel_data.to_str()}, rel_id=rel_id)
+            self.put_in_rel(data={"error_data": rel_err_data.to_str()}, rel_id=rel_id)
 
         return True
 
@@ -473,6 +482,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         self.delete_from_rel("cluster_fleet_apps", rel_id=rel_id)
         self.delete_from_rel("data", rel_id=rel_id)
         self.delete_from_rel("rel_data_hash", rel_id=rel_id)
+
 
     def _update_fleet(
         self, fleet_dict: dict[str, dict[str, Any]], app: PeerClusterApp, key: Optional[str] = None
@@ -594,19 +604,20 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
     def _rel_data(
         self,
         deployment_desc: DeploymentDescription,
-        orchestrators: PeerClusterOrchestrators,
     ) -> Union[PeerClusterRelData, PeerClusterRelErrorData]:
         """Build and return the peer cluster rel data to be shared with requirer sub-clusters."""
-        if rel_err_data := self._rel_err_data(deployment_desc, orchestrators):
-            return rel_err_data
-
         # check that this cluster is fully ready, otherwise put "configuring" in
         # peer rel data for requirers to show a blocked status until it's fully
         # ready (will receive a subsequent
+        cm_nodes = []
         try:
+            cm_nodes = self._fetch_local_cm_nodes(deployment_desc)
+        except OpenSearchHttpError:
+            logger.warning(f"Could not fetch nodes in related {deployment_desc.typ} sub-cluster")
+        finally:
             return PeerClusterRelData(
                 cluster_name=deployment_desc.config.cluster_name,
-                cm_nodes=self._fetch_local_cm_nodes(deployment_desc),
+                cm_nodes=cm_nodes,
                 credentials=PeerClusterRelDataCredentials(
                     admin_username=AdminUser,
                     admin_password=self.secrets.get(
@@ -630,14 +641,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 ),
                 deployment_desc=deployment_desc,
                 security_index_initialised=self._get_security_index_initialised(),
-            )
-        except OpenSearchHttpError:
-            return PeerClusterRelErrorData(
-                cluster_name=deployment_desc.config.cluster_name,
-                should_sever_relation=False,
-                should_wait=True,
-                blocked_message=f"Could not fetch nodes in related {deployment_desc.typ} sub-cluster.",
-                deployment_desc=deployment_desc,
             )
 
     def _rel_err_data(  # noqa: C901
