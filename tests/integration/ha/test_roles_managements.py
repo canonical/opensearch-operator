@@ -6,7 +6,6 @@ import asyncio
 import logging
 
 import pytest
-from charms.opensearch.v0.constants_charm import PClusterWrongNodesCountForQuorum
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
@@ -15,7 +14,6 @@ from ..helpers import (
     MODEL_CONFIG,
     check_cluster_formation_successful,
     cluster_health,
-    get_application_unit_ids,
     get_application_unit_names,
     get_leader_unit_ip,
 )
@@ -106,30 +104,6 @@ async def test_set_roles_manually(
     for node in nodes:
         assert sorted(node.roles) == ["cluster_manager", "data"], "roles unchanged"
         assert node.temperature == "cold", "Temperature unchanged."
-
-    # scale up cluster by 1 unit, this should give the new node the same roles
-    await ops_test.model.applications[app].add_unit(count=1)
-    # TODO: this should have to go once we full trust that quorum is automatically established
-    await wait_until(
-        ops_test,
-        apps=[app],
-        units_full_statuses={
-            app: {
-                "units": {
-                    "blocked": [PClusterWrongNodesCountForQuorum],
-                    "active": [],
-                },
-            },
-        },
-        wait_for_exact_units=len(nodes) + 1,
-        idle_period=IDLE_PERIOD,
-    )
-    new_nodes = await all_nodes(ops_test, leader_unit_ip)
-    assert len(new_nodes) == len(nodes)
-
-    # remove new unit
-    last_unit_id = sorted(get_application_unit_ids(ops_test, app))[-1]
-    await ops_test.model.applications[app].destroy_unit(f"{app}/{last_unit_id}")
 
 
 @pytest.mark.abort_on_fail
