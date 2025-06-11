@@ -420,6 +420,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.set(WaitingStatus(RequestUnitServiceOps.format("start")))
 
         # if this is the first data node to join, start without getting the lock
+        # TODO synchronize so that only 1 data node starts https://warthogs.atlassian.net/browse/DPE-7530
         ignore_lock = (
             (
                 "data" in deployment_desc.config.roles
