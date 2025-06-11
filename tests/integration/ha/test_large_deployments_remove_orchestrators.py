@@ -8,6 +8,8 @@ import logging
 
 import pytest
 from charms.opensearch.v0.constants_charm import (
+    PClusterNoDataNode,
+    PClusterNoRelation,
     PClusterOrchestratorsRemoved,
     PeerRelationName,
 )
@@ -87,6 +89,23 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
     for app in [MAIN_APP, FAILOVER_APP, DATA_APP]:
         await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
 
+    await wait_until(
+        ops_test,
+        apps=list(APP_UNITS.keys()),
+        apps_full_statuses={
+            MAIN_APP: {"blocked": [PClusterNoDataNode]},
+            FAILOVER_APP: {"blocked": [PClusterNoRelation]},
+            DATA_APP: {"blocked": [PClusterNoRelation]},
+        },
+        units_full_statuses={
+            MAIN_APP: {"units": {"blocked": [PClusterNoDataNode]}},
+            FAILOVER_APP: {"units": {"active": []}},
+            DATA_APP: {"units": {"active": []}},
+        },
+        wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
+        idle_period=IDLE_PERIOD,
+        timeout=1800,
+    )
     await ops_test.model.integrate(f"{FAILOVER_APP}:{REL_PEER}", f"{MAIN_APP}:{REL_ORCHESTRATOR}")
     await ops_test.model.integrate(f"{DATA_APP}:{REL_PEER}", f"{MAIN_APP}:{REL_ORCHESTRATOR}")
     await ops_test.model.integrate(f"{DATA_APP}:{REL_PEER}", f"{FAILOVER_APP}:{REL_ORCHESTRATOR}")
