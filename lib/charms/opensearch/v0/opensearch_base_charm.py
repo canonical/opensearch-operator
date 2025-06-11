@@ -421,7 +421,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # if this is the first data node to join, start without getting the lock
         ignore_lock = (
-            "data" in deployment_desc.config.roles
+            (
+                "data" in deployment_desc.config.roles
+                or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+            )
             and self.unit.is_leader()
             and deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
             and (
@@ -1811,9 +1814,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _is_failover_and_only_data_node(self) -> bool:
         """Check if the current node is a failover and the only data node in the cluster."""
         deployment_desc = self.opensearch_peer_cm.deployment_desc()
-        if (
-            deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR
-            and "data" in deployment_desc.config.roles
+        if deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR and (
+            "data" in deployment_desc.config.roles
+            or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
         ):
             # check if it's the only data node in the cluster
             cluster_fleet_apps = self.peers_data.get_object(Scope.APP, "cluster_fleet_apps")
