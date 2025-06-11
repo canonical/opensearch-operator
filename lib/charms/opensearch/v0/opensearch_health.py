@@ -68,10 +68,9 @@ class OpenSearchHealth:
         )
         logger.info(f"Current health of cluster: {status}")
 
+        self._apply_for_unit(status)
         if app:
             self._apply_for_app(status)
-        else:
-            self._apply_for_unit(status)
 
         return status
 
