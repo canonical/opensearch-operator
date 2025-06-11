@@ -106,8 +106,21 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
         idle_period=IDLE_PERIOD,
         timeout=1800,
     )
-    await ops_test.model.integrate(f"{FAILOVER_APP}:{REL_PEER}", f"{MAIN_APP}:{REL_ORCHESTRATOR}")
+
     await ops_test.model.integrate(f"{DATA_APP}:{REL_PEER}", f"{MAIN_APP}:{REL_ORCHESTRATOR}")
+    await wait_until(
+        ops_test,
+        apps=[MAIN_APP, DATA_APP],
+        apps_full_statuses={
+            MAIN_APP: {"active": []},
+            DATA_APP: {"active": []},
+        },
+        units_statuses=["active"],
+        wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
+        idle_period=IDLE_PERIOD,
+    )
+
+    await ops_test.model.integrate(f"{FAILOVER_APP}:{REL_PEER}", f"{MAIN_APP}:{REL_ORCHESTRATOR}")
     await ops_test.model.integrate(f"{DATA_APP}:{REL_PEER}", f"{FAILOVER_APP}:{REL_ORCHESTRATOR}")
     await wait_until(
         ops_test,
