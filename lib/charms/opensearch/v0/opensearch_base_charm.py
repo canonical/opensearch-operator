@@ -1819,7 +1819,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
         ):
             # check if it's the only data node in the cluster
-            cluster_fleet_apps = self.peers_data.get_object(Scope.APP, "cluster_fleet_apps")
+            cluster_fleet_apps = self.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
             for app in cluster_fleet_apps:
                 if self.app.name != cluster_fleet_apps[app].get("app", {}).get(
                     "name"
