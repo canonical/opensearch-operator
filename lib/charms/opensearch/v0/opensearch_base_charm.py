@@ -474,8 +474,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):  # noqa C901
         """Handle peer relation changes."""
-        if self.unit.is_leader() and self.opensearch.is_node_up():
-            health = self.health.apply()
+        if self.opensearch.is_node_up():
+            health = self.health.apply(app=self.unit.is_leader())
             if self._is_peer_rel_changed_deferred:
                 # We already deferred this event during this Juju event. Retry on the next
                 # Juju event.
@@ -656,16 +656,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # if there are exclusions to be removed
         # each unit should check its own exclusions' list
         self.opensearch_exclusions.cleanup()
-        if self.unit.is_leader():
-            if (health := self.health.apply(wait_for_green_first=True)) not in [
-                HealthColors.GREEN,
-                HealthColors.IGNORE,
-            ]:
-                logger.warning(
-                    f"Update status: exclusions updated and cluster health is {health}."
-                )
+        if (
+            health := self.health.apply(wait_for_green_first=True, app=self.unit.is_leader())
+        ) not in [
+            HealthColors.GREEN,
+            HealthColors.IGNORE,
+        ]:
+            logger.warning(f"Update status: exclusions updated and cluster health is {health}.")
 
-            if health == HealthColors.UNKNOWN:
+            if self.unit.is_leader() and health == HealthColors.UNKNOWN:
                 return
 
         for relation in self.model.relations.get(ClientRelationName, []):
