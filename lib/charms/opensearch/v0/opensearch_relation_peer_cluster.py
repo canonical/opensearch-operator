@@ -483,7 +483,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         self.delete_from_rel("data", rel_id=rel_id)
         self.delete_from_rel("rel_data_hash", rel_id=rel_id)
 
-
     def _update_fleet(
         self, fleet_dict: dict[str, dict[str, Any]], app: PeerClusterApp, key: Optional[str] = None
     ) -> None:
