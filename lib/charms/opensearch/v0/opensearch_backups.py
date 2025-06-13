@@ -75,6 +75,7 @@ object that corresponds to its own case (cluster-manager, failover, data, etc).
 
 import json
 import logging
+from abc import abstractmethod
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, Optional, Set
 
@@ -427,8 +428,6 @@ class BackupManager:
             logger.debug(f"Restore status: {indices_status}")
         except OpenSearchHttpError as e:
             output = e.response_body if e.response_body else None
-            if not output:
-                return False
             return BackupManager.get_service_status(output)
         except Exception as e:
             logger.error(f"_query_restore_status failed with: {e}")
@@ -714,7 +713,11 @@ class OpenSearchBackupBase(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelShouldNotExist, app=True)
 
-        if self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
+        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+            event.defer()
+            return
+
+        if deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR:
             # Nothing to do besides fixing the status
             return
 
@@ -938,16 +941,20 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_backup_action)
 
+    @property
+    @abstractmethod
     def get_service_status(self, response: dict[str, Any] | None) -> BackupServiceState:
         """Extends the backup manager's service status check by incorporating relation data."""
         ...
 
     @property
+    @abstractmethod
     def plugin(self):
         """Returns the plugin for this class."""
         ...
 
     @property
+    @abstractmethod
     def data(self) -> Model | None:
         """Returns the data for the backup backend."""
         ...
