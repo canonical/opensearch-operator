@@ -17,6 +17,7 @@ from charms.opensearch.v0.constants_charm import (
     RestoreInProgress,
 )
 from charms.opensearch.v0.helper_cluster import IndexStateEnum
+from charms.opensearch.v0.models import PerformanceType
 from charms.opensearch.v0.opensearch_backups import (
     S3_REPOSITORY,
     BackupServiceState,
@@ -69,13 +70,14 @@ def create_deployment_desc(*args, **kwargs):
             cluster_name="logs",
             init_hold=False,
             roles=["cluster_manager", "data"],
-            profile="production",
+            profile=PerformanceType.PRODUCTION,
         ),
         start=StartMode.WITH_PROVIDED_ROLES,
         pending_directives=[],
         app=App(model_uuid="model-uuid", name="opensearch"),
         typ=DeploymentType.MAIN_ORCHESTRATOR,
         state=DeploymentState(value=State.ACTIVE),
+        promotion_time=None,
     )
 
 
@@ -628,10 +630,12 @@ class TestBackups(unittest.TestCase):
         event = MagicMock()
         self.charm.backup.backup_manager.is_set = MagicMock(return_value=True)
         self.charm.backup.backup_manager.is_backup_in_progress = MagicMock(return_value=False)
-        mock_request.side_effect = OpenSearchHttpError(500, "Internal Server Error")
+        mock_request.side_effect = OpenSearchHttpError(
+            response_text="Internal Server Error", response_code=500
+        )
         self.charm.backup._on_create_backup_action(event)
         event.fail.assert_called_with(
-            "Failed with exception: HTTP error self.response_code='Internal Server Error'\nself.response_text=500"
+            "Failed with exception: HTTP error self.response_code=500\nself.response_text='Internal Server Error'"
         )
 
     def test_on_restore_backup_action(self, _):
