@@ -630,7 +630,9 @@ class TestBackups(unittest.TestCase):
         event = MagicMock()
         self.charm.backup.backup_manager.is_set = MagicMock(return_value=True)
         self.charm.backup.backup_manager.is_backup_in_progress = MagicMock(return_value=False)
-        mock_request.side_effect = OpenSearchHttpError("Internal Server Error", 500)
+        mock_request.side_effect = OpenSearchHttpError(
+            response_text="Internal Server Error", response_code=500
+        )
         self.charm.backup._on_create_backup_action(event)
         event.fail.assert_called_with(
             "Failed with exception: HTTP error self.response_code='Internal Server Error'\nself.response_text=500"
