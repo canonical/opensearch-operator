@@ -3430,6 +3430,10 @@ class KafkaProviderEventHandlers(ProviderEventHandlers):
                 event.relation, app=event.app, unit=event.unit
             )
 
+    def _on_secret_changed_event(self, event: SecretChangedEvent) -> None:
+        """Event emitted when the relation data has changed."""
+        pass
+
 
 class KafkaProvides(KafkaProviderData, KafkaProviderEventHandlers):
     """Provider-side of the Kafka relation."""
@@ -3674,6 +3678,10 @@ class OpenSearchProvidesEventHandlers(ProviderEventHandlers):
             getattr(self.on, "index_requested").emit(
                 event.relation, app=event.app, unit=event.unit
             )
+
+    def _on_secret_changed_event(self, event: SecretChangedEvent) -> None:
+        """Event emitted when the relation data has changed."""
+        pass
 
 
 class OpenSearchProvides(OpenSearchProvidesData, OpenSearchProvidesEventHandlers):
