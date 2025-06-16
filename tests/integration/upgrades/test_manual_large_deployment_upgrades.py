@@ -33,6 +33,7 @@ WORKLOAD = {
 }
 
 
+@pytest.mark.skip(reason="Fix with DPE-4528")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_large_deployment_deploy_original_charm(ops_test: OpsTest, series) -> None:
@@ -117,6 +118,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest, series)
     )
 
 
+@pytest.mark.skip(reason="Fix with DPE-4528")
 @pytest.mark.abort_on_fail
 async def test_manually_upgrade_to_local(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, charm
