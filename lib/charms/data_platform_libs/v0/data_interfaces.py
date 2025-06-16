@@ -3675,6 +3675,10 @@ class OpenSearchProvidesEventHandlers(ProviderEventHandlers):
                 event.relation, app=event.app, unit=event.unit
             )
 
+    def _on_secret_changed_event(self, event: SecretChangedEvent) -> None:
+        """Event emitted when the relation data has changed."""
+        pass
+
 
 class OpenSearchProvides(OpenSearchProvidesData, OpenSearchProvidesEventHandlers):
     """Provider-side of the OpenSearch relation."""
