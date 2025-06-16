@@ -536,14 +536,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(AZURE_RELATION):
                 return None
 
-            if not self.charm.backup.client.get_azure_connection_info().get("storage-account"):
+            azure_storage_conn_info = self.charm.backup.client.get_azure_storage_connection_info()
+            if not azure_storage_conn_info.get("storage-account"):
                 return None
 
             # As the main orchestrator, this application must set the S3 information.
-            storage_account = self.charm.backup.client.get_azure_connection_info().get(
-                "storage-account"
-            )
-            secret_key = self.charm.backup.client.get_azure_connection_info().get("secret-key")
+            storage_account = azure_storage_conn_info.get("storage-account")
+            secret_key = azure_storage_conn_info.get("secret-key")
 
             # set the secrets in the charm
             # TODO Move this to azure relation and include both in one secret
