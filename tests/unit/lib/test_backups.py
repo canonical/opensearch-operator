@@ -635,7 +635,7 @@ class TestBackups(unittest.TestCase):
         )
         self.charm.backup._on_create_backup_action(event)
         event.fail.assert_called_with(
-            "Failed with exception: HTTP error self.response_code='Internal Server Error'\nself.response_text=500"
+            "Failed with exception: HTTP error self.response_code=500\nself.response_text='Internal Server Error'"
         )
 
     def test_on_restore_backup_action(self, _):
