@@ -475,7 +475,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _on_peer_relation_changed(self, event: RelationChangedEvent):  # noqa C901
         """Handle peer relation changes."""
         if self.opensearch.is_node_up():
-            health = self.health.apply(app=self.unit.is_leader())
+            health = self.health.apply(app=self.unit.is_leader(), apply_for_units=True)
             if self._is_peer_rel_changed_deferred:
                 # We already deferred this event during this Juju event. Retry on the next
                 # Juju event.
@@ -657,7 +657,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # each unit should check its own exclusions' list
         self.opensearch_exclusions.cleanup()
         if (
-            health := self.health.apply(wait_for_green_first=True, app=self.unit.is_leader())
+            health := self.health.apply(
+                wait_for_green_first=True, app=self.unit.is_leader(), apply_for_units=True
+            )
         ) not in [
             HealthColors.GREEN,
             HealthColors.IGNORE,
@@ -1165,7 +1167,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.opensearch_fixes.apply_on_start()
 
         # apply cluster health
-        self.health.apply(wait_for_green_first=True, app=self.unit.is_leader())
+        self.health.apply(
+            wait_for_green_first=True,
+            app=self.unit.is_leader(),
+            apply_for_units=(not self.unit.is_leader()),
+        )
 
         if (
             self.unit.is_leader()
@@ -1384,7 +1390,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # opensearch until all shards in other units are in a "started" or "unassigned" state.
         try:
             if (
-                self.health.apply(wait_for_green_first=True, use_localhost=False, app=False)
+                self.health.apply(
+                    wait_for_green_first=True, use_localhost=False, app=False, apply_for_units=True
+                )
                 == HealthColors.YELLOW_TEMP
             ):
                 return False

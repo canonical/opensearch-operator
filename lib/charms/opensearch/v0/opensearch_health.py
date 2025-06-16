@@ -60,6 +60,7 @@ class OpenSearchHealth:
         wait_for_green_first: bool = False,
         use_localhost: bool = True,
         app: bool = True,
+        apply_for_units: bool = False,
     ) -> str:
         """Fetch cluster health and set it on the app status."""
         status = self.get(
@@ -68,7 +69,8 @@ class OpenSearchHealth:
         )
         logger.info(f"Current health of cluster: {status}")
 
-        self._apply_for_unit(status)
+        if apply_for_units:
+            self._apply_for_unit(status)
         if app:
             self._apply_for_app(status)
 
