@@ -314,7 +314,6 @@ class S3RelData(Model):
     @root_validator
     def validate_core_fields(cls, values):  # noqa: N805
         """Validate the core fields of the S3 relation data."""
-        # Do not raise an exception if we are missing all the fields:
         if (
             not (s3_creds := values.get("credentials"))
             or not s3_creds.access_key
