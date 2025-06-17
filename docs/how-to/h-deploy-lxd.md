@@ -1,85 +1,45 @@
 # How to deploy on LXD
 
-This guide goes shows you how to deploy Charmed OpenSearch on [LXD](https://ubuntu.com/server/docs/lxd-containers), Canonical’s lightweight container hypervisor.
+This guide summarizes how to set up your machine and deploy Charmed OpenSearch on [LXD](https://ubuntu.com/server/docs/lxd-containers), Canonical’s lightweight container hypervisor.
+
+If you are a beginner to OpenSearch or Juju and are looking for a more comprehensive walkthrough of these steps, refer instead to the [Tutorial](/t/9722).
 
 ## Prerequisites
+**Juju `v.3.5.3+`**: Install Juju, but do not bootstrap anything yet. 
 
-* Charmed OpenSearch VM Revision 108+
-* Fulfil the [system requirements](/t/14565)
+> See also: [How to install Juju](https://documentation.ubuntu.com/juju/3.6/howto/manage-juju/#install-juju)
+  
+**LXD `v6.1+`**: Install and initialize LXD. 
+> See also: [FIrst steps with LXD](https://documentation.ubuntu.com/lxd/en/latest/tutorial/first_steps/#install-and-initialize-lxd)
 
-## Summary
-* [Configure LXD](#configure-lxd)
-* [Prepare Juju](#prepare-juju)
-* [Deploy OpenSearch](#deploy-opensearch)
+**System requirements**: Check that you fulfill the rest of the software and hardware requirements in the [system requirements page](/t/14565).
 
 ---
 
-## Configure LXD
+## Disable IPv6 on LXD
 
-This subsection assumes you are running on a fresh Ubuntu installation. In this case, we need to either install or refresh the current LXD snap and initialize it.
-
-### Install
-
-LXD is pre-installed on Ubuntu images. You can verify if you have it install with the command `which lxd`. 
-
-If not installed, the `lxd` package can be installed using
-
-```shell
-sudo snap install lxd --channel=latest/stable  # latest stable will settle for 5.21+ version
+Juju does not support IPv6 addresses with LXD. To set the network bridge to have no IPv6 addresses, run the following command after initializing LXD:
+```
+lxc network set lxdbr0 ipv6.address none
 ```
 
-### Refresh and initialize
+See [The LXD cloud and Juju](https://documentation.ubuntu.com/juju/3.6/reference/cloud/list-of-supported-clouds/the-lxd-cloud-and-juju/#supported-constraints) for more information.
 
-Once installed, refresh the `lxd` snap:
+## Sysctl configuration
 
+Before bootstrapping Juju controllers, sysconfigs required by OpenSearch must be enforced. This entails modifying some kernel parameters on the host machine, and creating a configuration file to apply the same configuration in any new container that gets deployed.
+
+[note]
+The following instructions will modify your kernel parameters. You can later reset them either manually or by rebooting.
+
+To take note of the original values, run
 ```shell
-sudo snap refresh lxd --channel=latest/stable  # latest stable will settle for 5.21+ version
-lxd 5.21.1-2d13beb from Canonical✓ refreshed
+sudo sysctl -a | grep -E 'swappiness|max_map_count|tcp_retries2'
 ```
+[/note]
 
-Initialize your setup. In the steps below, LXD is initialized to the "dir" storage backend. We can keep that or selecting any other option. IPv6 is disabled.
-
-```shell
-sudo lxd init
-
-Would you like to use LXD clustering? (yes/no) [default=no]: 
-Do you want to configure a new storage pool? (yes/no) [default=yes]: 
-Name of the new storage pool [default=default]: 
-Name of the storage backend to use (lvm, powerflex, zfs, btrfs, ceph, dir) [default=zfs]: dir
-Would you like to connect to a MAAS server? (yes/no) [default=no]: 
-Would you like to create a new local network bridge? (yes/no) [default=yes]: 
-What should the new bridge be called? [default=lxdbr0]: 
-What IPv4 address should be used? (CIDR subnet notation, “auto” or “none”) [default=auto]: 
-What IPv6 address should be used? (CIDR subnet notation, “auto” or “none”) [default=auto]: none
-Would you like the LXD server to be available over the network? (yes/no) [default=no]: 
-Would you like stale cached images to be updated automatically? (yes/no) [default=yes]: 
-Would you like a YAML "lxd init" preseed to be printed? (yes/no) [default=no]:
-```
-
-## Prepare Juju
-
-Once LXD is ready, we can move on and prepare Juju. First, install juju's latest v3:
-
-```shell
-sudo snap install juju --classic --channel=3/stable
-```
-
-### Make LXD accessible to your local user
-
-Run the following commands to create a new group for LXD and add your current user to it:
-
-```shell
-sudo newgrp lxd
-sudo usermod -a -G lxd $USER
-```
-
-Now, log out and log back in.
-
-### Sysctl configuration
-
-Before bootstrapping Juju controllers, we need to enforce the sysconfigs that OpenSearch demands. Some of these settings must be applied within the container, others must be set directly on the host.
-
-On the host machine, add the settings below to a config file:
+### Configure sysctl on the host machine
+On the **host** machine, add the settings below to a config file:
 ```shell
 sudo tee /etc/sysctl.d/opensearch.conf <<EOF
 vm.swappiness = 0
@@ -87,22 +47,22 @@ vm.max_map_count = 262144
 net.ipv4.tcp_retries2 = 5
 EOF
 ```
-Now, apply the new settings:
+Then, apply the new settings:
 ```shell
 sudo sysctl -p /etc/sysctl.d/opensearch.conf
 ```
 
-### Bootstrap
-
-Create the juju controller using the [bootstrap](https://juju.is/docs/juju/manage-controllers#heading--bootstrap-a-controller) command:
+Now you can bootstrap a Juju controller:
 
 ```shell
 juju bootstrap localhost
 ```
 
-### Configure sysctl for each model
+### Configure sysctl for new containers
 
-Configure cloud-init to set sysctl on each new container deployed. First, add the configurations to a cloud-init user data file:
+Configure `cloud-init` to set sysctl on each new container that gets deployed. 
+
+First, add the configurations to a `cloud-init` user data file:
 
 ```shell
 cat <<EOF > cloudinit-userdata.yaml
@@ -116,47 +76,28 @@ cloudinit-userdata: |
 EOF
 ```
 
-Now, there are two options to set it as configuration: (1) set the cloud-init as a default and to be used by every new model created after that; or (2) set it as a model config for the target model. The latter will be explained in the next section.
+Now, there are two options to apply this  `cloud-init` configuration: set as the default config to be used by every new model created after that, or set it as a config for a target model.
 
-To set the cloud-init script above as default, use the [`model-defaults`](https://juju.is/docs/juju/juju-model-defaults) command:
+To set the `cloud-init` script above as **default for all models**, use the [`model-defaults`](https://juju.is/docs/juju/juju-model-defaults) command:
 
 ```
 juju model-defaults --file=./cloudinit-userdata.yaml
 ```
 
-### Add model
-
-Add a model for the OpenSearch deployment, for example:
+To set the `cloud-init` script **for a particular model**, use the [`model-config`](https://juju.is/docs/juju/juju-model-config) command:
 ```
-juju add-model opensearch
+juju model-config --file=./cloudinit-userdata.yaml --model <model_name>
 ```
-
-Confirm the cloud-init script is configured on this new model:
-```
-juju model-config cloudinit-userdata
-postruncmd:
-  - [ 'echo', 'vm.max_map_count=262144', '>>', '/etc/sysctl.conf' ]
-  - [ 'echo', 'vm.swappiness=0', '>>', '/etc/sysctl.conf' ]
-  - [ 'echo', 'net.ipv4.tcp_retries2=5', '>>', '/etc/sysctl.conf' ]
-  - [ 'echo', 'fs.file-max=1048576', '>>', '/etc/sysctl.conf' ]
-  - [ 'sysctl', '-p' ]
-```
-
-If the script above is not available, follow section "Configure sysctl for each model" to create the cloud-init script correctly and set it for this model:
-```
-juju model-config --file=./cloudinit-userdata.yaml
-```
-
 
 ## Deploy OpenSearch
 
-[note]
-**Note:** Charmed OpenSearch supports performance profile. It is recommended in a single host deployment with LXD to use the testing profile, which will only consume 1G RAM per container.
-[/note]
-
-To deploy OpenSearch, run
-```shell
-juju deploy opensearch --channel 2/edge --config profile="testing"
+Create a model if you haven't already:
 ```
+juju add-model <model_name>
+```
+In a single host deployment with LXD, we recommend using the `testing` profile, which will only consume 1G RAM per container.
 
-For more information about deploying OpenSearch, see our [tutorial](https://discourse.charmhub.io/t/topic/9716).
+To deploy OpenSearch with the testing profile, run
+```shell
+juju deploy opensearch --config profile=testing
+```
