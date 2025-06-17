@@ -75,7 +75,7 @@ object that corresponds to its own case (cluster-manager, failover, data, etc).
 
 import json
 import logging
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, Optional, Set
 
@@ -267,7 +267,7 @@ class BackupManager:
 
         return output["snapshot"]
 
-    def list_backups(self) -> Dict[int, str]:
+    def list_backups(self) -> dict[str, dict[str, Any]]:
         """Returns a mapping of snapshot ids / state."""
         # Using the original request method, as we want to raise an http exception if we
         # cannot get the snapshot list.
@@ -284,22 +284,24 @@ class BackupManager:
         """Executes broken API calls."""
         return  # do not execute anything as we intend to keep the backups untouched
 
-    def register(self, data: Dict[str, Any] | None) -> Dict[str, Any]:
+    def register(self, repo_settings: Dict[str, Any] | None) -> Dict[str, Any]:
         """Registers the snapshot repo in the cluster.
 
-        Returns the API call's response or raises an HTTP error.
+        Returns the Create/Update snapshot repo API response or raises an HTTP error.
 
         Raises:
+          - ValueError
           - OpenSearchHttpError
         """
-        if not data:
-            return BackupServiceState.REPO_ERR_UNKNOWN
+        if not repo_settings:
+            raise ValueError("Backup repository settings missing.")
+
         response = self.charm.opensearch.request(
             "PUT",
             f"_snapshot/{self.repository}",
             payload={
                 "type": "s3" if self.repository == S3_REPOSITORY else "azure",
-                "settings": data,
+                "settings": repo_settings,
             },
             retries=6,
             timeout=10,
@@ -441,6 +443,7 @@ class BackupManager:
         return BackupServiceState.SUCCESS
 
     def _query_backup_status(self, backup_id: Optional[str] = None) -> BackupServiceState:
+        """Return the state of the backup service."""
         try:
             target = f"_snapshot/{self.repository}/"
             target += f"{backup_id.lower()}" if backup_id else "_all"
@@ -457,8 +460,6 @@ class BackupManager:
             logger.error(f"_query_backup_status failed with: {e}")
             return BackupServiceState.RESPONSE_FAILED_NETWORK
 
-        if not output:
-            return False
         return BackupManager.get_service_status(output)
 
     def is_set(self) -> bool:
@@ -516,22 +517,24 @@ class BackupManager:
         if not response:
             return BackupServiceState.SNAPSHOT_FAILED_UNKNOWN
 
-        type = None
         try:
             if "error" not in response:
                 return BackupServiceState.SUCCESS
+
             if "root_cause" not in response["error"]:
                 return BackupServiceState.REPO_ERR_UNKNOWN
-            type = response["error"]["root_cause"][0]["type"]
+
+            error_type = response["error"]["root_cause"][0]["type"]
             reason = response["error"]["root_cause"][0]["reason"]
-            logger.warning(f"response contained error: {type} - {reason}")
-        except KeyError as e:
+            logger.warning(f"response contained error: {error_type} - {reason}")
+        except (KeyError, IndexError) as e:
             logger.exception(e)
             logger.error("response contained unknown error code")
             return BackupServiceState.RESPONSE_FAILED_NETWORK
-        # Check if we error'ed b/c s3 repo is not configured, hence we are still
+
+        # Check if we errored b/c s3 repo is not configured, hence we are still
         # waiting for the plugin to be configured
-        match type:
+        match error_type:
             case "repository_exception" if REPO_NOT_CREATED_ERR in reason:
                 return BackupServiceState.REPO_NOT_CREATED
             case "repository_exception" if REPO_CREATING_ERR in reason:
@@ -551,9 +554,8 @@ class BackupManager:
             case "snapshot_restore_exception":
                 return BackupServiceState.SNAPSHOT_RESTORE_ERROR
             case _:
-                # There is an error but we could not precise which is
+                # There is an error, but we could not specify which
                 return BackupServiceState.REPO_ERR_UNKNOWN
-        return BackupManager.get_snapshot_status(response)
 
     @staticmethod
     def get_snapshot_status(response: Dict[str, Any] | None) -> BackupServiceState:
@@ -822,17 +824,15 @@ class OpenSearchBackupBase(Object):
 
     @property
     def active_relation(self) -> str | None:
-        """Check which relation is active and return it's value."""
+        """Check which relation is active and return its value."""
         s3_rel = self.model.get_relation(S3_RELATION)
         azure_rel = self.model.get_relation(AZURE_RELATION)
 
-        # XNOR for the relations. Both existing or both not existing is an exit condition.
+        # Both existing or both not existing is an exit condition.
         if (s3_rel is None and azure_rel is None) or (s3_rel and azure_rel):
             return None
-        if s3_rel:
-            return S3_RELATION
-        if azure_rel:
-            return AZURE_RELATION
+
+        return S3_RELATION if s3_rel else AZURE_RELATION
 
     def _generate_backup_list_output(self, backups: Dict[str, Any]) -> str:
         """Generates a list of backups in a formatted table.
@@ -843,9 +843,9 @@ class OpenSearchBackupBase(Object):
             OpenSearchError: if the list of backups errors
         """
         backup_list = []
-        for id, backup in backups.items():
-            state = BackupManager.get_snapshot_status(backup["state"])
-            backup_list.append((id, state.value))
+        for _id, _backup in backups.items():
+            state = BackupManager.get_snapshot_status(_backup["state"])
+            backup_list.append((_id, state.value))
 
         output = ["{:<20s} | {:s}".format(" backup-id", "backup-status")]
         output.append("-" * len(output[0]))
@@ -926,7 +926,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         logger.info("Non-orchestrator cluster, abandon relation event")
 
 
-class OpenSearchMainBackup(OpenSearchBackupBase):
+class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
     """Common class for the MAIN orchestrator backup component.
 
     This class removes the redundancy between several backup backend classes.
@@ -941,7 +941,6 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_backup_action)
 
-    @property
     @abstractmethod
     def get_service_status(self, response: dict[str, Any] | None) -> BackupServiceState:
         """Extends the backup manager's service status check by incorporating relation data."""
@@ -1168,12 +1167,15 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
         # Steps:
         #     (1) set up as maintenance;
         self.charm.status.set(MaintenanceStatus(BackupConfigureStart))
+
         #     (2) run the request; and
         try:
-            state = self.get_service_status(self.backup_manager.register(self.data))
-        except OpenSearchHttpError as e:
+            snapshot_repo_resp = self.backup_manager.register(self.data)
+            state = self.get_service_status(snapshot_repo_resp)
+        except (ValueError, OpenSearchHttpError) as e:
             logger.error(f"Failed to setup backup service with exception: {e}")
             state = BackupServiceState.REPO_ERR_UNKNOWN
+
         #     (3) based on the response, set the message status
         if state != BackupServiceState.SUCCESS:
             logger.error(f"Failed to setup backup service with state {state}")
@@ -1182,6 +1184,7 @@ class OpenSearchMainBackup(OpenSearchBackupBase):
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupSetupFailed), app=True)
             raise OpenSearchBackupError()
+
         self.charm.status.clear(BackupSetupFailed)
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupSetupFailed, app=True)
@@ -1290,10 +1293,10 @@ class OpenSearchAzureBackup(OpenSearchMainBackup):
         if (status := BackupManager.get_service_status(response)) == BackupServiceState.SUCCESS:
             return BackupServiceState.SUCCESS
         if (
-            "container" in self.client.get_azure_connection_info()
+            "container" in self.client.get_azure_storage_connection_info()
             and AZURE_REPOSITORY in response
             and "settings" in response[AZURE_REPOSITORY]
-            and self.client.get_azure_connection_info()["container"]
+            and self.client.get_azure_storage_connection_info()["container"]
             == response[AZURE_REPOSITORY]["settings"]["container"]
         ):
             return BackupServiceState.REPO_NOT_CREATED_ALREADY_EXISTS
