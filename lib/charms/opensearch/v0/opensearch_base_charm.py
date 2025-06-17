@@ -280,6 +280,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_leader_elected(self, event: LeaderElectedEvent):
         """Handle leader election event."""
+        # We check if the current unit is the leader, in case where the leader elected event
+        # was deferred, then juju proceeded with a new leader election
+        if not self.unit.is_leader():
+            return
+
         if self.peers_data.get(Scope.APP, "security_index_initialised", False):
             # Leader election event happening after a previous leader got killed
             if not self.opensearch.is_node_up():
