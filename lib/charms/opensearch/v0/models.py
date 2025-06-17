@@ -429,6 +429,11 @@ class AzureRelData(Model):
         ):
             raise ValueError("Missing fields: storage_account, secret_key")
 
+        # remove any duplicate, prefix or trailing "/" characters
+        if base_path := values.get("base_path"):
+            base_path = re.sub(r"/+", "/", base_path).strip().strip("/")
+        values["base_path"] = base_path or None
+
         return values
 
     @validator(AZURE_CREDENTIALS, check_fields=False)
