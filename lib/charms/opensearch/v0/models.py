@@ -4,6 +4,7 @@
 """Cluster-related data structures / model classes."""
 import json
 import logging
+import re
 from abc import ABC
 from datetime import datetime
 from hashlib import md5
@@ -329,6 +330,11 @@ class S3RelData(Model):
             raise ValueError("Missing field: bucket")
         if not values.get("region"):
             raise ValueError("Missing field: region")
+
+        # remove any duplicate, prefix or trailing "/" characters
+        if base_path := values.get("base_path"):
+            base_path = re.sub(r"/+", "/", base_path).strip().strip("/")
+        values["base_path"] = base_path or None
 
         return values
 
