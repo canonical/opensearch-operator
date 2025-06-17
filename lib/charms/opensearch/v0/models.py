@@ -9,7 +9,6 @@ from datetime import datetime
 from hashlib import md5
 from typing import Any, Dict, List, Literal, Optional
 
-from charms.opensearch.v0.constants_charm import AZURE_REPO_BASE_PATH, S3_REPO_BASE_PATH
 from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from pydantic import BaseModel, Field, root_validator, validator
@@ -299,7 +298,7 @@ class S3RelData(Model):
     bucket: str = Field(default="")
     endpoint: str = Field(default="")
     region: str = Field(default="")
-    base_path: Optional[str] = Field(alias="path", default=S3_REPO_BASE_PATH)
+    base_path: Optional[str] = Field(alias="path", default=None)
     protocol: Optional[str] = None
     storage_class: Optional[str] = Field(alias="storage-class", default=None)
     tls_ca_chain: Optional[str] = Field(alias="tls-ca-chain", default=None)
@@ -403,7 +402,7 @@ class AzureRelData(Model):
     storage_account: str = Field(alias="storage-account", default="")
     container: str = Field(default="")
     endpoint: Optional[str] = Field(default="")
-    base_path: Optional[str] = Field(alias="path", default=AZURE_REPO_BASE_PATH)
+    base_path: Optional[str] = Field(alias="path", default=None)
     connection_protocol: Optional[str] = Field(alias="connection-protocol", default=None)
     credentials: AzureRelDataCredentials = Field(
         alias=AZURE_CREDENTIALS, default=AzureRelDataCredentials()

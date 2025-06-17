@@ -124,9 +124,7 @@ OPENSEARCH_SNAP_REVISION = 70  # Keep in sync with `workload_version` file
 # User-face Backup ID format
 OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
-S3_REPO_BASE_PATH = "/"
 S3_RELATION = "s3-credentials"
-AZURE_REPO_BASE_PATH = "/"
 AZURE_RELATION = "azure-credentials"
 
 OAUTH_RELATION = "oauth"
