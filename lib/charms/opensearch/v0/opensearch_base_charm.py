@@ -286,7 +286,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 event.defer()
                 return
 
-            if self.health.apply(app=self.charm.unit.is_leader(), apply_for_units=False) in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]:
+            if self.health.apply(app=self.charm.unit.is_leader(), apply_for_units=False) in [
+                HealthColors.UNKNOWN,
+                HealthColors.YELLOW_TEMP,
+            ]:
                 event.defer()
 
             self._compute_and_broadcast_updated_topology(self._get_nodes(True))
