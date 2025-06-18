@@ -286,7 +286,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 event.defer()
                 return
 
-            if self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]:
+            if self.health.apply(app=self.charm.unit.is_leader(), apply_for_units=False) in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]:
                 event.defer()
 
             self._compute_and_broadcast_updated_topology(self._get_nodes(True))
@@ -549,7 +549,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if node.name != format_unit_name(event.departing_unit, app=current_app)
         ]
 
-        self.health.apply(wait_for_green_first=True)
+        self.health.apply(wait_for_green_first=True, apply_for_units=False)
 
         n_units = sum(1 for node in remaining_nodes if node.app.id == current_app.id)
         if n_units == self.app.planned_units():
@@ -666,7 +666,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         ]:
             logger.warning(f"Update status: exclusions updated and cluster health is {health}.")
 
-            if self.unit.is_leader() and health == HealthColors.UNKNOWN:
+            if health == HealthColors.UNKNOWN:
                 return
 
         for relation in self.model.relations.get(ClientRelationName, []):
@@ -1170,7 +1170,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.health.apply(
             wait_for_green_first=True,
             app=self.unit.is_leader(),
-            apply_for_units=(not self.unit.is_leader()),
+            apply_for_units=True,
         )
 
         if (
