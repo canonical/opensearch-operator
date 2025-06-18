@@ -292,7 +292,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 event.defer()
                 return
 
-            if self.health.apply(app=self.charm.unit.is_leader(), apply_for_units=False) in [
+            if self.health.apply() in [
                 HealthColors.UNKNOWN,
                 HealthColors.YELLOW_TEMP,
             ]:
