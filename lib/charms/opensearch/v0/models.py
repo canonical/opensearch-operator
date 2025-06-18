@@ -4,12 +4,12 @@
 """Cluster-related data structures / model classes."""
 import json
 import logging
+import re
 from abc import ABC
 from datetime import datetime
 from hashlib import md5
 from typing import Any, Dict, List, Literal, Optional
 
-from charms.opensearch.v0.constants_charm import AZURE_REPO_BASE_PATH, S3_REPO_BASE_PATH
 from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from pydantic import BaseModel, Field, root_validator, validator
@@ -299,7 +299,7 @@ class S3RelData(Model):
     bucket: str = Field(default="")
     endpoint: str = Field(default="")
     region: str = Field(default="")
-    base_path: Optional[str] = Field(alias="path", default=S3_REPO_BASE_PATH)
+    base_path: Optional[str] = Field(alias="path", default=None)
     protocol: Optional[str] = None
     storage_class: Optional[str] = Field(alias="storage-class", default=None)
     tls_ca_chain: Optional[str] = Field(alias="tls-ca-chain", default=None)
@@ -330,6 +330,11 @@ class S3RelData(Model):
             raise ValueError("Missing field: bucket")
         if not values.get("region"):
             raise ValueError("Missing field: region")
+
+        # remove any duplicate, prefix or trailing "/" characters
+        if base_path := values.get("base_path"):
+            base_path = re.sub(r"/+", "/", base_path).strip().strip("/")
+        values["base_path"] = base_path or None
 
         return values
 
@@ -403,7 +408,7 @@ class AzureRelData(Model):
     storage_account: str = Field(alias="storage-account", default="")
     container: str = Field(default="")
     endpoint: Optional[str] = Field(default="")
-    base_path: Optional[str] = Field(alias="path", default=AZURE_REPO_BASE_PATH)
+    base_path: Optional[str] = Field(alias="path", default=None)
     connection_protocol: Optional[str] = Field(alias="connection-protocol", default=None)
     credentials: AzureRelDataCredentials = Field(
         alias=AZURE_CREDENTIALS, default=AzureRelDataCredentials()
@@ -423,6 +428,11 @@ class AzureRelData(Model):
             or not creds.secret_key
         ):
             raise ValueError("Missing fields: storage_account, secret_key")
+
+        # remove any duplicate, prefix or trailing "/" characters
+        if base_path := values.get("base_path"):
+            base_path = re.sub(r"/+", "/", base_path).strip().strip("/")
+        values["base_path"] = base_path or None
 
         return values
 
