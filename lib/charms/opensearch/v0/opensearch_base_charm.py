@@ -292,7 +292,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 event.defer()
                 return
 
-            if self.health.apply() in [
+            if self.health.apply(unit=False) in [
                 HealthColors.UNKNOWN,
                 HealthColors.YELLOW_TEMP,
             ]:
@@ -484,7 +484,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _on_peer_relation_changed(self, event: RelationChangedEvent):  # noqa C901
         """Handle peer relation changes."""
         if self.opensearch.is_node_up():
-            health = self.health.apply(app=self.unit.is_leader(), apply_for_units=True)
+            health = self.health.apply(app=self.unit.is_leader())
             if self._is_peer_rel_changed_deferred:
                 # We already deferred this event during this Juju event. Retry on the next
                 # Juju event.
@@ -558,7 +558,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if node.name != format_unit_name(event.departing_unit, app=current_app)
         ]
 
-        self.health.apply(wait_for_green_first=True, apply_for_units=False)
+        self.health.apply(wait_for_green_first=True, unit=False)
 
         n_units = sum(1 for node in remaining_nodes if node.app.id == current_app.id)
         if n_units == self.app.planned_units():
@@ -628,7 +628,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # check cluster status
                 if self.alt_hosts:
                     health_color = self.health.apply(
-                        wait_for_green_first=True, use_localhost=False
+                        wait_for_green_first=True, use_localhost=False, unit=False
                     )
                     if health_color == HealthColors.RED:
                         raise OpenSearchHAError(ClusterHealthRed)
@@ -666,9 +666,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # each unit should check its own exclusions' list
         self.opensearch_exclusions.cleanup()
         if (
-            health := self.health.apply(
-                wait_for_green_first=True, app=self.unit.is_leader(), apply_for_units=True
-            )
+            health := self.health.apply(wait_for_green_first=True, app=self.unit.is_leader())
         ) not in [
             HealthColors.GREEN,
             HealthColors.IGNORE,
@@ -1179,7 +1177,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.health.apply(
             wait_for_green_first=True,
             app=self.unit.is_leader(),
-            apply_for_units=True,
         )
 
         if (
@@ -1399,9 +1396,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # opensearch until all shards in other units are in a "started" or "unassigned" state.
         try:
             if (
-                self.health.apply(
-                    wait_for_green_first=True, use_localhost=False, app=False, apply_for_units=True
-                )
+                self.health.apply(wait_for_green_first=True, use_localhost=False, app=False)
                 == HealthColors.YELLOW_TEMP
             ):
                 return False
