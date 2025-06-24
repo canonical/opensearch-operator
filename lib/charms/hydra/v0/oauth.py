@@ -67,7 +67,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 10
+LIBPATCH = 11
 
 PYDEPS = ["jsonschema"]
 
@@ -419,12 +419,8 @@ class OAuthRequirer(OAuthRelation):
             self.on.invalid_client_config.emit(e.args[0])
 
     def _on_relation_broken_event(self, event: RelationBrokenEvent) -> None:
-        # Workaround for https://github.com/canonical/operator/issues/888
-        self._pop_relation_data(event.relation.id)
-        if self.is_client_created():
-            event.defer()
-            logger.info("Relation data still available. Deferring the event")
-            return
+        # This may be caused by a provider unit being removed.
+        # Also the oauth data may still be there, perhaps we should remove this event altogether for now.
 
         # Notify the requirer that the relation data was removed
         self.on.oauth_info_removed.emit()
@@ -734,10 +730,12 @@ class OAuthProvider(OAuthRelation):
         return f"client_secret_{relation.id}"
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
+        # There is no way to tell if this event was emitted because the relation was removed or if one of
+        # the applications was scaled down. Until this is fixed, we don't delete the client.
         # Workaround for https://github.com/canonical/operator/issues/888
-        self._pop_relation_data(event.relation.id)
+        # self._pop_relation_data(event.relation.id)
 
-        self._delete_juju_secret(event.relation)
+        # self._delete_juju_secret(event.relation)
         self.on.client_deleted.emit(event.relation.id)
 
     def _create_juju_secret(self, client_secret: str, relation: Relation) -> Secret:
@@ -754,6 +752,9 @@ class OAuthProvider(OAuthRelation):
             return
         else:
             secret.remove_all_revisions()
+
+    def remove_secret(self, relation: Relation) -> None:
+        return self._delete_juju_secret(relation)
 
     def set_provider_info_in_relation_data(
         self,

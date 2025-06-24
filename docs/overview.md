@@ -79,5 +79,8 @@ This documentation follows the [Diataxis framework](https://canonical.com/blog/d
 | 3 | revision-168| [Revision 168](/t/14050) |
 | 2 | r-system-requirements | [System requirements](/t/14565) |
 | 2 | r-software-testing | [Software testing](/t/14109) |
+| 1 | explanation | [Explanation]() |
+| 2 | e-security | [Security](/t/17244) |
+| 3 | e-cryptography | [Cryptography](/t/17243) |
 
 [/details]

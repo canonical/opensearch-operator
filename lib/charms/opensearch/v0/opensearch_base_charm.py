@@ -280,13 +280,22 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_leader_elected(self, event: LeaderElectedEvent):
         """Handle leader election event."""
+        # We check if the current unit is the leader, in case where the leader elected event
+        # was deferred, then juju proceeded with a new leader election, and this now deferred-event
+        # was emitted in a non-juju leader unit (previous leader)
+        if not self.unit.is_leader():
+            return
+
         if self.peers_data.get(Scope.APP, "security_index_initialised", False):
             # Leader election event happening after a previous leader got killed
             if not self.opensearch.is_node_up():
                 event.defer()
                 return
 
-            if self.health.apply() in [HealthColors.UNKNOWN, HealthColors.YELLOW_TEMP]:
+            if self.health.apply(unit=False) in [
+                HealthColors.UNKNOWN,
+                HealthColors.YELLOW_TEMP,
+            ]:
                 event.defer()
 
             self._compute_and_broadcast_updated_topology(self._get_nodes(True))
@@ -474,8 +483,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):  # noqa C901
         """Handle peer relation changes."""
-        if self.unit.is_leader() and self.opensearch.is_node_up():
-            health = self.health.apply()
+        if self.opensearch.is_node_up():
+            health = self.health.apply(app=self.unit.is_leader())
             if self._is_peer_rel_changed_deferred:
                 # We already deferred this event during this Juju event. Retry on the next
                 # Juju event.
@@ -549,7 +558,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if node.name != format_unit_name(event.departing_unit, app=current_app)
         ]
 
-        self.health.apply(wait_for_green_first=True)
+        self.health.apply(wait_for_green_first=True, unit=False)
 
         n_units = sum(1 for node in remaining_nodes if node.app.id == current_app.id)
         if n_units == self.app.planned_units():
@@ -619,7 +628,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # check cluster status
                 if self.alt_hosts:
                     health_color = self.health.apply(
-                        wait_for_green_first=True, use_localhost=False
+                        wait_for_green_first=True, use_localhost=False, unit=False
                     )
                     if health_color == HealthColors.RED:
                         raise OpenSearchHAError(ClusterHealthRed)
@@ -656,14 +665,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # if there are exclusions to be removed
         # each unit should check its own exclusions' list
         self.opensearch_exclusions.cleanup()
-        if self.unit.is_leader():
-            if (health := self.health.apply(wait_for_green_first=True)) not in [
-                HealthColors.GREEN,
-                HealthColors.IGNORE,
-            ]:
-                logger.warning(
-                    f"Update status: exclusions updated and cluster health is {health}."
-                )
+        if (
+            health := self.health.apply(wait_for_green_first=True, app=self.unit.is_leader())
+        ) not in [
+            HealthColors.GREEN,
+            HealthColors.IGNORE,
+        ]:
+            logger.warning(f"Update status: exclusions updated and cluster health is {health}.")
 
             if health == HealthColors.UNKNOWN:
                 return
@@ -1166,7 +1174,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.opensearch_fixes.apply_on_start()
 
         # apply cluster health
-        self.health.apply(wait_for_green_first=True, app=self.unit.is_leader())
+        self.health.apply(
+            wait_for_green_first=True,
+            app=self.unit.is_leader(),
+        )
 
         if (
             self.unit.is_leader()
