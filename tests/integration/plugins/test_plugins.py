@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 COS_APP_NAME = "grafana-agent"
-COS_CHANNEL = "stable"
+COS_CHANNEL = "1/stable"
 COS_RELATION_NAME = "cos-agent"
 MAIN_ORCHESTRATOR_NAME = "main"
 FAILOVER_ORCHESTRATOR_NAME = "failover"
