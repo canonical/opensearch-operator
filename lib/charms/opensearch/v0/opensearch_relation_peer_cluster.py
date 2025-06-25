@@ -590,7 +590,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         deployment_desc: Optional[DeploymentDescription],
     ) -> Optional[PeerClusterRelData]:
         """Build and return the peer cluster rel data to be shared with requirer sub-clusters."""
-        # returns non if this cluster is not fully ready, or if the admin user
+        # returns None if this cluster is not fully ready, or if the admin user
         # is not initialized
         if not deployment_desc:
             logger.debug("Cluster not ready to populate relation data")
