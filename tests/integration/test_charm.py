@@ -39,7 +39,7 @@ from .tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_NUM_UNITS = 2
+DEFAULT_NUM_UNITS = 3
 
 
 @pytest.mark.abort_on_fail
@@ -148,7 +148,6 @@ async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip("Wazuh: to be implemented")
 async def test_actions_rotate_admin_password(ops_test: OpsTest) -> None:
     """Test the rotation and change of admin password."""
     leader_ip = await get_leader_unit_ip(ops_test)
