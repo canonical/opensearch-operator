@@ -1189,6 +1189,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.unit.open_port("tcp", 9200)
 
         # clear waiting to start status
+        self.status.clear(RequestUnitServiceOps.format("start"))
         self.status.clear(WaitingToStart)
         self.status.clear(ServiceStartError)
         self.status.clear(PClusterNoDataNode)
