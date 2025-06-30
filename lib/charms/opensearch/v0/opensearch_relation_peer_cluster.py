@@ -673,10 +673,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         ):
             if not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
                 blocked_msg = f"Security index not initialized {message_suffix}."
-        elif (
-            ClusterTopology.data_role_in_cluster_fleet_apps(self.charm)
-            and self.charm.peers_data.get(Scope.APP, "security_index_initialised", False)
-        ):
+        elif ClusterTopology.data_role_in_cluster_fleet_apps(
+            self.charm
+        ) and self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
             if not self.charm.is_every_unit_marked_as_started():
                 blocked_msg = f"Waiting for every unit {message_suffix} to start."
             elif not self.charm.secrets.get(Scope.APP, self.charm.secrets.password_key(COSUser)):
