@@ -10,13 +10,13 @@ from pytest_operator.plugin import OpsTest
 
 from ..ha.continuous_writes import ContinuousWrites
 from ..ha.helpers import assert_continuous_writes_consistency
-from ..helpers import APP_NAME, CONFIG_OPTS, IDLE_PERIOD, MODEL_CONFIG, run_action
+from ..helpers import APP_NAME, CONFIG_OPTS, MODEL_CONFIG, run_action
 from ..helpers_deployments import get_application_units, wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 
 logger = logging.getLogger(__name__)
 
-
+IDLE_PERIOD = 30
 OPENSEARCH_ORIGINAL_CHARM_NAME = "opensearch"
 OPENSEARCH_INITIAL_CHANNEL = "2/edge"
 OPENSEARCH_MAIN_APP_NAME = "main"
@@ -135,7 +135,7 @@ async def test_manually_upgrade_to_local(
 
     logger.info("Build charm locally")
 
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward(fast_interval="60s"):
         for app, unit_count in WORKLOAD.items():
             application = ops_test.model.applications[app]
             units = await get_application_units(ops_test, app)
