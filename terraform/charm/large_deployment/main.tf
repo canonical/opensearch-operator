@@ -99,7 +99,7 @@ resource "juju_offer" "self_signed_certificates-offer" {
 
   model            = var.main.model
   application_name = "self-signed-certificates"
-  endpoint         = "certificates"
+  endpoints        = ["certificates"]
 }
 
 resource "juju_offer" "opensearch_main-offer" {
@@ -107,7 +107,7 @@ resource "juju_offer" "opensearch_main-offer" {
 
   model            = var.main.model
   application_name = var.main.app_name
-  endpoint         = "peer-cluster-orchestrator"
+  endpoints        = ["peer-cluster-orchestrator"]
 }
 
 resource "juju_offer" "opensearch_failover-offer" {
@@ -115,7 +115,7 @@ resource "juju_offer" "opensearch_failover-offer" {
 
   model            = var.failover.model
   application_name = var.failover.app_name
-  endpoint         = "peer-cluster-orchestrator"
+  endpoints        = ["peer-cluster-orchestrator"]
 }
 
 

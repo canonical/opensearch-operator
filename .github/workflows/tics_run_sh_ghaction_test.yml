@@ -1,11 +1,13 @@
 name: TICS run self-hosted test (github-action)
 
 on:
+  schedule:
+    - cron: "0 2 * * 6" # Every Saturday 2:00 AM UTC
   workflow_dispatch: # Allows manual triggering
 
 jobs:
   build:
-    runs-on: [self-hosted, linux, X64]
+    runs-on: [self-hosted, linux, amd64, tiobe, noble]
 
     steps:
       - name: Checkout the project

@@ -4,12 +4,12 @@
 """Cluster-related data structures / model classes."""
 import json
 import logging
+import re
 from abc import ABC
 from datetime import datetime
 from hashlib import md5
 from typing import Any, Dict, List, Literal, Optional
 
-from charms.opensearch.v0.constants_charm import AZURE_REPO_BASE_PATH, S3_REPO_BASE_PATH
 from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from pydantic import BaseModel, Field, root_validator, validator
@@ -299,12 +299,12 @@ class S3RelData(Model):
     bucket: str = Field(default="")
     endpoint: str = Field(default="")
     region: str = Field(default="")
-    base_path: Optional[str] = Field(alias="path", default=S3_REPO_BASE_PATH)
+    base_path: Optional[str] = Field(alias="path", default=None)
     protocol: Optional[str] = None
-    storage_class: Optional[str] = Field(alias="storage-class")
-    tls_ca_chain: Optional[str] = Field(alias="tls-ca-chain")
+    storage_class: Optional[str] = Field(alias="storage-class", default=None)
+    tls_ca_chain: Optional[str] = Field(alias="tls-ca-chain", default=None)
     credentials: S3RelDataCredentials = Field(alias=S3_CREDENTIALS, default=S3RelDataCredentials())
-    path_style_access: Optional[bool] = False
+    path_style_access: bool = Field(alias="s3-uri-style", default=False)
 
     class Config:
         """Model config of this pydantic model."""
@@ -314,11 +314,10 @@ class S3RelData(Model):
     @root_validator
     def validate_core_fields(cls, values):  # noqa: N805
         """Validate the core fields of the S3 relation data."""
-        # Do not raise an exception if we are missing all the fields:
         if (
             not (s3_creds := values.get("credentials"))
-            and not s3_creds.access_key
-            and not s3_creds.secret_key
+            or not s3_creds.access_key
+            or not s3_creds.secret_key
         ):
             raise ValueError("Missing fields: access_key, secret_key")
 
@@ -332,10 +331,19 @@ class S3RelData(Model):
         if not values.get("region"):
             raise ValueError("Missing field: region")
 
-        if values.get("s3-uri-style") == "path":
-            values["bucket_path_style"] = True
+        # remove any duplicate, prefix or trailing "/" characters
+        if base_path := values.get("base_path"):
+            base_path = re.sub(r"/+", "/", base_path).strip().strip("/")
+        values["base_path"] = base_path or None
 
         return values
+
+    @validator("path_style_access", pre=True)
+    def change_path_style_type(cls, value) -> bool:  # noqa: N805
+        """Coerce a type change of the path_style_access into a bool."""
+        if isinstance(value, str):
+            return value.lower() == "path"
+        return bool(value)
 
     @validator(S3_CREDENTIALS, check_fields=False)
     def ensure_secret_content(cls, conf: Dict[str, str] | S3RelDataCredentials):  # noqa: N805
@@ -400,7 +408,7 @@ class AzureRelData(Model):
     storage_account: str = Field(alias="storage-account", default="")
     container: str = Field(default="")
     endpoint: Optional[str] = Field(default="")
-    base_path: Optional[str] = Field(alias="path", default=AZURE_REPO_BASE_PATH)
+    base_path: Optional[str] = Field(alias="path", default=None)
     connection_protocol: Optional[str] = Field(alias="connection-protocol", default=None)
     credentials: AzureRelDataCredentials = Field(
         alias=AZURE_CREDENTIALS, default=AzureRelDataCredentials()
@@ -416,10 +424,15 @@ class AzureRelData(Model):
         """Validate the core fields of the azure relation data."""
         if (
             not (creds := values.get("credentials"))
-            and not creds.storage_account
-            and not creds.secret_key
+            or not creds.storage_account
+            or not creds.secret_key
         ):
             raise ValueError("Missing fields: storage_account, secret_key")
+
+        # remove any duplicate, prefix or trailing "/" characters
+        if base_path := values.get("base_path"):
+            base_path = re.sub(r"/+", "/", base_path).strip().strip("/")
+        values["base_path"] = base_path or None
 
         return values
 

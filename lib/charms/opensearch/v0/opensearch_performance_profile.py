@@ -14,6 +14,7 @@ There are two ways the charm can learn about its profile and when it changes:
 The charm will then apply the profile and restart the OpenSearch service if needed.
 """
 import logging
+from typing import TYPE_CHECKING
 
 import ops
 from charms.opensearch.v0.constants_charm import PERFORMANCE_PROFILE
@@ -39,6 +40,9 @@ LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
 
+if TYPE_CHECKING:
+    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
+
 
 class _ApplyProfileTemplatesOpenSearch(EventBase):
     """Attempt to apply the profile templates.
@@ -53,7 +57,7 @@ class OpenSearchPerformance(ops.Object):
 
     _apply_profile_templates_event = EventSource(_ApplyProfileTemplatesOpenSearch)
 
-    def __init__(self, charm: ops.charm.CharmBase = None):
+    def __init__(self, charm: "OpenSearchBaseCharm"):
         super().__init__(charm, None)
         self.charm = charm
         self.peers_data = self.charm.peers_data
@@ -80,7 +84,7 @@ class OpenSearchPerformance(ops.Object):
         if isinstance(value, OpenSearchPerfProfile):
             value = value.typ
         elif isinstance(value, str):
-            # Ensure the value is a valid one
+            # Ensure the value is valid
             value = PerformanceType(value)
 
         self.peers_data.put(Scope.UNIT, PERFORMANCE_PROFILE, str(value))
