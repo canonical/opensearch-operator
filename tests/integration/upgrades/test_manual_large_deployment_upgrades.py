@@ -17,6 +17,7 @@ from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 logger = logging.getLogger(__name__)
 
 IDLE_PERIOD = 30
+INITIAL_REVISION = 209
 OPENSEARCH_ORIGINAL_CHARM_NAME = "opensearch"
 OPENSEARCH_INITIAL_CHANNEL = "2/edge"
 OPENSEARCH_MAIN_APP_NAME = "main"
@@ -63,6 +64,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest, series)
             num_units=WORKLOAD[OPENSEARCH_MAIN_APP_NAME],
             series=series,
             channel=OPENSEARCH_INITIAL_CHANNEL,
+            revision=INITIAL_REVISION,
             config=main_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
@@ -71,6 +73,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest, series)
             num_units=WORKLOAD[OPENSEARCH_FAILOVER_APP_NAME],
             series=series,
             channel=OPENSEARCH_INITIAL_CHANNEL,
+            revision=INITIAL_REVISION,
             config=failover_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
@@ -79,6 +82,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest, series)
             num_units=WORKLOAD[APP_NAME],
             series=series,
             channel=OPENSEARCH_INITIAL_CHANNEL,
+            revision=INITIAL_REVISION,
             config=data_hot_conf | CONFIG_OPTS,
         ),
     )
