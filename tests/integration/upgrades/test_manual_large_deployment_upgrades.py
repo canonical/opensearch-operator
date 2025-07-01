@@ -167,7 +167,7 @@ async def test_manually_upgrade_to_local(
                 wait_for_exact_units={
                     app: unit_count,
                 },
-                idle_period=120,
+                idle_period=IDLE_PERIOD,
                 timeout=3600,
             )
             # Resume the upgrade
