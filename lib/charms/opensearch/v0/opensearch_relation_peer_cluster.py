@@ -196,13 +196,16 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             p_cluster_app=peer_cluster_app,
             trigger_rel_id=event.relation.id,
         )
-
+        
         if (
             deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
             and "data" in peer_cluster_app.roles
             and self.charm.is_admin_user_configured()
             and self.charm.tls.is_fully_configured()
         ):
+            logger.debug(
+                f"Handling joining data node ({peer_cluster_app.app.id}) in main orchestrator"
+            )
             self.charm.handle_joining_data_node()
 
         if data.get("is_candidate_failover_orchestrator") != "true":
@@ -927,6 +930,17 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         if self._error_set_from_providers(orchestrators, data, event.relation.id):
             # check errors sent by providers
+            # check if valid data is present if so update the seed hosts
+            if data.get("data"):
+                # In case the main orchestrator was scaled down to 0 and back
+                # we need to update the seed hosts with the data from the relation
+                # to pick up the new IPs and enable the data node see it
+                logger.debug(
+                    "Error from provider but valid data found in relation data, updating seed hosts."
+                )
+                data = self.peer_cm.rel_data_from_str(data["data"])
+                self.charm.opensearch_config.add_seed_hosts([node.ip for node in data.cm_nodes])
+                self.charm.peer_cluster_requirer.refresh_requirer_relation_data()
             return
 
         # fetch the success data
