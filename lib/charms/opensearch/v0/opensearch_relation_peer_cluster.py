@@ -196,7 +196,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             p_cluster_app=peer_cluster_app,
             trigger_rel_id=event.relation.id,
         )
-        
+
         if (
             deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
             and "data" in peer_cluster_app.roles
@@ -943,7 +943,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 )
                 data = self.peer_cm.rel_data_from_str(data["data"])
                 self.charm.opensearch_config.add_seed_hosts([node.ip for node in data.cm_nodes])
-                self.charm.peer_cluster_requirer.refresh_requirer_relation_data()
             return
 
         # fetch the success data
