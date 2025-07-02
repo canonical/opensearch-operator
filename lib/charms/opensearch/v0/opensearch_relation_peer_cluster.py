@@ -203,9 +203,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             and self.charm.is_admin_user_configured()
             and self.charm.tls.is_fully_configured()
         ):
-            logger.debug(
-                f"Handling joining data node ({peer_cluster_app.app.id}) in main orchestrator"
-            )
             self.charm.handle_joining_data_node()
 
         if data.get("is_candidate_failover_orchestrator") != "true":
