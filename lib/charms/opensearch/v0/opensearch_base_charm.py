@@ -448,7 +448,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 )
             )
         )
-        self._start_opensearch_event.emit(ignore_lock=ignore_lock)
+        if ignore_lock:
+            # Actual start will be done in `_on_peer_cluster_relation_changed`
+            logger.debug(
+                f"Requesting start as first data node without lock: {deployment_desc.app.id}"
+            )
+            self.peer_cluster_requirer.set_first_data_node(deployment_desc.app.id)
+            return
+        self._start_opensearch_event.emit()
 
     def _apply_peer_cm_directives_and_check_if_can_start(self) -> bool:
         """Apply the directives computed by the opensearch peer cluster manager."""

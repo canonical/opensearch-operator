@@ -182,6 +182,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         if self._get_security_index_initialised():
             self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
+        
+        if first_data_node := self._get_first_data_node():
+            self.charm.peers_data.put(Scope.APP, "first_data_node", first_data_node)
 
         # get list of relations with this orchestrator
         target_relation_ids = [
@@ -617,6 +620,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             credentials=credentials,
             deployment_desc=deployment_desc,
             security_index_initialised=self._get_security_index_initialised(),
+            first_data_node=self._get_first_data_node(),
         )
 
     def _rel_data_credentials(
@@ -859,6 +863,24 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         return False
 
+    def _get_first_data_node(self) -> str | None:
+        """Get the first data node from the relation data."""
+        if first_data_node := self.charm.peers_data.get(Scope.APP, "first_data_node", None):
+            return first_data_node
+        
+        # check all other clusters if they have initialised the security index
+        all_relation_ids = [
+            rel.id for rel in self.charm.model.relations[self.relation_name] if len(rel.units) > 0
+        ]
+
+        for rel_id in all_relation_ids:
+            if first_data_node := self.get_from_rel(
+                "first_data_node", rel_id=rel_id, remote_app=True
+            ):
+                return first_data_node
+
+        return None
+
 
 class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
     """Peer cluster relation requirer class."""
@@ -927,6 +949,21 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 return
 
             self._put_main_orchestrator_registered(orchestrators.failover_rel_id, True)
+
+        if data.get("data"):
+            peer_cluster_rel_data = self.peer_cm.rel_data_from_str(data["data"])
+            local_first_data_node = self._get_local_first_data_node()
+            if (
+                local_first_data_node := self._get_local_first_data_node()
+            ) is not None and peer_cluster_rel_data.first_data_node is not None:
+                logger.debug(
+                    f"Local first data node: {local_first_data_node} - cluster first data node: {peer_cluster_rel_data.first_data_node}"
+                )
+                if peer_cluster_rel_data.first_data_node == local_first_data_node:
+                    self.charm._start_opensearch_event.emit(ignore_lock=True)
+                else:
+                    self.charm._start_opensearch_event.emit()
+                self.set_first_data_node("")
 
         if self._error_set_from_providers(orchestrators, data, event.relation.id):
             # check errors sent by providers
@@ -1433,3 +1470,38 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             error = self.charm.peers_data.get(Scope.APP, error_label, "")
             self.charm.status.clear(error, app=True)
             self.charm.peers_data.delete(Scope.APP, error_label)
+
+    def set_first_data_node(self, first_data_node: str) -> None:
+        """Set the first data node in the relation data."""
+
+        orchestrators = PeerClusterOrchestrators.from_dict(
+            self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
+        )
+
+        if not orchestrators:
+            return
+
+        logger.debug(
+            f"Setting first data node '{first_data_node}' for orchestrator {orchestrators.main_app.id}"
+        )
+
+        # set the first data node in the relation data
+        self.put_in_rel(
+            data={"first_data_node": first_data_node},
+            rel_id=orchestrators.main_rel_id,
+        )
+
+    def _get_local_first_data_node(self) -> str | None:
+        """Get first data node from the local app relation data."""
+        orchestrators = PeerClusterOrchestrators.from_dict(
+            self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
+        )
+
+        if not orchestrators:
+            return
+
+        return self.get_from_rel(
+            key="first_data_node",
+            rel_id=orchestrators.main_rel_id,
+            remote_app=False,
+        )
