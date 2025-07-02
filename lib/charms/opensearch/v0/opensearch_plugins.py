@@ -168,13 +168,13 @@ inherit from OpenSearchPluginDataProvider and implement the abstract methods.
 
 class MyPluginDataProvider(OpenSearchPluginDataProvider):
 
-    def __init__(self, charm):        
+    def __init__(self, charm):
         super().__init__(charm)
         self._charm = charm
 
     def get_relation(self) -> Any:
         return self._charm.model.get_relation("my-plugin-relation")
-    
+
     def get_data(self) -> Dict[str, Any]:
         return self.get_relation().data[self._charm.unit]
 

@@ -20,7 +20,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v31.0.1
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v32.1.0
 
   unit-test:
     name: Unit test charm
@@ -92,7 +92,7 @@ jobs:
 
       - name: run checks - prepare
         run: |
-          sudo snap install juju --channel=3.6 --classic
+          sudo snap install juju --channel=3.6
 
       - name: LXD setup
         run: |
@@ -166,7 +166,7 @@ jobs:
           - .
           - tests/integration/relations/opensearch_provider/application-charm
     name: Build charm | ${{ matrix.path }}
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v31.0.1
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v32.1.0
     with:
       path-to-charm-directory: ${{ matrix.path }}
 

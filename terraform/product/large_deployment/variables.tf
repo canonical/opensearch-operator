@@ -102,7 +102,7 @@ variable "self-signed-certificates" {
 variable "grafana-agent" {
   description = "Configuration for the grafana-agent"
   type = object({
-    channel     = optional(string, "latest/stable")
+    channel     = optional(string, "1/stable")
     revision    = optional(string, null)
     base        = optional(string, "ubuntu@22.04")
     constraints = optional(string, "arch=amd64")

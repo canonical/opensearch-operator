@@ -6,7 +6,7 @@
 import json
 import logging
 from hashlib import sha1
-from typing import TYPE_CHECKING, Any, Dict, List, MutableMapping, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, MutableMapping, Optional
 
 from charms.opensearch.v0.constants_charm import (
     AZURE_RELATION,
@@ -378,19 +378,18 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         )
 
         # compute the data that needs to be broadcast to all related clusters (success or error)
-        # if rel_data is an error, prepare to broadcast it to all related clusters
-        rel_data = self._rel_data(deployment_desc, orchestrators)
+        rel_data = self._rel_data(deployment_desc)
+        # replace the plaintext credentials in
+        # rel_data with their corresponding secret IDs
+        rel_data_redacted_dict = self._rel_data_redacted_dict(rel_data)
 
-        # if rel_data is NOT an error, we will replace the plaintext credentials in
-        # the object, with their corresponding secret IDs
-        if isinstance(rel_data, PeerClusterRelData):
-            rel_data_redacted_dict = self._rel_data_redacted_dict(rel_data)
+        # grant the secrets inside the rel_data to all the related clusters
+        self._grant_rel_data_secrets(rel_data_redacted_dict, all_relation_ids)
 
-            # grant the secrets inside the rel_data to all the related clusters
-            self._grant_rel_data_secrets(rel_data_redacted_dict, all_relation_ids)
+        rel_err_data = self._rel_err_data(deployment_desc, orchestrators, rel_data)
 
         # exit if current cluster should not have been considered a provider
-        if self._notify_if_wrong_integration(rel_data, all_relation_ids) and event_rel_id:
+        if self._notify_if_wrong_integration(rel_err_data, all_relation_ids) and event_rel_id:
             self.delete_from_rel("trigger", rel_id=event_rel_id)
             return
 
@@ -410,9 +409,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         orchestrators[f"{cluster_type}_app"] = deployment_desc.app.to_dict()
         self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators)
 
-        should_defer = False
-        if isinstance(rel_data, PeerClusterRelErrorData):
-            should_defer = rel_data.should_wait
+        should_defer = rel_err_data and rel_err_data.should_wait
 
         # save the orchestrators of this fleet
         has_units = self.charm.app.planned_units() > 0
@@ -426,11 +423,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             )
             self.put_in_rel(data={"orchestrators": json.dumps(orchestrators)}, rel_id=rel_id)
 
-            # there is no error to broadcast - we clear any previously broadcasted error
-            if isinstance(rel_data, PeerClusterRelData):
-                self.delete_from_rel("error_data", rel_id=rel_id)
-                # we add the hash of the rel_data to only emit a change event
-                # if the data has actually changed
+            # we add the hash of the rel_data to only emit a change event
+            # if the data has actually changed
+            if rel_data_redacted_dict:
                 self.put_in_rel(
                     data={
                         "data": json.dumps(rel_data_redacted_dict),
@@ -440,8 +435,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                     },
                     rel_id=rel_id,
                 )
+            # there is no error to broadcast - we clear any previously broadcasted error
+            if not rel_err_data:
+                self.delete_from_rel("error_data", rel_id=rel_id)
             else:
-                self.put_in_rel(data={"error_data": rel_data.to_str()}, rel_id=rel_id)
+                self.put_in_rel(data={"error_data": rel_err_data.to_str()}, rel_id=rel_id)
 
             # if no planned units, delete relation data as it won't get updated
             if not has_units:
@@ -453,18 +451,15 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
     def _notify_if_wrong_integration(
         self,
-        rel_data: Union[PeerClusterRelData, PeerClusterRelErrorData],
+        rel_err_data: Optional[PeerClusterRelErrorData],
         target_relation_ids: List[int],
     ) -> bool:
         """Check if relation is invalid and notify related sub-clusters."""
-        if not isinstance(rel_data, PeerClusterRelErrorData):
-            return False
-
-        if not rel_data.should_sever_relation:
+        if not rel_err_data or not rel_err_data.should_sever_relation:
             return False
 
         for rel_id in target_relation_ids:
-            self.put_in_rel(data={"error_data": rel_data.to_str()}, rel_id=rel_id)
+            self.put_in_rel(data={"error_data": rel_err_data.to_str()}, rel_id=rel_id)
 
         return True
 
@@ -540,14 +535,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(AZURE_RELATION):
                 return None
 
-            if not self.charm.backup.client.get_azure_connection_info().get("storage-account"):
+            azure_storage_conn_info = self.charm.backup.client.get_azure_storage_connection_info()
+            if not azure_storage_conn_info.get("storage-account"):
                 return None
 
             # As the main orchestrator, this application must set the S3 information.
-            storage_account = self.charm.backup.client.get_azure_connection_info().get(
-                "storage-account"
-            )
-            secret_key = self.charm.backup.client.get_azure_connection_info().get("secret-key")
+            storage_account = azure_storage_conn_info.get("storage-account")
+            secret_key = azure_storage_conn_info.get("secret-key")
 
             # set the secrets in the charm
             # TODO Move this to azure relation and include both in one secret
@@ -597,57 +591,61 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
     def _rel_data(
         self,
-        deployment_desc: DeploymentDescription,
-        orchestrators: PeerClusterOrchestrators,
-    ) -> Union[PeerClusterRelData, PeerClusterRelErrorData]:
+        deployment_desc: Optional[DeploymentDescription],
+    ) -> Optional[PeerClusterRelData]:
         """Build and return the peer cluster rel data to be shared with requirer sub-clusters."""
-        if rel_err_data := self._rel_err_data(deployment_desc, orchestrators):
-            return rel_err_data
+        # returns None if this cluster is not fully ready, or if the admin user
+        # is not initialized
+        if not deployment_desc:
+            logger.debug("Cluster not ready to populate relation data")
+            return None
 
-        # check that this cluster is fully ready, otherwise put "configuring" in
-        # peer rel data for requirers to show a blocked status until it's fully
-        # ready (will receive a subsequent
+        credentials = self._rel_data_credentials(deployment_desc)
+        if not credentials:
+            logger.debug("Admin user not initialized. Relation data not ready")
+            return None
+
+        cm_nodes = []
         try:
-            return PeerClusterRelData(
-                cluster_name=deployment_desc.config.cluster_name,
-                cm_nodes=self._fetch_local_cm_nodes(deployment_desc),
-                credentials=PeerClusterRelDataCredentials(
-                    admin_username=AdminUser,
-                    admin_password=self.secrets.get(
-                        Scope.APP, self.secrets.password_key(AdminUser)
-                    ),
-                    admin_password_hash=self.secrets.get(
-                        Scope.APP, self.secrets.hash_key(AdminUser)
-                    ),
-                    kibana_password=self.secrets.get(
-                        Scope.APP, self.secrets.password_key(KibanaserverUser)
-                    ),
-                    kibana_password_hash=self.secrets.get(
-                        Scope.APP, self.secrets.hash_key(KibanaserverUser)
-                    ),
-                    monitor_password=self.secrets.get(
-                        Scope.APP, self.secrets.password_key(COSUser)
-                    ),
-                    admin_tls=self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val),
-                    s3=self._s3_credentials(deployment_desc),
-                    azure=self._azure_credentials(deployment_desc),
-                ),
-                deployment_desc=deployment_desc,
-                security_index_initialised=self._get_security_index_initialised(),
-            )
+            cm_nodes = self._fetch_local_cm_nodes(deployment_desc)
         except OpenSearchHttpError:
-            return PeerClusterRelErrorData(
-                cluster_name=deployment_desc.config.cluster_name,
-                should_sever_relation=False,
-                should_wait=True,
-                blocked_message=f"Could not fetch nodes in related {deployment_desc.typ} sub-cluster.",
-                deployment_desc=deployment_desc,
+            logger.warning(f"Could not fetch nodes in related {deployment_desc.typ} sub-cluster")
+
+        return PeerClusterRelData(
+            cluster_name=deployment_desc.config.cluster_name,
+            cm_nodes=cm_nodes,
+            credentials=credentials,
+            deployment_desc=deployment_desc,
+            security_index_initialised=self._get_security_index_initialised(),
+        )
+
+    def _rel_data_credentials(
+        self, deployment_desc: DeploymentDescription
+    ) -> Optional[PeerClusterRelDataCredentials]:
+        """Build and return the rel data credentials to be shared with requirer sub-clusters."""
+        if self.charm.is_admin_user_configured():
+            return PeerClusterRelDataCredentials(
+                admin_username=AdminUser,
+                admin_password=self.secrets.get(Scope.APP, self.secrets.password_key(AdminUser)),
+                admin_password_hash=self.secrets.get(Scope.APP, self.secrets.hash_key(AdminUser)),
+                kibana_password=self.secrets.get(
+                    Scope.APP, self.secrets.password_key(KibanaserverUser)
+                ),
+                kibana_password_hash=self.secrets.get(
+                    Scope.APP, self.secrets.hash_key(KibanaserverUser)
+                ),
+                monitor_password=self.secrets.get(Scope.APP, self.secrets.password_key(COSUser)),
+                admin_tls=self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val),
+                s3=self._s3_credentials(deployment_desc),
+                azure=self._azure_credentials(deployment_desc),
             )
+        return None
 
     def _rel_err_data(  # noqa: C901
         self,
-        deployment_desc: DeploymentDescription,
+        deployment_desc: Optional[DeploymentDescription],
         orchestrators: PeerClusterOrchestrators,
+        rel_data: Optional[PeerClusterRelData],
     ) -> Optional[PeerClusterRelErrorData]:
         """Build error peer relation data object."""
         should_sever_relation, should_retry, blocked_msg = False, True, None
@@ -679,10 +677,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         ):
             if not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
                 blocked_msg = f"Security index not initialized {message_suffix}."
-        elif (
-            ClusterTopology.data_role_in_cluster_fleet_apps(self.charm)
-            or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
-        ):
+        elif ClusterTopology.data_role_in_cluster_fleet_apps(
+            self.charm
+        ) and self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
+            # Requirer units should start after all provider units have started,
+            # and only if the security index has already been initialized by a data node.
+            # This avoids a potential deadlock where both orchestrator and data units
+            # wait on each other to proceed.
             if not self.charm.is_every_unit_marked_as_started():
                 blocked_msg = f"Waiting for every unit {message_suffix} to start."
             elif not self.charm.secrets.get(Scope.APP, self.charm.secrets.password_key(COSUser)):
@@ -694,6 +695,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 except OpenSearchHttpError as e:
                     logger.error(e)
                     blocked_msg = f"Could not fetch nodes {message_suffix}"
+        elif rel_data and not rel_data.cm_nodes:
+            blocked_msg = f"Could not fetch nodes in related {deployment_desc.typ} sub-cluster."
 
         if not blocked_msg:
             return None
@@ -745,10 +748,16 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if node.is_cm_eligible() and node.app.id == deployment_desc.app.id
         ]
 
-    def _rel_data_redacted_dict(self, rel_data: PeerClusterRelData) -> dict[str, Any]:
+    def _rel_data_redacted_dict(
+        self, rel_data: Optional[PeerClusterRelData]
+    ) -> Optional[dict[str, Any]]:
         """Replace the secrets' plain text content in the rel data by their IDs."""
         # hide the secrets and instead pass their ids so that
         # they can be fetched when needed in the requirer side
+        # returns None if rel_data has not been successfully created
+        if not rel_data:
+            return None
+
         redacted_dict = rel_data.to_dict()
 
         redacted_dict["credentials"] = {
@@ -798,9 +807,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         return redacted_dict
 
     def _grant_rel_data_secrets(  # noqa: C901
-        self, rel_data_secret_content: dict[str, Any], all_rel_ids: list[int]
+        self, rel_data_secret_content: Optional[dict[str, Any]], all_rel_ids: list[int]
     ):
         """Grant the secrets to all the related apps."""
+        # return if rel_data_secret_content was not successfully created
+        if not rel_data_secret_content:
+            return
+
         credentials = rel_data_secret_content["credentials"]
         for key, secret_id in credentials.items():
             # admin-username is not secrets

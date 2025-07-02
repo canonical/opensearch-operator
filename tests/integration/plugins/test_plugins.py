@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 COS_APP_NAME = "grafana-agent"
+COS_CHANNEL = "1/stable"
 COS_RELATION_NAME = "cos-agent"
 MAIN_ORCHESTRATOR_NAME = "main"
 FAILOVER_ORCHESTRATOR_NAME = "failover"
@@ -246,7 +247,7 @@ async def test_prometheus_exporter_enabled_by_default(ops_test, deploy_type: str
 async def test_small_deployments_prometheus_exporter_cos_relation(
     ops_test, series, deploy_type: str
 ):
-    await ops_test.model.deploy(COS_APP_NAME, channel="edge", series=series),
+    await ops_test.model.deploy(COS_APP_NAME, channel=COS_CHANNEL, series=series)
     await ops_test.model.integrate(APP_NAME, COS_APP_NAME)
     await _wait_for_units(ops_test, deploy_type, wait_for_cos=True)
 
@@ -343,7 +344,7 @@ async def test_large_deployment_prometheus_exporter_cos_relation(
     ops_test, series, deploy_type: str
 ):
     # Check that the correct settings were successfully communicated to grafana-agent
-    await ops_test.model.deploy(COS_APP_NAME, channel="edge", series=series),
+    await ops_test.model.deploy(COS_APP_NAME, channel=COS_CHANNEL, series=series),
     await ops_test.model.integrate(FAILOVER_ORCHESTRATOR_NAME, COS_APP_NAME)
     await ops_test.model.integrate(MAIN_ORCHESTRATOR_NAME, COS_APP_NAME)
     await ops_test.model.integrate(APP_NAME, COS_APP_NAME)

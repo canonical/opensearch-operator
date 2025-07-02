@@ -46,6 +46,10 @@ class TestHelperDatabag(unittest.TestCase):
         self.status.clear(message_template, pattern=Status.CheckPattern.Interpolated)
         self.assertEqual(self.charm.unit.status.name, "active")
 
+        self.charm.unit.status = BlockedStatus("Should not be cleared")
+        self.status.clear(message_template, pattern=Status.CheckPattern.Interpolated)
+        self.assertEqual(self.charm.unit.status.name, "blocked")
+
     def test_mask_sensitive_information(self):
         """Verify the pattern to remove sensitive information from the logs."""
         command_to_test = """-tspass mypasswd \
