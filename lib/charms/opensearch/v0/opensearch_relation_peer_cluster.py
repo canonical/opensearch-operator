@@ -1179,15 +1179,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             ),
         )
         self.put_in_rel(data={"app": current_app.to_str()}, rel_id=rel_id)
-        self.put_in_rel(data={"app": current_app.to_str()}, rel_id=rel_id)
 
         # update content of fleet in the current app's peer databag
-        cluster_fleet_apps = (
-            self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
-        )
-        rel_cluster_fleet_apps = self.get_obj_from_rel("cluster_fleet_apps", rel_id=rel_id)
-        rel_cluster_fleet_apps.update({deployment_desc.app.id: current_app.to_dict()})
-        cluster_fleet_apps.update(rel_cluster_fleet_apps)
         cluster_fleet_apps = (
             self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
         )
