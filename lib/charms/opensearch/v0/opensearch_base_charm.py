@@ -149,8 +149,11 @@ class _StartOpenSearch(EventBase):
         self.first_data_node = first_data_node
 
     def snapshot(self) -> Dict[str, Any]:
-        return {"ignore_lock": self.ignore_lock, "after_upgrade": self.after_upgrade, 
-                "first_data_node": self.first_data_node}
+        return {
+            "ignore_lock": self.ignore_lock,
+            "after_upgrade": self.after_upgrade,
+            "first_data_node": self.first_data_node,
+        }
 
     def restore(self, snapshot: Dict[str, Any]):
         self.ignore_lock = snapshot["ignore_lock"]
@@ -453,10 +456,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 f"Cluster first data node is {cluster_first_data_node}, {deployment_desc.app.id} should not ignore lock."
             )
             return False
-        if not self._is_failover_and_no_pure_data_node():
-            logger.debug(
-                "Failover but a pure data node exists, should not ignore lock."
-            )
+        if (
+            deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR
+            and not self._is_failover_and_no_pure_data_node()
+        ):
+            logger.debug("Failover but a pure data node exists, should not ignore lock.")
             return False
 
         return (
@@ -737,7 +741,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # handle when/if certificates are expired
         self._check_certs_expiration(event)
-
 
     def _on_config_changed(self, event: ConfigChangedEvent):  # noqa C901
         """On config changed event. Useful for IP changes or for user provided config changes."""
@@ -1306,9 +1309,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             logger.info("post_start_init: Detected CA rotation complete in cluster")
             self.tls.on_ca_certs_rotation_complete()
 
-        if self.peers_data.get(
-            Scope.UNIT, "cluster_manager_removed", default=False
-        ):
+        if self.peers_data.get(Scope.UNIT, "cluster_manager_removed", default=False):
             # restore cluster_manager role and restart the service
             logger.debug("Restoring cluster_manager role and restarting the service")
             self.peers_data.delete(Scope.UNIT, "cluster_manager_removed")
@@ -1869,9 +1870,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # check if it's the only data node in the cluster
             cluster_fleet_apps = self.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
             for app in cluster_fleet_apps:
-                if self.app.name != cluster_fleet_apps[app].get("app", {}).get(
-                    "name"
-                ) and "data" in cluster_fleet_apps[app].get("roles") and "cluster_manager" not in cluster_fleet_apps[app].get("roles"):
+                if (
+                    self.app.name != cluster_fleet_apps[app].get("app", {}).get("name")
+                    and "data" in cluster_fleet_apps[app].get("roles")
+                    and "cluster_manager" not in cluster_fleet_apps[app].get("roles")
+                ):
                     return False
             return True
         return False
