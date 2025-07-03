@@ -141,18 +141,21 @@ class _StartOpenSearch(EventBase):
     This event will be deferred until OpenSearch starts.
     """
 
-    def __init__(self, handle, *, ignore_lock=False, after_upgrade=False):
+    def __init__(self, handle, *, ignore_lock=False, after_upgrade=False, first_data_node=False):
         super().__init__(handle)
         # Only used for force upgrade
         self.ignore_lock = ignore_lock
         self.after_upgrade = after_upgrade
+        self.first_data_node = first_data_node
 
     def snapshot(self) -> Dict[str, Any]:
-        return {"ignore_lock": self.ignore_lock, "after_upgrade": self.after_upgrade}
+        return {"ignore_lock": self.ignore_lock, "after_upgrade": self.after_upgrade, 
+                "first_data_node": self.first_data_node}
 
     def restore(self, snapshot: Dict[str, Any]):
         self.ignore_lock = snapshot["ignore_lock"]
         self.after_upgrade = snapshot["after_upgrade"]
+        self.first_data_node = snapshot["first_data_node"]
 
 
 class _RestartOpenSearch(EventBase):
@@ -431,7 +434,35 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # if this is the first data node to join, start without getting the lock
         # TODO synchronize so that only 1 data node starts
         # https://warthogs.atlassian.net/browse/DPE-7530
-        ignore_lock = (
+
+        if self._should_ignore_lock(deployment_desc):
+            # Actual start will be done in `_on_peer_cluster_relation_changed`
+            logger.debug(
+                f"Requesting start as first data node without lock: {deployment_desc.app.id}"
+            )
+            self.peer_cluster_requirer.set_first_data_node(deployment_desc.app.id)
+            return
+        self._start_opensearch_event.emit()
+
+    def _should_ignore_lock(self, deployment_desc: DeploymentDescription) -> bool:
+        """Check if we should ignore the lock when starting OpenSearch."""
+        if (
+            cluster_first_data_node := self.peer_cluster_requirer.get_cluster_first_data_node()
+        ) is not None and cluster_first_data_node != deployment_desc.app.id:
+            logger.debug(
+                f"Cluster first data node is {cluster_first_data_node}, {deployment_desc.app.id} should not ignore lock."
+            )
+            return False
+        if (
+            deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR
+            and not self._is_failover_and_only_data_node()
+        ):
+            logger.debug(
+                "Failover orchestrator is not the only data node, should not ignore lock."
+            )
+            return False
+
+        return (
             (
                 "data" in deployment_desc.config.roles
                 or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
@@ -448,14 +479,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 )
             )
         )
-        if ignore_lock:
-            # Actual start will be done in `_on_peer_cluster_relation_changed`
-            logger.debug(
-                f"Requesting start as first data node without lock: {deployment_desc.app.id}"
-            )
-            self.peer_cluster_requirer.set_first_data_node(deployment_desc.app.id)
-            return
-        self._start_opensearch_event.emit()
 
     def _apply_peer_cm_directives_and_check_if_can_start(self) -> bool:
         """Apply the directives computed by the opensearch peer cluster manager."""
@@ -1063,7 +1086,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
-        if not self._can_service_start():
+        if not self._can_service_start(event.first_data_node):
             self.node_lock.release()
             logger.info("Could not start opensearch service. Will retry next event.")
             event.defer()
@@ -1384,7 +1407,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         logger.debug("Starting OpenSearch after upgrade")
         self._start_opensearch_event.emit(ignore_lock=event.ignore_lock, after_upgrade=True)
 
-    def _can_service_start(self) -> bool:
+    def _can_service_start(self, first_data_node: bool = False) -> bool:
         """Return if the opensearch service can start."""
         # if there are any missing system requirements leave
         if missing_sys_reqs := self.opensearch.missing_sys_requirements():
@@ -1405,11 +1428,17 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             not self.peers_data.get(Scope.APP, "security_index_initialised", False)
             or not self.alt_hosts
         ):
-            return self.unit.is_leader() and (
-                deployment_desc.start == StartMode.WITH_GENERATED_ROLES
-                or deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
-                or "data" in deployment_desc.config.roles
-            )
+            if self.unit.is_leader():
+                # If main orchestrator start
+                if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+                    return True
+                # If data node only start if it's the first one
+                if (
+                    deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+                    or "data" in deployment_desc.config.roles
+                ) and first_data_node:
+                    return True
+            return False
 
         # When a new unit joins, replica shards are automatically added to it. In order to prevent
         # overloading the cluster, units must be started one at a time. So we defer starting
@@ -1847,6 +1876,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 ) and "data" in cluster_fleet_apps[app].get("roles"):
                     return False
             return True
+        return False
 
     @property
     def unit_ip(self) -> str:

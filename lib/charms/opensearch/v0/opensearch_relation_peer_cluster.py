@@ -182,7 +182,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         if self._get_security_index_initialised():
             self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
-        
+            # clean up the first data node when security index is intiialised
+            self.charm.peers_data.put(Scope.APP, "first_data_node", "")
+
         if first_data_node := self._get_first_data_node():
             self.charm.peers_data.put(Scope.APP, "first_data_node", first_data_node)
 
@@ -867,7 +869,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         """Get the first data node from the relation data."""
         if first_data_node := self.charm.peers_data.get(Scope.APP, "first_data_node", None):
             return first_data_node
-        
+
         # check all other clusters if they have initialised the security index
         all_relation_ids = [
             rel.id for rel in self.charm.model.relations[self.relation_name] if len(rel.units) > 0
@@ -960,7 +962,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                     f"Local first data node: {local_first_data_node} - cluster first data node: {peer_cluster_rel_data.first_data_node}"
                 )
                 if peer_cluster_rel_data.first_data_node == local_first_data_node:
-                    self.charm._start_opensearch_event.emit(ignore_lock=True)
+                    self.charm._start_opensearch_event.emit(ignore_lock=True, first_data_node=True)
                 else:
                     self.charm._start_opensearch_event.emit()
                 self.set_first_data_node("")
@@ -1505,3 +1507,22 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             rel_id=orchestrators.main_rel_id,
             remote_app=False,
         )
+
+    def get_cluster_first_data_node(self) -> str | None:
+        """Get the first data node from the cluster relation data."""
+        orchestrators = PeerClusterOrchestrators.from_dict(
+            self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
+        )
+
+        if not orchestrators:
+            return None
+
+        peer_cluster_data = self.get_from_rel(
+            "data", rel_id=orchestrators.main_rel_id, remote_app=True
+        )
+        logger.debug(f"get_cluster_first_data_node : data read: {peer_cluster_data}")
+
+        if not peer_cluster_data:
+            return None
+
+        return self.peer_cm.rel_data_from_str(peer_cluster_data).first_data_node
