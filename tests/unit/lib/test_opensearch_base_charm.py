@@ -217,8 +217,12 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_CHARM_CLASS}._start_opensearch_event")
     @patch(f"{BASE_CHARM_CLASS}._apply_peer_cm_directives_and_check_if_can_start")
     @patch(f"{BASE_CHARM_CLASS}._should_ignore_lock")
-    @patch(f"{BASE_LIB_PATH}.opensearch_relation_peer_cluster.OpenSearchPeerClusterRequirer.set_first_data_node")
-    @patch(f"{BASE_LIB_PATH}.opensearch_relation_peer_cluster.OpenSearchPeerClusterRequirer.get_cluster_first_data_node")
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_relation_peer_cluster.OpenSearchPeerClusterRequirer.set_first_data_node"
+    )
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_relation_peer_cluster.OpenSearchPeerClusterRequirer.get_cluster_first_data_node"
+    )
     def test_data_role_only_on_start(
         self,
         get_cluster_first_data_node,
@@ -257,8 +261,12 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_CHARM_CLASS}._start_opensearch_event")
     @patch(f"{BASE_CHARM_CLASS}._apply_peer_cm_directives_and_check_if_can_start")
     @patch(f"{BASE_CHARM_CLASS}._should_ignore_lock")
-    @patch(f"{BASE_LIB_PATH}.opensearch_relation_peer_cluster.OpenSearchPeerClusterRequirer.set_first_data_node")
-    @patch(f"{BASE_LIB_PATH}.opensearch_relation_peer_cluster.OpenSearchPeerClusterRequirer.get_cluster_first_data_node")
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_relation_peer_cluster.OpenSearchPeerClusterRequirer.set_first_data_node"
+    )
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_relation_peer_cluster.OpenSearchPeerClusterRequirer.get_cluster_first_data_node"
+    )
     def test_failover_orchestrator_with_data_role_on_start(
         self,
         get_cluster_first_data_node,

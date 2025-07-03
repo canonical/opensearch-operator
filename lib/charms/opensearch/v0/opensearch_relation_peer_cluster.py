@@ -152,7 +152,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         self.refresh_relation_data(event, event_rel_id=event.relation.id, can_defer=False)
 
-    def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):
+    def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):  # noqa: C901
         """Event received by all units in sub-cluster when a new sub-cluster joins the relation."""
         if not self.charm.unit.is_leader():
             return
@@ -182,7 +182,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         if self._get_security_index_initialised():
             self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
-            # clean up the first data node when security index is intiialised
+            # clean up the first data node when security index is initialised
             self.charm.peers_data.put(Scope.APP, "first_data_node", "")
 
         if first_data_node := self._get_first_data_node():
@@ -1475,7 +1475,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
     def set_first_data_node(self, first_data_node: str) -> None:
         """Set the first data node in the relation data."""
-
         orchestrators = PeerClusterOrchestrators.from_dict(
             self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
         )

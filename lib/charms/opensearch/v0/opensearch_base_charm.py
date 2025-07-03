@@ -908,7 +908,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def on_tls_ca_rotation(self):
         """Called when adding new CA to the trust store."""
         self.status.set(MaintenanceStatus(TLSCaRotation))
-        logger.debug(f"Restarting opensearch due to CA rotation")
+        logger.debug("Restarting opensearch due to CA rotation")
         self._restart_opensearch_event.emit()
 
     def on_tls_conf_set(
@@ -1405,7 +1405,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         logger.debug("Starting OpenSearch after upgrade")
         self._start_opensearch_event.emit(ignore_lock=event.ignore_lock, after_upgrade=True)
 
-    def _can_service_start(self, first_data_node: bool = False) -> bool:
+    def _can_service_start(self, first_data_node: bool = False) -> bool:  # noqa: C901
         """Return if the opensearch service can start."""
         # if there are any missing system requirements leave
         if missing_sys_reqs := self.opensearch.missing_sys_requirements():
