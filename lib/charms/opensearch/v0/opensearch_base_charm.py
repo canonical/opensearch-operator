@@ -738,9 +738,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # handle when/if certificates are expired
         self._check_certs_expiration(event)
 
-    def trigger_restart(self):
-        """Trigger a restart of the service."""
-        self._restart_opensearch_event.emit()
 
     def _on_config_changed(self, event: ConfigChangedEvent):  # noqa C901
         """On config changed event. Useful for IP changes or for user provided config changes."""
@@ -829,6 +826,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch.is_service_started() and (
             plugin_needs_restart or perf_profile_needs_restart
         ):
+            logger.debug(
+                f"Restarting opensearch due to confuig change: plugin_needs_restart={plugin_needs_restart}, perf_profile_needs_restart={perf_profile_needs_restart}"
+            )
             self._restart_opensearch_event.emit()
 
     def _on_set_password_action(self, event: ActionEvent):
@@ -905,6 +905,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def on_tls_ca_rotation(self):
         """Called when adding new CA to the trust store."""
         self.status.set(MaintenanceStatus(TLSCaRotation))
+        logger.debug(f"Restarting opensearch due to CA rotation")
         self._restart_opensearch_event.emit()
 
     def on_tls_conf_set(
@@ -1078,14 +1079,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if event.ignore_lock:
             # Only used for force upgrades and starting data nodes for cluster-manager-only nodes
             logger.debug("Starting without lock")
-        elif not self.node_lock.acquired:
-            logger.debug("Lock to start opensearch not acquired. Will retry next event")
+        elif not self._can_service_start(event.first_data_node):
+            logger.info("Conditions not met to start opensearch. Will retry next event.")
             event.defer()
             return
-
-        if not self._can_service_start(event.first_data_node):
-            self.node_lock.release()
-            logger.info("Could not start opensearch service. Will retry next event.")
+        elif not self.node_lock.acquired:
+            logger.debug("Lock to start opensearch not acquired. Will retry next event")
             event.defer()
             return
 
@@ -1307,10 +1306,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             logger.info("post_start_init: Detected CA rotation complete in cluster")
             self.tls.on_ca_certs_rotation_complete()
 
-        if self._is_failover_and_no_pure_data_node() and self.peers_data.get(
+        if self.peers_data.get(
             Scope.UNIT, "cluster_manager_removed", default=False
         ):
             # restore cluster_manager role and restart the service
+            logger.debug("Restoring cluster_manager role and restarting the service")
             self.peers_data.delete(Scope.UNIT, "cluster_manager_removed")
             self._restart_opensearch_event.emit()
 
@@ -1701,6 +1701,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         self.status.set(WaitingStatus(WaitingToStart))
+        logger.debug("Restarting opensearch due to reconfiguring node roles")
         self._restart_opensearch_event.emit()
 
     def _recompute_roles_if_needed(self, event: RelationChangedEvent):
