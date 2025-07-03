@@ -453,12 +453,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 f"Cluster first data node is {cluster_first_data_node}, {deployment_desc.app.id} should not ignore lock."
             )
             return False
-        if (
-            deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR
-            and not self._is_failover_and_only_data_node()
-        ):
+        if not self._is_failover_and_no_pure_data_node():
             logger.debug(
-                "Failover orchestrator is not the only data node, should not ignore lock."
+                "Failover but a pure data node exists, should not ignore lock."
             )
             return False
 
@@ -1310,7 +1307,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             logger.info("post_start_init: Detected CA rotation complete in cluster")
             self.tls.on_ca_certs_rotation_complete()
 
-        if self._is_failover_and_only_data_node() and self.peers_data.get(
+        if self._is_failover_and_no_pure_data_node() and self.peers_data.get(
             Scope.UNIT, "cluster_manager_removed", default=False
         ):
             # restore cluster_manager role and restart the service
@@ -1608,7 +1605,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # cluster-manager role from it to avoid it bootstrapping the cluster
         # which is the responsibility of the main orchestrator
         # who then broadcasts `security_index_initialized` to the peer clusters.
-        if self._is_failover_and_only_data_node() and not self.peers_data.get(
+        if self._is_failover_and_no_pure_data_node() and not self.peers_data.get(
             Scope.APP, "security_index_initialised", False
         ):
             self.peers_data.put(Scope.UNIT, "cluster_manager_removed", True)
@@ -1861,7 +1858,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # notify the main orchestrator that the security index is initialized
             self.peer_cluster_requirer.set_security_index_initialised()
 
-    def _is_failover_and_only_data_node(self) -> bool:
+    def _is_failover_and_no_pure_data_node(self) -> bool:
         """Check if the current node is a failover and the only data node in the cluster."""
         deployment_desc = self.opensearch_peer_cm.deployment_desc()
         if deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR and (
@@ -1873,7 +1870,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             for app in cluster_fleet_apps:
                 if self.app.name != cluster_fleet_apps[app].get("app", {}).get(
                     "name"
-                ) and "data" in cluster_fleet_apps[app].get("roles"):
+                ) and "data" in cluster_fleet_apps[app].get("roles") and "cluster_manager" not in cluster_fleet_apps[app].get("roles"):
                     return False
             return True
         return False
