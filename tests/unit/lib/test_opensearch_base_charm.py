@@ -216,14 +216,20 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     @patch(f"{BASE_CHARM_CLASS}._start_opensearch_event")
     @patch(f"{BASE_CHARM_CLASS}._apply_peer_cm_directives_and_check_if_can_start")
+    @patch(f"{BASE_CHARM_CLASS}._should_ignore_lock")
+    @patch(f"{BASE_LIB_PATH}.opensearch_relation_peer_cluster.OpenSearchPeerClusterRequirer.set_first_data_node")
+    @patch(f"{BASE_LIB_PATH}.opensearch_relation_peer_cluster.OpenSearchPeerClusterRequirer.get_cluster_first_data_node")
     def test_data_role_only_on_start(
         self,
-        is_fully_configured,
-        is_admin_user_configured,
-        set_client_auth,
-        deployment_desc,
-        _start_opensearch_event,
+        get_cluster_first_data_node,
+        set_first_data_node,
+        _should_ignore_lock,
         _apply_peer_cm_directives_and_check_if_can_start,
+        _start_opensearch_event,
+        deployment_desc,
+        set_client_auth,
+        is_admin_user_configured,
+        is_fully_configured,
     ):
         """Test start event for nodes that only have the `data` role."""
         with (
@@ -238,10 +244,11 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             is_admin_user_configured.return_value = True
             deployment_desc.typ.return_value = DeploymentType.OTHER
             deployment_desc.config.roles.return_value = ["data"]
+            _should_ignore_lock.return_value = True
 
             self.harness.set_leader(True)
             self.charm.on.start.emit()
-            self.charm._start_opensearch_event.emit.assert_called_once()
+            self.charm._start_opensearch_event.emit.assert_not_called()
 
     @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.is_fully_configured")
     @patch(f"{BASE_CHARM_CLASS}.is_admin_user_configured")
@@ -249,14 +256,20 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     @patch(f"{BASE_CHARM_CLASS}._start_opensearch_event")
     @patch(f"{BASE_CHARM_CLASS}._apply_peer_cm_directives_and_check_if_can_start")
+    @patch(f"{BASE_CHARM_CLASS}._should_ignore_lock")
+    @patch(f"{BASE_LIB_PATH}.opensearch_relation_peer_cluster.OpenSearchPeerClusterRequirer.set_first_data_node")
+    @patch(f"{BASE_LIB_PATH}.opensearch_relation_peer_cluster.OpenSearchPeerClusterRequirer.get_cluster_first_data_node")
     def test_failover_orchestrator_with_data_role_on_start(
         self,
-        is_fully_configured,
-        is_admin_user_configured,
-        set_client_auth,
-        deployment_desc,
-        _start_opensearch_event,
+        get_cluster_first_data_node,
+        set_first_data_node,
+        _should_ignore_lock,
         _apply_peer_cm_directives_and_check_if_can_start,
+        _start_opensearch_event,
+        deployment_desc,
+        set_client_auth,
+        is_admin_user_configured,
+        is_fully_configured,
     ):
         """Test start event for failover orchestrator with `data` role."""
         with patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up:
@@ -266,11 +279,12 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             is_admin_user_configured.return_value = True
             deployment_desc.typ.return_value = DeploymentType.FAILOVER_ORCHESTRATOR
             deployment_desc.config.roles.return_value = ["cluster-manager", "data"]
+            _should_ignore_lock.return_value = True
 
             self.harness.set_leader(True)
             self.charm.on.start.emit()
 
-            self.charm._start_opensearch_event.emit.assert_called_once()
+            self.charm._start_opensearch_event.emit.assert_not_called()
 
     @patch(f"{BASE_LIB_PATH}.opensearch_locking.OpenSearchNodeLock.acquired")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
@@ -286,8 +300,10 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_CHARM_CLASS}._put_or_update_internal_user_unit")
     @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.request")
     @patch(f"{BASE_CHARM_CLASS}._post_start_init")
+    @patch(f"{BASE_CHARM_CLASS}._should_ignore_lock")
     def test_on_start(
         self,
+        _should_ignore_lock,
         _post_start_init,
         request,
         _put_or_update_internal_user_unit,
@@ -314,6 +330,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             ),
         ):
             # test when setup complete
+            _should_ignore_lock.return_value = False
             is_node_up.return_value = True
             self.peers_data.put(Scope.APP, "security_index_initialised", True)
             self.charm.on.start.emit()
