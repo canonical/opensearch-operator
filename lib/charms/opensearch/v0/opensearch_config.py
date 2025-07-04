@@ -70,6 +70,8 @@ class OpenSearchConfig:
             "-Djdk.tls.client.protocols=TLSv1.2",
         )
 
+
+
     def add_oidc_auth(self, openid_connect_url: str):
         """Adds OIDC auth scheme on the security config."""
         oidc_config = {

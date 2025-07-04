@@ -104,6 +104,7 @@ from charms.opensearch.v0.constants_secrets import (
 )
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
+from charms.opensearch.v0.helper_security import store_ca, list_cas
 from charms.opensearch.v0.models import AzureRelData, DeploymentType, Model, S3RelData
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
@@ -284,7 +285,7 @@ class BackupManager:
         """Executes broken API calls."""
         return  # do not execute anything as we intend to keep the backups untouched
 
-    def register(self, repo_settings: Dict[str, Any] | None) -> Dict[str, Any]:
+    def register(self, repo_settings: Dict[str, Any] | None, ca_chain: str) -> Dict[str, Any]:
         """Registers the snapshot repo in the cluster.
 
         Returns the Create/Update snapshot repo API response or raises an HTTP error.
@@ -295,6 +296,10 @@ class BackupManager:
         """
         if not repo_settings:
             raise ValueError("Backup repository settings missing.")
+
+        # store the certificate in the trust store
+
+        # reload the trust store
 
         response = self.charm.opensearch.request(
             "PUT",
@@ -662,6 +667,27 @@ class OpenSearchBackupBase(Object):
 
     def _on_secret_changed(self, event: SecretEvent) -> None:
         pass
+
+    def setup_trust_store(self) -> None:
+        """Setup a custom JVM trust store."""
+        # TODO: real value
+        ca = "CA"
+        custom_store_pwd = "hellow"
+        custom_store_path = f"{self.charm.opensearch.paths.certs}/custom.p12"
+
+        if ca in list_cas(store_pwd=custom_store_pwd, store_path=custom_store_path):
+            return
+
+        store_ca(
+            alias="custom",
+            store_pwd="hello",
+            store_path=f"{self.charm.opensearch.paths.certs}/custom.p12",
+            ca="CA",
+        )
+
+        self.charm.opensearch.config.replace() # JVM options
+
+        # TODO restart
 
     def _on_backup_relation_event(self, event: RelationEvent) -> None:
         """Defers the backup relation events."""

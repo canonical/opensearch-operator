@@ -1470,6 +1470,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if user in OpenSearchSystemUsers:
             self.user_manager.put_internal_user(user, hashed_pwd)
 
+    def _create_custom_trust_store(self) -> bool:
+        """Create a custom jvm trust store for non-client/peers self-signed certificates."""
+        if self.unit.is_leader():
+            if self.secrets.
+
     def _initialize_security_index(self, admin_secrets: Dict[str, any]) -> None:
         """Run the security_admin script, it creates and initializes the opendistro_security index.
 
