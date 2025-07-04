@@ -1169,7 +1169,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
         )
 
-        if not orchestrators:
+        if orchestrators.main_app is None:
             return
 
         # set the security index as initialised in the unit data bag with the main orchestrator
@@ -1479,7 +1479,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
         )
 
-        if not orchestrators:
+        if orchestrators.main_app is None:
             return
 
         logger.debug(
@@ -1498,7 +1498,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
         )
 
-        if not orchestrators:
+        if orchestrators.main_app is None:
             return
 
         return self.get_from_rel(
@@ -1513,7 +1513,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
         )
 
-        if not orchestrators:
+        if orchestrators.main_app is None:
             return None
 
         peer_cluster_data = self.get_from_rel(
