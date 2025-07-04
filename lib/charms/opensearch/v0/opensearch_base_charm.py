@@ -434,9 +434,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # request the start of OpenSearch
         self.status.set(WaitingStatus(RequestUnitServiceOps.format("start")))
 
-        # if this is the first data node to join, start without getting the lock
-        # TODO synchronize so that only 1 data node starts
-        # https://warthogs.atlassian.net/browse/DPE-7530
+        # if this is the a data node to join, start without getting the lock
+        # if there are multiple data apps in the cluster
+        # we synchronize the start of the first data node through peer cluster relationtoxc
+        # all data nodes request to start as first data node
+        #   ->(app databag key: first_data_node on data app)
+        # main orchestrator will choose which node to start first
+        #   ->(app databag key: first_data_node on main orchestrator app)
 
         if self._should_ignore_lock(deployment_desc):
             # Actual start will be done in `_on_peer_cluster_relation_changed`
@@ -449,6 +453,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _should_ignore_lock(self, deployment_desc: DeploymentDescription) -> bool:
         """Check if we should ignore the lock when starting OpenSearch."""
+        # if the security index is not initialized, a node has already started
+        if self.peers_data.get(Scope.APP, "security_index_initialised", False) and not (
+            # in case all data-nodes are powered down after being previously started
+            # ignore the lock to get a data-node started, as it holds security index
+            self.peers_data.get(Scope.UNIT, "started")
+            and not self.opensearch.is_service_started()
+        ):
+            return False
+
+        # if another data node got the clearance from the main orchestrator no need to ignore lock
         if (
             cluster_first_data_node := self.peer_cluster_requirer.get_cluster_first_data_node()
         ) is not None and cluster_first_data_node != deployment_desc.app.id:
@@ -456,6 +470,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 f"Cluster first data node is {cluster_first_data_node}, {deployment_desc.app.id} should not ignore lock."
             )
             return False
+
+        # if failover but there is a data node
         if (
             deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR
             and not self._is_failover_and_no_pure_data_node()
@@ -463,6 +479,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             logger.debug("Failover but a pure data node exists, should not ignore lock.")
             return False
 
+        # leader data node that's not main orchestrator
         return (
             (
                 "data" in deployment_desc.config.roles
@@ -470,15 +487,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             )
             and self.unit.is_leader()
             and deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
-            and (
-                not self.peers_data.get(Scope.APP, "security_index_initialised", False)
-                or (
-                    # in case all data-nodes are powered down after being previously started
-                    # ignore the lock to get a data-node started, as it holds security index
-                    self.peers_data.get(Scope.UNIT, "started")
-                    and not self.opensearch.is_service_started()
-                )
-            )
         )
 
     def _apply_peer_cm_directives_and_check_if_can_start(self) -> bool:
