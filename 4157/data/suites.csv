@@ -1,0 +1,282 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"Verify that if we recreate a relation, we can access the same index.","57479","test_data_persists_on_relation_rejoin","tests.integration.relations","Mon Jul 07 01:56:26 UTC 2025","passed","Mon Jul 07 01:57:23 UTC 2025","","test_opensearch_provider","",""
+"Test that the main-failover relation can be removed and re-added.","205335","test_large_deployment_sever_main_failover_relation","tests.integration.ha","Mon Jul 07 01:44:44 UTC 2025","passed","Mon Jul 07 01:48:10 UTC 2025","","test_large_deployments_remove_orchestrators","",""
+"Runs the backup process whilst writing to the cluster into 'noisy-index'.","109937","test_create_backup_and_restore[microceph-small]","tests.integration.ha","Mon Jul 07 01:44:15 UTC 2025","passed","Mon Jul 07 01:46:05 UTC 2025","","test_backups","",""
+"Test admin permissions behave the way we want.
+
+    admin-only actions include:
+    - creating multiple indices
+    - removing indices they've created
+    - set cluster roles.
+
+    verify that:
+    - we can't remove .opendistro_security index
+      - otherwise create client-admin-role
+    - verify neither admin nor default users can access user api
+      - otherwise create client-default-role
+    ","9383","test_admin_permissions","tests.integration.relations","Mon Jul 07 01:55:33 UTC 2025","passed","Mon Jul 07 01:55:43 UTC 2025","","test_opensearch_provider","",""
+"Deletes the entire OpenSearch cluster and redeploys from scratch.
+
+    Restores each of the previous backups we created and compare with their doc count.
+    The cluster is considered healthy if:
+    1) At each backup restored, check our track of doc count vs. current index count
+    2) Try to write to that new index.
+    ","681199","test_restore_to_new_cluster[azure-small]","tests.integration.ha","Mon Jul 07 01:50:04 UTC 2025","passed","Mon Jul 07 02:01:26 UTC 2025","","test_backups","",""
+"Build and deploy prod cluster of OpenSearch with Manual TLS Operator integration.","506107","test_build_and_deploy_with_manual_tls","tests.integration.tls","Mon Jul 07 01:36:05 UTC 2025","passed","Mon Jul 07 01:44:32 UTC 2025","","test_manual_tls","",""
+"Test upgrade and rollback to each version available.","","test_upgrade_rollback_from_local[from_v2.18.0_to_local]","tests.integration.upgrades","","unknown","","","test_small_deployment_upgrades","",""
+"Test that the failover orchestrator promotes itself
+
+    when the majority of relations with main are severed
+    ","291005","test_failover_promotion","tests.integration.large_deployments","Mon Jul 07 01:47:10 UTC 2025","passed","Mon Jul 07 01:52:01 UTC 2025","","test_failover_promotion_cross_model_relations","",""
+"Test that under optimal conditions all the nodes form the same big cluster.","","test_large_deployment_fully_formed","tests.integration.ha","","unknown","","","test_large_deployments_relations","",""
+"Build and deploy one unit of OpenSearch.","","test_build_and_deploy","tests.integration.ha","","unknown","","","test_large_deployments_relations","",""
+"Build and deploy a large deployment for OpenSearch.
+
+    The following apps will be deployed:
+    * main: the main orchestrator
+    * failover: the failover orchestrator
+    * opensearch (or APP_NAME): the data.hot node
+
+    The data node is selected to adopt the ""APP_NAME"" value because it is the node which
+    ContinuousWrites will later target its writes to.
+    ","465703","test_large_deployment_build_and_deploy[microceph-large]","tests.integration.ha","Mon Jul 07 01:36:58 UTC 2025","passed","Mon Jul 07 01:44:44 UTC 2025","","test_backups","",""
+"Build and deploy a large deployment for OpenSearch.
+
+    The following apps will be deployed:
+    * main: the main orchestrator
+    * failover: the failover orchestrator
+    * opensearch (or APP_NAME): the data.hot node
+
+    The data node is selected to adopt the ""APP_NAME"" value because it is the node which
+    ContinuousWrites will later target its writes to.
+    ","396640","test_large_deployment_build_and_deploy[azure-large]","tests.integration.ha","Mon Jul 07 01:36:53 UTC 2025","passed","Mon Jul 07 01:43:29 UTC 2025","","test_backups","",""
+"Deploy OpenSearch.","","test_deploy_from_version[from_v2.18.0_to_local]","tests.integration.upgrades","","unknown","","","test_small_deployment_upgrades","",""
+"Deploy OpenSearch.","","test_deploy_from_version[from_v2.17.0_to_local]","tests.integration.upgrades","","unknown","","","test_small_deployment_upgrades","",""
+"Check storage is reused and data accessible after scaling down and up.","965788","test_storage_reuse_after_scale_to_zero","tests.integration.ha","Mon Jul 07 02:04:42 UTC 2025","passed","Mon Jul 07 02:20:47 UTC 2025","","test_storage","",""
+"Removes and re-adds the backup relation to test backup and restore.","275121","test_remove_and_readd_backup_relation[azure-small]","tests.integration.ha","Mon Jul 07 01:45:26 UTC 2025","passed","Mon Jul 07 01:50:01 UTC 2025","","test_backups","",""
+"Removes and re-adds the backup relation to test backup and restore.","306663","test_remove_and_readd_backup_relation[azure-large]","tests.integration.ha","Mon Jul 07 01:56:20 UTC 2025","passed","Mon Jul 07 02:01:26 UTC 2025","","test_backups","",""
+"Runs the backup process whilst writing to the cluster into 'noisy-index'.","548697","test_create_backup_and_restore[aws-large]","tests.integration.ha","Mon Jul 07 01:46:43 UTC 2025","passed","Mon Jul 07 01:55:52 UTC 2025","","test_backups","",""
+"Check storage is reused and data accessible after scaling down and up.","1105988","test_storage_reuse_after_scale_down","tests.integration.ha","Mon Jul 07 01:46:10 UTC 2025","passed","Mon Jul 07 02:04:36 UTC 2025","","test_storage","",""
+"Tests the entire cycle of KNN plugin.
+
+    1) Enters data and trains a model in ""test_end_to_end_with_ivf_faiss_training""
+    2) Trains model: ""test_end_to_end_with_ivf_faiss_model""
+    3) Once training is complete, creates a target index and connects with the model
+    4) Disables KNN plugin: the search must fail
+    5) Re-enables the plugin: search must succeed and return two vectors.
+    ","417144","test_knn_training_search[small_deployment]","tests.integration.plugins","Mon Jul 07 01:51:22 UTC 2025","passed","Mon Jul 07 01:58:19 UTC 2025","","test_plugins","",""
+"Check consistency, ie write to node, read data from remaining nodes.
+
+    1. Create index with replica shards equal to number of nodes - 1.
+    2. Index data.
+    3. Query data from all the nodes (all the nodes should contain a copy of the data).
+    ","39261","test_replication_across_members","tests.integration.ha","Mon Jul 07 01:41:36 UTC 2025","passed","Mon Jul 07 01:42:15 UTC 2025","","test_ha","",""
+"Build and deploy OpenSearch with a single unit and remove it.","549917","test_deploy_and_remove_single_unit","tests.integration","Mon Jul 07 01:36:20 UTC 2025","passed","Mon Jul 07 01:45:29 UTC 2025","","test_charm","",""
+"Test the rotation and change of admin password.","19027","test_actions_rotate_system_user_password[monitor]","tests.integration","Mon Jul 07 01:50:25 UTC 2025","passed","Mon Jul 07 01:50:44 UTC 2025","","test_charm","",""
+"Test that the security index is well initialised.","3571","test_security_index_initialised","tests.integration.tls","Mon Jul 07 01:41:01 UTC 2025","passed","Mon Jul 07 01:41:04 UTC 2025","","test_tls","",""
+"Build and deploy a large deployment for OpenSearch.
+
+    The following apps will be deployed:
+    * main: the main orchestrator
+    * failover: the failover orchestrator
+    * opensearch (or APP_NAME): the data.hot node
+
+    The data node is selected to adopt the ""APP_NAME"" value because it is the node which
+    ContinuousWrites will later target its writes to.
+    ","503413","test_large_deployment_build_and_deploy[aws-large]","tests.integration.ha","Mon Jul 07 01:36:56 UTC 2025","passed","Mon Jul 07 01:45:19 UTC 2025","","test_backups","",""
+"Add users and call update status.","307836","test_add_users_and_calling_update_status","tests.integration","Mon Jul 07 01:51:07 UTC 2025","passed","Mon Jul 07 01:56:15 UTC 2025","","test_charm","",""
+"Test upgrade from usptream to currently locally built version.","","test_upgrade_from_version_to_local[from_v2.18.0_to_local]","tests.integration.upgrades","","unknown","","","test_small_deployment_upgrades","",""
+"Test which IP will be assigned to transport bind in the end.","1841","test_check_opensearch_transport","tests.integration.spaces","Mon Jul 07 01:43:26 UTC 2025","passed","Mon Jul 07 01:43:28 UTC 2025","","test_wrong_space","",""
+"If the cluster name wasn't auto generated, cluster name should not be inherited","88393","test_invalid_inherit_cluster_name_integration","tests.integration.ha","Mon Jul 07 01:46:45 UTC 2025","passed","Mon Jul 07 01:48:14 UTC 2025","","test_large_deployments_inherit_cluster_name","",""
+"Setup a large deployments cluster.","307953","test_build_large_deployment","tests.integration.tls","Mon Jul 07 01:41:50 UTC 2025","passed","Mon Jul 07 01:46:58 UTC 2025","","test_ca_rotation","",""
+"Establish all the required relations.
+
+    Connects OpenSearch, data integrator and identity platform (cross-model).
+    ","399402","test_setup_relations","tests.integration.relations","Mon Jul 07 01:41:47 UTC 2025","passed","Mon Jul 07 01:48:26 UTC 2025","","test_oauth","",""
+"Test that Prometheus Exporter is running before the relation is there.
+
+    Test only on small deployments scenario, as this is a more functional check to the plugin.
+    ","5611","test_prometheus_exporter_enabled_by_default[small_deployment]","tests.integration.plugins","Mon Jul 07 01:44:15 UTC 2025","passed","Mon Jul 07 01:44:20 UTC 2025","","test_plugins","",""
+"Test check the pinned revision.","789","test_check_pinned_revision","tests.integration","Mon Jul 07 01:51:03 UTC 2025","passed","Mon Jul 07 01:51:04 UTC 2025","","test_charm","",""
+"Configuration change before cluster is ready.
+
+    We hold the cluster without starting its unit services by not relating to tls-operator.
+    ","242165","test_config_switch_before_cluster_ready[small_deployment]","tests.integration.plugins","Mon Jul 07 01:40:13 UTC 2025","passed","Mon Jul 07 01:44:15 UTC 2025","","test_plugins","",""
+"Check that cluster can self-heal and unit reconfigures itself with new IP.","897756","test_full_network_cut_with_ip_change_node_with_primary_shard","tests.integration.ha","Mon Jul 07 01:52:24 UTC 2025","passed","Mon Jul 07 02:07:22 UTC 2025","","test_ha_networking","",""
+"Test normal user permissions behave the way we want.
+
+    verify that:
+    - we can't remove .opendistro_security index
+    - verify neither admin nor default users can access user api
+    ","9383","test_normal_user_permissions","tests.integration.relations","Mon Jul 07 01:55:43 UTC 2025","passed","Mon Jul 07 01:55:52 UTC 2025","","test_opensearch_provider","",""
+"Check that writes in cluster not replicated to another cluster.","286350","test_multi_clusters_db_isolation","tests.integration.ha","Mon Jul 07 01:42:55 UTC 2025","passed","Mon Jul 07 01:47:41 UTC 2025","","test_ha_multi_clusters","",""
+"Test upgrade and rollback to each version available.","","test_upgrade_rollback_from_local[from_v2.17.0_to_local]","tests.integration.upgrades","","unknown","","","test_small_deployment_upgrades","",""
+"After integrating the failover app to the others, all should be started and fine.","179041","test_integrate_failover","tests.integration.ha","Mon Jul 07 01:46:43 UTC 2025","passed","Mon Jul 07 01:49:42 UTC 2025","","test_large_deployments_cluster_manager_only_nodes","",""
+"Runs the backup process whilst writing to the cluster into 'noisy-index'.","148059","test_create_backup_and_restore[microceph-large]","tests.integration.ha","Mon Jul 07 01:46:08 UTC 2025","passed","Mon Jul 07 01:48:36 UTC 2025","","test_backups","",""
+"Test that the user is removed when the relation is broken.","33440","test_relation_broken","tests.integration.relations","Mon Jul 07 01:55:52 UTC 2025","passed","Mon Jul 07 01:56:26 UTC 2025","","test_opensearch_provider","",""
+"","5665","test_monitoring_user_fetch_prometheus_data[large_deployment]","tests.integration.plugins","Mon Jul 07 01:54:01 UTC 2025","passed","Mon Jul 07 01:54:06 UTC 2025","","test_plugins","",""
+"Build and deploy a large deployment for OpenSearch.","487277","test_large_deployment_build_and_deploy[large_deployment]","tests.integration.plugins","Mon Jul 07 01:43:43 UTC 2025","passed","Mon Jul 07 01:51:50 UTC 2025","","test_plugins","",""
+"Build and deploy one unit of OpenSearch.","","test_build_and_deploy","tests.integration.ha","","unknown","","","test_large_deployments_validate_cm_count","",""
+"Removes and re-adds the backup relation to test backup and restore.","281924","test_remove_and_readd_backup_relation[aws-small]","tests.integration.ha","Mon Jul 07 01:45:13 UTC 2025","passed","Mon Jul 07 01:49:55 UTC 2025","","test_backups","",""
+"Test we can create relations with admin permissions.","11384","test_dashboard_relation_password_change","tests.integration.relations","Mon Jul 07 01:44:00 UTC 2025","passed","Mon Jul 07 01:44:12 UTC 2025","","test_opensearch_provider","",""
+"Tests the different blocked messages expected in large deployments.","80836","test_large_setups_relations_with_misconfiguration[aws-large]","tests.integration.ha","Mon Jul 07 01:45:19 UTC 2025","passed","Mon Jul 07 01:46:40 UTC 2025","","test_backups","",""
+"Build and deploy one unit of OpenSearch.","298575","test_build_and_deploy_active","tests.integration.tls","Mon Jul 07 01:36:02 UTC 2025","passed","Mon Jul 07 01:41:01 UTC 2025","","test_tls","",""
+"","105003","test_prometheus_monitor_user_password_change[large_deployment]","tests.integration.plugins","Mon Jul 07 01:54:06 UTC 2025","passed","Mon Jul 07 01:55:51 UTC 2025","","test_plugins","",""
+"Removes and re-adds the backup relation to test backup and restore.","267216","test_remove_and_readd_backup_relation[aws-large]","tests.integration.ha","Mon Jul 07 01:55:58 UTC 2025","passed","Mon Jul 07 02:00:25 UTC 2025","","test_backups","",""
+"Tests the scaling back to 3x node-cluster and see the voting exclusions to be applied.","576048","test_scale_back_up","tests.integration.ha","Mon Jul 07 01:47:59 UTC 2025","passed","Mon Jul 07 01:57:35 UTC 2025","","test_scale_to_one_and_back","",""
+"Check the repo is missing error returned by OpenSearch.
+
+    We use the message format to monitor the cluster status. We need to know if this
+    message pattern changed between releases of OpenSearch.
+    ","5002","test_repo_missing_message","tests.integration.ha","Mon Jul 07 01:42:44 UTC 2025","passed","Mon Jul 07 01:42:49 UTC 2025","","test_backups","",""
+"Run for each cloud and update the cluster config.","286584","test_change_config_and_backup_restore","tests.integration.ha","Mon Jul 07 01:43:59 UTC 2025","passed","Mon Jul 07 01:48:45 UTC 2025","","test_backups","",""
+"Check the repo is misconfigured.","69973","test_wrong_s3_credentials","tests.integration.ha","Mon Jul 07 01:42:49 UTC 2025","passed","Mon Jul 07 01:43:59 UTC 2025","","test_backups","",""
+"Uploads data and runs a query search against the FAISS KNNEngine.","9878","test_knn_search_with_hnsw_faiss[small_deployment]","tests.integration.plugins","Mon Jul 07 01:51:02 UTC 2025","passed","Mon Jul 07 01:51:12 UTC 2025","","test_plugins","",""
+"Build and deploy an HA cluster of OpenSearch and corresponding S3 integration.","395559","test_small_deployment_build_and_deploy[azure-small]","tests.integration.ha","Mon Jul 07 01:36:44 UTC 2025","passed","Mon Jul 07 01:43:20 UTC 2025","","test_backups","",""
+"Check we can update and delete things.
+
+    The client application authenticates using the cert provided in the index; if this is
+    invalid for any reason, the test will fail, so this test implicitly verifies that TLS works.
+    ","2040","test_index_usage","tests.integration.relations","Mon Jul 07 01:43:31 UTC 2025","passed","Mon Jul 07 01:43:33 UTC 2025","","test_opensearch_provider","",""
+"Build and deploy an HA cluster of OpenSearch and corresponding S3 integration.","452231","test_small_deployment_build_and_deploy[microceph-small]","tests.integration.ha","Mon Jul 07 01:36:36 UTC 2025","passed","Mon Jul 07 01:44:09 UTC 2025","","test_backups","",""
+"Test we can create relations with admin permissions.","17347","test_admin_relation","tests.integration.relations","Mon Jul 07 01:55:16 UTC 2025","passed","Mon Jul 07 01:55:33 UTC 2025","","test_opensearch_provider","",""
+"Tests the different blocked messages expected in large deployments.","92860","test_large_setups_relations_with_misconfiguration[azure-large]","tests.integration.ha","Mon Jul 07 01:43:29 UTC 2025","passed","Mon Jul 07 01:45:02 UTC 2025","","test_backups","",""
+"","182666","test_knn_enabled_disabled[small_deployment]","tests.integration.plugins","Mon Jul 07 01:48:00 UTC 2025","passed","Mon Jul 07 01:51:02 UTC 2025","","test_plugins","",""
+"Compare the internal_users.yaml of all units.","1198","test_all_units_have_all_local_users","tests.integration","Mon Jul 07 01:51:05 UTC 2025","passed","Mon Jul 07 01:51:06 UTC 2025","","test_charm","",""
+"Tests the shutdown of a node, and re-allocation of shards to a newly joined unit.
+
+    The goal of this test is to make sure that shards are automatically relocated after
+    a Yellow status on the cluster caused by a scale-down event.
+    ","1005743","test_safe_scale_down_shards_realloc","tests.integration.ha","Mon Jul 07 01:47:47 UTC 2025","passed","Mon Jul 07 02:04:33 UTC 2025","","test_horizontal_scaling","",""
+"Deletes the entire OpenSearch cluster and redeploys from scratch.
+
+    Restores each of the previous backups we created and compare with their doc count.
+    The cluster is considered healthy if:
+    1) At each backup restored, check our track of doc count vs. current index count
+    2) Try to write to that new index.
+    ","671048","test_restore_to_new_cluster[microceph-small]","tests.integration.ha","Mon Jul 07 01:50:41 UTC 2025","passed","Mon Jul 07 02:01:52 UTC 2025","","test_backups","",""
+"Build and deploy one unit of OpenSearch.","297385","test_build_and_deploy","tests.integration.ha","Mon Jul 07 01:36:33 UTC 2025","passed","Mon Jul 07 01:41:31 UTC 2025","","test_ha","",""
+"Repeat the CA rotation test for the large deployment.","947730","test_rollout_new_ca[large]","tests.integration.tls","Mon Jul 07 01:46:58 UTC 2025","passed","Mon Jul 07 02:02:46 UTC 2025","","test_ca_rotation","",""
+"Build and deploy one unit of OpenSearch.","232407","test_build_and_deploy","tests.integration.ha","Mon Jul 07 01:42:08 UTC 2025","passed","Mon Jul 07 01:46:01 UTC 2025","","test_storage","",""
+"Change roles mapping from first data integrator user to second one.
+
+    Ensure, that admin permissions from the first one is removed, while role
+    from the second one is added.
+    ","23151","test_oauth_access_second_client","tests.integration.relations","Mon Jul 07 01:50:09 UTC 2025","passed","Mon Jul 07 01:50:32 UTC 2025","","test_oauth","",""
+"Uploads data and runs a query search against the NMSLIB KNNEngine.","9769","test_knn_search_with_hnsw_nmslib[small_deployment]","tests.integration.plugins","Mon Jul 07 01:51:12 UTC 2025","passed","Mon Jul 07 01:51:22 UTC 2025","","test_plugins","",""
+"Removes and re-adds the backup relation to test backup and restore.","259710","test_remove_and_readd_backup_relation[microceph-large]","tests.integration.ha","Mon Jul 07 01:48:42 UTC 2025","passed","Mon Jul 07 01:53:02 UTC 2025","","test_backups","",""
+"Test that expiring TLS certificates are renewed.","543548","test_tls_expiration","tests.integration.tls","Mon Jul 07 01:42:04 UTC 2025","passed","Mon Jul 07 01:51:07 UTC 2025","","test_tls","",""
+"Check that cluster can self-heal and unit reconfigures itself with network cut..","734853","test_full_network_cut_without_ip_change_node_with_elected_cm","tests.integration.ha","Mon Jul 07 02:07:33 UTC 2025","passed","Mon Jul 07 02:19:48 UTC 2025","","test_ha_networking","",""
+"Build and deploy a couple of OpenSearch units.","141416","test_build_and_deploy","tests.integration","Mon Jul 07 01:45:29 UTC 2025","passed","Mon Jul 07 01:47:51 UTC 2025","","test_charm","",""
+"Check that cluster can self-heal and unit reconfigures itself with new IP.","566035","test_full_network_cut_with_ip_change_node_with_elected_cm","tests.integration.ha","Mon Jul 07 01:42:47 UTC 2025","passed","Mon Jul 07 01:52:13 UTC 2025","","test_ha_networking","",""
+"Check cluster can self-heal + data indexed/read on process freeze on node with P_shard.","215360","test_freeze_db_process_node_with_primary_shard","tests.integration.ha","Mon Jul 07 01:45:27 UTC 2025","passed","Mon Jul 07 01:49:02 UTC 2025","","test_ha","",""
+"Check storage is reused and data accessible after removing app and deploying new cluster.","1733552","test_storage_reuse_in_new_cluster_after_app_removal","tests.integration.ha","Mon Jul 07 02:21:02 UTC 2025","passed","Mon Jul 07 02:49:56 UTC 2025","","test_storage","",""
+"Build and deploy one unit of OpenSearch.","356209","test_build_and_deploy","tests.integration.ha","Mon Jul 07 01:37:36 UTC 2025","passed","Mon Jul 07 01:43:32 UTC 2025","","test_large_deployments_cluster_manager_only_nodes","",""
+"Tests that new added units to the cluster are discoverable.","440969","test_horizontal_scale_up","tests.integration.ha","Mon Jul 07 01:40:19 UTC 2025","passed","Mon Jul 07 01:47:40 UTC 2025","","test_horizontal_scaling","",""
+"Check cluster can operate normally after all nodes SIGKILL at same time and come back up.","149454","test_full_cluster_crash","tests.integration.ha","Mon Jul 07 01:55:57 UTC 2025","passed","Mon Jul 07 01:58:26 UTC 2025","","test_ha","",""
+"Data and failover apps should inherit cluster name and integrate with cluster manager.","336892","test_cluster_name_inheritence_and_integration","tests.integration.ha","Mon Jul 07 01:42:26 UTC 2025","passed","Mon Jul 07 01:48:03 UTC 2025","","test_large_deployments_inherit_cluster_name","",""
+"Test upgrade from usptream to currently locally built version.","","test_upgrade_from_version_to_local[from_v2.17.0_to_local]","tests.integration.upgrades","","unknown","","","test_small_deployment_upgrades","",""
+"Configure new OAuth client on Hydra (identity platform).
+
+    Also, acquire corresponding access token for the further testing.
+    ","3656","test_setup_oauth","tests.integration.relations","Mon Jul 07 01:48:26 UTC 2025","passed","Mon Jul 07 01:48:30 UTC 2025","","test_oauth","",""
+"Build and deploy one unit of OpenSearch.","519628","test_build_and_deploy","tests.integration.ha","Mon Jul 07 01:36:05 UTC 2025","passed","Mon Jul 07 01:44:44 UTC 2025","","test_large_deployments_remove_orchestrators","",""
+"Deletes the entire OpenSearch cluster and redeploys from scratch.
+
+    Restores each of the previous backups we created and compare with their doc count.
+    The cluster is considered healthy if:
+    1) At each backup restored, check our track of doc count vs. current index count
+    2) Try to write to that new index.
+    ","700720","test_restore_to_new_cluster[aws-small]","tests.integration.ha","Mon Jul 07 01:49:58 UTC 2025","passed","Mon Jul 07 02:01:39 UTC 2025","","test_backups","",""
+"Runs the backup process whilst writing to the cluster into 'noisy-index'.","130156","test_create_backup_and_restore[aws-small]","tests.integration.ha","Mon Jul 07 01:42:55 UTC 2025","passed","Mon Jul 07 01:45:05 UTC 2025","","test_backups","",""
+"Build and deploy one unit of OpenSearch without autogenerated cluster name.","246161","test_build_and_deploy_not_autogen","tests.integration.ha","Mon Jul 07 01:42:39 UTC 2025","passed","Mon Jul 07 01:46:45 UTC 2025","","test_large_deployments_inherit_cluster_name","",""
+"Build and deploy an OpenSearch cluster.","239224","test_build_and_deploy_small_deployment[small_deployment]","tests.integration.plugins","Mon Jul 07 01:36:13 UTC 2025","passed","Mon Jul 07 01:40:13 UTC 2025","","test_plugins","",""
+"Test that the cluster formation is successful after TLS setup.","3784","test_cluster_formation_after_tls","tests.integration.tls","Mon Jul 07 01:41:14 UTC 2025","passed","Mon Jul 07 01:41:18 UTC 2025","","test_tls","",""
+"Check cluster can self-heal, data indexed/read on process restart on primary shard node.","75949","test_restart_db_process_node_with_primary_shard","tests.integration.ha","Mon Jul 07 01:54:29 UTC 2025","passed","Mon Jul 07 01:55:45 UTC 2025","","test_ha","",""
+"Check roles changes in all nodes.","170020","test_set_roles_manually","tests.integration.ha","Mon Jul 07 01:43:11 UTC 2025","passed","Mon Jul 07 01:46:01 UTC 2025","","test_roles_managements","",""
+"","4157","test_monitoring_user_fetch_prometheus_data[small_deployment]","tests.integration.plugins","Mon Jul 07 01:46:25 UTC 2025","passed","Mon Jul 07 01:46:29 UTC 2025","","test_plugins","",""
+"Check cluster can operate normally after all nodes SIGTERM at same time and come back up.","149833","test_full_cluster_restart","tests.integration.ha","Mon Jul 07 01:58:40 UTC 2025","passed","Mon Jul 07 02:01:10 UTC 2025","","test_ha","",""
+"Test upgrade from upstream to currently locally built version.","","test_upgrade_between_versions","tests.integration.upgrades","","unknown","","","test_small_deployment_upgrades","",""
+"Test upgrade from usptream to currently locally built version.","0","test_manually_upgrade_to_local","tests.integration.upgrades","Mon Jul 07 01:41:49 UTC 2025","skipped","Mon Jul 07 01:41:49 UTC 2025","","test_manual_large_deployment_upgrades","",""
+"Test we can create relations with admin permissions.","23754","test_dashboard_relation","tests.integration.relations","Mon Jul 07 01:43:37 UTC 2025","passed","Mon Jul 07 01:44:00 UTC 2025","","test_opensearch_provider","",""
+"Test that TLS is enabled when relating to the TLS Certificates Operator.","9456","test_tls_configured","tests.integration.tls","Mon Jul 07 01:41:04 UTC 2025","passed","Mon Jul 07 01:41:14 UTC 2025","","test_tls","",""
+"Check cluster can self-heal + data indexed/read when process dies on node with P_shard.","76525","test_kill_db_process_node_with_primary_shard","tests.integration.ha","Mon Jul 07 01:42:26 UTC 2025","passed","Mon Jul 07 01:43:42 UTC 2025","","test_ha","",""
+"Test that two different applications can connect to the database.","215548","test_multiple_relations","tests.integration.relations","Mon Jul 07 01:51:23 UTC 2025","passed","Mon Jul 07 01:54:59 UTC 2025","","test_opensearch_provider","",""
+"Check version reported in the databag is consistent with the version on the charm.","1161","test_version","tests.integration.relations","Mon Jul 07 01:43:35 UTC 2025","passed","Mon Jul 07 01:43:37 UTC 2025","","test_opensearch_provider","",""
+"Build and deploy the charm for large deployment tests.","0","test_large_deployment_deploy_original_charm","tests.integration.upgrades","Mon Jul 07 01:41:49 UTC 2025","skipped","Mon Jul 07 01:41:49 UTC 2025","","test_manual_large_deployment_upgrades","",""
+"Check roles changes in all nodes.","918353","test_switch_back_to_auto_generated_roles","tests.integration.ha","Mon Jul 07 01:46:17 UTC 2025","passed","Mon Jul 07 02:01:36 UTC 2025","","test_roles_managements","",""
+"Deploy OpenSearch.","","test_deploy_latest_from_channel","tests.integration.upgrades","","unknown","","","test_small_deployment_upgrades","",""
+"Test the retrieval of admin secrets.","134122","test_actions_get_admin_password","tests.integration","Mon Jul 07 01:47:51 UTC 2025","passed","Mon Jul 07 01:50:05 UTC 2025","","test_charm","",""
+"","91020","test_prometheus_monitor_user_password_change[small_deployment]","tests.integration.plugins","Mon Jul 07 01:46:29 UTC 2025","passed","Mon Jul 07 01:48:00 UTC 2025","","test_plugins","",""
+"Test that renewed TLS certificates are reloaded immediately without restarting.","46212","test_tls_renewal","tests.integration.tls","Mon Jul 07 01:41:18 UTC 2025","passed","Mon Jul 07 01:42:04 UTC 2025","","test_tls","",""
+"","124320","test_small_deployments_prometheus_exporter_cos_relation[small_deployment]","tests.integration.plugins","Mon Jul 07 01:44:20 UTC 2025","passed","Mon Jul 07 01:46:25 UTC 2025","","test_plugins","",""
+"Test basic functionality of relation interface.","441955","test_create_relation","tests.integration.relations","Mon Jul 07 01:36:09 UTC 2025","passed","Mon Jul 07 01:43:31 UTC 2025","","test_opensearch_provider","",""
+"Check cluster self-healing & data indexed/read on process restart on CM node.","83534","test_restart_db_process_node_with_elected_cm","tests.integration.ha","Mon Jul 07 01:52:53 UTC 2025","passed","Mon Jul 07 01:54:16 UTC 2025","","test_ha","",""
+"Build, deploy and test status of an HA cluster of OpenSearch and corresponding backups.
+
+    This test group will iterate over each cloud, update its credentials via config and rerun
+    the backup and restore tests.
+    ","391259","test_build_deploy_and_test_status","tests.integration.ha","Mon Jul 07 01:36:12 UTC 2025","passed","Mon Jul 07 01:42:44 UTC 2025","","test_backups","",""
+"Compare the internal_users.yaml of all units.","1164","test_all_units_have_internal_users_synced","tests.integration","Mon Jul 07 01:51:06 UTC 2025","passed","Mon Jul 07 01:51:07 UTC 2025","","test_charm","",""
+"Check we can update and delete things using bulk api.","2034","test_bulk_index_usage","tests.integration.relations","Mon Jul 07 01:43:33 UTC 2025","passed","Mon Jul 07 01:43:35 UTC 2025","","test_opensearch_provider","",""
+"After integrating the cluster manager with the data application, both should start up.","190383","test_correct_startup_after_integration","tests.integration.ha","Mon Jul 07 01:43:32 UTC 2025","passed","Mon Jul 07 01:46:43 UTC 2025","","test_large_deployments_cluster_manager_only_nodes","",""
+"Deploy OpenSearch, data integrator and identity platform (K8s) simultaneously.","244277","test_deploy","tests.integration.relations","Mon Jul 07 01:37:42 UTC 2025","passed","Mon Jul 07 01:41:47 UTC 2025","","test_oauth","",""
+"Check cluster can self-heal, data indexed/read on process freeze on node with elected CM.","206982","test_freeze_db_process_node_with_elected_cm","tests.integration.ha","Mon Jul 07 01:49:13 UTC 2025","passed","Mon Jul 07 01:52:40 UTC 2025","","test_ha","",""
+"Build and deploy one unit of OpenSearch.","396102","test_build_and_deploy","tests.integration.ha","Mon Jul 07 01:36:15 UTC 2025","passed","Mon Jul 07 01:42:51 UTC 2025","","test_ha_multi_clusters","",""
+"Tests the shutdown of a node, and see the voting exclusions to be applied.
+
+    This test will remove the elected cluster manager.
+    ","312120","test_scale_down","tests.integration.ha","Mon Jul 07 01:42:41 UTC 2025","passed","Mon Jul 07 01:47:53 UTC 2025","","test_scale_to_one_and_back","",""
+"Check cluster can self-heal, data indexed/read when process dies on node with elected CM.","81017","test_kill_db_process_node_with_elected_cm","tests.integration.ha","Mon Jul 07 01:43:54 UTC 2025","passed","Mon Jul 07 01:45:15 UTC 2025","","test_ha","",""
+"Ensure that all of the oauth clients permissions are removed with clean roles mapping.","22762","test_oauth_access_cleanup","tests.integration.relations","Mon Jul 07 01:50:32 UTC 2025","passed","Mon Jul 07 01:50:54 UTC 2025","","test_oauth","",""
+"Deploy and configure second data integrator.","70214","test_deploy_second_client","tests.integration.relations","Mon Jul 07 01:48:58 UTC 2025","passed","Mon Jul 07 01:50:09 UTC 2025","","test_oauth","",""
+"Tests the removal of specific units (elected cm, juju leader, node with prim shard).
+
+    The goal of this test is to make sure that:
+     - the CM reelection happens successfully.
+     - the leader-elected event gets triggered successfully and
+        leadership related events on the charm work correctly, i.e: roles reassigning.
+     - the primary shards reelection happens successfully.
+    It is worth noting that we're going into this test with an odd number of units.
+    ","560149","test_safe_scale_down_remove_leaders","tests.integration.ha","Mon Jul 07 02:04:42 UTC 2025","passed","Mon Jul 07 02:14:02 UTC 2025","","test_horizontal_scaling","",""
+"Runs the backup process whilst writing to the cluster into 'noisy-index'.","112404","test_create_backup_and_restore[azure-small]","tests.integration.ha","Mon Jul 07 01:43:26 UTC 2025","passed","Mon Jul 07 01:45:18 UTC 2025","","test_backups","",""
+"Check that cluster can self-heal and unit reconfigures itself with network cut.","696499","test_full_network_cut_without_ip_change_node_with_primary_shard","tests.integration.ha","Mon Jul 07 02:19:59 UTC 2025","passed","Mon Jul 07 02:31:36 UTC 2025","","test_ha_networking","",""
+"Build and deploy one unit of OpenSearch.","208025","test_build_and_deploy","tests.integration.ha","Mon Jul 07 01:36:41 UTC 2025","passed","Mon Jul 07 01:40:09 UTC 2025","","test_horizontal_scaling","",""
+"Build and deploy one unit of OpenSearch.","360837","test_build_and_deploy","tests.integration.ha","Mon Jul 07 01:37:06 UTC 2025","passed","Mon Jul 07 01:43:07 UTC 2025","","test_roles_managements","",""
+"Test the rotation and change of admin password.","20312","test_actions_rotate_admin_password","tests.integration","Mon Jul 07 01:50:05 UTC 2025","passed","Mon Jul 07 01:50:25 UTC 2025","","test_charm","",""
+"Check invalid conditions under different states.","","test_invalid_conditions","tests.integration.ha","","unknown","","","test_large_deployments_relations","",""
+"Test that two different applications can connect to the database.","17364","test_multiple_relations_accessing_same_index","tests.integration.relations","Mon Jul 07 01:54:59 UTC 2025","passed","Mon Jul 07 01:55:16 UTC 2025","","test_opensearch_provider","",""
+"Test the rotation and change of admin password.","19009","test_actions_rotate_system_user_password[kibanaserver]","tests.integration","Mon Jul 07 01:50:44 UTC 2025","passed","Mon Jul 07 01:51:03 UTC 2025","","test_charm","",""
+"Test to check if the workload_version file is updated.","565","test_check_workload_version","tests.integration","Mon Jul 07 01:51:04 UTC 2025","passed","Mon Jul 07 01:51:05 UTC 2025","","test_charm","",""
+"Build and deploy one unit of OpenSearch with autogenerated cluster name.","330019","test_build_and_deploy_autogen","tests.integration.ha","Mon Jul 07 01:36:56 UTC 2025","passed","Mon Jul 07 01:42:26 UTC 2025","","test_large_deployments_inherit_cluster_name","",""
+"Test that the orchestrator apps can be deleted.","243503","test_large_deployment_remove_orchestrators","tests.integration.ha","Mon Jul 07 01:48:10 UTC 2025","passed","Mon Jul 07 01:52:13 UTC 2025","","test_large_deployments_remove_orchestrators","",""
+"Test upgrade from usptream to currently locally built version.","","test_upgrade_to_local","tests.integration.upgrades","","unknown","","","test_small_deployment_upgrades","",""
+"Test that scaling correctly updates endpoints in databag.
+
+    scale_application also contains a wait_for_idle check, including checking for active status.
+    Idle_period checks must be greater than 1 minute to guarantee update_status fires correctly.
+    ","431472","test_scaling","tests.integration.relations","Mon Jul 07 01:44:12 UTC 2025","passed","Mon Jul 07 01:51:23 UTC 2025","","test_opensearch_provider","",""
+"Tests the different blocked messages expected in large deployments.","80917","test_large_setups_relations_with_misconfiguration[microceph-large]","tests.integration.ha","Mon Jul 07 01:44:44 UTC 2025","passed","Mon Jul 07 01:46:05 UTC 2025","","test_backups","",""
+"Test that scaling down to less than 3 cms triggers a status change","","test_large_deployment_validate_cm_count","tests.integration.ha","","unknown","","","test_large_deployments_validate_cm_count","",""
+"Runs the backup process whilst writing to the cluster into 'noisy-index'.","667822","test_create_backup_and_restore[azure-large]","tests.integration.ha","Mon Jul 07 01:45:05 UTC 2025","passed","Mon Jul 07 01:56:13 UTC 2025","","test_backups","",""
+"Removes and re-adds the backup relation to test backup and restore.","264966","test_remove_and_readd_backup_relation[microceph-small]","tests.integration.ha","Mon Jul 07 01:46:12 UTC 2025","passed","Mon Jul 07 01:50:37 UTC 2025","","test_backups","",""
+"","130620","test_large_deployment_prometheus_exporter_cos_relation[large_deployment]","tests.integration.plugins","Mon Jul 07 01:51:50 UTC 2025","passed","Mon Jul 07 01:54:01 UTC 2025","","test_plugins","",""
+"Repeat the CA rotation test for the large deployment.","658638","test_rollout_new_ca[small]","tests.integration.tls","Mon Jul 07 01:41:06 UTC 2025","passed","Mon Jul 07 01:52:05 UTC 2025","","test_ca_rotation","",""
+"Check access to the OpenSearch with an access token, acquired earlier.
+
+    Ensure that roles mapping works correctly by elevating user
+    to the admin role and checking access to the admin endpoint.
+    ","28628","test_oauth_access","tests.integration.relations","Mon Jul 07 01:48:30 UTC 2025","passed","Mon Jul 07 01:48:58 UTC 2025","","test_oauth","",""
+"Build and deploy an HA cluster of OpenSearch and corresponding S3 integration.","329754","test_small_deployment_build_and_deploy[aws-small]","tests.integration.ha","Mon Jul 07 01:37:19 UTC 2025","passed","Mon Jul 07 01:42:49 UTC 2025","","test_backups","",""
+"Build and deploy one unit of OpenSearch.","384172","test_build_and_deploy","tests.integration.ha","Mon Jul 07 01:36:09 UTC 2025","passed","Mon Jul 07 01:42:33 UTC 2025","","test_scale_to_one_and_back","",""
+"Build and deploy OpenSearch.
+
+    For this test, we will misconfigure space bindings and see if the charm still
+    respects the setup.
+
+    More information: gh:canonical/opensearch-operator#334
+    ","429877","test_build_and_deploy","tests.integration.spaces","Mon Jul 07 01:36:16 UTC 2025","passed","Mon Jul 07 01:43:26 UTC 2025","","test_wrong_space","",""
+"Tests removing the entire application at once.","23173","test_gracefully_cluster_remove","tests.integration.ha","Mon Jul 07 01:57:39 UTC 2025","passed","Mon Jul 07 01:58:02 UTC 2025","","test_scale_to_one_and_back","",""
+"Build and deploy one unit of OpenSearch.","615127","test_build_and_deploy","tests.integration.large_deployments","Mon Jul 07 01:36:54 UTC 2025","passed","Mon Jul 07 01:47:10 UTC 2025","","test_failover_promotion_cross_model_relations","",""
+"Build and deploy one unit of OpenSearch.","387299","test_build_and_deploy","tests.integration.ha","Mon Jul 07 01:36:10 UTC 2025","passed","Mon Jul 07 01:42:37 UTC 2025","","test_ha_networking","",""
+"Build and deploy one unit of OpenSearch.","302705","test_build_and_deploy_active","tests.integration.tls","Mon Jul 07 01:36:04 UTC 2025","passed","Mon Jul 07 01:41:06 UTC 2025","","test_ca_rotation","",""
