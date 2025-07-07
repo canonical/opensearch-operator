@@ -462,6 +462,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         ):
             return False
 
+        # if main orchestrator return false
+        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+            return False
+
         # if another data node got the clearance from the main orchestrator no need to ignore lock
         if (
             cluster_first_data_node := self.peer_cluster_requirer.get_cluster_first_data_node()
@@ -481,13 +485,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # leader data node that's not main orchestrator
         return (
-            (
-                "data" in deployment_desc.config.roles
-                or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
-            )
-            and self.unit.is_leader()
-            and deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
-        )
+            "data" in deployment_desc.config.roles
+            or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+        ) and self.unit.is_leader()
 
     def _apply_peer_cm_directives_and_check_if_can_start(self) -> bool:
         """Apply the directives computed by the opensearch peer cluster manager."""
