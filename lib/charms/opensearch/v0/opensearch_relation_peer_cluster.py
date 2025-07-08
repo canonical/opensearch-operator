@@ -266,6 +266,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if len(event.relation.units) > 0:
             return
 
+        # if the trigger app is the failover orchestrator and there are no planned units, delete it
         cluster_fleet_apps = self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps")
         cluster_fleet_apps.pop(trigger_app.app.id, None)
         self.charm.peers_data.put_object(Scope.APP, "cluster_fleet_apps", cluster_fleet_apps)
@@ -273,6 +274,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         orchestrators = PeerClusterOrchestrators.from_dict(
             self.charm.peers_data.get_object(Scope.APP, "orchestrators")
         )
+
         if event.relation.id == orchestrators.failover_rel_id:
             orchestrators.delete("failover")
             self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
