@@ -263,7 +263,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             trigger_rel_id=event.relation.id,
         )
 
-        # if the trigger app is the failover orchestrator and there are no planned units, delete it
         if len(event.relation.units) > 0:
             return
 
