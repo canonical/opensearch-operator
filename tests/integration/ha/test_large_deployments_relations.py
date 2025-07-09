@@ -127,7 +127,7 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
         },
         units_full_statuses={
             MAIN_APP: {"units": {"blocked": [TLSRelationMissing]}},
-            FAILOVER_APP: {"units": {"active": []}},
+            FAILOVER_APP: {"units": {"blocked": [TLSRelationMissing]}},
         },
         wait_for_exact_units={
             MAIN_APP: APP_UNITS[MAIN_APP],
@@ -209,7 +209,7 @@ async def test_large_deployment_fully_formed(
         timeout=1800,
     )
 
-    # fetch nodes, we should have 6 nodes (main + failover)-orchestrators
+    # fetch nodes, we should have 8 nodes (main + failover)-orchestrators + 2 data nodes
     leader_unit_ip = await get_leader_unit_ip(ops_test, app=MAIN_APP)
     nodes = await all_nodes(ops_test, leader_unit_ip, app=MAIN_APP)
     assert len(nodes) == 8, f"Wrong node count. Expecting 8 online nodes, found: {len(nodes)}."
