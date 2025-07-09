@@ -17,6 +17,16 @@ from ops import EventBase, Object, RelationBrokenEvent, RelationDepartedEvent
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
+# The unique Charmhub library identifier, never change it
+LIBID = "c761774d45d8494fb3601addc7676d0e"
+
+# Increment this major API version when introducing breaking changes
+LIBAPI = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
+
 logger = logging.getLogger(__name__)
 
 
