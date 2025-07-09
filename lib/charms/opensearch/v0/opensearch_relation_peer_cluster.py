@@ -527,6 +527,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
     def _azure_credentials(
         self, deployment_desc: DeploymentDescription
     ) -> Optional[AzureRelDataCredentials]:
+        """Retrieve Azure storage credentials."""
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             if not self.charm.model.get_relation(AZURE_RELATION):
                 return None
@@ -535,7 +536,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not azure_storage_conn_info.get("storage-account"):
                 return None
 
-            # As the main orchestrator, this application must set the S3 information.
+            # As the main orchestrator, this application must set the azure information.
             storage_account = azure_storage_conn_info.get("storage-account")
             secret_key = azure_storage_conn_info.get("secret-key")
 
@@ -558,6 +559,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
     def _s3_credentials(
         self, deployment_desc: DeploymentDescription
     ) -> Optional[S3RelDataCredentials]:
+        """Retrieve S3 storage credentials."""
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             if not self.charm.model.get_relation(S3_RELATION):
                 return None

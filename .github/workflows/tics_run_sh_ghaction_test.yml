@@ -7,14 +7,14 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, linux, amd64, tiobe, noble]
+    runs-on: [self-hosted, linux, amd64, tiobe, jammy]
 
     steps:
       - name: Checkout the project
         uses: actions/checkout@v4
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y python3.10-venv
+        run: sudo apt-get update && sudo apt-get install -y python3-venv
 
       - name: Install pipx
         run: python3 -m pip install --user pipx && python3 -m pipx ensurepath
@@ -32,8 +32,8 @@ jobs:
 
       - name: move results to necessary folder for TICS
         run: |
-          mkdir .cover
-          mv coverage.xml .cover/coverage.xml
+          mkdir cover
+          mv coverage.xml cover/coverage.xml
 
       - name: Run TICS analysis with github-action
         uses: tiobe/tics-github-action@v3
