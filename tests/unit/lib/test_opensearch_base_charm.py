@@ -151,8 +151,8 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         _purge_users.assert_called_once()
         _put_or_update_internal_user_leader.assert_has_calls(
             [
-                call("admin", update_password_in_opensearch=False),
-                call("kibanaserver", update_password_in_opensearch=False),
+                call("admin", update=False),
+                call("kibanaserver", update=False),
             ],
             any_order=True,
         )
@@ -166,8 +166,8 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         _purge_users.assert_called_once()
         _put_or_update_internal_user_leader.assert_has_calls(
             [
-                call("admin", update_password_in_opensearch=False),
-                call("kibanaserver", update_password_in_opensearch=False),
+                call("admin", update=False),
+                call("kibanaserver", update=False),
             ],
             any_order=True,
         )
@@ -195,8 +195,8 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.charm.on.leader_elected.emit()
         _put_or_update_internal_user_leader.assert_has_calls(
             [
-                call("admin", update_password_in_opensearch=False),
-                call("kibanaserver", update_password_in_opensearch=False),
+                call("admin", update=False),
+                call("kibanaserver", update=False),
             ],
             any_order=True,
         )

@@ -939,7 +939,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                     "Error from provider but valid data found in relation data, updating seed hosts."
                 )
                 data = self.peer_cm.rel_data_from_str(data["data"])
-                self.charm.opensearch_config.add_seed_hosts([node.ip for node in data.cm_nodes])
+                self.charm.opensearch_peer_cm.run_with_relation_data(data)
             return
 
         # fetch the success data

@@ -320,7 +320,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # Restore purged system users in local `internal_users.yml`
         # with corresponding credentials
         for user in OpenSearchSystemUsers:
-            self._put_or_update_internal_user_leader(user, update_password_in_opensearch=False)
+            self._put_or_update_internal_user_leader(user, update=False)
 
         self.status.clear(AdminUserInitProgress)
 
@@ -1442,7 +1442,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         user: str,
         pwd: Optional[str] = None,
         update: bool = True,
-        update_password_in_opensearch: bool = True,
     ) -> None:
         """Create system user or update it with a new password."""
         # Leader is to set new password and hash, others populate existing hash locally
@@ -1459,7 +1458,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # Updating security index
         # We need to do this for all credential changes
-        if secret and update_password_in_opensearch:
+        if secret and update:
             self.user_manager.update_user_password(user, hashed_pwd)
 
         # In case it's a new user, OR it's a system user (that has an entry in internal_users.yml)
