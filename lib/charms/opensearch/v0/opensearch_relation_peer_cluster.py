@@ -536,6 +536,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
     def _azure_credentials(
         self, deployment_desc: DeploymentDescription
     ) -> Optional[AzureRelDataCredentials]:
+        """Retrieve Azure storage credentials."""
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             if not self.charm.model.get_relation(AZURE_RELATION):
                 return None
@@ -544,7 +545,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not azure_storage_conn_info.get("storage-account"):
                 return None
 
-            # As the main orchestrator, this application must set the S3 information.
+            # As the main orchestrator, this application must set the azure information.
             storage_account = azure_storage_conn_info.get("storage-account")
             secret_key = azure_storage_conn_info.get("secret-key")
 
@@ -567,6 +568,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
     def _s3_credentials(
         self, deployment_desc: DeploymentDescription
     ) -> Optional[S3RelDataCredentials]:
+        """Retrieve S3 storage credentials."""
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             if not self.charm.model.get_relation(S3_RELATION):
                 return None
@@ -969,6 +971,16 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         if self._error_set_from_providers(orchestrators, data, event.relation.id):
             # check errors sent by providers
+            # check if valid data is present if so update the seed hosts
+            if data.get("data"):
+                # In case the main orchestrator was scaled down to 0 and back
+                # we need to update the seed hosts with the data from the relation
+                # to pick up the new IPs and enable the data node see it
+                logger.debug(
+                    "Error from provider but valid data found in relation data, updating seed hosts."
+                )
+                data = self.peer_cm.rel_data_from_str(data["data"])
+                self.charm.opensearch_peer_cm.run_with_relation_data(data)
             return
 
         # fetch the success data

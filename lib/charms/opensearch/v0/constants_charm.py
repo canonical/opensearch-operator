@@ -119,7 +119,7 @@ ClientUsersDict = "client_relation_users"
 
 
 # Opensearch Snap revision
-OPENSEARCH_SNAP_REVISION = 70  # Keep in sync with `workload_version` file
+OPENSEARCH_SNAP_REVISION = 79  # Keep in sync with `workload_version` file
 
 # User-face Backup ID format
 OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
