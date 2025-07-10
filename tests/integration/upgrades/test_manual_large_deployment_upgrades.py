@@ -17,7 +17,8 @@ from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 logger = logging.getLogger(__name__)
 
 IDLE_PERIOD = 30
-INITIAL_REVISION = 206
+INITIAL_REVISION_NOBLE = 206
+INITIAL_REVISION_JAMMY = 207
 OPENSEARCH_ORIGINAL_CHARM_NAME = "opensearch"
 OPENSEARCH_INITIAL_CHANNEL = "2/edge"
 OPENSEARCH_MAIN_APP_NAME = "main"
@@ -45,15 +46,14 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest, series)
     main_orchestrator_conf = {
         "cluster_name": "backup-test",
         "init_hold": False,
-        "roles": "cluster_manager",
     }
     failover_orchestrator_conf = {
         "cluster_name": "backup-test",
         "init_hold": True,
-        "roles": "cluster_manager",
     }
     data_hot_conf = {"cluster_name": "backup-test", "init_hold": True, "roles": "data.hot"}
 
+    initial_revision = INITIAL_REVISION_NOBLE if series == "noble" else INITIAL_REVISION_JAMMY
     await asyncio.gather(
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=tls_config
@@ -64,7 +64,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest, series)
             num_units=WORKLOAD[OPENSEARCH_MAIN_APP_NAME],
             series=series,
             channel=OPENSEARCH_INITIAL_CHANNEL,
-            revision=INITIAL_REVISION,
+            revision=initial_revision,
             config=main_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
@@ -73,7 +73,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest, series)
             num_units=WORKLOAD[OPENSEARCH_FAILOVER_APP_NAME],
             series=series,
             channel=OPENSEARCH_INITIAL_CHANNEL,
-            revision=INITIAL_REVISION,
+            revision=initial_revision,
             config=failover_orchestrator_conf | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
@@ -82,7 +82,7 @@ async def test_large_deployment_deploy_original_charm(ops_test: OpsTest, series)
             num_units=WORKLOAD[APP_NAME],
             series=series,
             channel=OPENSEARCH_INITIAL_CHANNEL,
-            revision=INITIAL_REVISION,
+            revision=initial_revision,
             config=data_hot_conf | CONFIG_OPTS,
         ),
     )
