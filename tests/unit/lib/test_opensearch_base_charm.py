@@ -150,7 +150,11 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
         _purge_users.assert_called_once()
         _put_or_update_internal_user_leader.assert_has_calls(
-            [call("admin"), call("kibanaserver")], any_order=True
+            [
+                call("admin", update=False),
+                call("kibanaserver", update=False),
+            ],
+            any_order=True,
         )
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
 
@@ -161,7 +165,11 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.charm.on.leader_elected.emit()
         _purge_users.assert_called_once()
         _put_or_update_internal_user_leader.assert_has_calls(
-            [call("admin"), call("kibanaserver")], any_order=True
+            [
+                call("admin", update=False),
+                call("kibanaserver", update=False),
+            ],
+            any_order=True,
         )
 
     @patch(
@@ -186,7 +194,11 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.peers_data.put(Scope.APP, "admin_user_initialized", True)
         self.charm.on.leader_elected.emit()
         _put_or_update_internal_user_leader.assert_has_calls(
-            [call("admin"), call("kibanaserver")], any_order=True
+            [
+                call("admin", update=False),
+                call("kibanaserver", update=False),
+            ],
+            any_order=True,
         )
         _purge_users.assert_called_once()
 

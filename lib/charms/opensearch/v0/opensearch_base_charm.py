@@ -320,7 +320,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # Restore purged system users in local `internal_users.yml`
         # with corresponding credentials
         for user in OpenSearchSystemUsers:
-            self._put_or_update_internal_user_leader(user)
+            self._put_or_update_internal_user_leader(user, update=False)
 
         self.status.clear(AdminUserInitProgress)
 
@@ -605,6 +605,18 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 if self.model.get_relation(PeerRelationName):
                     self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")
                     self.peers_data.delete(Scope.APP, "nodes_config")
+                    # we delete the security index initialised and bootstrapped flags
+                    # if there are no data units left in all cluster
+                    data_apps_in_fleet = [
+                        app
+                        for app in self.opensearch_peer_cm.apps_in_fleet()
+                        if "data" in app.roles
+                    ]
+                    if not data_apps_in_fleet or all(
+                        app.planned_units == 0 for app in data_apps_in_fleet
+                    ):
+                        self.peers_data.delete(Scope.APP, "security_index_initialised")
+                        self.peers_data.delete(Scope.APP, "bootstrapped")
                 if self.opensearch_peer_cm.is_provider():
                     self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
                 if self.opensearch_peer_cm.is_consumer():
@@ -1426,7 +1438,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.opensearch.config.delete("opensearch-security/internal_users.yml", user)
 
     def _put_or_update_internal_user_leader(
-        self, user: str, pwd: Optional[str] = None, update: bool = True
+        self,
+        user: str,
+        pwd: Optional[str] = None,
+        update: bool = True,
     ) -> None:
         """Create system user or update it with a new password."""
         # Leader is to set new password and hash, others populate existing hash locally
@@ -1443,7 +1458,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # Updating security index
         # We need to do this for all credential changes
-        if secret:
+        if secret and update:
             self.user_manager.update_user_password(user, hashed_pwd)
 
         # In case it's a new user, OR it's a system user (that has an entry in internal_users.yml)

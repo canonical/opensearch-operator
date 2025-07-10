@@ -498,7 +498,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             app=deployment_desc.app,
             planned_units=self.charm.app.planned_units(),
             units=[format_unit_name(u, app=deployment_desc.app) for u in all_units(self.charm)],
-            roles=deployment_desc.config.roles,
+            roles=(
+                deployment_desc.config.roles
+                if deployment_desc.start == StartMode.WITH_PROVIDED_ROLES
+                else ClusterTopology.generated_roles()
+            ),
         )
         self._update_fleet(cluster_fleet_apps, current_app)
 
@@ -928,6 +932,16 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         if self._error_set_from_providers(orchestrators, data, event.relation.id):
             # check errors sent by providers
+            # check if valid data is present if so update the seed hosts
+            if data.get("data"):
+                # In case the main orchestrator was scaled down to 0 and back
+                # we need to update the seed hosts with the data from the relation
+                # to pick up the new IPs and enable the data node see it
+                logger.debug(
+                    "Error from provider but valid data found in relation data, updating seed hosts."
+                )
+                data = self.peer_cm.rel_data_from_str(data["data"])
+                self.charm.opensearch_peer_cm.run_with_relation_data(data)
             return
 
         # fetch the success data
@@ -1154,8 +1168,14 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         current_app = PeerClusterApp(
             app=deployment_desc.app,
             planned_units=self.charm.app.planned_units(),
-            units=[format_unit_name(u, app=deployment_desc.app) for u in all_units(self.charm)],
-            roles=deployment_desc.config.roles,
+            units=[
+                format_unit_name(unit, app=deployment_desc.app) for unit in all_units(self.charm)
+            ],
+            roles=(
+                deployment_desc.config.roles
+                if deployment_desc.start == StartMode.WITH_PROVIDED_ROLES
+                else ClusterTopology.generated_roles()
+            ),
         )
         self.put_in_rel(data={"app": current_app.to_str()}, rel_id=rel_id)
 
