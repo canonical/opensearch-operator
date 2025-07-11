@@ -608,7 +608,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     self.peers_data.delete(Scope.APP, "nodes_config")
                     # we delete the security index initialised and bootstrapped flags
                     # if there are no data units left in all cluster
-                    if self.is_data_app_in_fleet():
+                    if not self.is_data_app_in_fleet():
                         self.peers_data.delete(Scope.APP, "security_index_initialised")
                         self.peers_data.delete(Scope.APP, "bootstrapped")
                 if self.opensearch_peer_cm.is_provider():
@@ -1040,8 +1040,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             ):
                 # check if cluster should have started but is blocked
                 logger.debug("OpenSearch already started, but post-start init failed.")
-                if self.is_data_app_in_fleet() and self.peers_data.get(Scope.APP, "bootstrapped", False) and self.opensearch_peer_cm.is_provider(typ="main"):
-                    # if data node exists and cluster was previously bootstrapped and the unit is a provider and cannot start
+                if (
+                    self.is_data_app_in_fleet()
+                    and self.peers_data.get(Scope.APP, "bootstrapped", False)
+                    and self.opensearch_peer_cm.is_provider(typ="main")
+                ):
+                    # In large deployments with cluster-manager-only-nodes, 
+                    # the startup might fail if the cluster was bootstrapped earlier and the cluster-manager node
+                    # lost its data
                     logger.warning(
                         "Node is not ready to start, but data node exists and the cluster was previously bootstrapped."
                     )
@@ -1109,12 +1115,18 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # In large deployments with cluster-manager-only-nodes, the startup might fail
             # for the cluster-manager if a joining data node did not yet initialize the
             # security index. We still want to update and broadcast the latest relation data.
-            if self.is_data_app_in_fleet() and self.peers_data.get(Scope.APP, "bootstrapped", False) and self.opensearch_peer_cm.is_provider(typ="main"):
-                    # if data node exists and cluster was previously bootstrapped and the unit is a provider and cannot start
-                    logger.warning(
-                        "Node is not ready to start, but data node exists and the cluster was previously bootstrapped."
-                    )
-                    self.status.set(BlockedStatus(ServiceStartError))
+            if (
+                self.is_data_app_in_fleet()
+                and self.peers_data.get(Scope.APP, "bootstrapped", False)
+                and self.opensearch_peer_cm.is_provider(typ="main")
+            ):
+                # In large deployments with cluster-manager-only-nodes, 
+                    # the startup might fail if the cluster was bootstrapped already and the cluster-manager node
+                    # lost its data
+                logger.warning(
+                    "Node is not ready to start, but data node exists and the cluster was previously bootstrapped."
+                )
+                self.status.set(BlockedStatus(ServiceStartError))
             if self.opensearch_peer_cm.is_provider(typ="main"):
                 self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
             event.defer()
@@ -1875,10 +1887,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def is_data_app_in_fleet(self) -> bool:
         """Check if the data app is in the fleet."""
         data_apps_in_fleet = [
-                        app
-                        for app in self.opensearch_peer_cm.apps_in_fleet()
-                        if "data" in app.roles
-                    ]
-        return data_apps_in_fleet and any(
-            app.planned_units > 0 for app in data_apps_in_fleet
-        )
+            app for app in self.opensearch_peer_cm.apps_in_fleet() if "data" in app.roles
+        ]
+        return data_apps_in_fleet and any(app.planned_units > 0 for app in data_apps_in_fleet)
