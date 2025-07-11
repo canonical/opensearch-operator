@@ -420,6 +420,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
             and not deployment_desc.start == StartMode.WITH_GENERATED_ROLES
             and "data" not in deployment_desc.config.roles
+            and not self.is_data_app_in_fleet()
         ):
             self.status.set(BlockedStatus(PClusterNoDataNode))
             event.defer()
@@ -607,14 +608,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     self.peers_data.delete(Scope.APP, "nodes_config")
                     # we delete the security index initialised and bootstrapped flags
                     # if there are no data units left in all cluster
-                    data_apps_in_fleet = [
-                        app
-                        for app in self.opensearch_peer_cm.apps_in_fleet()
-                        if "data" in app.roles
-                    ]
-                    if not data_apps_in_fleet or all(
-                        app.planned_units == 0 for app in data_apps_in_fleet
-                    ):
+                    if self.is_data_app_in_fleet():
                         self.peers_data.delete(Scope.APP, "security_index_initialised")
                         self.peers_data.delete(Scope.APP, "bootstrapped")
                 if self.opensearch_peer_cm.is_provider():
@@ -1044,6 +1038,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 OpenSearchHttpError,
                 OpenSearchNotFullyReadyError,
             ):
+                # check if cluster should have started but is blocked
+                logger.debug("OpenSearch already started, but post-start init failed.")
+                if self.is_data_app_in_fleet() and self.peers_data.get(Scope.APP, "bootstrapped", False) and self.opensearch_peer_cm.is_provider(typ="main"):
+                    # if data node exists and cluster was previously bootstrapped and the unit is a provider and cannot start
+                    logger.warning(
+                        "Node is not ready to start, but data node exists and the cluster was previously bootstrapped."
+                    )
+                    self.status.set(BlockedStatus(ServiceStartError))
+
                 event.defer()
             except OpenSearchUserMgmtError as e:
                 # Either generic start failure or cluster is not read to create the internal users
@@ -1106,6 +1109,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # In large deployments with cluster-manager-only-nodes, the startup might fail
             # for the cluster-manager if a joining data node did not yet initialize the
             # security index. We still want to update and broadcast the latest relation data.
+            if self.is_data_app_in_fleet() and self.peers_data.get(Scope.APP, "bootstrapped", False) and self.opensearch_peer_cm.is_provider(typ="main"):
+                    # if data node exists and cluster was previously bootstrapped and the unit is a provider and cannot start
+                    logger.warning(
+                        "Node is not ready to start, but data node exists and the cluster was previously bootstrapped."
+                    )
+                    self.status.set(BlockedStatus(ServiceStartError))
             if self.opensearch_peer_cm.is_provider(typ="main"):
                 self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
             event.defer()
@@ -1256,6 +1265,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self._upgrade.unit_state = upgrade.UnitState.HEALTHY
         logger.debug("Set upgrade unit state to healthy")
         self._reconcile_upgrade()
+
+        # get cluster uuid and save it to the peer relation data
+        try:
+            cluster_uuid = self.opensearch.request("GET", "/")["cluster_uuid"]
+            self.peers_data.put(Scope.APP, "cluster_uuid", cluster_uuid)
+        except OpenSearchHttpError as e:
+            logger.error(f"Failed to get cluster uuid, cluster might not be up: {e}")
+            event.defer()
+            return
 
         # update the peer cluster rel data with new IP in case of main cluster manager
         if self.opensearch_peer_cm.is_provider():
@@ -1853,3 +1871,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         return [
             host for host in all_hosts if host != self.unit_ip and self.opensearch.is_node_up(host)
         ]
+
+    def is_data_app_in_fleet(self) -> bool:
+        """Check if the data app is in the fleet."""
+        data_apps_in_fleet = [
+                        app
+                        for app in self.opensearch_peer_cm.apps_in_fleet()
+                        if "data" in app.roles
+                    ]
+        return data_apps_in_fleet and any(
+            app.planned_units > 0 for app in data_apps_in_fleet
+        )
