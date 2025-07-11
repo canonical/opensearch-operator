@@ -1045,9 +1045,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     and self.peers_data.get(Scope.APP, "bootstrapped", False)
                     and self.opensearch_peer_cm.is_provider(typ="main")
                 ):
-                    # In large deployments with cluster-manager-only-nodes, 
-                    # the startup might fail if the cluster was bootstrapped earlier and the cluster-manager node
-                    # lost its data
+                    # In large deployments with cluster-manager-only-nodes,
+                    # the startup might fail if the cluster was bootstrapped earlier
+                    # and the cluster-manager node lost its data
                     logger.warning(
                         "Node is not ready to start, but data node exists and the cluster was previously bootstrapped."
                     )
@@ -1120,9 +1120,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 and self.peers_data.get(Scope.APP, "bootstrapped", False)
                 and self.opensearch_peer_cm.is_provider(typ="main")
             ):
-                # In large deployments with cluster-manager-only-nodes, 
-                    # the startup might fail if the cluster was bootstrapped already and the cluster-manager node
-                    # lost its data
+                # In large deployments with cluster-manager-only-nodes,
+                # the startup might fail if the cluster was bootstrapped already
+                # and the cluster-manager node lost its data
                 logger.warning(
                     "Node is not ready to start, but data node exists and the cluster was previously bootstrapped."
                 )
@@ -1278,14 +1278,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         logger.debug("Set upgrade unit state to healthy")
         self._reconcile_upgrade()
 
-        # get cluster uuid and save it to the peer relation data
-        try:
-            cluster_uuid = self.opensearch.request("GET", "/")["cluster_uuid"]
-            self.peers_data.put(Scope.APP, "cluster_uuid", cluster_uuid)
-        except OpenSearchHttpError as e:
-            logger.error(f"Failed to get cluster uuid, cluster might not be up: {e}")
-            event.defer()
-            return
+        # get cluster uuid and save it to the peer relation data if leader unit
+        if self.unit.is_leader():
+            try:
+                cluster_uuid = self.opensearch.request("GET", "/")["cluster_uuid"]
+                self.peers_data.put(Scope.APP, "cluster_uuid", cluster_uuid)
+            except OpenSearchHttpError as e:
+                logger.error(f"Failed to get cluster uuid, cluster might not be up: {e}")
+                event.defer()
+                return
 
         # update the peer cluster rel data with new IP in case of main cluster manager
         if self.opensearch_peer_cm.is_provider():
