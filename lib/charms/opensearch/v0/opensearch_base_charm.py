@@ -1278,16 +1278,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         logger.debug("Set upgrade unit state to healthy")
         self._reconcile_upgrade()
 
-        # get cluster uuid and save it to the peer relation data if leader unit
-        if self.unit.is_leader():
-            try:
-                cluster_uuid = self.opensearch.request("GET", "/")["cluster_uuid"]
-                self.peers_data.put(Scope.APP, "cluster_uuid", cluster_uuid)
-            except OpenSearchHttpError as e:
-                logger.error(f"Failed to get cluster uuid, cluster might not be up: {e}")
-                event.defer()
-                return
-
         # update the peer cluster rel data with new IP in case of main cluster manager
         if self.opensearch_peer_cm.is_provider():
             self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
