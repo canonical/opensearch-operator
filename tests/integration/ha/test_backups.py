@@ -89,7 +89,7 @@ LARGE_DEPLOYMENTS_ALL_CLOUDS = [
 
 
 S3_INTEGRATOR = "s3-integrator"
-S3_INTEGRATOR_CHANNEL = "latest/edge"
+S3_INTEGRATOR_CHANNEL = "1/stable"
 S3_RELATION = "s3-credentials"
 AZURE_INTEGRATOR = "azure-storage-integrator"
 AZURE_INTEGRATOR_CHANNEL = "latest/edge"
