@@ -141,24 +141,25 @@ class _StartOpenSearch(EventBase):
     This event will be deferred until OpenSearch starts.
     """
 
-    def __init__(self, handle, *, ignore_lock=False, after_upgrade=False, first_data_node=False):
+    def __init__(
+        self, handle, *, ignore_lock=False, after_upgrade=False, is_first_data_node=False
+    ):
         super().__init__(handle)
-        # Only used for force upgrade
         self.ignore_lock = ignore_lock
         self.after_upgrade = after_upgrade
-        self.first_data_node = first_data_node
+        self.is_first_data_node = is_first_data_node
 
     def snapshot(self) -> Dict[str, Any]:
         return {
             "ignore_lock": self.ignore_lock,
             "after_upgrade": self.after_upgrade,
-            "first_data_node": self.first_data_node,
+            "is_first_data_node": self.is_first_data_node,
         }
 
     def restore(self, snapshot: Dict[str, Any]):
         self.ignore_lock = snapshot["ignore_lock"]
         self.after_upgrade = snapshot["after_upgrade"]
-        self.first_data_node = snapshot["first_data_node"]
+        self.is_first_data_node = snapshot["is_first_data_node"]
 
 
 class _RestartOpenSearch(EventBase):
@@ -434,60 +435,70 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # request the start of OpenSearch
         self.status.set(WaitingStatus(RequestUnitServiceOps.format("start")))
 
-        # if this is the a data node to join, start without getting the lock
+        # In large deployments one data node needs to start to initialzie the security index
+        # this first node ignores the lock
         # if there are multiple data apps in the cluster
-        # we synchronize the start of the first data node through peer cluster relationtoxc
-        # all data nodes request to start as first data node
+        # we synchronize the start of the first data node through peer cluster relation
+        # all leader data units request to start as first data node
         #   ->(app databag key: first_data_node on data app)
         # main orchestrator will choose which node to start first
         #   ->(app databag key: first_data_node on main orchestrator app)
 
         if self._should_ignore_lock(deployment_desc):
-            # Actual start will be done in `_on_peer_cluster_relation_changed`
-            logger.debug(
-                f"Requesting start as first data node without lock: {deployment_desc.app.id}"
-            )
-            self.peer_cluster_requirer.set_first_data_node(deployment_desc.app.id)
+            logger.debug(f"Requesting start as first data node without lock: {self.unit_name}")
+            self.peer_cluster_requirer.set_first_data_node(self.unit_name)
+            event.defer()
             return
+
+        if self.opensearch_peer_cm.is_consumer() and (
+            (local_first_data_node := self.peer_cluster_requirer.get_local_first_data_node())
+            is not None
+        ):
+            # lock requested
+            if (peer_cluster_rel_data := self.opensearch_peer_cm.rel_data()) is not None:
+                # main orchestrator has chosen the first data node
+                if peer_cluster_rel_data.first_data_node == local_first_data_node:
+                    logger.debug(
+                        f"Local first data node: {local_first_data_node} - cluster first data node: {peer_cluster_rel_data.first_data_node}"
+                    )
+                    # this unit is the first data node chosen by the main orchestrator
+                    self._start_opensearch_event.emit(ignore_lock=True, is_first_data_node=True)
+                    self.peer_cluster_requirer.set_first_data_node(None)
+            else:
+                # main orchestratior has not chosen the first data node yet
+                logger.debug(
+                    f"Local first data node: {local_first_data_node} - cluster first data node: not set"
+                )
+                event.defer()
+                return
+
         self._start_opensearch_event.emit()
 
     def _should_ignore_lock(self, deployment_desc: DeploymentDescription) -> bool:
         """Check if we should ignore the lock when starting OpenSearch."""
-        # if the security index is not initialized, a node has already started
-        if self.peers_data.get(Scope.APP, "security_index_initialised", False) and not (
-            # in case all data-nodes are powered down after being previously started
-            # ignore the lock to get a data-node started, as it holds security index
-            self.peers_data.get(Scope.UNIT, "started")
-            and not self.opensearch.is_service_started()
-        ):
-            return False
-
-        # if main orchestrator return false
-        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
-            return False
-
-        # if another data node got the clearance from the main orchestrator no need to ignore lock
-        if (
-            cluster_first_data_node := self.peer_cluster_requirer.get_cluster_first_data_node()
-        ) is not None and cluster_first_data_node != deployment_desc.app.id:
-            logger.debug(
-                f"Cluster first data node is {cluster_first_data_node}, {deployment_desc.app.id} should not ignore lock."
-            )
-            return False
-
-        # if failover but there is a data node
-        if (
-            deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR
-            and not self._is_failover_and_no_pure_data_node()
-        ):
-            logger.debug("Failover but a pure data node exists, should not ignore lock.")
-            return False
-
-        # leader data node that's not main orchestrator
         return (
-            "data" in deployment_desc.config.roles
-            or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
-        ) and self.unit.is_leader()
+            self.unit.is_leader()
+            # data unit
+            and (
+                "data" in deployment_desc.config.roles
+                or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+            )
+            and deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
+            and (
+                not self.peers_data.get(Scope.APP, "security_index_initialised", False)
+                or (
+                    # in case all data-nodes are powered down after being previously started
+                    # ignore the lock to get a data-node started, as it holds security index
+                    self.peers_data.get(Scope.UNIT, "started")
+                    and not self.opensearch.is_service_started()
+                )
+            )
+            and self.peer_cluster_requirer.get_cluster_first_data_node() is None
+            and (
+                deployment_desc.typ != DeploymentType.FAILOVER_ORCHESTRATOR
+                or self._is_failover_and_sole_data_app()
+            )
+        )
 
     def _apply_peer_cm_directives_and_check_if_can_start(self) -> bool:
         """Apply the directives computed by the opensearch peer cluster manager."""
@@ -850,7 +861,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             plugin_needs_restart or perf_profile_needs_restart
         ):
             logger.debug(
-                f"Restarting opensearch due to confuig change: plugin_needs_restart={plugin_needs_restart}, perf_profile_needs_restart={perf_profile_needs_restart}"
+                f"Restarting opensearch due to config change: plugin_needs_restart={plugin_needs_restart}, perf_profile_needs_restart={perf_profile_needs_restart}"
             )
             self._restart_opensearch_event.emit()
 
@@ -1100,9 +1111,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.peers_data.delete(Scope.UNIT, "started")
 
         if event.ignore_lock:
-            # Only used for force upgrades and starting data nodes for cluster-manager-only nodes
+            # Only used for force upgrades and starting 1 data node on a large deployment
+            # where the main orchestrator has cluster-manager only nodes
             logger.debug("Starting without lock")
-        elif not self._can_service_start(event.first_data_node):
+        elif not self._can_service_start(event.is_first_data_node):
             logger.info("Conditions not met to start opensearch. Will retry next event.")
             event.defer()
             return
@@ -1446,17 +1458,17 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             not self.peers_data.get(Scope.APP, "security_index_initialised", False)
             or not self.alt_hosts
         ):
-            if self.unit.is_leader():
-                # If main orchestrator start
-                if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
-                    return True
-                # If data node only start if it's the first one
-                if (
-                    deployment_desc.start == StartMode.WITH_GENERATED_ROLES
-                    or "data" in deployment_desc.config.roles
-                ) and first_data_node:
-                    return True
-            return False
+            return self.unit.is_leader() and (
+                deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+                # first data node in a cluster-manager-only deployment
+                or (
+                    (
+                        deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+                        or "data" in deployment_desc.config.roles
+                    )
+                    and first_data_node
+                )
+            )
 
         # When a new unit joins, replica shards are automatically added to it. In order to prevent
         # overloading the cluster, units must be started one at a time. So we defer starting
@@ -1629,8 +1641,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # cluster-manager role from it to avoid it bootstrapping the cluster
         # which is the responsibility of the main orchestrator
         # who then broadcasts `security_index_initialized` to the peer clusters.
-        if self._is_failover_and_no_pure_data_node() and not self.peers_data.get(
-            Scope.APP, "security_index_initialised", False
+        if (
+            self.unit.is_leader()
+            and self._is_failover_and_sole_data_app()
+            and not self.peers_data.get(Scope.APP, "security_index_initialised", False)
         ):
             self.peers_data.put(Scope.UNIT, "cluster_manager_removed", True)
             computed_roles.remove("cluster_manager")
@@ -1883,24 +1897,25 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # notify the main orchestrator that the security index is initialized
             self.peer_cluster_requirer.set_security_index_initialised()
 
-    def _is_failover_and_no_pure_data_node(self) -> bool:
+    def _is_failover_and_sole_data_app(self) -> bool:
         """Check if the current node is a failover and the only data node in the cluster."""
         deployment_desc = self.opensearch_peer_cm.deployment_desc()
-        if deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR and (
-            "data" in deployment_desc.config.roles
-            or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
-        ):
-            # check if it's the only data node in the cluster
-            cluster_fleet_apps = self.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
-            for app in cluster_fleet_apps:
-                if (
-                    self.app.name != cluster_fleet_apps[app].get("app", {}).get("name")
-                    and "data" in cluster_fleet_apps[app].get("roles")
-                    and "cluster_manager" not in cluster_fleet_apps[app].get("roles")
-                ):
-                    return False
-            return True
-        return False
+        cluster_fleet_apps = self.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
+        return (
+            # data node in a failover orchestrator deployment
+            deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR
+            and (
+                "data" in deployment_desc.config.roles
+                or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+            )
+            # No pure data nodes in the cluster
+            and not any(
+                self.app.name != cluster_fleet_apps[app].get("app", {}).get("name")
+                and "data" in cluster_fleet_apps[app].get("roles", [])
+                and "cluster_manager" not in cluster_fleet_apps[app].get("roles", [])
+                for app in cluster_fleet_apps
+            )
+        )
 
     @property
     def unit_ip(self) -> str:

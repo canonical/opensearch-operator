@@ -183,7 +183,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if self._get_security_index_initialised():
             self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
             # clean up the first data node when security index is initialised
-            self.charm.peers_data.put(Scope.APP, "first_data_node", "")
+            self.charm.peers_data.delete(Scope.APP, "first_data_node")
 
         if first_data_node := self._get_first_data_node():
             self.charm.peers_data.put(Scope.APP, "first_data_node", first_data_node)
@@ -208,6 +208,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             and self.charm.is_admin_user_configured()
             and self.charm.tls.is_fully_configured()
         ):
+            # TODO migrate to _on_start hook instead
             self.charm.handle_joining_data_node()
 
         if data.get("is_candidate_failover_orchestrator") != "true":
@@ -954,21 +955,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
             self._put_main_orchestrator_registered(orchestrators.failover_rel_id, True)
 
-        if data.get("data"):
-            peer_cluster_rel_data = self.peer_cm.rel_data_from_str(data["data"])
-            local_first_data_node = self._get_local_first_data_node()
-            if (
-                local_first_data_node := self._get_local_first_data_node()
-            ) is not None and peer_cluster_rel_data.first_data_node is not None:
-                logger.debug(
-                    f"Local first data node: {local_first_data_node} - cluster first data node: {peer_cluster_rel_data.first_data_node}"
-                )
-                if peer_cluster_rel_data.first_data_node == local_first_data_node:
-                    self.charm._start_opensearch_event.emit(ignore_lock=True, first_data_node=True)
-                else:
-                    self.charm._start_opensearch_event.emit()
-                self.set_first_data_node("")
-
         if self._error_set_from_providers(orchestrators, data, event.relation.id):
             # check errors sent by providers
             # check if valid data is present if so update the seed hosts
@@ -1485,7 +1471,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             self.charm.status.clear(error, app=True)
             self.charm.peers_data.delete(Scope.APP, error_label)
 
-    def set_first_data_node(self, first_data_node: str) -> None:
+    def set_first_data_node(self, first_data_node: str | None) -> None:
         """Set the first data node in the relation data."""
         orchestrators = PeerClusterOrchestrators.from_dict(
             self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
@@ -1498,13 +1484,18 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             f"Setting first data node '{first_data_node}' for orchestrator {orchestrators.main_app.id}"
         )
 
+        if first_data_node is None:
+            # if first data node is None, delete the key from the relation data
+            self.delete_from_rel(key="first_data_node", rel_id=orchestrators.main_rel_id)
+            return
+
         # set the first data node in the relation data
         self.put_in_rel(
             data={"first_data_node": first_data_node},
             rel_id=orchestrators.main_rel_id,
         )
 
-    def _get_local_first_data_node(self) -> str | None:
+    def get_local_first_data_node(self) -> str | None:
         """Get first data node from the local app relation data."""
         orchestrators = PeerClusterOrchestrators.from_dict(
             self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
