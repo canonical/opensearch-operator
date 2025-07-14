@@ -198,5 +198,5 @@ async def test_manually_upgrade_to_local(
     await assert_continuous_writes_consistency(
         ops_test,
         c_writes,
-        [APP_NAME, OPENSEARCH_MAIN_APP_NAME],
+        [APP_NAME, OPENSEARCH_FAILOVER_APP_NAME, OPENSEARCH_MAIN_APP_NAME],
     )
