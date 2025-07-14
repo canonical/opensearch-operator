@@ -450,9 +450,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
-        if self.opensearch_peer_cm.is_consumer() and (
-            (local_first_data_node := self.peer_cluster_requirer.get_local_first_data_node())
-            is not None
+        if (
+            self.unit.is_leader()
+            and self.opensearch_peer_cm.is_consumer()
+            and (
+                (local_first_data_node := self.peer_cluster_requirer.get_local_first_data_node())
+                is not None
+            )
         ):
             # lock requested
             if (peer_cluster_rel_data := self.opensearch_peer_cm.rel_data()) is not None:
