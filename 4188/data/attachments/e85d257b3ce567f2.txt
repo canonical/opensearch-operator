@@ -1,0 +1,45 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'opensearch': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'active', 'since': '16 Jul 2025 01:45:00Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/2': {'workload-status': {'current': 'active', 'since': '16 Jul 2025 01:40:19Z'}, 'juju-status': {'current': 'idle', 'since': '16 Jul 2025 01:57:12Z', 'version': '3.6.8'}, 'leader': True, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.61.37.188'}, 'opensearch/3': {'workload-status': {'current': 'active', 'since': '16 Jul 2025 01:49:48Z'}, 'juju-status': {'current': 'idle', 'since': '16 Jul 2025 01:56:58Z', 'version': '3.6.8'}, 'machine': '4', 'open-ports': ['9200/tcp'], 'public-address': '10.61.37.137'}, 'opensearch/4': {'workload-status': {'current': 'active', 'since': '16 Jul 2025 01:54:34Z'}, 'juju-status': {'current': 'idle', 'since': '16 Jul 2025 01:57:05Z', 'version': '3.6.8'}, 'machine': '5', 'open-ports': ['9200/tcp'], 'public-address': '10.61.37.217'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '22.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 264, 'charm-channel': 'latest/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '16 Jul 2025 01:37:50Z'}, 'relations': {'certificates': [{'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '16 Jul 2025 01:37:50Z'}, 'juju-status': {'current': 'idle', 'since': '16 Jul 2025 01:54:04Z', 'version': '3.6.8'}, 'leader': True, 'machine': '0', 'public-address': '10.61.37.48'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.8    unsupported  01:57:36Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports  Message
+self-signed-certificates/0*  active    idle   0        10.61.37.48            
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.61.37.48   juju-edf819-0  ubuntu@22.04      Running
+3        stopped  10.61.37.188  juju-edf819-3  ubuntu@24.04      Running
+4        stopped  10.61.37.137  juju-edf819-4  ubuntu@24.04      Running
+5        stopped  10.61.37.217  juju-edf819-5  ubuntu@24.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-1: 01:37:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:37:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:37:35 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:37:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:37:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 01:37:40 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:37:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:37:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 01:37:41 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:37:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:37:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:37:43 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:47:48 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:47:48 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-3: 01:47:48 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-self-signed-certificates-0: 01:49:18 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-2: 01:49:18 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+machine-5: 01:52:31 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:52:31 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-4: 01:52:31 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-3: 01:54:35 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-4: 01:57:16 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-2: 01:57:20 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
