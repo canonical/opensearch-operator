@@ -420,6 +420,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
             and not deployment_desc.start == StartMode.WITH_GENERATED_ROLES
             and "data" not in deployment_desc.config.roles
+            and not self.peers_data.get(Scope.APP, "security_index_initialised", False)
         ):
             self.status.set(BlockedStatus(PClusterNoDataNode))
             event.defer()
