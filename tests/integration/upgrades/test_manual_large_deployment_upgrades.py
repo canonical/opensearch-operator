@@ -21,7 +21,6 @@ from .helpers import (
     IDLE_PERIOD,
     OPENSEARCH_CHANNEL,
     OPENSEARCH_CHARM,
-    revision_supported_config,
     UPGRADE_MATRIX,
     VERSION_N_MINUS_1,
     VERSION_N_MINUS_2,
@@ -29,6 +28,7 @@ from .helpers import (
     assert_rollback_to_revision,
     assert_upgrade_to_local,
     assert_upgrade_to_revision,
+    revision_supported_config,
 )
 
 logger = logging.getLogger(__name__)
