@@ -8,8 +8,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from ..ha.continuous_writes import ContinuousWrites, ReplicationMode
-from ..helpers import APP_NAME
-from .helpers import app_name
+from ..helpers import APP_NAME, app_name
 
 logger = logging.getLogger(__name__)
 

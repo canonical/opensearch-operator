@@ -6,22 +6,41 @@ import logging
 import subprocess
 from typing import Optional
 
+import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
-from ..ha.continuous_writes import ContinuousWrites
-from ..ha.helpers import (
-    assert_continuous_writes_consistency,
-    assert_continuous_writes_increasing,
-)
-from ..helpers import APP_NAME, app_name, run_action
+from ..helpers import CONFIG_OPTS, run_action
 from ..helpers_deployments import get_application_units, wait_until
 
-OPENSEARCH_SERVICE_PATH = "/etc/systemd/system/snap.opensearch.daemon.service"
-ORIGINAL_RESTART_DELAY = 20
-SECOND_APP_NAME = "second-opensearch"
-RESTART_DELAY = 360
+OPENSEARCH_CHARM = "opensearch"
+OPENSEARCH_CHANNEL = "2/edge"
+PROFILES_REVISION = 185
 
+TIMEOUT = 2400
+IDLE_PERIOD = 30
+FAST_INTERVAL = "60s"
+
+VERSION_N_MINUS_2 = "2.17.0"
+VERSION_N_MINUS_1 = "2.18.0"
+
+VERSION_TO_REVISION = {
+    VERSION_N_MINUS_2: {"jammy": 168, "noble": 206},
+    VERSION_N_MINUS_1: {"jammy": 209, "noble": 208},
+}
+
+FROM_VERSION_PREFIX = "from_v{}_to_local"
+
+UPGRADE_MATRIX = [
+    pytest.param(
+        version,
+        id=FROM_VERSION_PREFIX.format(version),
+        marks=pytest.mark.group(
+            id="two_version_upgrade" if version == VERSION_N_MINUS_2 else "one_version_upgrade"
+        ),
+    )
+    for version in VERSION_TO_REVISION.keys()
+]
 
 logger = logging.getLogger(__name__)
 
@@ -65,11 +84,18 @@ async def refresh(
             subprocess.check_output(cmd)
 
 
-async def assert_upgrade_to_local(
-    ops_test: OpsTest, cwrites: ContinuousWrites, local_charm: str
-) -> None:
-    """Does the upgrade to local and asserts continuous writes."""
-    app = (await app_name(ops_test)) or APP_NAME
+def revision_supported_config(revision: int) -> dict[str, str]:
+    """Returns 'testing' profile config if given revision supports profiles"""
+    return CONFIG_OPTS if revision >= PROFILES_REVISION else {}
+
+
+async def assert_upgrade_to_revision(
+    ops_test: OpsTest,
+    app: str,
+    revision: int,
+    config: dict[str, str] = {},
+):
+    """Upgrades app to revision"""
     units = await get_application_units(ops_test, app)
     leader_id = [u.id for u in units if u.is_leader][0]
 
@@ -80,25 +106,25 @@ async def assert_upgrade_to_local(
         app=app,
     )
     assert action.status == "completed"
+    async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
+        logger.info(f"Refresh the charm to revision {revision}")
 
-    async with ops_test.fast_forward("60s"):
-        logger.info("Refresh the charm")
-
-        await refresh(ops_test, app, path=local_charm, config={"profile": "testing"})
+        await refresh(
+            ops_test,
+            app,
+            revision=revision,
+            config=revision_supported_config(revision) | config,
+        )
 
         await wait_until(
             ops_test,
             apps=[app],
             apps_statuses=["blocked"],
             units_statuses=["active"],
-            wait_for_exact_units={
-                APP_NAME: 3,
-            },
-            timeout=2800,
-            idle_period=30,
+            wait_for_exact_units={app: len(units)},
+            timeout=TIMEOUT,
+            idle_period=IDLE_PERIOD,
         )
-
-        logger.info("Upgrade finished")
         # Resume the upgrade
         action = await run_action(
             ops_test,
@@ -106,22 +132,134 @@ async def assert_upgrade_to_local(
             "resume-upgrade",
             app=app,
         )
-        logger.info(action)
         assert action.status == "completed"
+        logger.info(f"resume-upgrade: {action}")
 
-        logger.info("Refresh is over, waiting for the charm to settle")
+        await wait_until(
+            ops_test,
+            apps=[app],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            timeout=TIMEOUT,
+            idle_period=IDLE_PERIOD,
+        )
+        logger.info(f"Upgrade of app {app} finished")
+
+
+async def assert_upgrade_to_local(
+    ops_test: OpsTest, app: str, charm: str, config: dict[str, str] = {}
+):
+    """Upgrades app to local charm"""
+    units = await get_application_units(ops_test, app)
+    leader_id = [u.id for u in units if u.is_leader][0]
+
+    action = await run_action(
+        ops_test,
+        leader_id,
+        "pre-upgrade-check",
+        app=app,
+    )
+    assert action.status == "completed"
+    async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
+        logger.info("Refresh to local charm")
+
+        await refresh(ops_test, app, path=charm, config=CONFIG_OPTS | config)
+
+        await wait_until(
+            ops_test,
+            apps=[app],
+            apps_statuses=["blocked"],
+            units_statuses=["active"],
+            wait_for_exact_units={app: len(units)},
+            timeout=TIMEOUT,
+            idle_period=IDLE_PERIOD,
+        )
+        # Resume the upgrade
+        action = await run_action(
+            ops_test,
+            leader_id,
+            "resume-upgrade",
+            app=app,
+        )
+        assert action.status == "completed"
+        logger.info(f"resume-upgrade: {action}")
+
+        await wait_until(
+            ops_test,
+            apps=[app],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            timeout=TIMEOUT,
+            idle_period=IDLE_PERIOD,
+        )
+        logger.info(f"Upgrade of app {app} completed")
+
+
+async def assert_rollback_to_revision(
+    ops_test: OpsTest, app: str, charm: str, revision: int, config: dict[str, str] = {}
+):
+    """Upgrades app to local charm and rolls back to revision mid-upgrade"""
+    units = await get_application_units(ops_test, app)
+    leader_id = [unit.id for unit in units if unit.is_leader][0]
+
+    action = await run_action(ops_test, leader_id, "pre-upgrade-check", app=app)
+    assert action.status == "completed"
+
+    n_units = len(units)
+    async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
+        logger.info("Refresh to local charm")
+        await refresh(ops_test, app, path=charm, config=CONFIG_OPTS | config)
+
+        await wait_until(
+            ops_test,
+            apps=[app],
+            apps_statuses=["blocked"],
+            units_statuses=["active"],
+            wait_for_exact_units={
+                app: n_units,
+            },
+            timeout=TIMEOUT,
+            idle_period=IDLE_PERIOD,
+        )
+
+        logger.info(f"Rolling back to revision: {revision}")
+        await refresh(
+            ops_test,
+            app,
+            switch=OPENSEARCH_CHARM,
+            channel=OPENSEARCH_CHANNEL,
+            config=CONFIG_OPTS | config,
+        )
+        # Wait until we are set in an idle state and can rollback the revision.
+        # app status blocked: that will happen if we are jumping N-2 versions in our test
+        # app status active: that will happen if we are jumping N-1 in our test
+        await wait_until(
+            ops_test,
+            apps=[app],
+            apps_statuses=["active", "blocked"],
+            units_statuses=["active"],
+            wait_for_exact_units={
+                app: n_units,
+            },
+            timeout=TIMEOUT,
+            idle_period=IDLE_PERIOD,
+        )
+        await refresh(
+            ops_test,
+            app,
+            revision=revision,
+            config=revision_supported_config(revision) | config,
+        )
+
         await wait_until(
             ops_test,
             apps=[app],
             apps_statuses=["active"],
             units_statuses=["active"],
             wait_for_exact_units={
-                APP_NAME: 3,
+                app: n_units,
             },
-            timeout=2800,
-            idle_period=30,
+            timeout=TIMEOUT,
+            idle_period=IDLE_PERIOD,
         )
-
-    # continuous writes checks
-    await assert_continuous_writes_increasing(cwrites)
-    await assert_continuous_writes_consistency(ops_test, cwrites, [app])
+        logger.info(f"Rollback of app {app} completed")
