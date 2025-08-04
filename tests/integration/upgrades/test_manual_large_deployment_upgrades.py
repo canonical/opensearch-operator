@@ -14,13 +14,14 @@ from ..ha.helpers import (
     assert_continuous_writes_consistency,
     assert_continuous_writes_increasing,
 )
-from ..helpers import APP_NAME, CONFIG_OPTS, MODEL_CONFIG
+from ..helpers import APP_NAME, MODEL_CONFIG
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import (
     IDLE_PERIOD,
     OPENSEARCH_CHANNEL,
     OPENSEARCH_CHARM,
+    revision_supported_config,
     UPGRADE_MATRIX,
     VERSION_N_MINUS_1,
     VERSION_N_MINUS_2,
@@ -53,6 +54,7 @@ async def _build_env(ops_test: OpsTest, revision: int, series: str) -> None:
 
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
+    charm_config = revision_supported_config(revision)
     await asyncio.gather(
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
@@ -64,7 +66,7 @@ async def _build_env(ops_test: OpsTest, revision: int, series: str) -> None:
             num_units=APPS[MAIN_APP],
             revision=revision,
             series=series,
-            config={"cluster_name": "upgrades"} | CONFIG_OPTS,
+            config={"cluster_name": "upgrades"} | charm_config,
         ),
         ops_test.model.deploy(
             OPENSEARCH_CHARM,
@@ -74,7 +76,7 @@ async def _build_env(ops_test: OpsTest, revision: int, series: str) -> None:
             revision=revision,
             series=series,
             config={"cluster_name": "upgrades", "init_hold": True, "roles": "cluster_manager"}
-            | CONFIG_OPTS,
+            | charm_config,
         ),
         ops_test.model.deploy(
             OPENSEARCH_CHARM,
@@ -83,7 +85,7 @@ async def _build_env(ops_test: OpsTest, revision: int, series: str) -> None:
             num_units=APPS[APP_NAME],
             revision=revision,
             series=series,
-            config={"cluster_name": "upgrades", "init_hold": True, "roles": "data"} | CONFIG_OPTS,
+            config={"cluster_name": "upgrades", "init_hold": True, "roles": "data"} | charm_config,
         ),
     )
 
