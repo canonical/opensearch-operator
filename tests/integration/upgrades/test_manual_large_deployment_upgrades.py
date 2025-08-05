@@ -9,6 +9,11 @@ import pytest
 from charms.opensearch.v0.constants_charm import PClusterNoRelation
 from pytest_operator.plugin import OpsTest
 
+from ..ha.continuous_writes import ContinuousWrites
+from ..ha.helpers import (
+    assert_continuous_writes_consistency,
+    assert_continuous_writes_increasing,
+)
 from ..helpers import APP_NAME, MODEL_CONFIG, set_watermark
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
@@ -157,10 +162,16 @@ async def test_upgrade_between_versions(ops_test: OpsTest, series: str) -> None:
 
 @pytest.mark.group(id="happy_path_upgrade")
 @pytest.mark.abort_on_fail
-async def test_upgrade_to_local(ops_test: OpsTest, charm) -> None:
+async def test_upgrade_to_local(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, charm
+) -> None:
     """Test upgrade to local charm."""
     for app in list(APPS.keys()):
         await assert_upgrade_to_local(ops_test, app=app, charm=charm)
+
+    # continuous writes checks
+    await assert_continuous_writes_increasing(c_writes)
+    await assert_continuous_writes_consistency(ops_test, c_writes, list(APPS.keys()))
 
 
 @pytest.mark.parametrize("version", UPGRADE_PARAMS)
@@ -189,7 +200,13 @@ async def test_upgrade_rollback_from_local(
 
 @pytest.mark.parametrize("version", UPGRADE_PARAMS)
 @pytest.mark.abort_on_fail
-async def test_upgrade_from_version_to_local(ops_test: OpsTest, version, charm) -> None:
+async def test_upgrade_from_version_to_local(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, version, charm
+) -> None:
     """Test upgrade from usptream to currently locally built version."""
     for app in list(APPS.keys()):
         await assert_upgrade_to_local(ops_test, app=app, charm=charm)
+
+    # continuous writes checks
+    await assert_continuous_writes_increasing(c_writes)
+    await assert_continuous_writes_consistency(ops_test, c_writes, list(APPS.keys()))
