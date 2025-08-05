@@ -17,7 +17,7 @@ from ..helpers import APP_NAME, CONFIG_OPTS, MODEL_CONFIG, set_watermark
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import (
     PROFILES_REVISION,
-    UPGRADE_MATRIX,
+    UPGRADE_PARAMS,
     VERSION_N_MINUS_1,
     VERSION_N_MINUS_2,
     VERSION_TO_REVISION,
@@ -125,7 +125,7 @@ async def test_upgrade_to_local(
 ##################################################################################
 
 
-@pytest.mark.parametrize("version", UPGRADE_MATRIX)
+@pytest.mark.parametrize("version", UPGRADE_PARAMS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_deploy_from_version(ops_test: OpsTest, version, series) -> None:
@@ -133,7 +133,7 @@ async def test_deploy_from_version(ops_test: OpsTest, version, series) -> None:
     await _build_env(ops_test, version, series)
 
 
-@pytest.mark.parametrize("version", UPGRADE_MATRIX)
+@pytest.mark.parametrize("version", UPGRADE_PARAMS)
 @pytest.mark.abort_on_fail
 async def test_upgrade_rollback_from_local(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, version, charm, series
@@ -144,7 +144,7 @@ async def test_upgrade_rollback_from_local(
     await assert_rollback_to_revision(ops_test, app=app, charm=charm, revision=revision)
 
 
-@pytest.mark.parametrize("version", UPGRADE_MATRIX)
+@pytest.mark.parametrize("version", UPGRADE_PARAMS)
 @pytest.mark.abort_on_fail
 async def test_upgrade_from_version_to_local(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, version, charm

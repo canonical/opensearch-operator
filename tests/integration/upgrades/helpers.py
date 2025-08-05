@@ -31,7 +31,7 @@ VERSION_TO_REVISION = {
 
 FROM_VERSION_PREFIX = "from_v{}_to_local"
 
-UPGRADE_MATRIX = [
+UPGRADE_PARAMS = [
     pytest.param(
         version,
         id=FROM_VERSION_PREFIX.format(version),

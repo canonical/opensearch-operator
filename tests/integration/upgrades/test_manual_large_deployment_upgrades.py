@@ -14,14 +14,14 @@ from ..ha.helpers import (
     assert_continuous_writes_consistency,
     assert_continuous_writes_increasing,
 )
-from ..helpers import APP_NAME, MODEL_CONFIG
+from ..helpers import APP_NAME, MODEL_CONFIG, set_watermark
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import (
     IDLE_PERIOD,
     OPENSEARCH_CHANNEL,
     OPENSEARCH_CHARM,
-    UPGRADE_MATRIX,
+    UPGRADE_PARAMS,
     VERSION_N_MINUS_1,
     VERSION_N_MINUS_2,
     VERSION_TO_REVISION,
@@ -48,12 +48,14 @@ APPS = {
 }
 
 
-async def _build_env(ops_test: OpsTest, revision: int, series: str) -> None:
+async def _build_env(ops_test: OpsTest, version: str, series: str) -> None:
     """Sets up environment for given revision and series"""
     await ops_test.model.set_config(MODEL_CONFIG)
 
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
+    
+    revision = VERSION_TO_REVISION[version][series]
     charm_config = revision_supported_config(revision)
     await asyncio.gather(
         ops_test.model.deploy(
@@ -135,15 +137,17 @@ async def _build_env(ops_test: OpsTest, revision: int, series: str) -> None:
         timeout=1800,
     )
 
+    for app in list(APPS.keys()):
+        await set_watermark(ops_test, app)
+
 
 @pytest.mark.group(id="happy_path_upgrade")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_large_deployment_deploy_starting_version(ops_test: OpsTest, series) -> None:
     """Build and deploy the charm for large deployment tests."""
-    # deploy version n-2 revision for current series
-    revision = VERSION_TO_REVISION[VERSION_N_MINUS_2][series]
-    await _build_env(ops_test, revision, series)
+    # deploy version n-2 for current series
+    await _build_env(ops_test,VERSION_N_MINUS_2, series)
 
 
 @pytest.mark.group(id="happy_path_upgrade")
@@ -168,17 +172,16 @@ async def test_upgrade_to_local(ops_test: OpsTest, c_writes: ContinuousWrites, c
     await assert_continuous_writes_consistency(ops_test, c_writes, list(APPS.keys()))
 
 
-@pytest.mark.parametrize("version", UPGRADE_MATRIX)
+@pytest.mark.parametrize("version", UPGRADE_PARAMS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_deploy_from_version(ops_test: OpsTest, version, series) -> None:
     """Deploy OpenSearch at given version."""
     # deploy revision with given version
-    revision = VERSION_TO_REVISION[version][series]
-    await _build_env(ops_test, revision, series)
+    await _build_env(ops_test, version, series)
 
 
-@pytest.mark.parametrize("version", UPGRADE_MATRIX)
+@pytest.mark.parametrize("version", UPGRADE_PARAMS)
 @pytest.mark.abort_on_fail
 async def test_upgrade_rollback_from_local(
     ops_test: OpsTest,
@@ -193,7 +196,7 @@ async def test_upgrade_rollback_from_local(
         await assert_rollback_to_revision(ops_test, app, charm, revision)
 
 
-@pytest.mark.parametrize("version", UPGRADE_MATRIX)
+@pytest.mark.parametrize("version", UPGRADE_PARAMS)
 @pytest.mark.abort_on_fail
 async def test_upgrade_from_version_to_local(
     ops_test: OpsTest, c_writes: ContinuousWrites, version, charm
