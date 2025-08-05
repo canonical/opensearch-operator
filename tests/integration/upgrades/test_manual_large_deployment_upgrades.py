@@ -54,7 +54,7 @@ async def _build_env(ops_test: OpsTest, version: str, series: str) -> None:
 
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
-    
+
     revision = VERSION_TO_REVISION[version][series]
     charm_config = revision_supported_config(revision)
     await asyncio.gather(
@@ -147,7 +147,7 @@ async def _build_env(ops_test: OpsTest, version: str, series: str) -> None:
 async def test_large_deployment_deploy_starting_version(ops_test: OpsTest, series) -> None:
     """Build and deploy the charm for large deployment tests."""
     # deploy version n-2 for current series
-    await _build_env(ops_test,VERSION_N_MINUS_2, series)
+    await _build_env(ops_test, VERSION_N_MINUS_2, series)
 
 
 @pytest.mark.group(id="happy_path_upgrade")
