@@ -27,4 +27,3 @@ async def c_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites):
     yield
     await c_writes.clear()
     logger.info("\n\n\n\nThe writes have been cleared.\n\n\n\n")
-

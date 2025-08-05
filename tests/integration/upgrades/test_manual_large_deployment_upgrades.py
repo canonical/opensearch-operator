@@ -162,7 +162,9 @@ async def test_upgrade_between_versions(ops_test: OpsTest, series: str) -> None:
 
 @pytest.mark.group(id="happy_path_upgrade")
 @pytest.mark.abort_on_fail
-async def test_upgrade_to_local(ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, charm) -> None:
+async def test_upgrade_to_local(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, charm
+) -> None:
     """Test upgrade to local charm."""
     for app in list(APPS.keys()):
         await assert_upgrade_to_local(ops_test, app=app, charm=charm)
