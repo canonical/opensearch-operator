@@ -28,7 +28,7 @@ from .helpers import (
     assert_rollback_to_revision,
     assert_upgrade_to_local,
     assert_upgrade_to_revision,
-    revision_supported_config,
+    testing_config_if_supported,
 )
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ async def _build_env(ops_test: OpsTest, version: str, series: str) -> None:
     config = {"ca-common-name": "CN_CA"}
 
     revision = VERSION_TO_REVISION[version][series]
-    charm_config = revision_supported_config(revision)
+    charm_config = testing_config_if_supported(revision)
     await asyncio.gather(
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
@@ -179,7 +179,6 @@ async def test_upgrade_to_local(
 @pytest.mark.skip_if_deployed
 async def test_deploy_from_version(ops_test: OpsTest, version, series) -> None:
     """Deploy OpenSearch at given version."""
-    # deploy revision with given version
     await _build_env(ops_test, version, series)
 
 
@@ -192,7 +191,6 @@ async def test_upgrade_rollback_from_local(
     series,
 ) -> None:
     """Test upgrade and rollback to given version."""
-    # rollback to revision with given version
     revision = VERSION_TO_REVISION[version][series]
     for app in list(APPS.keys()):
         await assert_rollback_to_revision(ops_test, app, charm, revision)

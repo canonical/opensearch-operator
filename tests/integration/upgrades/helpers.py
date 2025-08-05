@@ -45,6 +45,11 @@ UPGRADE_PARAMS = [
 logger = logging.getLogger(__name__)
 
 
+def testing_config_if_supported(revision: int) -> dict[str, str]:
+    """Returns 'testing' profile config if given revision supports profiles"""
+    return CONFIG_OPTS if revision >= PROFILES_REVISION else {}
+
+
 async def refresh(
     ops_test: OpsTest,
     app_name: str,
@@ -84,11 +89,6 @@ async def refresh(
             subprocess.check_output(cmd)
 
 
-def revision_supported_config(revision: int) -> dict[str, str]:
-    """Returns 'testing' profile config if given revision supports profiles"""
-    return CONFIG_OPTS if revision >= PROFILES_REVISION else {}
-
-
 async def assert_upgrade_to_revision(
     ops_test: OpsTest,
     app: str,
@@ -108,12 +108,11 @@ async def assert_upgrade_to_revision(
     assert action.status == "completed"
     async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
         logger.info(f"Refresh the charm to revision {revision}")
-
         await refresh(
             ops_test,
             app,
             revision=revision,
-            config=revision_supported_config(revision) | config,
+            config=testing_config_if_supported(revision) | config,
         )
 
         await wait_until(
@@ -125,6 +124,7 @@ async def assert_upgrade_to_revision(
             timeout=TIMEOUT,
             idle_period=IDLE_PERIOD,
         )
+
         # Resume the upgrade
         action = await run_action(
             ops_test,
@@ -143,13 +143,13 @@ async def assert_upgrade_to_revision(
             timeout=TIMEOUT,
             idle_period=IDLE_PERIOD,
         )
-        logger.info(f"Upgrade of app {app} finished")
+        logger.info(f"Upgrade of '{app}' completed")
 
 
 async def assert_upgrade_to_local(
     ops_test: OpsTest, app: str, charm: str, config: dict[str, str] = {}
 ):
-    """Upgrades app to local charm"""
+    """Upgrades to local charm"""
     units = await get_application_units(ops_test, app)
     leader_id = [u.id for u in units if u.is_leader][0]
 
@@ -162,7 +162,6 @@ async def assert_upgrade_to_local(
     assert action.status == "completed"
     async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
         logger.info("Refresh to local charm")
-
         await refresh(ops_test, app, path=charm, config=CONFIG_OPTS | config)
 
         await wait_until(
@@ -174,6 +173,7 @@ async def assert_upgrade_to_local(
             timeout=TIMEOUT,
             idle_period=IDLE_PERIOD,
         )
+
         # Resume the upgrade
         action = await run_action(
             ops_test,
@@ -192,13 +192,13 @@ async def assert_upgrade_to_local(
             timeout=TIMEOUT,
             idle_period=IDLE_PERIOD,
         )
-        logger.info(f"Upgrade of app {app} completed")
+        logger.info(f"Upgrade of '{app}' completed")
 
 
 async def assert_rollback_to_revision(
     ops_test: OpsTest, app: str, charm: str, revision: int, config: dict[str, str] = {}
 ):
-    """Upgrades app to local charm and rolls back to revision mid-upgrade"""
+    """Upgrades to local charm and rolls back to revision mid-upgrade"""
     units = await get_application_units(ops_test, app)
     leader_id = [unit.id for unit in units if unit.is_leader][0]
 
@@ -230,6 +230,7 @@ async def assert_rollback_to_revision(
             channel=OPENSEARCH_CHANNEL,
             config=CONFIG_OPTS | config,
         )
+
         # Wait until we are set in an idle state and can rollback the revision.
         # app status blocked: that will happen if we are jumping N-2 versions in our test
         # app status active: that will happen if we are jumping N-1 in our test
@@ -248,7 +249,7 @@ async def assert_rollback_to_revision(
             ops_test,
             app,
             revision=revision,
-            config=revision_supported_config(revision) | config,
+            config=testing_config_if_supported(revision) | config,
         )
 
         await wait_until(
@@ -262,4 +263,4 @@ async def assert_rollback_to_revision(
             timeout=TIMEOUT,
             idle_period=IDLE_PERIOD,
         )
-        logger.info(f"Rollback of app {app} completed")
+        logger.info(f"Rollback of '{app}' completed")
