@@ -7,9 +7,8 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 
 from charms.opensearch.v0.constants_charm import GeneratedRoles
 from charms.opensearch.v0.helper_enums import BaseStrEnum
-from charms.opensearch.v0.models import App, Node, PeerClusterApp
+from charms.opensearch.v0.models import App, Node
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
-from charms.opensearch.v0.opensearch_internal_data import Scope
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # The unique Charmhub library identifier, never change it
