@@ -420,7 +420,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
             and not deployment_desc.start == StartMode.WITH_GENERATED_ROLES
             and "data" not in deployment_desc.config.roles
-            and not self.is_data_app_in_fleet()
+            and not ClusterTopology.data_role_in_cluster_fleet_apps(self)
         ):
             self.status.set(BlockedStatus(PClusterNoDataNode))
             event.defer()
@@ -608,7 +608,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     self.peers_data.delete(Scope.APP, "nodes_config")
                     # we delete the security index initialised and bootstrapped flags
                     # if there are no data units left in all cluster
-                    if not self.is_data_app_in_fleet():
+                    if not ClusterTopology.data_role_in_cluster_fleet_apps(self):
                         self.peers_data.delete(Scope.APP, "security_index_initialised")
                         self.peers_data.delete(Scope.APP, "bootstrapped")
                 if self.opensearch_peer_cm.is_provider():
@@ -1041,7 +1041,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # check if cluster should have started but is blocked
                 logger.debug("OpenSearch already started, but post-start init failed.")
                 if (
-                    self.is_data_app_in_fleet()
+                    ClusterTopology.data_role_in_cluster_fleet_apps(self)
                     and self.peers_data.get(Scope.APP, "bootstrapped", False)
                     and self.opensearch_peer_cm.is_provider(typ="main")
                 ):
@@ -1112,12 +1112,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             OpenSearchNotFullyReadyError,
         ) as e:
             self.node_lock.release()
-            # In large deployments with cluster-manager-only-nodes, the startup might fail
-            # for the cluster-manager if a joining data node did not yet initialize the
-            # security index. We still want to update and broadcast the latest relation data.
             if (
-                self.is_data_app_in_fleet()
+                ClusterTopology.data_role_in_cluster_fleet_apps(self)
                 and self.peers_data.get(Scope.APP, "bootstrapped", False)
+                # In large deployments with cluster-manager-only-nodes, the startup might fail
+                # for the cluster-manager if a joining data node did not yet initialize the
+                # security index. We still want to update and broadcast the latest relation data.
                 and self.opensearch_peer_cm.is_provider(typ="main")
             ):
                 # In large deployments with cluster-manager-only-nodes,
@@ -1874,10 +1874,3 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         return [
             host for host in all_hosts if host != self.unit_ip and self.opensearch.is_node_up(host)
         ]
-
-    def is_data_app_in_fleet(self) -> bool:
-        """Check if the data app is in the fleet."""
-        data_apps_in_fleet = [
-            app for app in self.opensearch_peer_cm.apps_in_fleet() if "data" in app.roles
-        ]
-        return data_apps_in_fleet and any(app.planned_units > 0 for app in data_apps_in_fleet)
