@@ -38,6 +38,7 @@ FAILOVER_APP = "failover"
 
 REL_ORCHESTRATOR = "peer-cluster-orchestrator"
 REL_PEER = "peer-cluster"
+TIMEOUT = 1800
 
 charm = None
 
@@ -92,14 +93,7 @@ async def _build_env(ops_test: OpsTest, version: str, series: str) -> None:
     )
 
     # wait until the TLS operator is ready
-    await wait_until(
-        ops_test,
-        apps=[TLS_CERTIFICATES_APP_NAME],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units={TLS_CERTIFICATES_APP_NAME: 1},
-        idle_period=IDLE_PERIOD,
-    )
+    await ops_test.model.wait_for_idle(apps=[TLS_CERTIFICATES_APP_NAME], timeout=TIMEOUT)
 
     # integrate TLS to all applications
     for app in [MAIN_APP, FAILOVER_APP, APP_NAME]:
@@ -120,7 +114,7 @@ async def _build_env(ops_test: OpsTest, version: str, series: str) -> None:
         },
         wait_for_exact_units={app: units for app, units in APPS.items()},
         idle_period=IDLE_PERIOD,
-        timeout=1800,
+        timeout=TIMEOUT,
     )
 
     await ops_test.model.integrate(f"{MAIN_APP}:{REL_ORCHESTRATOR}", f"{APP_NAME}:{REL_PEER}")
@@ -134,7 +128,7 @@ async def _build_env(ops_test: OpsTest, version: str, series: str) -> None:
         units_statuses=["active"],
         wait_for_exact_units={app: units for app, units in APPS.items()},
         idle_period=IDLE_PERIOD,
-        timeout=1800,
+        timeout=TIMEOUT,
     )
 
     for app in list(APPS.keys()):

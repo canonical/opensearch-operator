@@ -99,13 +99,11 @@ async def assert_upgrade_to_revision(
     units = await get_application_units(ops_test, app)
     leader_id = [u.id for u in units if u.is_leader][0]
 
-    action = await run_action(
-        ops_test,
-        leader_id,
-        "pre-upgrade-check",
-        app=app,
-    )
+    # run pre-upgrade-check action on leader
+    action = await run_action(ops_test, leader_id, "pre-upgrade-check", app=app)
+    logger.info(f"pre-upgrade-check: {action}")
     assert action.status == "completed"
+
     async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
         logger.info(f"Refreshing '{app}' to revision {revision}")
         await refresh(
@@ -120,20 +118,17 @@ async def assert_upgrade_to_revision(
             apps=[app],
             apps_statuses=["blocked"],
             units_statuses=["active"],
-            wait_for_exact_units={app: len(units)},
+            wait_for_exact_units={
+                app: len(units),
+            },
             timeout=TIMEOUT,
             idle_period=IDLE_PERIOD,
         )
 
-        # Resume the upgrade
-        action = await run_action(
-            ops_test,
-            leader_id,
-            "resume-upgrade",
-            app=app,
-        )
-        assert action.status == "completed"
+        # run resume-upgrade action on leader
+        action = await run_action(ops_test, leader_id, "resume-upgrade", app=app)
         logger.info(f"resume-upgrade: {action}")
+        assert action.status == "completed"
 
         await wait_until(
             ops_test,
@@ -153,13 +148,11 @@ async def assert_upgrade_to_local(
     units = await get_application_units(ops_test, app)
     leader_id = [u.id for u in units if u.is_leader][0]
 
-    action = await run_action(
-        ops_test,
-        leader_id,
-        "pre-upgrade-check",
-        app=app,
-    )
+    # run pre-upgrade-check action on leader
+    action = await run_action(ops_test, leader_id, "pre-upgrade-check", app=app)
+    logger.info(f"pre-upgrade-check: {action}")
     assert action.status == "completed"
+
     async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
         logger.info(f"Refreshing '{app}' local charm")
         await refresh(ops_test, app, path=charm, config=CONFIG_OPTS | config)
@@ -169,20 +162,17 @@ async def assert_upgrade_to_local(
             apps=[app],
             apps_statuses=["blocked"],
             units_statuses=["active"],
-            wait_for_exact_units={app: len(units)},
+            wait_for_exact_units={
+                app: len(units),
+            },
             timeout=TIMEOUT,
             idle_period=IDLE_PERIOD,
         )
 
-        # Resume the upgrade
-        action = await run_action(
-            ops_test,
-            leader_id,
-            "resume-upgrade",
-            app=app,
-        )
-        assert action.status == "completed"
+        # run resume-upgrade action on leader
+        action = await run_action(ops_test, leader_id, "resume-upgrade", app=app)
         logger.info(f"resume-upgrade: {action}")
+        assert action.status == "completed"
 
         await wait_until(
             ops_test,
@@ -202,7 +192,9 @@ async def assert_rollback_to_revision(
     units = await get_application_units(ops_test, app)
     leader_id = [unit.id for unit in units if unit.is_leader][0]
 
+    # run pre-upgrade-check action on leader
     action = await run_action(ops_test, leader_id, "pre-upgrade-check", app=app)
+    logger.info(f"pre-upgrade-check: {action}")
     assert action.status == "completed"
 
     n_units = len(units)
@@ -222,7 +214,7 @@ async def assert_rollback_to_revision(
             idle_period=IDLE_PERIOD,
         )
 
-        logger.info(f"Rolling back '{app}' to revision: {revision}")
+        # switch to store charm
         await refresh(
             ops_test,
             app,
@@ -245,6 +237,8 @@ async def assert_rollback_to_revision(
             timeout=TIMEOUT,
             idle_period=IDLE_PERIOD,
         )
+
+        logger.info(f"Rolling back '{app}' to revision: {revision}")
         await refresh(
             ops_test,
             app,
