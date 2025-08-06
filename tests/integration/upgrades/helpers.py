@@ -107,7 +107,7 @@ async def assert_upgrade_to_revision(
     )
     assert action.status == "completed"
     async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
-        logger.info(f"Refresh the charm to revision {revision}")
+        logger.info(f"Refreshing '{app}' to revision {revision}")
         await refresh(
             ops_test,
             app,
@@ -161,7 +161,7 @@ async def assert_upgrade_to_local(
     )
     assert action.status == "completed"
     async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
-        logger.info("Refresh to local charm")
+        logger.info(f"Refreshing '{app}' local charm")
         await refresh(ops_test, app, path=charm, config=CONFIG_OPTS | config)
 
         await wait_until(
@@ -207,7 +207,7 @@ async def assert_rollback_to_revision(
 
     n_units = len(units)
     async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
-        logger.info("Refresh to local charm")
+        logger.info(f"Refreshing '{app}' to local charm")
         await refresh(ops_test, app, path=charm, config=CONFIG_OPTS | config)
 
         await wait_until(
@@ -222,7 +222,7 @@ async def assert_rollback_to_revision(
             idle_period=IDLE_PERIOD,
         )
 
-        logger.info(f"Rolling back to revision: {revision}")
+        logger.info(f"Rolling back '{app}' to revision: {revision}")
         await refresh(
             ops_test,
             app,

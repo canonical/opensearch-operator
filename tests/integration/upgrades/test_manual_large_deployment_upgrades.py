@@ -49,17 +49,17 @@ APPS = {
 
 
 async def _build_env(ops_test: OpsTest, version: str, series: str) -> None:
-    """Sets up environment for given revision and series"""
+    """Sets up environment for given version and series"""
     await ops_test.model.set_config(MODEL_CONFIG)
 
     # Deploy TLS Certificates operator.
-    config = {"ca-common-name": "CN_CA"}
+    tls_config = {"ca-common-name": "CN_CA"}
 
     revision = VERSION_TO_REVISION[version][series]
-    charm_config = testing_config_if_supported(revision)
+    config = testing_config_if_supported(revision)
     await asyncio.gather(
         ops_test.model.deploy(
-            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=tls_config
         ),
         ops_test.model.deploy(
             OPENSEARCH_CHARM,
@@ -68,7 +68,7 @@ async def _build_env(ops_test: OpsTest, version: str, series: str) -> None:
             num_units=APPS[MAIN_APP],
             revision=revision,
             series=series,
-            config={"cluster_name": "upgrades"} | charm_config,
+            config={"cluster_name": "upgrades"} | config,
         ),
         ops_test.model.deploy(
             OPENSEARCH_CHARM,
@@ -78,7 +78,7 @@ async def _build_env(ops_test: OpsTest, version: str, series: str) -> None:
             revision=revision,
             series=series,
             config={"cluster_name": "upgrades", "init_hold": True, "roles": "cluster_manager"}
-            | charm_config,
+            | config,
         ),
         ops_test.model.deploy(
             OPENSEARCH_CHARM,
@@ -87,7 +87,7 @@ async def _build_env(ops_test: OpsTest, version: str, series: str) -> None:
             num_units=APPS[APP_NAME],
             revision=revision,
             series=series,
-            config={"cluster_name": "upgrades", "init_hold": True, "roles": "data"} | charm_config,
+            config={"cluster_name": "upgrades", "init_hold": True, "roles": "data"} | config,
         ),
     )
 
@@ -144,7 +144,7 @@ async def _build_env(ops_test: OpsTest, version: str, series: str) -> None:
 @pytest.mark.group(id="happy_path_upgrade")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_large_deployment_deploy_starting_version(ops_test: OpsTest, series) -> None:
+async def test_deploy_starting_version(ops_test: OpsTest, series) -> None:
     """Build and deploy the charm for large deployment tests."""
     # deploy version n-2 for current series
     await _build_env(ops_test, VERSION_N_MINUS_2, series)
@@ -177,7 +177,7 @@ async def test_upgrade_to_local(
 @pytest.mark.parametrize("version", UPGRADE_PARAMS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_deploy_from_version(ops_test: OpsTest, version, series) -> None:
+async def test_deploy_version(ops_test: OpsTest, version, series) -> None:
     """Deploy OpenSearch at given version."""
     await _build_env(ops_test, version, series)
 
@@ -186,11 +186,11 @@ async def test_deploy_from_version(ops_test: OpsTest, version, series) -> None:
 @pytest.mark.abort_on_fail
 async def test_upgrade_rollback_from_local(
     ops_test: OpsTest,
-    version,
-    charm,
-    series,
+    version: str,
+    charm: str,
+    series: str,
 ) -> None:
-    """Test upgrade and rollback to given version."""
+    """Test upgrade to local and rollback to given version."""
     revision = VERSION_TO_REVISION[version][series]
     for app in list(APPS.keys()):
         await assert_rollback_to_revision(ops_test, app, charm, revision)
@@ -201,7 +201,7 @@ async def test_upgrade_rollback_from_local(
 async def test_upgrade_from_version_to_local(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, version, charm
 ) -> None:
-    """Test upgrade from usptream to currently locally built version."""
+    """Test upgrade from usptream to local charm."""
     for app in list(APPS.keys()):
         await assert_upgrade_to_local(ops_test, app=app, charm=charm)
 
