@@ -96,7 +96,7 @@ async def _build_env(ops_test: OpsTest, version: str, series: str) -> None:
     await ops_test.model.wait_for_idle(apps=[TLS_CERTIFICATES_APP_NAME], timeout=TIMEOUT)
 
     # integrate TLS to all applications
-    for app in [MAIN_APP, FAILOVER_APP, APP_NAME]:
+    for app in list(APPS.keys()):
         await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
 
     await wait_until(
@@ -149,6 +149,11 @@ async def test_deploy_starting_version(ops_test: OpsTest, series) -> None:
 async def test_upgrade_between_versions(ops_test: OpsTest, series: str) -> None:
     """Test minor version upgrade."""
     # upgrade to version n-1 revision for current series
+    if series == "jammy":
+        pytest.skip(
+            "Skipping for jammy until 2 versions with https://github.com/canonical/opensearch-operator/pull/683 released"
+        )
+
     revision = VERSION_TO_REVISION[VERSION_N_MINUS_1][series]
     for app in list(APPS.keys()):
         await assert_upgrade_to_revision(ops_test, app, revision)
@@ -160,7 +165,7 @@ async def test_upgrade_to_local(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, charm
 ) -> None:
     """Test upgrade to local charm."""
-    for app in list(APPS.keys()):
+    for app in [APP_NAME, FAILOVER_APP, MAIN_APP]:
         await assert_upgrade_to_local(ops_test, app=app, charm=charm)
 
     # continuous writes checks
@@ -186,7 +191,7 @@ async def test_upgrade_rollback_from_local(
 ) -> None:
     """Test upgrade to local and rollback to given version."""
     revision = VERSION_TO_REVISION[version][series]
-    for app in list(APPS.keys()):
+    for app in [APP_NAME, FAILOVER_APP, MAIN_APP]:
         await assert_rollback_to_revision(ops_test, app, charm, revision)
 
 
@@ -196,7 +201,7 @@ async def test_upgrade_from_version_to_local(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, version, charm
 ) -> None:
     """Test upgrade from usptream to local charm."""
-    for app in list(APPS.keys()):
+    for app in [APP_NAME, FAILOVER_APP, MAIN_APP]:
         await assert_upgrade_to_local(ops_test, app=app, charm=charm)
 
     # continuous writes checks

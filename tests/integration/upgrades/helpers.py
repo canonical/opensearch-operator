@@ -25,7 +25,7 @@ VERSION_N_MINUS_2 = "2.17.0"
 VERSION_N_MINUS_1 = "2.18.0"
 
 VERSION_TO_REVISION = {
-    VERSION_N_MINUS_2: {"jammy": 207, "noble": 206},
+    VERSION_N_MINUS_2: {"jammy": 168, "noble": 206},
     VERSION_N_MINUS_1: {"jammy": 209, "noble": 208},
 }
 

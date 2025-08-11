@@ -20,6 +20,7 @@ from .helpers import (
     UPGRADE_PARAMS,
     VERSION_N_MINUS_1,
     VERSION_N_MINUS_2,
+    VERSION_TO_REVISION,
     assert_rollback_to_revision,
     assert_upgrade_to_local,
     assert_upgrade_to_revision,
@@ -33,11 +34,6 @@ OPENSEARCH_CHANNEL = "2/edge"
 
 charm = None
 
-
-VERSION_TO_REVISION = {
-    VERSION_N_MINUS_2: {"jammy": 168, "noble": 206},
-    VERSION_N_MINUS_1: {"jammy": 209, "noble": 208},
-}
 
 #######################################################################
 #
