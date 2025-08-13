@@ -568,3 +568,16 @@ class OpenSearchDistribution(ABC):
         output = self.run_bin("opensearch-bin", "--version 2>/dev/null")
         logger.debug(f"version call output: {output}")
         return output.split(", ")[0].split(": ")[1]
+
+    def meminfo(self) -> dict[str, float]:
+        """Read the /proc/meminfo file and return the values.
+
+        According to the kernel source code, the values are always in kB:
+            https://github.com/torvalds/linux/blob/
+                2a130b7e1fcdd83633c4aa70998c314d7c38b476/fs/proc/meminfo.c#L31
+        """
+        with open("/proc/meminfo") as f:
+            meminfo = f.read().split("\n")
+            meminfo = [line.split() for line in meminfo if line.strip()]
+
+        return {line[0][:-1]: float(line[1]) for line in meminfo}

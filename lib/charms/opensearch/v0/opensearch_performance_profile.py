@@ -13,19 +13,18 @@ There are two ways the charm can learn about its profile and when it changes:
 
 The charm will then apply the profile and restart the OpenSearch service if needed.
 """
+from abc import ABC, abstractmethod
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional
 
 import ops
-from charms.opensearch.v0.constants_charm import PERFORMANCE_PROFILE
+from charms.opensearch.v0.state import OpenSearchClusterState
 from charms.opensearch.v0.models import (
-    DeploymentType,
-    OpenSearchPerfProfile,
+    Model,
     PerformanceType,
 )
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
-from charms.opensearch.v0.opensearch_internal_data import Scope
-from ops.framework import EventBase, EventSource
+from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "8b7aa39016e748ea908787df1d7fb089"
@@ -35,7 +34,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 
 logger = logging.getLogger(__name__)
@@ -43,140 +42,206 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
-
-class _ApplyProfileTemplatesOpenSearch(EventBase):
-    """Attempt to apply the profile templates.
-
-    The main reason to have a separate event, is to be able to wait for the cluster to restart.
-    In this case, deferring this event does not defer any major other event.
-    """
+_1GB_IN_KB = 1024 * 1024  # 1GB in KB
+MIN_HEAP_SIZE = _1GB_IN_KB  # 1GB in KB
+MAX_HEAP_SIZE = 32 * _1GB_IN_KB  # 32GB in KB
 
 
-class OpenSearchPerformance(ops.Object):
-    """Base class for OpenSearch charms."""
+class ProfileMemoryRequirements(Model):
+    """Memory requirements for a profile"""
 
-    _apply_profile_templates_event = EventSource(_ApplyProfileTemplatesOpenSearch)
+    memory_size: Optional[int] = None
+    jvm_heap_percentage: float = 0.5
 
-    def __init__(self, charm: "OpenSearchBaseCharm"):
-        super().__init__(charm, None)
-        self.charm = charm
-        self.peers_data = self.charm.peers_data
-        self.framework.observe(
-            self._apply_profile_templates_event, self._on_apply_profile_templates
-        )
-        self._apply_profile_templates_has_been_called = False
+
+class ClusterTopologyRequirements(Model):
+    """Cluster Topology requirements for a profile"""
+
+    cluster_managers: int = 1
+    data: int = 1
+
+
+class OpenSearchProfile(ABC):
+    """Abstract class for an OpenSearch profile"""
 
     @property
-    def current(self) -> OpenSearchPerfProfile | None:
-        """Return the current performance profile.
+    @abstractmethod
+    def memory_requirements(self) -> ProfileMemoryRequirements:
+        """Get the memory requirements for this profile"""
+        pass
 
-        The profile is saved as a string in the charm peer databag.
-        """
-        if not self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE):
-            return None
-        return OpenSearchPerfProfile.from_dict(
-            {"typ": self.peers_data.get(Scope.UNIT, PERFORMANCE_PROFILE)}
+    @property
+    @abstractmethod
+    def cluster_topology_requirements(self) -> ClusterTopologyRequirements:
+        """Get the cluster topology requirements for this profile."""
+        pass
+
+
+class ProductionProfile(OpenSearchProfile):
+
+    @property
+    def memory_requirements(self) -> ProfileMemoryRequirements:
+        """Get the memory requirements for this profile."""
+        return ProfileMemoryRequirements(
+            memory_size=4 * _1GB_IN_KB,  # 4GB in KB
+            jvm_heap_percentage=0.5,
         )
 
-    @current.setter
-    def current(self, value: OpenSearchPerfProfile | str):
-        """Set the current performance profile."""
-        if isinstance(value, OpenSearchPerfProfile):
-            value = value.typ
-        elif isinstance(value, str):
-            # Ensure the value is valid
-            value = PerformanceType(value)
-
-        self.peers_data.put(Scope.UNIT, PERFORMANCE_PROFILE, str(value))
-
-    def apply(self, profile_name: str) -> bool:
-        """Apply the performance profile.
-
-        If returns True, then the caller must execute a restart.
-        """
-        logger.info(f"Current profile: {str(self.current)}, new proposed profile: {profile_name}")
-        new_profile = OpenSearchPerfProfile.from_dict(
-            {
-                "typ": profile_name,
-            }
+    @property
+    def cluster_topology_requirements(self) -> ClusterTopologyRequirements:
+        """Get the cluster topology requirements for this profile."""
+        return ClusterTopologyRequirements(
+            cluster_managers=3,
+            data=3,
         )
-        if self.current == new_profile:
-            # Nothing to do, nothing changes
-            return False
 
-        self.charm.opensearch_config.apply_performance_profile(new_profile)
-        self.current = new_profile
 
-        if self.charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR:
-            self._apply_profile_templates_event.emit()
-        return True
+class TestingProfile(OpenSearchProfile):
 
-    def _on_apply_profile_templates(self, event: EventBase):
-        """Apply the profile templates.
+    @property
+    def memory_requirements(self) -> ProfileMemoryRequirements:
+        """Get the memory requirements for this profile."""
+        return ProfileMemoryRequirements(
+            memory_size=None,
+            jvm_heap_percentage=0.5,
+        )
 
-        The main reason to have a separate event, is to be able to wait for the cluster. It
-        defers otherwise and only defers the execution of this particular task.
+    @property
+    def cluster_topology_requirements(self) -> ClusterTopologyRequirements:
+        """Get the cluster topology requirements for this profile."""
+        return ClusterTopologyRequirements(
+            cluster_managers=1,
+            data=1,
+        )
+
+
+class ProfilesEvents(ops.Object):
+    """Handle all profile related events"""
+
+    def __init__(self, charm: "OpenSearchBaseCharm"):
+        super().__init__(charm, key="profiles_events")
+        self.charm = charm
+
+        # events
+        for event in [self.charm.on.config_changed, self.charm.on.update_status]:
+            self.framework.observe(event, self._on_profile_change)
+
+    # handlers
+    def _on_profile_change(self, event: ops.EventBase):
         """
-        logger.info("Applying profile-templates")
-        if not self.charm.unit.is_leader():
-            # Only the leader can apply the templates
-            return
-
-        if self._apply_profile_templates_has_been_called:
-            # we can safely abandon this event as we already had a previous call on the same hook
-            return
-        self._apply_profile_templates_has_been_called = True
-
+        Handle profile changes
+        """
+        new_profile_type: str = PerformanceType(self.charm.config.get("profile"))
+        # if the profile has been applied before and did not change we do not do anything
         if (
-            not self.charm.opensearch_peer_cm.deployment_desc()
-            or not self.charm.opensearch.is_node_up()
+            self.charm.state.unit.profile is not None
+            and self.charm.state.unit.profile == new_profile_type
         ):
-            logger.info("Applying profile templates but cluster not ready yet.")
-            event.defer()
             return
 
-        # Configure templates if needed
-        if not self.apply_perf_templates_if_needed():
-            logger.debug("Failed to apply templates. Will retry later.")
-            event.defer()
+        profile = (
+            TestingProfile()
+            if new_profile_type == PerformanceType.TESTING
+            else ProductionProfile()
+        )
+        missing_requirements = self.charm.profiles_manager.check_all_requirements(profile)
 
-    def apply_perf_templates_if_needed(  # noqa: C901
-        self, new_profile: PerformanceType | None = None
-    ) -> bool:
-        """Apply performance templates if needed."""
-        profile = new_profile or self.current.typ
-        if not profile:
+        if missing_requirements:
+            logger.error(f"Missing profile requirements: {missing_requirements}")
+            self.charm.status.set(ops.BlockedStatus(" - ".join(missing_requirements)))
+            return
+
+        self.charm.state.unit.profile = new_profile_type
+
+
+class ProfilesManager:
+    """Manage all profile related operations"""
+
+    def __init__(self, state: OpenSearchClusterState, workload: OpenSearchDistribution):
+        self.state = state
+        self.workload = workload
+        self.profile = (
+            TestingProfile()
+            if self.state.unit.profile == PerformanceType.TESTING
+            else ProductionProfile()
+        )
+
+    def _apply_system_requirement(self, system_requirement: str, value: int) -> bool:
+        """Apply a system requirement."""
+        try:
+            self.workload._run_cmd(f"sysctl -w {system_requirement}={value}")
+            return int(self.workload._run_cmd(f"sysctl -n {system_requirement}")) == value
+        except OpenSearchCmdError:
             return False
 
-        if profile == PerformanceType.TESTING:
-            # We try to remove the index and components' templates
-            for endpoint in [
-                "/_index_template/charmed-index-tpl",
-            ]:
-                try:
-                    self.charm.opensearch.request("DELETE", endpoint)
-                except OpenSearchHttpError as e:
-                    if e.response_code != 404:
-                        logger.warning(f"Failed to delete index template: {e}")
-                        return False
-            # Nothing to do anymore
-            return True
+    def _get_kernel_property_value(self, prop: str) -> int:
+        """Get the value of a kernel parameter."""
+        return int(self.workload._run_cmd(f"sysctl -n {prop}"))
 
-        for idx, template in self.current.charmed_index_template.items():
-            try:
-                # We can re-run PUT on the same index template
-                # It just gets updated and returns "ack: True"
-                self.charm.opensearch.request("PUT", f"/_index_template/{idx}", template)
-            except OpenSearchHttpError as e:
-                logger.error(f"Failed to apply index template: {e}")
-                return False
+    def check_missing_system_requirements(self) -> List[str]:
+        """Checks the system requirements."""
 
-        for idx, template in self.current.charmed_component_templates.items():
-            try:
-                # We can re-run PUT on the same template
-                # It just gets updated and returns "ack: True"
-                self.charm.opensearch.request("PUT", f"/_component_template/{idx}", template)
-            except OpenSearchHttpError as e:
-                logger.error(f"Failed to apply component template: {e}")
-                return False
-        return True
+        missing_requirements = []
+
+        prop, val = "vm.max_map_count", 262144
+        if self._get_kernel_property_value(prop) < val and not self._apply_system_requirement(
+            prop, val
+        ):
+            missing_requirements.append(f"{prop} should be at least {val}")
+
+        prop, val = "vm.swappiness", 1
+        if self._get_kernel_property_value(prop) > val and not self._apply_system_requirement(
+            prop, 0
+        ):
+            missing_requirements.append(f"{prop} should be at most 1")
+
+        prop, val = "net.ipv4.tcp_retries2", 5
+        if self._get_kernel_property_value(prop) > val and not self._apply_system_requirement(
+            prop, val
+        ):
+            missing_requirements.append(f"{prop} should be at most {val}")
+
+        return missing_requirements
+
+    def check_memory_requirements(self, profile: OpenSearchProfile) -> List[str]:
+        memory_size = self.workload.meminfo()["MemTotal"]
+
+        if profile.memory_requirements.memory_size:
+            if memory_size < profile.memory_requirements.memory_size:
+                logger.error(
+                    f"Insufficient memory: {memory_size} < {profile.memory_requirements.memory_size}"
+                )
+                return [
+                    f"Insufficient memory: {memory_size} < {profile.memory_requirements.memory_size}"
+                ]
+
+        return []
+
+    def check_cluster_topology(self, profile: OpenSearchProfile) -> List[str]:
+        """Check the cluster topology requirements."""
+        cluster_fleet_apps = self.state.app.cluster_fleet_apps
+        missing_requirements = []
+
+        nbr_cm_nodes = sum(1 for app in cluster_fleet_apps if "cluster_manager" in app.roles)
+        nbr_data_nodes = sum(1 for app in cluster_fleet_apps if "data" in app.roles)
+
+        if nbr_cm_nodes < profile.cluster_topology_requirements.cluster_managers:
+            missing_requirements.append(
+                f"At least {profile.cluster_topology_requirements.cluster_managers} cluster manager nodes are required. Found only {nbr_cm_nodes}."
+            )
+
+        if nbr_data_nodes < profile.cluster_topology_requirements.data:
+            missing_requirements.append(
+                f"At least {profile.cluster_topology_requirements.data} data nodes are required. Found only {nbr_data_nodes}."
+            )
+
+        return missing_requirements
+
+    def check_all_requirements(self, profile: OpenSearchProfile) -> List[str]:
+        missing_requirements: List[str] = []
+
+        missing_requirements.extend(self.check_missing_system_requirements())
+        missing_requirements.extend(self.check_memory_requirements(profile))
+        missing_requirements.extend(self.check_cluster_topology(profile))
+
+        return missing_requirements
