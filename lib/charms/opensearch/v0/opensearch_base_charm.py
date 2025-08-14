@@ -1113,7 +1113,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         ) as e:
             self.node_lock.release()
             self.status.set(BlockedStatus(ServiceStartError))
-            
+
             # In large deployments with cluster-manager-only-nodes, the startup might fail
             # for the cluster-manager if a joining data node did not yet initialize the
             # security index. We still want to update and broadcast the latest relation data.
