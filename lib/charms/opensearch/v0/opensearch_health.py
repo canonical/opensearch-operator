@@ -93,7 +93,7 @@ class OpenSearchHealth:
         # compute health only in clusters where data nodes exist
         compute_health = (
             deployment_desc.start == StartMode.WITH_GENERATED_ROLES
-            or ClusterTopology.data_role_in_cluster_fleet_apps(self._charm)
+            or ClusterTopology.is_data_role_in_cluster_fleet_apps(self._charm)
             or not local_app_only
         )
         if not compute_health:

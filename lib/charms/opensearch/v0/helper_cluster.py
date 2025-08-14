@@ -145,7 +145,7 @@ class ClusterTopology:
         return result
 
     @staticmethod
-    def data_role_in_cluster_fleet_apps(charm: "OpenSearchBaseCharm") -> bool:
+    def is_data_role_in_cluster_fleet_apps(charm: "OpenSearchBaseCharm") -> bool:
         """Look for data-role through all the roles of all the nodes in all applications"""
         data_apps_in_fleet = [
             app for app in charm.opensearch_peer_cm.apps_in_fleet() if "data" in app.roles

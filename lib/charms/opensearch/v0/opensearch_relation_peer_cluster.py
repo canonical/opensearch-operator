@@ -679,7 +679,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         ):
             if not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
                 blocked_msg = f"Security index not initialized {message_suffix}."
-        elif ClusterTopology.data_role_in_cluster_fleet_apps(
+        elif ClusterTopology.is_data_role_in_cluster_fleet_apps(
             self.charm
         ) and self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
             # Requirer units should start after all provider units have started,

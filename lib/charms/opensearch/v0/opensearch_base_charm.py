@@ -608,7 +608,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     self.peers_data.delete(Scope.APP, "nodes_config")
                     # we delete the security index initialised and bootstrapped flags
                     # if there are no data units left in all cluster
-                    if not ClusterTopology.data_role_in_cluster_fleet_apps(self):
+                    if not ClusterTopology.is_data_role_in_cluster_fleet_apps(self):
                         self.peers_data.delete(Scope.APP, "security_index_initialised")
                         self.peers_data.delete(Scope.APP, "bootstrapped")
                 if self.opensearch_peer_cm.is_provider():
@@ -1041,7 +1041,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 # check if cluster should have started but is blocked
                 logger.debug("OpenSearch already started, but post-start init failed.")
                 if (
-                    ClusterTopology.data_role_in_cluster_fleet_apps(self)
+                    ClusterTopology.is_data_role_in_cluster_fleet_apps(self)
                     and self.peers_data.get(Scope.APP, "bootstrapped", False)
                     and self.opensearch_peer_cm.is_provider(typ="main")
                 ):
@@ -1112,21 +1112,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             OpenSearchNotFullyReadyError,
         ) as e:
             self.node_lock.release()
-            if (
-                ClusterTopology.data_role_in_cluster_fleet_apps(self)
-                and self.peers_data.get(Scope.APP, "bootstrapped", False)
-                # In large deployments with cluster-manager-only-nodes, the startup might fail
-                # for the cluster-manager if a joining data node did not yet initialize the
-                # security index. We still want to update and broadcast the latest relation data.
-                and self.opensearch_peer_cm.is_provider(typ="main")
-            ):
-                # In large deployments with cluster-manager-only-nodes,
-                # the startup might fail if the cluster was bootstrapped already
-                # and the cluster-manager node lost its data
-                logger.warning(
-                    "Node is not ready to start, but data node exists and the cluster was previously bootstrapped."
-                )
-                self.status.set(BlockedStatus(ServiceStartError))
+            self.status.set(BlockedStatus(ServiceStartError))
+            
+            # In large deployments with cluster-manager-only-nodes, the startup might fail
+            # for the cluster-manager if a joining data node did not yet initialize the
+            # security index. We still want to update and broadcast the latest relation data.
             if self.opensearch_peer_cm.is_provider(typ="main"):
                 self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
             event.defer()
