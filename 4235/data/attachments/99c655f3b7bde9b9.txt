@@ -1,0 +1,237 @@
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:795 Connecting to existing model concierge-lxd:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/self-signed-certificates-264
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/opensearch-2
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/opensearch-3
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/opensearch-1
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/opensearch-0
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:393 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:394 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.8    unsupported  06:53:45Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch-data                    waiting    0/2  opensearch                                 2  no       waiting for machine
+opensearch-failover                waiting    0/3  opensearch                                 3  no       waiting for machine
+opensearch-invalid                 waiting    0/1  opensearch                                 1  no       waiting for machine
+opensearch-main                    waiting    0/3  opensearch                                 0  no       waiting for machine
+self-signed-certificates           waiting    0/1  self-signed-certificates  latest/stable  264  no       waiting for machine
+
+Unit                        Workload  Agent       Machine  Public address  Ports  Message
+opensearch-data/0           waiting   allocating  1                               waiting for machine
+opensearch-data/1           waiting   allocating  2                               waiting for machine
+opensearch-failover/0       waiting   allocating  4                               waiting for machine
+opensearch-failover/1       waiting   allocating                                  waiting for machine
+opensearch-failover/2       waiting   allocating                                  waiting for machine
+opensearch-invalid/0        waiting   allocating  3                               waiting for machine
+opensearch-main/0           waiting   allocating                                  waiting for machine
+opensearch-main/1           waiting   allocating                                  waiting for machine
+opensearch-main/2           waiting   allocating                                  waiting for machine
+self-signed-certificates/0  waiting   allocating  0                               waiting for machine
+
+Machine  State    Address  Inst id  Base          AZ  Message
+0        pending           pending  ubuntu@22.04      Creating container
+1        pending           pending  ubuntu@24.04      
+2        pending           pending  ubuntu@24.04      
+3        pending           pending  ubuntu@24.04      
+4        pending           pending  ubuntu@24.04      
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+06:53:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:315 self-signed-certificates -- expected units: 1 -- current: 0
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+06:53:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: self-signed-certificates - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: self waiting -- message: waiting for machine
+		self-signed-certificates-0.979  -- (10.88.70.117) -- [allocating (since: 06:53:36)] waiting: waiting for machine
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+06:56:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: self-signed-certificates - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: self active -- message: None
+		self-signed-certificates-0.979* -- (10.88.70.117) -- [idle (since: 06:55:16)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+06:56:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: self-signed-certificates - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: self active -- message: None
+		self-signed-certificates-0.979* -- (10.88.70.117) -- [idle (since: 06:55:16)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+06:56:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:412 06:56:32 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:393 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:394 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.8    unsupported  06:56:32Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch-data                    blocked      2  opensearch                                 2  no       Cannot start. Waiting for peer cluster relation...
+opensearch-failover                blocked      3  opensearch                                 3  no       Cannot start. Waiting for peer cluster relation...
+opensearch-invalid                 active       1  opensearch                                 1  no       
+opensearch-main                    blocked      3  opensearch                                 0  no       Missing TLS relation with this cluster.
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports  Message
+opensearch-data/0*           active       executing  1        10.88.70.154           
+opensearch-data/1            active       executing  2        10.88.70.5             (leader-settings-changed) 
+opensearch-failover/0*       active       idle       4        10.88.70.143           
+opensearch-failover/1        maintenance  executing  5        10.88.70.161           (install) Installing OpenSearch...
+opensearch-failover/2        active       idle       6        10.88.70.150           
+opensearch-invalid/0*        active       executing  3        10.88.70.69            (config-changed) 
+opensearch-main/0            blocked      idle       7        10.88.70.237           Missing TLS relation with this cluster.
+opensearch-main/1            maintenance  executing  8        10.88.70.67            (install) Installing OpenSearch...
+opensearch-main/2*           blocked      idle       9        10.88.70.238           Missing TLS relation with this cluster.
+self-signed-certificates/0*  active       idle       0        10.88.70.117           
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.88.70.117  juju-0dad65-0  ubuntu@22.04      Running
+1        started  10.88.70.154  juju-0dad65-1  ubuntu@24.04      Running
+2        started  10.88.70.5    juju-0dad65-2  ubuntu@24.04      Running
+3        started  10.88.70.69   juju-0dad65-3  ubuntu@24.04      Running
+4        started  10.88.70.143  juju-0dad65-4  ubuntu@24.04      Running
+5        started  10.88.70.161  juju-0dad65-5  ubuntu@24.04      Running
+6        started  10.88.70.150  juju-0dad65-6  ubuntu@24.04      Running
+7        started  10.88.70.237  juju-0dad65-7  ubuntu@24.04      Running
+8        started  10.88.70.67   juju-0dad65-8  ubuntu@24.04      Running
+9        started  10.88.70.238  juju-0dad65-9  ubuntu@24.04      Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+06:56:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.ea2  -- (10.88.70.237) -- [idle (since: 06:56:16)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-1.ea2  -- (10.88.70.67) -- [executing (since: 06:55:05)] maintenance: Installing OpenSearch...
+		opensearch-main-2.ea2* -- (10.88.70.238) -- [idle (since: 06:56:11)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+06:56:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.ea2  -- (10.88.70.237) -- [idle (since: 06:56:16)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-1.ea2  -- (10.88.70.67) -- [executing (since: 06:55:05)] maintenance: Installing OpenSearch...
+		opensearch-main-2.ea2* -- (10.88.70.238) -- [idle (since: 06:56:11)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+06:56:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.ea2  -- (10.88.70.237) -- [executing (since: 06:56:56)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-1.ea2  -- (10.88.70.67) -- [executing (since: 06:56:56)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.ea2* -- (10.88.70.238) -- [executing (since: 06:56:57)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+06:57:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.ea2  -- (10.88.70.237) -- [idle (since: 06:56:58)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-1.ea2  -- (10.88.70.67) -- [idle (since: 06:57:07)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.ea2* -- (10.88.70.238) -- [idle (since: 06:56:58)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+06:57:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.ea2  -- (10.88.70.237) -- [idle (since: 06:56:58)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-1.ea2  -- (10.88.70.67) -- [idle (since: 06:57:07)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.ea2* -- (10.88.70.238) -- [idle (since: 06:56:58)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+06:57:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.ea2  -- (10.88.70.237) -- [idle (since: 06:56:58)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-1.ea2  -- (10.88.70.67) -- [idle (since: 06:57:07)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.ea2* -- (10.88.70.238) -- [idle (since: 06:56:58)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+06:57:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.ea2  -- (10.88.70.237) -- [idle (since: 06:56:58)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-1.ea2  -- (10.88.70.67) -- [idle (since: 06:57:07)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.ea2* -- (10.88.70.238) -- [idle (since: 06:56:58)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+06:57:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.ea2  -- (10.88.70.237) -- [idle (since: 06:56:58)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-1.ea2  -- (10.88.70.67) -- [idle (since: 06:57:07)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.ea2* -- (10.88.70.238) -- [idle (since: 06:56:58)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+06:58:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.ea2  -- (10.88.70.237) -- [idle (since: 06:56:58)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-1.ea2  -- (10.88.70.67) -- [idle (since: 06:57:07)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.ea2* -- (10.88.70.238) -- [idle (since: 06:56:58)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+06:58:19 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:341 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:342 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-main-0.ea2  -- (10.88.70.237) -- [idle (since: 06:56:58)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-1.ea2  -- (10.88.70.67) -- [idle (since: 06:57:07)] blocked: Missing TLS relation with this cluster.
+		opensearch-main-2.ea2* -- (10.88.70.238) -- [idle (since: 06:56:58)] blocked: Missing TLS relation with this cluster.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+06:58:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:412 06:58:38 -- Waiting for model: complete.
