@@ -9,7 +9,6 @@ import pytest
 from charms.opensearch.v0.models import (
     MAX_HEAP_SIZE,
     MIN_HEAP_SIZE,
-    OpenSearchPerfProfile,
     PerformanceType,
 )
 from ops.testing import Harness

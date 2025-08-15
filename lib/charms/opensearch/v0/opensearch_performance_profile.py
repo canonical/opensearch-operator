@@ -15,14 +15,15 @@ The charm will then apply the profile and restart the OpenSearch service if need
 """
 from abc import ABC, abstractmethod
 import logging
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
-from charms.opensearch.v0.state import OpenSearchClusterState
+if TYPE_CHECKING:
+    from charms.opensearch.v0.state import OpenSearchClusterState
+    from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.models import (
     Model,
     PerformanceType,
 )
-from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 
 # The unique Charmhub library identifier, never change it
@@ -121,7 +122,7 @@ class TestingProfile(OpenSearchProfile):
 class ProfilesManager:
     """Manage all profile related operations"""
 
-    def __init__(self, state: OpenSearchClusterState, workload: OpenSearchDistribution):
+    def __init__(self, state: "OpenSearchClusterState", workload: "OpenSearchDistribution"):
         self.state = state
         self.workload = workload
         self.profile = self.state.app.profile or TestingProfile()

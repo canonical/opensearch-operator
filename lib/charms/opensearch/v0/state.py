@@ -6,13 +6,15 @@
 
 import json
 import logging
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from ops import Application, Object, Relation, Unit
 
 from charms.data_platform_libs.v0.data_interfaces import Data, DataPeerData, DataPeerUnitData
 from charms.opensearch.v0.constants_charm import PERFORMANCE_PROFILE, PeerRelationName
 from charms.opensearch.v0.models import PeerClusterApp, PerformanceType
-from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
+
+if TYPE_CHECKING:
+    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 from charms.opensearch.v0.opensearch_performance_profile import (
     OpenSearchProfile,
     ProductionProfile,
