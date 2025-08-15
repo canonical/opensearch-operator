@@ -6,15 +6,20 @@
 
 import json
 import logging
-from typing import List, Optional, TYPE_CHECKING
-from ops import Application, Object, Relation, Unit
+from typing import TYPE_CHECKING, List, Optional
 
-from charms.data_platform_libs.v0.data_interfaces import Data, DataPeerData, DataPeerUnitData
+from charms.data_platform_libs.v0.data_interfaces import (
+    Data,
+    DataPeerData,
+    DataPeerUnitData,
+)
 from charms.opensearch.v0.constants_charm import PERFORMANCE_PROFILE, PeerRelationName
 from charms.opensearch.v0.models import PeerClusterApp, PerformanceType
+from ops import Application, Object, Relation, Unit
 
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
+
 from charms.opensearch.v0.opensearch_profile import (
     OpenSearchProfile,
     ProductionProfile,
@@ -82,6 +87,7 @@ class OpenSearchApp(RelationState):
 
     @property
     def profile(self) -> Optional[OpenSearchProfile]:
+        """Current profile of the unit"""
         if profile_str := self.relation_data.get(PERFORMANCE_PROFILE, None):
             return (
                 TestingProfile()

@@ -13,13 +13,14 @@ There are two ways the charm can learn about its profile and when it changes:
 
 The charm will then apply the profile and restart the OpenSearch service if needed.
 """
-from abc import ABC, abstractmethod
 import logging
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
     from charms.opensearch.v0.state import OpenSearchClusterState
     from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+
 from charms.opensearch.v0.models import (
     Model,
     PerformanceType,
@@ -78,6 +79,10 @@ class OpenSearchProfile(ABC):
 
 
 class ProductionProfile(OpenSearchProfile):
+    """Production profile for opensearch.
+
+    Ensures cluster meets production minimal requirements
+    """
 
     type = PerformanceType.PRODUCTION
 
@@ -99,6 +104,10 @@ class ProductionProfile(OpenSearchProfile):
 
 
 class TestingProfile(OpenSearchProfile):
+    """Testing profile for opensearch.
+
+    Ensures basic system requirements and 1 CM+ 1 Data roles.
+    """
 
     type = PerformanceType.TESTING
 
@@ -141,7 +150,6 @@ class ProfilesManager:
 
     def check_missing_system_requirements(self) -> List[str]:
         """Checks the system requirements."""
-
         missing_requirements = []
 
         prop, val = "vm.max_map_count", 262144
@@ -165,6 +173,7 @@ class ProfilesManager:
         return missing_requirements
 
     def check_memory_requirements(self, profile: OpenSearchProfile) -> List[str]:
+        """Checks memory requirements for the unit."""
         memory_size = self.workload.meminfo()["MemTotal"]
 
         if profile.memory_requirements.memory_size:

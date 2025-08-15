@@ -4,7 +4,6 @@
 from unittest.mock import patch
 
 import pytest
-
 from charms.opensearch.v0.opensearch_profile import (
     _1GB_IN_KB,
     ClusterTopologyRequirements,
