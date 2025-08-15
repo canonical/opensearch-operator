@@ -15,9 +15,8 @@ The charm will then apply the profile and restart the OpenSearch service if need
 """
 from abc import ABC, abstractmethod
 import logging
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
-import ops
 from charms.opensearch.v0.state import OpenSearchClusterState
 from charms.opensearch.v0.models import (
     Model,
@@ -39,8 +38,6 @@ LIBPATCH = 2
 
 logger = logging.getLogger(__name__)
 
-if TYPE_CHECKING:
-    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 _1GB_IN_KB = 1024 * 1024  # 1GB in KB
 MIN_HEAP_SIZE = _1GB_IN_KB  # 1GB in KB
@@ -64,6 +61,8 @@ class ClusterTopologyRequirements(Model):
 class OpenSearchProfile(ABC):
     """Abstract class for an OpenSearch profile"""
 
+    type: PerformanceType
+
     @property
     @abstractmethod
     def memory_requirements(self) -> ProfileMemoryRequirements:
@@ -78,6 +77,8 @@ class OpenSearchProfile(ABC):
 
 
 class ProductionProfile(OpenSearchProfile):
+
+    type = PerformanceType.PRODUCTION
 
     @property
     def memory_requirements(self) -> ProfileMemoryRequirements:
@@ -98,6 +99,8 @@ class ProductionProfile(OpenSearchProfile):
 
 class TestingProfile(OpenSearchProfile):
 
+    type = PerformanceType.TESTING
+
     @property
     def memory_requirements(self) -> ProfileMemoryRequirements:
         """Get the memory requirements for this profile."""
@@ -115,56 +118,13 @@ class TestingProfile(OpenSearchProfile):
         )
 
 
-class ProfilesEvents(ops.Object):
-    """Handle all profile related events"""
-
-    def __init__(self, charm: "OpenSearchBaseCharm"):
-        super().__init__(charm, key="profiles_events")
-        self.charm = charm
-
-        # events
-        for event in [self.charm.on.config_changed, self.charm.on.update_status]:
-            self.framework.observe(event, self._on_profile_change)
-
-    # handlers
-    def _on_profile_change(self, event: ops.EventBase):
-        """
-        Handle profile changes
-        """
-        new_profile_type: str = PerformanceType(self.charm.config.get("profile"))
-        # if the profile has been applied before and did not change we do not do anything
-        if (
-            self.charm.state.unit.profile is not None
-            and self.charm.state.unit.profile == new_profile_type
-        ):
-            return
-
-        profile = (
-            TestingProfile()
-            if new_profile_type == PerformanceType.TESTING
-            else ProductionProfile()
-        )
-        missing_requirements = self.charm.profiles_manager.check_all_requirements(profile)
-
-        if missing_requirements:
-            logger.error(f"Missing profile requirements: {missing_requirements}")
-            self.charm.status.set(ops.BlockedStatus(" - ".join(missing_requirements)))
-            return
-
-        self.charm.state.unit.profile = new_profile_type
-
-
 class ProfilesManager:
     """Manage all profile related operations"""
 
     def __init__(self, state: OpenSearchClusterState, workload: OpenSearchDistribution):
         self.state = state
         self.workload = workload
-        self.profile = (
-            TestingProfile()
-            if self.state.unit.profile == PerformanceType.TESTING
-            else ProductionProfile()
-        )
+        self.profile = self.state.app.profile or TestingProfile()
 
     def _apply_system_requirement(self, system_requirement: str, value: int) -> bool:
         """Apply a system requirement."""
@@ -237,7 +197,16 @@ class ProfilesManager:
 
         return missing_requirements
 
-    def check_all_requirements(self, profile: OpenSearchProfile) -> List[str]:
+    def check_all_requirements(self, profile: Optional[OpenSearchProfile] = None) -> List[str]:
+        """Check all requirements of profile
+
+        Requirements include:
+        - System requirements
+        - Memory requirements
+        - Cluster topology requirements
+        """
+        if profile is None:
+            profile = self.profile
         missing_requirements: List[str] = []
 
         missing_requirements.extend(self.check_missing_system_requirements())
@@ -245,3 +214,11 @@ class ProfilesManager:
         missing_requirements.extend(self.check_cluster_topology(profile))
 
         return missing_requirements
+
+    def get_config_profile(self) -> OpenSearchProfile:
+        """Get the current config profile."""
+        return (
+            TestingProfile()
+            if PerformanceType(self.state.config.get("profile")) == PerformanceType.TESTING
+            else ProductionProfile()
+        )

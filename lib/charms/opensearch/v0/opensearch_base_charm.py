@@ -80,7 +80,6 @@ from charms.opensearch.v0.opensearch_peer_clusters import (
     StartMode,
 )
 from charms.opensearch.v0.opensearch_performance_profile import (
-    ProfilesEvents,
     ProfilesManager,
 )
 from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager
@@ -247,8 +246,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.framework.observe(self.on.set_password_action, self._on_set_password_action)
         self.framework.observe(self.on.get_password_action, self._on_get_password_action)
 
-        # Event handlers
-        self.profiles_events = ProfilesEvents(self)
         self.cos_integration = COSAgentProvider(
             self,
             relation_name=COSRelationName,
@@ -663,17 +660,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         """On update status event.
 
         We want to periodically check for the following:
-        1- Do we have users that need to be deleted, and if so we need to delete them.
-        2- The system requirements are still met
+        1- The profile requirements are still met
+        2- Do we have users that need to be deleted, and if so we need to delete them.
         3- every 6 hours check if certs are expiring soon (in 7 days),
             as a safeguard in case relation broken. As there will be data loss
             without the user noticing in case the cert of the unit transport layer expires.
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
-        # if there are missing system requirements defer
-        if len(missing_sys_reqs := self.opensearch.missing_sys_requirements()) > 0:
-            self.status.set(BlockedStatus(" - ".join(missing_sys_reqs)))
-            return
+        if missing_requirements := self.profiles_manager.check_all_requirements():
+            logger.error(f"Missing profile requirements: {missing_requirements}")
+            self.status.set(BlockedStatus(" - ".join(missing_requirements)))
 
         # if node already shutdown - leave
         if not self.opensearch.is_node_up():
@@ -769,7 +765,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
-        perf_profile_needs_restart = False
         plugin_needs_restart = False
 
         try:
@@ -801,15 +796,30 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if original_status:
                 self.status.set(original_status)
 
-        # perf_profile_needs_restart = self.performance_profile.apply(
-        #     self.config.get(PERFORMANCE_PROFILE)
-        # )
+        profile_restart_needed = False
+        config_profile = self.profiles_manager.get_config_profile()
+        current_profile = self.state.app.profile
+        missing_requirements = self.profiles_manager.check_all_requirements(config_profile)
+
+        if missing_requirements:
+            logger.error(f"Missing profile requirements: {missing_requirements}")
+            self.status.set(BlockedStatus(" - ".join(missing_requirements)))
+            return
+
+        # if the profile hasn't been applied before
+        if current_profile is None or current_profile != config_profile:
+            self.opensearch_config.set_jvm_heap_size(
+                config_profile.memory_requirements.jvm_heap_percentage
+                * self.opensearch.meminfo()["MemTotal"]
+            )
+            profile_restart_needed = True
+            self.state.app.profile = config_profile
 
         if not self.opensearch_provider.update_relations_roles_mapping():
             event.defer()
 
         if self.opensearch.is_service_started() and (
-            plugin_needs_restart or perf_profile_needs_restart
+            plugin_needs_restart or profile_restart_needed
         ):
             self._restart_opensearch_event.emit()
 
@@ -1382,7 +1392,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _can_service_start(self) -> bool:
         """Return if the opensearch service can start."""
         # if there are any missing system requirements leave
-        if missing_sys_reqs := self.opensearch.missing_sys_requirements():
+        if missing_sys_reqs := self.profiles_manager.check_all_requirements():
             self.status.set(BlockedStatus(" - ".join(missing_sys_reqs)))
             return False
 

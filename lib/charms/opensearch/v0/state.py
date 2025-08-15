@@ -13,6 +13,11 @@ from charms.data_platform_libs.v0.data_interfaces import Data, DataPeerData, Dat
 from charms.opensearch.v0.constants_charm import PERFORMANCE_PROFILE, PeerRelationName
 from charms.opensearch.v0.models import PeerClusterApp, PerformanceType
 from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
+from charms.opensearch.v0.opensearch_performance_profile import (
+    OpenSearchProfile,
+    ProductionProfile,
+    TestingProfile,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +78,21 @@ class OpenSearchApp(RelationState):
         cluster_fleet_apps = json.loads(self.relation_data.get("cluster_fleet_apps", "{}"))
         return [PeerClusterApp.from_dict(app) for app in cluster_fleet_apps.values()]
 
+    @property
+    def profile(self) -> Optional[OpenSearchProfile]:
+        if profile_str := self.relation_data.get(PERFORMANCE_PROFILE, None):
+            return (
+                TestingProfile()
+                if PerformanceType(profile_str) == PerformanceType.TESTING
+                else ProductionProfile()
+            )
+        return None
+
+    @profile.setter
+    def profile(self, new_profile: OpenSearchProfile):
+        """Set the performance profile for the node."""
+        self.update({PERFORMANCE_PROFILE: new_profile.type.value})
+
 
 class OpenSearchNode(RelationState):
     """State/Relation data collection for an opensearch node (juju unit)."""
@@ -86,17 +106,6 @@ class OpenSearchNode(RelationState):
     ):
         super().__init__(relation, data_interface, component)
         self.unit = component
-
-    @property
-    def profile(self) -> Optional[PerformanceType]:
-        if profile_str := self.relation_data.get(PERFORMANCE_PROFILE, None):
-            return PerformanceType(profile_str)
-        return None
-
-    @profile.setter
-    def profile(self, new_profile: PerformanceType):
-        """Set the performance profile for the node."""
-        self.update({PERFORMANCE_PROFILE: new_profile.value})
 
 
 class OpenSearchClusterState(Object):
