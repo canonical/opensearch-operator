@@ -134,7 +134,7 @@ class ProfilesManager:
     def __init__(self, state: "OpenSearchClusterState", workload: "OpenSearchDistribution"):
         self.state = state
         self.workload = workload
-        self.profile = self.state.app.profile or TestingProfile()
+        self.profile = self.state.app.profile or ProductionProfile()
 
     def _apply_system_requirement(self, system_requirement: str, value: int) -> bool:
         """Apply a system requirement."""
@@ -192,8 +192,12 @@ class ProfilesManager:
         cluster_fleet_apps = self.state.app.cluster_fleet_apps
         missing_requirements = []
 
-        nbr_cm_nodes = sum(1 for app in cluster_fleet_apps if "cluster_manager" in app.roles)
-        nbr_data_nodes = sum(1 for app in cluster_fleet_apps if "data" in app.roles)
+        nbr_cm_nodes = sum(
+            app.planned_units for app in cluster_fleet_apps if "cluster_manager" in app.roles
+        )
+        nbr_data_nodes = sum(
+            app.planned_units for app in cluster_fleet_apps if "data" in app.roles
+        )
 
         if nbr_cm_nodes < profile.cluster_topology_requirements.cluster_managers:
             missing_requirements.append(
