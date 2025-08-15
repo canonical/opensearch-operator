@@ -79,7 +79,7 @@ from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchPeerClustersManager,
     StartMode,
 )
-from charms.opensearch.v0.opensearch_performance_profile import (
+from charms.opensearch.v0.opensearch_profile import (
     ProfilesManager,
 )
 from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager

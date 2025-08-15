@@ -15,7 +15,7 @@ from charms.opensearch.v0.models import PeerClusterApp, PerformanceType
 
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
-from charms.opensearch.v0.opensearch_performance_profile import (
+from charms.opensearch.v0.opensearch_profile import (
     OpenSearchProfile,
     ProductionProfile,
     TestingProfile,
