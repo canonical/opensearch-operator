@@ -680,75 +680,77 @@ class OpenSearchPeerClustersManager:
             )
         return PeerClusterRelData.from_dict(content)
 
+    def _resolve_credential(
+        self,
+        credential: str,
+        *,
+        content_key: Optional[str] = None,
+        password_key: Optional[str] = None,
+        hash_key: Optional[str] = None,
+    ):
+        """Resolves credential to its secret value if it's a secret"""
+        if not credential.startswith("secret://"):
+            return credential
+
+        if not content_key:
+            if password_key:
+                content_key = self._charm.secrets.password_key(password_key)
+            elif hash_key:
+                content_key = self._charm.secrets.hash_key(hash_key)
+            else:
+                raise ValueError("One of content_key, password_key or hash_key must be provided.")
+        return self._charm.model.get_secret(id=credential).get_content().get(content_key)
+
     def rel_data_from_str(self, redacted_dict_str: str) -> PeerClusterRelData:
         """Construct the peer cluster rel data from the secret data."""
         content = json.loads(redacted_dict_str)
         credentials = content["credentials"]
 
-        credentials["admin_password"] = (
-            self._charm.model.get_secret(id=credentials["admin_password"])
-            .get_content()
-            .get(self._charm.secrets.password_key(AdminUser))
+        credentials["admin_password"] = self._resolve_credential(
+            credentials["admin_password"], password_key=AdminUser
+        )
+        credentials["admin_password_hash"] = self._resolve_credential(
+            credentials["admin_password_hash"], hash_key=AdminUser
         )
 
-        credentials["admin_password_hash"] = (
-            self._charm.model.get_secret(id=credentials["admin_password_hash"])
-            .get_content()
-            .get(self._charm.secrets.hash_key(AdminUser))
+        credentials["kibana_password"] = self._resolve_credential(
+            credentials["kibana_password"], password_key=KibanaserverUser
+        )
+        credentials["kibana_password_hash"] = self._resolve_credential(
+            credentials["kibana_password_hash"], hash_key=KibanaserverUser
         )
 
-        credentials["kibana_password"] = (
-            self._charm.model.get_secret(id=credentials["kibana_password"])
-            .get_content()
-            .get(self._charm.secrets.password_key(KibanaserverUser))
-        )
-
-        credentials["kibana_password_hash"] = (
-            self._charm.model.get_secret(id=credentials["kibana_password_hash"])
-            .get_content()
-            .get(self._charm.secrets.hash_key(KibanaserverUser))
-        )
-
-        if "monitor_password" in credentials:
-            credentials["monitor_password"] = (
-                self._charm.model.get_secret(id=credentials["monitor_password"])
-                .get_content()
-                .get(self._charm.secrets.password_key(COSUser))
+        if credentials.get("monitor_password"):
+            credentials["monitor_password"] = self._resolve_credential(
+                credentials["monitor_password"], password_key=COSUser
             )
 
-        if "admin_tls" in credentials:
+        if credentials.get("admin_tls") and isinstance(credentials["admin_tls"], str):
             credentials["admin_tls"] = self._charm.model.get_secret(
                 id=credentials["admin_tls"]
             ).get_content()
 
         if (
-            "s3" in credentials
+            credentials.get("s3")
             and credentials["s3"].get("access-key")
             and credentials["s3"].get("secret-key")
         ):
-            credentials["s3"]["access-key"] = (
-                self._charm.model.get_secret(id=credentials["s3"]["access-key"])
-                .get_content()
-                .get("s3-access-key")
+            credentials["s3"]["access-key"] = self._resolve_credential(
+                credentials["s3"]["access-key"], content_key="s3-access-key"
             )
-            credentials["s3"]["secret-key"] = (
-                self._charm.model.get_secret(id=credentials["s3"]["secret-key"])
-                .get_content()
-                .get("s3-secret-key")
+            credentials["s3"]["secret-key"] = self._resolve_credential(
+                credentials["s3"]["secret-key"], content_key="s3-secret-key"
             )
         if (
-            "azure" in credentials
+            credentials.get("azure")
             and credentials["azure"].get("storage-account")
             and credentials["azure"].get("secret-key")
         ):
-            credentials["azure"]["storage-account"] = (
-                self._charm.model.get_secret(id=credentials["azure"]["storage-account"])
-                .get_content()
-                .get("azure-storage-account")
+            credentials["azure"]["storage-account"] = self._resolve_credential(
+                credentials["azure"]["storage-account"], content_key="azure-storage-account"
             )
-            credentials["azure"]["secret-key"] = (
-                self._charm.model.get_secret(id=credentials["azure"]["secret-key"])
-                .get_content()
-                .get("azure-secret-key")
+            credentials["azure"]["secret-key"] = self._resolve_credential(
+                credentials["azure"]["secret-key"], content_key="azure-secret-key"
             )
+
         return PeerClusterRelData.from_dict(content)
