@@ -1,0 +1,68 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.8    unsupported  02:53:56Z
+
+App                       Version  Status       Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         maintenance      3  opensearch                                 0  no       Installing OpenSearch...
+self-signed-certificates           active           1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports  Message
+opensearch/0*                maintenance  executing  0        10.0.0.75              (install) Installing OpenSearch...
+opensearch/1                 maintenance  executing  1        10.0.0.43              (install) Installing OpenSearch...
+opensearch/2                 maintenance  executing  2        10.0.0.159             (install) Installing OpenSearch...
+self-signed-certificates/0*  active       idle       3        10.0.0.150             
+
+Machine  State    Address     Inst id        Base          AZ  Message
+0        started  10.0.0.75   juju-5345c9-0  ubuntu@24.04      Running
+1        started  10.0.0.43   juju-5345c9-1  ubuntu@24.04      Running
+2        started  10.0.0.159  juju-5345c9-2  ubuntu@24.04      Running
+3        started  10.0.0.150  juju-5345c9-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 02:33:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:33:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 02:33:44 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 02:33:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:33:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 02:33:44 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 02:33:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:33:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 02:33:51 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 02:35:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:35:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:35:16 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-2: 02:51:15 ERROR unit.opensearch/2.juju-log Failed to install/upgrade opensearch. 
+Snap: 'opensearch' -- command ['snap', 'install', 'opensearch', '--revision="79"'] failed!
+Stdout:
+2025-08-17T02:34:12Z INFO Waiting for automatic snapd restart...
+
+Stderr:
+error: cannot perform the following tasks:
+- Download snap "opensearch" (79) from channel "stable" (Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/5jhXwLx2kfI42wm6InusEO3ZryZyh6Eq_79.snap?interactive=1&token=1755410400_5e2bdf8a6b670ff95208455f42df16524cd4c4df": net/http: timeout awaiting response headers)
+
+Latest logs:
+Aug 17 02:34:00 juju-5345c9-2 useradd[2204]: new user: name=snap_daemon, UID=584788, GID=584788, home=/nonexistent, shell=/usr/bin/false, from=none
+Aug 17 02:34:12 juju-5345c9-2 snapd[1047]: daemon.go:548: gracefully waiting for running hooks
+Aug 17 02:34:12 juju-5345c9-2 snapd[1047]: daemon.go:550: done waiting for running hooks
+Aug 17 02:34:15 juju-5345c9-2 snapd[1047]: overlord.go:528: Released state lock file
+Aug 17 02:34:15 juju-5345c9-2 systemd[1]: snapd.service: Deactivated successfully.
+Aug 17 02:34:15 juju-5345c9-2 systemd[1]: snapd.service: Scheduled restart job, restart counter is at 1.
+Aug 17 02:34:15 juju-5345c9-2 systemd[1]: Starting snapd.service - Snap Daemon...
+Aug 17 02:34:17 juju-5345c9-2 snapd[2359]: overlord.go:284: Acquiring state lock file
+Aug 17 02:34:17 juju-5345c9-2 snapd[2359]: overlord.go:289: Acquired state lock file
+Aug 17 02:34:17 juju-5345c9-2 snapd[2359]: patch.go:64: Patching system state level 6 to sublevel 1...
+Aug 17 02:34:17 juju-5345c9-2 snapd[2359]: patch.go:64: Patching system state level 6 to sublevel 2...
+Aug 17 02:34:17 juju-5345c9-2 snapd[2359]: patch.go:64: Patching system state level 6 to sublevel 3...
+Aug 17 02:34:17 juju-5345c9-2 snapd[2359]: daemon.go:273: started snapd/2.70 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-27-generic.
+Aug 17 02:34:17 juju-5345c9-2 snapd[2359]: daemon.go:367: adjusting startup timeout by 35s (pessimistic estimate of 30s plus 5s per snap)
+Aug 17 02:34:17 juju-5345c9-2 snapd[2359]: backends.go:68: AppArmor status: apparmor is enabled and all features are available (using snapd provided apparmor_parser)
+Aug 17 02:34:17 juju-5345c9-2 snapd[2359]: backend.go:141: delegating reload of snap-confine profiles to system snap security profiles setup
+Aug 17 02:34:17 juju-5345c9-2 snapd[2359]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Aug 17 02:34:17 juju-5345c9-2 systemd[1]: Started snapd.service - Snap Daemon.
+Aug 17 02:34:29 juju-5345c9-2 snapd[2359]: stateengine.go:163: state ensure error: decode new commands catalog: context deadline exceeded (Client.Timeout or context cancellation while reading body)
+Aug 17 02:51:15 juju-5345c9-2 snapd[2359]: taskrunner.go:299: Change 4 task (Download snap "opensearch" (79) from channel "stable") failed: Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/5jhXwLx2kfI42wm6InusEO3ZryZyh6Eq_79.snap?interactive=1&token=1755410400_5e2bdf8a6b670ff95208455f42df16524cd4c4df": net/http: timeout awaiting response headers
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
