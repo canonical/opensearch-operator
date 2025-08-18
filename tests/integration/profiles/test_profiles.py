@@ -8,9 +8,13 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
+from charms.opensearch.v0.constants_charm import PClusterNoDataNode
+
+from ..ha.test_large_deployments_cluster_manager_only_nodes import REL_ORCHESTRATOR
+from ..ha.test_large_deployments_relations import REL_PEER
+
 from ..helpers import (
     APP_NAME,
-    CONFIG_OPTS,
     MODEL_CONFIG,
 )
 from ..helpers_deployments import wait_until
@@ -29,9 +33,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
-        ops_test.model.deploy(
-            charm, num_units=1, series=series, config=CONFIG_OPTS, constraints="mem=4G"
-        ),
+        ops_test.model.deploy(charm, num_units=1, series=series, constraints="mem=4G"),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -75,18 +77,12 @@ async def test_scale_to_active(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_clean_cluster_topology(ops_test: OpsTest) -> None:
-    """Clean the cluster topology error scenario."""
-    # Remove the cluster topology error by scaling the cluster.
-    await ops_test.model.remove_application(APP_NAME, block_until_done=True)
-
-
-@pytest.mark.abort_on_fail
 async def test_insufficient_memory(ops_test: OpsTest, charm: str, series: str) -> None:
     """Test insufficient memory scenario."""
-    await ops_test.model.deploy(
-        charm, num_units=3, series=series, config=CONFIG_OPTS, constraints="mem=3G"
-    )
+    if APP_NAME in ops_test.model.applications:
+        await ops_test.model.remove_application(APP_NAME, block_until_done=True)
+
+    await ops_test.model.deploy(charm, num_units=3, series=series, constraints="mem=3G")
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await wait_until(
         ops_test,
@@ -103,3 +99,96 @@ async def test_insufficient_memory(ops_test: OpsTest, charm: str, series: str) -
             }
         },
     )
+
+
+@pytest.mark.abort_on_fail
+async def test_testing_profile(ops_test: OpsTest, charm: str, series: str) -> None:
+    """Test testing profile"""
+
+    if APP_NAME in ops_test.model.applications:
+        await ops_test.model.remove_application(APP_NAME, block_until_done=True)
+
+    await ops_test.model.deploy(charm, num_units=1, series=series, config={"profile": "testing"})
+    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=1,
+    )
+
+
+@pytest.mark.abort_on_fail
+async def test_large_deployment_cluster(ops_test: OpsTest, charm: str, series: str) -> None:
+    """Test large deployment cluster scenario."""
+    await ops_test.model.deploy(
+        charm,
+        application_name="main",
+        num_units=1,
+        series=series,
+        config={"cluster_name": "test", "roles": "cluster_manager"},
+    )
+    await ops_test.model.deploy(
+        charm,
+        application_name="data",
+        num_units=1,
+        series=series,
+        config={"cluster_name": "test", "init_hold": True, "roles": "data"},
+    )
+
+    # integrate TLS to all applications
+    for app in ["main", "data"]:
+        await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
+
+    # create the peer-cluster-relation
+    await ops_test.model.integrate(f"data:{REL_PEER}", f"main:{REL_ORCHESTRATOR}")
+
+    await wait_until(
+        ops_test,
+        apps=["main", "data"],
+        units_full_statuses={
+            "main": {
+                "units": {
+                    "blocked": [
+                        "At least 3 cluster manager nodes are required. Found only 1. - At least 3 data nodes are required. Found only 1."
+                    ]
+                }
+            },
+            "data": {
+                "units": {
+                    "blocked": [
+                        "At least 3 cluster manager nodes are required. Found only 1. - At least 3 data nodes are required. Found only 1."
+                    ]
+                }
+            },
+        },
+    )
+
+    main_app = ops_test.model.applications["main"]
+    await main_app.add_units(count=2)
+
+    await wait_until(
+        ops_test,
+        apps=["main", "data"],
+        units_full_statuses={
+            "main": {
+                "units": {
+                    "blocked": [
+                        "At least 3 data nodes are required. Found only 1.",
+                        PClusterNoDataNode,
+                    ]
+                }
+            },
+            "data": {
+                "units": {
+                    "blocked": [
+                        "At least 3 data nodes are required. Found only 1.",
+                    ]
+                }
+            },
+        },
+    )
+    data_app = ops_test.model.applications["data"]
+    await data_app.add_units(count=2)
+    await wait_until(ops_test, apps=["main", "data"], wait_for_exact_units=3)

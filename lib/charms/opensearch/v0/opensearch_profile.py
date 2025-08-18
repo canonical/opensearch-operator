@@ -121,7 +121,7 @@ class TestingProfile(OpenSearchProfile):
         """Get the memory requirements for this profile."""
         return ProfileMemoryRequirements(
             memory_size=None,
-            jvm_heap_percentage=0.5,
+            jvm_heap_percentage=0.25,
         )
 
     @property
@@ -139,7 +139,7 @@ class ProfilesManager:
     def __init__(self, state: "OpenSearchClusterState", workload: "OpenSearchDistribution"):
         self.state = state
         self.workload = workload
-        self.profile = self.state.app.profile or ProductionProfile()
+        self.profile = self.state.app.profile or self.get_config_profile()
 
     def _apply_system_requirement(self, system_requirement: str, value: int) -> bool:
         """Apply a system requirement."""
@@ -181,14 +181,16 @@ class ProfilesManager:
         """Checks memory requirements for the unit."""
         memory_size = self.workload.meminfo()["MemTotal"]
 
-        if profile.memory_requirements.memory_size:
-            if memory_size < profile.memory_requirements.memory_size:
-                logger.error(
-                    f"Insufficient memory: {memory_size} < {profile.memory_requirements.memory_size}"
-                )
-                return [
-                    f"Insufficient memory: {memory_size} < {profile.memory_requirements.memory_size}"
-                ]
+        if (
+            profile.memory_requirements.memory_size
+            and memory_size < profile.memory_requirements.memory_size
+        ):
+            logger.error(
+                f"Insufficient memory: {memory_size} < {profile.memory_requirements.memory_size}"
+            )
+            return [
+                f"Insufficient memory: {memory_size} < {profile.memory_requirements.memory_size}"
+            ]
 
         return []
 
