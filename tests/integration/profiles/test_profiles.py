@@ -6,13 +6,11 @@ import asyncio
 import logging
 
 import pytest
-from pytest_operator.plugin import OpsTest
-
 from charms.opensearch.v0.constants_charm import PClusterNoDataNode
+from pytest_operator.plugin import OpsTest
 
 from ..ha.test_large_deployments_cluster_manager_only_nodes import REL_ORCHESTRATOR
 from ..ha.test_large_deployments_relations import REL_PEER
-
 from ..helpers import (
     APP_NAME,
     MODEL_CONFIG,
@@ -104,11 +102,12 @@ async def test_insufficient_memory(ops_test: OpsTest, charm: str, series: str) -
 @pytest.mark.abort_on_fail
 async def test_testing_profile(ops_test: OpsTest, charm: str, series: str) -> None:
     """Test testing profile"""
-
     if APP_NAME in ops_test.model.applications:
         await ops_test.model.remove_application(APP_NAME, block_until_done=True)
 
-    await ops_test.model.deploy(charm, num_units=1, series=series, config={"profile": "testing"})
+    await ops_test.model.deploy(
+        charm, num_units=1, series=series, config={"profile": "testing"}, constraints="mem=4G"
+    )
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await wait_until(
         ops_test,
@@ -128,6 +127,7 @@ async def test_large_deployment_cluster(ops_test: OpsTest, charm: str, series: s
         num_units=1,
         series=series,
         config={"cluster_name": "test", "roles": "cluster_manager"},
+        constraints="mem=4G",
     )
     await ops_test.model.deploy(
         charm,
@@ -135,6 +135,7 @@ async def test_large_deployment_cluster(ops_test: OpsTest, charm: str, series: s
         num_units=1,
         series=series,
         config={"cluster_name": "test", "init_hold": True, "roles": "data"},
+        constraints="mem=4G",
     )
 
     # integrate TLS to all applications
