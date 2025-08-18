@@ -2,20 +2,18 @@
 # See LICENSE file for licensing details.
 
 
-from pytest_operator.plugin import OpsTest
-import pytest
-
 import asyncio
 import logging
 
-from ..helpers_deployments import wait_until
-
+import pytest
+from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
     APP_NAME,
     CONFIG_OPTS,
     MODEL_CONFIG,
 )
+from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 
 logger = logging.getLogger(__name__)

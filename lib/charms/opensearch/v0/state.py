@@ -14,7 +14,11 @@ from charms.data_platform_libs.v0.data_interfaces import (
     DataPeerUnitData,
 )
 from charms.opensearch.v0.constants_charm import PERFORMANCE_PROFILE, PeerRelationName
-from charms.opensearch.v0.models import DeploymentDescription, PeerClusterApp, PerformanceType
+from charms.opensearch.v0.models import (
+    DeploymentDescription,
+    PeerClusterApp,
+    PerformanceType,
+)
 from ops import Application, Object, Relation, Unit
 
 if TYPE_CHECKING:
