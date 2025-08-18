@@ -46,7 +46,9 @@ def test_production_profile():
 
 def test_testing_profile():
     testing_profile = TestingProfile()
-    assert testing_profile.memory_requirements == ProfileMemoryRequirements(memory_size=None)
+    assert testing_profile.memory_requirements == ProfileMemoryRequirements(
+        memory_size=None, jvm_heap_percentage=0.25
+    )
     assert testing_profile.cluster_topology_requirements == ClusterTopologyRequirements(
         cluster_managers=1, data=1
     )
