@@ -113,14 +113,14 @@ class OpenSearchConfig:
         self._opensearch.config.replace(
             self.JVM_OPTIONS,
             "-Xms[0-9]+[kmgKMG]",
-            f"-Xms{str(heap_size_in_kb)}k",
+            f"-Xms{str(int(heap_size_in_kb))}k",
             regex=True,
         )
 
         self._opensearch.config.replace(
             self.JVM_OPTIONS,
             "-Xmx[0-9]+[kmgKMG]",
-            f"-Xmx{str(heap_size_in_kb)}k",
+            f"-Xmx{str(int(heap_size_in_kb))}k",
             regex=True,
         )
 

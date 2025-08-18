@@ -17,13 +17,18 @@ import logging
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, List, Optional
 
+from charms.opensearch.v0.helper_cluster import ClusterTopology
+
 if TYPE_CHECKING:
     from charms.opensearch.v0.state import OpenSearchClusterState
     from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 
+from charms.opensearch.v0.helper_charm import all_units, format_unit_name
 from charms.opensearch.v0.models import (
     Model,
+    PeerClusterApp,
     PerformanceType,
+    StartMode,
 )
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 
@@ -189,7 +194,10 @@ class ProfilesManager:
 
     def check_cluster_topology(self, profile: OpenSearchProfile) -> List[str]:
         """Check the cluster topology requirements."""
-        cluster_fleet_apps = self.state.app.cluster_fleet_apps
+        cluster_fleet_apps = self.state.app.cluster_fleet_apps or [
+            self._current_peer_cluster_app()
+        ]
+        logger.debug(f"current_cluster_fleet_apps: {cluster_fleet_apps}")
         missing_requirements = []
 
         nbr_cm_nodes = sum(
@@ -235,4 +243,19 @@ class ProfilesManager:
             TestingProfile()
             if PerformanceType(self.state.config.get("profile")) == PerformanceType.TESTING
             else ProductionProfile()
+        )
+
+    def _current_peer_cluster_app(self) -> PeerClusterApp:
+        deployment_desc = self.state.app.deployment_description
+        return PeerClusterApp(
+            app=deployment_desc.app,
+            planned_units=self.state.charm.app.planned_units(),
+            units=[
+                format_unit_name(u, app=deployment_desc.app) for u in all_units(self.state.charm)
+            ],
+            roles=(
+                deployment_desc.config.roles
+                if deployment_desc.start == StartMode.WITH_PROVIDED_ROLES
+                else ClusterTopology.generated_roles()
+            ),
         )

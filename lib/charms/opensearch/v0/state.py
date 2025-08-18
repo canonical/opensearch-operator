@@ -14,7 +14,7 @@ from charms.data_platform_libs.v0.data_interfaces import (
     DataPeerUnitData,
 )
 from charms.opensearch.v0.constants_charm import PERFORMANCE_PROFILE, PeerRelationName
-from charms.opensearch.v0.models import PeerClusterApp, PerformanceType
+from charms.opensearch.v0.models import DeploymentDescription, PeerClusterApp, PerformanceType
 from ops import Application, Object, Relation, Unit
 
 if TYPE_CHECKING:
@@ -100,6 +100,14 @@ class OpenSearchApp(RelationState):
     def profile(self, new_profile: OpenSearchProfile):
         """Set the performance profile for the node."""
         self.update({PERFORMANCE_PROFILE: new_profile.type.value})
+
+    @property
+    def deployment_description(self) -> DeploymentDescription | None:
+        """Return DeploymentDescription from peer relation"""
+        deployment_desc_dict = json.loads(self.relation_data.get("deployment-description", "{}"))
+        if not deployment_desc_dict:
+            return None
+        return DeploymentDescription.from_dict(deployment_desc_dict)
 
 
 class OpenSearchNode(RelationState):
