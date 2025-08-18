@@ -510,6 +510,7 @@ class PeerClusterRelData(Model):
     deployment_desc: Optional[DeploymentDescription]
     security_index_initialised: bool = False
     first_data_node: Optional[str] = None
+    plugins: Optional[Dict[str, Any]]
 
 
 class PeerClusterRelErrorData(Model):
@@ -546,6 +547,11 @@ class PeerClusterOrchestrators(Model):
         self.main_app = self.failover_app
         self.main_rel_id = self.failover_rel_id
         self.delete("failover")
+
+
+class Plugins(Model):
+    """Model class for managed plugins."""
+    keystore: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
 
 
 class OpenSearchPerfProfile(Model):

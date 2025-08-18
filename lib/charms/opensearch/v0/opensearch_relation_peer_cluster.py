@@ -626,7 +626,18 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             deployment_desc=deployment_desc,
             security_index_initialised=self._get_security_index_initialised(),
             first_data_node=self._get_first_data_node(),
+            plugins=self._plugin_secrets(),
         )
+
+    def _plugin_secrets(self):
+        """Grants plugin secrets to subcluster relations and returns secret ids"""
+        plugin_secrets = self.charm.state.app.plugin_secrets
+        # grant secrets to subsclusters
+        for relation in self.charm.model.relations[self.relation_name]:
+            for secret_id in plugin_secrets.values():
+                self.secrets.grant_secret_to_relation(secret_id, relation)
+        return plugin_secrets
+
 
     def _rel_data_credentials(
         self, deployment_desc: DeploymentDescription
@@ -791,6 +802,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             redacted_dict["credentials"]["monitor_password"] = monitor_password
         if admin_tls := self.secrets.get_secret_id(Scope.APP, CertType.APP_ADMIN.val):
             redacted_dict["credentials"]["admin_tls"] = admin_tls
+
+        # if (plugins := getattr(rel_data.credentials, "plugins")):
+        #     redacted_dict["credentials"]["plugins"] = { label: secret_id for label in plugins if (secret_id := self.secrets.get_secret_id(Scope.APP, label)) }
 
         if (
             rel_data.credentials.s3
@@ -971,6 +985,10 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # fetch the success data
         data = self.peer_cm.rel_data_from_str(data["data"])
+        
+        if (plugin_secrets := data.plugins):
+            self._track_plugin_secrets(plugin_secrets)
+
         # check errors that can only be figured out from the requirer side
         if self._error_set_from_requirer(orchestrators, deployment_desc, data, event.relation.id):
             return
@@ -1018,6 +1036,22 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # recompute the deployment desc
         self.charm.opensearch_peer_cm.run_with_relation_data(data)
+
+    def _track_plugin_secrets(self, relation_plugins):
+        """Track plugin secrets from relation data"""
+        current_plugins = self.charm.state.app.plugin_secrets
+        current_labels = set(current_plugins.keys())
+        updated_labels = set(relation_plugins.keys())
+
+        to_remove = current_labels - updated_labels
+        for label in to_remove:
+            self.charm.state.app.remove_plugin_secret(label)
+
+        for label, secret_id in relation_plugins.items():
+            if label not in current_labels:
+                self.charm.model.get_secret(id=secret_id, label=label).get_content().get(label)
+            self.charm.state.app.add_plugin_secret(label, secret_id)
+
 
     def apply_orchestrator_status(self) -> None:
         """Sets or clears status based on presence of local orchestrators."""

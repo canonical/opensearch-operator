@@ -118,6 +118,8 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
         logger.debug("Secret change for %s", str(label_key))
 
+        # all units should add plugins keys to the opensearch keystore
+
         if is_leader and label_key == self._charm.secrets.password_key(KibanaserverUser):
             self._charm.opensearch_provider.update_dashboards_password()
 
@@ -379,7 +381,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         label = self.label(scope, key)
         return self._charm.peers_data.get(scope, label)
 
-    def grant_secret_to_relation(self, secret_id: int, relation: Relation):
+    def grant_secret_to_relation(self, secret_id: str, relation: Relation):
         """Grant a secret to a relation."""
         secret = self._charm.model.get_secret(id=secret_id)
         secret.grant(relation)

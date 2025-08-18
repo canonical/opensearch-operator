@@ -4,6 +4,7 @@
 """Utility classes and methods for getting cluster info, configuration info and suggestions."""
 import logging
 from typing import TYPE_CHECKING, Dict, List, Optional
+from urllib.parse import urlencode
 
 from charms.opensearch.v0.constants_charm import GeneratedRoles
 from charms.opensearch.v0.helper_enums import BaseStrEnum
@@ -50,16 +51,25 @@ class ClusterTopology:
         host: Optional[str] = None,
         alt_hosts: Optional[List[str]] = None,
         include_defaults: bool = False,
+        flat_settings: bool = True,
+        filter_path: Optional[List[str]] = None,
     ) -> Dict[str, any]:
         """Get the cluster settings."""
-        settings = opensearch.request(
+        params = {}
+        if include_defaults:
+            params["include_defaults"] = "true"
+        if flat_settings:
+            params["flat_settings"] = "true"
+        if filter_path:
+            params["filter_path"] = ",".join(filter_path)
+
+        query = urlencode(params)
+        return opensearch.request(
             "GET",
-            f"/_cluster/settings?flat_settings=true&include_defaults={str(include_defaults).lower()}",
+            f"/_cluster/settings?{query}",
             host=host,
             alt_hosts=alt_hosts,
         )
-
-        return dict(settings["defaults"] | settings["persistent"] | settings["transient"])
 
     @staticmethod
     def recompute_nodes_conf(app_id: str, nodes: List[Node]) -> Dict[str, Node]:
