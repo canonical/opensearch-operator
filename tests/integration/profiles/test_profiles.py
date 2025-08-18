@@ -164,6 +164,7 @@ async def test_large_deployment_cluster(ops_test: OpsTest, charm: str, series: s
                 }
             },
         },
+        wait_for_exact_units={"main": 1, "data": 1},
     )
 
     main_app = ops_test.model.applications["main"]
@@ -189,6 +190,7 @@ async def test_large_deployment_cluster(ops_test: OpsTest, charm: str, series: s
                 }
             },
         },
+        wait_for_exact_units={"main": 3, "data": 1},
     )
     data_app = ops_test.model.applications["data"]
     await data_app.add_units(count=2)
