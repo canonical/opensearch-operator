@@ -46,6 +46,13 @@ async def test_wait_blocked_cluster_topology(ops_test: OpsTest) -> None:
     await wait_until(
         ops_test,
         apps=[APP_NAME],
+        apps_full_statuses={
+            APP_NAME: {
+                "blocked": [
+                    "At least 3 cluster manager nodes are required. Found only 1. - At least 3 data nodes are required. Found only 1."
+                ]
+            }
+        },
         units_full_statuses={
             APP_NAME: {
                 "units": {
