@@ -61,6 +61,8 @@ class TestOpenSearchKNN(unittest.TestCase):
         self.charm.performance_profile = MagicMock()
         self.charm.performance_profile.apply = MagicMock(return_value=False)
 
+    @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size")
+    @patch(f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_all_requirements", return_value=[])
     @patch(f"{BASE_LIB_PATH}.opensearch_plugin_manager.OpenSearchPluginManager.is_ready_for_api")
     @patch(
         f"{BASE_LIB_PATH}.opensearch_plugins.OpenSearchKnn.version",
@@ -102,6 +104,8 @@ class TestOpenSearchKNN(unittest.TestCase):
         ____,
         mock_plugin_version,
         mock_is_ready_for_api,
+        _____,
+        ______,
     ) -> None:
         """Tests entire config_changed event with KNN plugin."""
         mock_is_enabled.return_value = True
@@ -140,6 +144,9 @@ class TestOpenSearchKNN(unittest.TestCase):
             {"knn.plugin.enabled": "false"}
         )
 
+
+    @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size")
+    @patch(f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_all_requirements", return_value=[])
     @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.request")
     @patch(
         f"{BASE_LIB_PATH}.opensearch_plugin_manager.OpenSearchPluginManager.cluster_config",
@@ -188,6 +195,8 @@ class TestOpenSearchKNN(unittest.TestCase):
         mock_is_ready_for_api,
         mock_cluster_config,
         mock_api_request,
+        _____,
+        ______,
     ) -> None:
         """Tests entire config_changed event with KNN plugin."""
         mock_is_enabled.return_value = True

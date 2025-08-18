@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.models import App, PeerClusterApp
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_internal_data import Scope
@@ -153,13 +154,22 @@ class TestOpenSearchPlugin(unittest.TestCase):
         assert self.plugin_manager.status(test_plugin) == PluginState.WAITING_FOR_UPGRADE
 
     @patch(
+        "charms.opensearch.v0.opensearch_profile.ProfilesManager._current_peer_cluster_app",
+        return_value=PeerClusterApp(
+            app=App(id="opensearch"),
+            roles=["cluster_manager", "data"],
+            planned_units=1,
+            units=["1"],
+        ),
+    )
+    @patch(
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
     )
     @patch(
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
         new_callable=PropertyMock,
     )
-    def test_check_plugin_called_on_config_changed(self, mock_version, deployment_desc) -> None:
+    def test_check_plugin_called_on_config_changed(self, mock_version, deployment_desc, _) -> None:
         """Triggers a config change and should call plugin manager."""
         self.harness.set_leader(True)
         self.peers_data.put(Scope.APP, "security_index_initialised", True)

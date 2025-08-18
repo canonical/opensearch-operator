@@ -391,6 +391,9 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             start.assert_called_once()
             _post_start_init.assert_called_once()
 
+
+    @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size")
+    @patch(f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_all_requirements", return_value=[])
     @patch(f"{BASE_LIB_PATH}.opensearch_backups.BackupManager.is_backup_in_progress")
     @patch(f"{BASE_LIB_PATH}.opensearch_backups.BackupManager.is_restore_in_progress")
     @patch(f"{BASE_CHARM_CLASS}._stop_opensearch")
@@ -398,7 +401,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(
         f"{BASE_LIB_PATH}.opensearch_relation_provider.OpenSearchProvider.remove_lingering_relation_users_and_roles"
     )
-    def test_on_update_status(self, _, cert_expiration_remaining_hours, _stop_opensearch, __, ___):
+    def test_on_update_status(self, _, cert_expiration_remaining_hours, _stop_opensearch, __, ___, ____, _____):
         """Test on update status."""
         with patch(
             f"{self.BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_all_requirements"

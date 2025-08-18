@@ -101,6 +101,15 @@ class TestPerformanceProfile(unittest.TestCase):
                 "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.meminfo",
                 return_value={"MemTotal": 15.0 * _1GB_IN_KB},
             ),
+            patch(
+                "charms.opensearch.v0.opensearch_profile.ProfilesManager._current_peer_cluster_app",
+                return_value=PeerClusterApp(
+                    app=App(id="opensearch"),
+                    roles=["cluster_manager", "data"],
+                    planned_units=3,
+                    units=["1", "2", "3"],
+                ),
+            ),
         ):
             self.charm._on_config_changed(MagicMock())
             assert self.charm.unit.status.name == "blocked"
@@ -129,6 +138,15 @@ class TestPerformanceProfile(unittest.TestCase):
                 "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.meminfo",
                 return_value={"MemTotal": 3.0 * _1GB_IN_KB},
             ),
+            patch(
+                "charms.opensearch.v0.opensearch_profile.ProfilesManager._current_peer_cluster_app",
+                return_value=PeerClusterApp(
+                    app=App(id="opensearch"),
+                    roles=["cluster_manager", "data"],
+                    planned_units=3,
+                    units=["1", "2", "3"],
+                ),
+            ),
         ):
             self.charm._on_config_changed(MagicMock())
             assert self.charm.unit.status.name == "blocked"
@@ -156,6 +174,15 @@ class TestPerformanceProfile(unittest.TestCase):
             patch(
                 "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.meminfo",
                 return_value={"MemTotal": 4.0 * _1GB_IN_KB},
+            ),
+            patch(
+                "charms.opensearch.v0.opensearch_profile.ProfilesManager._current_peer_cluster_app",
+                return_value=PeerClusterApp(
+                    app=App(id="opensearch"),
+                    roles=["cluster_manager", "data"],
+                    planned_units=1,
+                    units=["1"],
+                ),
             ),
         ):
             self.charm._on_config_changed(MagicMock())
