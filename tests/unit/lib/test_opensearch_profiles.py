@@ -37,7 +37,7 @@ def mock_meminfo():
 def test_production_profile():
     production_profile = ProductionProfile()
     assert production_profile.memory_requirements == ProfileMemoryRequirements(
-        memory_size=4 * _1GB_IN_KB
+        memory_size=4 * _1GB_IN_KB, jvm_heap_percentage=0.5
     )
     assert production_profile.cluster_topology_requirements == ClusterTopologyRequirements(
         cluster_managers=3, data=3
@@ -47,7 +47,7 @@ def test_production_profile():
 def test_testing_profile():
     testing_profile = TestingProfile()
     assert testing_profile.memory_requirements == ProfileMemoryRequirements(
-        memory_size=None, jvm_heap_percentage=0.25
+        memory_size=None, jvm_heap_percentage=None
     )
     assert testing_profile.cluster_topology_requirements == ClusterTopologyRequirements(
         cluster_managers=1, data=1
@@ -70,11 +70,14 @@ class TestPerformanceProfile(unittest.TestCase):
         self.harness = Harness(OpenSearchOperatorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.set_leader(True)
-        self.harness.begin()
-        self.charm = self.harness.charm
-        self.charm.status.set(ActiveStatus())
-        self.opensearch = self.charm.opensearch
-        self.test_profile = ProductionProfile()
+        with patch(
+            "charms.opensearch.v0.opensearch_profile.ProfilesManager.get_config_profile",
+            return_value=ProductionProfile(),
+        ):
+            self.harness.begin()
+            self.charm = self.harness.charm
+            self.charm.status.set(ActiveStatus())
+            self.opensearch = self.charm.opensearch
 
     def test_profile_update_on_config_changed_system_requirement_not_met(self):
         """Test the update of the JVM options."""
@@ -149,6 +152,10 @@ class TestPerformanceProfile(unittest.TestCase):
                     units=["1", "2", "3"],
                 ),
             ),
+            patch(
+                "charms.opensearch.v0.opensearch_profile.ProfilesManager.get_config_profile",
+                return_value=ProductionProfile(),
+            ),
         ):
             self.charm._on_config_changed(MagicMock())
             assert self.charm.unit.status.name == "blocked"
@@ -185,6 +192,10 @@ class TestPerformanceProfile(unittest.TestCase):
                     planned_units=1,
                     units=["1"],
                 ),
+            ),
+            patch(
+                "charms.opensearch.v0.opensearch_profile.ProfilesManager.get_config_profile",
+                return_value=ProductionProfile(),
             ),
         ):
             self.charm._on_config_changed(MagicMock())
@@ -232,6 +243,10 @@ class TestPerformanceProfile(unittest.TestCase):
             patch(
                 "charms.opensearch.v0.opensearch_config.OpenSearchConfig.set_jvm_heap_size",
             ) as set_jvm_heap_size,
+            patch(
+                "charms.opensearch.v0.opensearch_profile.ProfilesManager.get_config_profile",
+                return_value=ProductionProfile(),
+            ),
         ):
             self.charm._on_config_changed(MagicMock())
             set_jvm_heap_size.assert_called_with(2097152.0)
@@ -291,10 +306,6 @@ class TestPerformanceProfile(unittest.TestCase):
             patch(
                 "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_started",
                 return_value=False,
-            ),
-            patch(
-                "charms.opensearch.v0.state.OpenSearchApp.profile",
-                new_callable=PropertyMock,
             ),
         ):
             self.charm._start_opensearch(MagicMock())
