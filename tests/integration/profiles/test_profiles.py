@@ -164,6 +164,8 @@ async def test_testing_profile(ops_test: OpsTest, charm: str, series: str) -> No
 @pytest.mark.abort_on_fail
 async def test_large_deployment_cluster(ops_test: OpsTest, charm: str, series: str) -> None:
     """Test large deployment cluster scenario."""
+    if APP_NAME in ops_test.model.applications:
+        await ops_test.model.remove_application(APP_NAME, block_until_done=True)
     constraints = await get_constraints(ops_test)
     await ops_test.model.deploy(
         charm,
