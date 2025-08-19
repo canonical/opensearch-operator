@@ -82,6 +82,7 @@ class OpenSearchProfile(ABC):
         pass
 
     def get_jvm_heap_size(self, mem_size: float) -> int:
+        """Get the JVM heap size in KB based on the memory requirements."""
         if self.memory_requirements.jvm_heap_percentage:
             return min(int(self.memory_requirements.jvm_heap_percentage * mem_size), MAX_HEAP_SIZE)
         return _1GB_IN_KB
