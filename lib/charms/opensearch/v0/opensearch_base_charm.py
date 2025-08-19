@@ -808,8 +808,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # if the profile hasn't been applied before
         if current_profile is None or current_profile != config_profile:
             self.opensearch_config.set_jvm_heap_size(
-                config_profile.memory_requirements.jvm_heap_percentage
-                * self.opensearch.meminfo()["MemTotal"]
+                config_profile.get_jvm_heap_size(self.opensearch.meminfo()["MemTotal"])
             )
             profile_restart_needed = True
             self.state.app.profile = config_profile

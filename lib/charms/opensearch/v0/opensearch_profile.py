@@ -47,15 +47,14 @@ logger = logging.getLogger(__name__)
 
 
 _1GB_IN_KB = 1024 * 1024  # 1GB in KB
-MIN_HEAP_SIZE = _1GB_IN_KB  # 1GB in KB
-MAX_HEAP_SIZE = 32 * _1GB_IN_KB  # 32GB in KB
+MAX_HEAP_SIZE = 31 * _1GB_IN_KB  # 32GB in KB
 
 
 class ProfileMemoryRequirements(Model):
     """Memory requirements for a profile"""
 
     memory_size: Optional[int] = None
-    jvm_heap_percentage: float = 0.5
+    jvm_heap_percentage: Optional[float] = None
 
 
 class ClusterTopologyRequirements(Model):
@@ -81,6 +80,11 @@ class OpenSearchProfile(ABC):
     def cluster_topology_requirements(self) -> ClusterTopologyRequirements:
         """Get the cluster topology requirements for this profile."""
         pass
+
+    def get_jvm_heap_size(self, mem_size: float) -> int:
+        if self.memory_requirements.jvm_heap_percentage:
+            return min(int(self.memory_requirements.jvm_heap_percentage * mem_size), MAX_HEAP_SIZE)
+        return _1GB_IN_KB
 
 
 class ProductionProfile(OpenSearchProfile):
@@ -121,7 +125,7 @@ class TestingProfile(OpenSearchProfile):
         """Get the memory requirements for this profile."""
         return ProfileMemoryRequirements(
             memory_size=None,
-            jvm_heap_percentage=0.25,
+            jvm_heap_percentage=None,
         )
 
     @property
