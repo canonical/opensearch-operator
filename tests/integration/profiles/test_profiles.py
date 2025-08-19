@@ -93,6 +93,7 @@ async def test_wait_blocked_cluster_topology(ops_test: OpsTest) -> None:
                 }
             }
         },
+        wait_for_exact_units=1,
     )
 
 
@@ -104,6 +105,7 @@ async def test_scale_to_active(ops_test: OpsTest) -> None:
     await wait_until(
         ops_test,
         apps=[APP_NAME],
+        wait_for_exact_units=3,
     )
 
 
@@ -135,6 +137,7 @@ async def test_insufficient_memory(ops_test: OpsTest, charm: str, series: str) -
                 }
             }
         },
+        wait_for_exact_units=3,
     )
 
 
