@@ -21,17 +21,50 @@ from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 logger = logging.getLogger(__name__)
 
 
+async def get_cloud_type(ops_test: OpsTest) -> str:
+    """Return current cloud type of the selected controller.
+
+    Args:
+        ops_test (OpsTest): ops_test plugin
+
+    Returns:
+        Tuple:
+            string describing current type of the underlying cloud
+            bool   describing if VMs are enabled
+    """
+    assert ops_test.model, "Model must be present"
+    controller = await ops_test.model.get_controller()
+    cloud = await controller.cloud()
+    return cloud.cloud.type_
+
+
+async def get_constraints(ops_test: OpsTest) -> str | None:
+    """Get constraints for the OpenSearch charm based on the cloud type."""
+    cloud_type = await get_cloud_type(ops_test)
+    if cloud_type == "lxd":
+        return "mem=4G"
+    return None
+
+
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
     """Build and deploy one unit of OpenSearch."""
     await ops_test.model.set_config(MODEL_CONFIG)
+    constraints = await get_constraints(ops_test)
+    logger.info(f"Using constraints: {constraints}")
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
-        ops_test.model.deploy(charm, num_units=1, series=series, constraints="mem=4G"),
+        ops_test.model.deploy(
+            charm,
+            num_units=1,
+            series=series,
+            constraints=constraints,
+            config={"profile": "production"},
+        ),
     )
 
     # Relate it to OpenSearch to set up TLS.
@@ -80,7 +113,13 @@ async def test_insufficient_memory(ops_test: OpsTest, charm: str, series: str) -
     if APP_NAME in ops_test.model.applications:
         await ops_test.model.remove_application(APP_NAME, block_until_done=True)
 
-    await ops_test.model.deploy(charm, num_units=3, series=series, constraints="mem=3G")
+    await ops_test.model.deploy(
+        charm,
+        num_units=3,
+        series=series,
+        constraints="mem=3G",
+        config={"profile": "production"},
+    )
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await wait_until(
         ops_test,
@@ -104,9 +143,10 @@ async def test_testing_profile(ops_test: OpsTest, charm: str, series: str) -> No
     """Test testing profile"""
     if APP_NAME in ops_test.model.applications:
         await ops_test.model.remove_application(APP_NAME, block_until_done=True)
+    constraints = await get_constraints(ops_test)
 
     await ops_test.model.deploy(
-        charm, num_units=1, series=series, config={"profile": "testing"}, constraints="mem=4G"
+        charm, num_units=1, series=series, config={"profile": "testing"}, constraints=constraints
     )
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await wait_until(
@@ -121,21 +161,27 @@ async def test_testing_profile(ops_test: OpsTest, charm: str, series: str) -> No
 @pytest.mark.abort_on_fail
 async def test_large_deployment_cluster(ops_test: OpsTest, charm: str, series: str) -> None:
     """Test large deployment cluster scenario."""
+    constraints = await get_constraints(ops_test)
     await ops_test.model.deploy(
         charm,
         application_name="main",
         num_units=1,
         series=series,
-        config={"cluster_name": "test", "roles": "cluster_manager"},
-        constraints="mem=4G",
+        config={"cluster_name": "test", "roles": "cluster_manager", "profile": "production"},
+        constraints=constraints,
     )
     await ops_test.model.deploy(
         charm,
         application_name="data",
         num_units=1,
         series=series,
-        config={"cluster_name": "test", "init_hold": True, "roles": "data"},
-        constraints="mem=4G",
+        config={
+            "cluster_name": "test",
+            "init_hold": True,
+            "roles": "data",
+            "profile": "production",
+        },
+        constraints=constraints,
     )
 
     # integrate TLS to all applications
