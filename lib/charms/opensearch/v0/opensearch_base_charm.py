@@ -811,7 +811,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 config_profile.get_jvm_heap_size(self.opensearch.meminfo()["MemTotal"])
             )
             profile_restart_needed = True
-            self.state.app.profile = config_profile
+            if self.unit.is_leader():
+                self.state.app.profile = config_profile
 
         if not self.opensearch_provider.update_relations_roles_mapping():
             event.defer()

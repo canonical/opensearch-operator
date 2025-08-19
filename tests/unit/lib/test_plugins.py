@@ -153,6 +153,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         assert test_plugin.version == "2.9.0.0"
         assert self.plugin_manager.status(test_plugin) == PluginState.WAITING_FOR_UPGRADE
 
+    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.set_jvm_heap_size")
     @patch(
         "charms.opensearch.v0.opensearch_profile.ProfilesManager._current_peer_cluster_app",
         return_value=PeerClusterApp(
@@ -169,7 +170,9 @@ class TestOpenSearchPlugin(unittest.TestCase):
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
         new_callable=PropertyMock,
     )
-    def test_check_plugin_called_on_config_changed(self, mock_version, deployment_desc, _) -> None:
+    def test_check_plugin_called_on_config_changed(
+        self, mock_version, deployment_desc, _, __
+    ) -> None:
         """Triggers a config change and should call plugin manager."""
         self.harness.set_leader(True)
         self.peers_data.put(Scope.APP, "security_index_initialised", True)
