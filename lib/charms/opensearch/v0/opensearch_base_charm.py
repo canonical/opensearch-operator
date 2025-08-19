@@ -435,7 +435,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # request the start of OpenSearch
         self.status.set(WaitingStatus(RequestUnitServiceOps.format("start")))
 
-        # In large deployments one data node needs to start to initialzie the security index
+        # In large deployments one data node needs to start to initialize the security index
         # this first node ignores the lock
         # if there are multiple data apps in the cluster
         # we synchronize the start of the first data node through peer cluster relation
@@ -453,10 +453,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if (
             self.unit.is_leader()
             and self.opensearch_peer_cm.is_consumer()
-            and (
-                (local_first_data_node := self.peer_cluster_requirer.get_local_first_data_node())
-                is not None
-            )
+            and (local_first_data_node := self.peer_cluster_requirer.get_local_first_data_node())
         ):
             # lock requested
             if (peer_cluster_rel_data := self.opensearch_peer_cm.rel_data()) is not None:
@@ -469,7 +466,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     self._start_opensearch_event.emit(ignore_lock=True, is_first_data_node=True)
                     self.peer_cluster_requirer.set_first_data_node(None)
             else:
-                # main orchestratior has not chosen the first data node yet
+                # main orchestrator has not chosen the first data node yet
                 logger.debug(
                     f"Local first data node: {local_first_data_node} - cluster first data node: not set"
                 )
@@ -1441,7 +1438,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         logger.debug("Starting OpenSearch after upgrade")
         self._start_opensearch_event.emit(ignore_lock=event.ignore_lock, after_upgrade=True)
 
-    def _can_service_start(self, first_data_node: bool = False) -> bool:  # noqa: C901
+    def _can_service_start(self, is_first_data_node: bool = False) -> bool:  # noqa: C901
         """Return if the opensearch service can start."""
         # if there are any missing system requirements leave
         if missing_sys_reqs := self.opensearch.missing_sys_requirements():
@@ -1470,7 +1467,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                         deployment_desc.start == StartMode.WITH_GENERATED_ROLES
                         or "data" in deployment_desc.config.roles
                     )
-                    and first_data_node
+                    and is_first_data_node
                 )
             )
 
