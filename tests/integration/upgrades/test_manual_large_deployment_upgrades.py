@@ -170,7 +170,7 @@ async def test_upgrade_to_local(
 
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
-    await assert_continuous_writes_consistency(ops_test, c_writes, list(APPS.keys()))
+    await assert_continuous_writes_consistency(ops_test, c_writes, [APP_NAME, MAIN_APP])
 
 
 @pytest.mark.parametrize("version", UPGRADE_PARAMS)
@@ -206,4 +206,4 @@ async def test_upgrade_from_version_to_local(
 
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
-    await assert_continuous_writes_consistency(ops_test, c_writes, list(APPS.keys()))
+    await assert_continuous_writes_consistency(ops_test, c_writes, [APP_NAME, MAIN_APP])
