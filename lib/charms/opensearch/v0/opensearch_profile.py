@@ -246,9 +246,9 @@ class ProfilesManager:
     def get_config_profile(self) -> OpenSearchProfile:
         """Get the current config profile."""
         return (
-            TestingProfile()
-            if PerformanceType(self.state.config.get("profile")) == PerformanceType.TESTING
-            else ProductionProfile()
+            ProductionProfile()
+            if PerformanceType(self.state.config.get("profile")) == PerformanceType.PRODUCTION
+            else TestingProfile()
         )
 
     def _current_peer_cluster_app(self) -> PeerClusterApp:

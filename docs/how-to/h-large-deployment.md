@@ -67,11 +67,10 @@ The cluster will consist of multiple integrated juju applications (clusters) wit
 [note type="caution"]
 **Caution**: Charmed OpenSearch supports performance profiles and will have different RAM consumption according to the profile chosen:
 
-* `production`: consumes 50% of the RAM available, up to 32G
-* `staging`: consumes 25% of the RAM available, up to 32G
+* `production`: consumes 50% of the RAM available, up to 31G
 * `testing`: consumes 1G of RAM
 
-The configuration defaults to `production`, but for the examples below, testing will be chosen as it is assumed the deployment happens on a single LXD cluster.
+The configuration defaults to `testing`. For the examples below, `testing` will be chosen as it is assumed the deployment happens on a single LXD cluster.
 
 [/note]
 

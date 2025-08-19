@@ -94,9 +94,9 @@ class OpenSearchApp(RelationState):
         """Current profile of the unit"""
         if profile_str := self.relation_data.get(PERFORMANCE_PROFILE, None):
             return (
-                TestingProfile()
-                if PerformanceType(profile_str) == PerformanceType.TESTING
-                else ProductionProfile()
+                ProductionProfile()
+                if PerformanceType(profile_str) == PerformanceType.PRODUCTION
+                else TestingProfile()
             )
         return None
 

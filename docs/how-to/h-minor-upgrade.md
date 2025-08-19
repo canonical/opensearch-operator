@@ -117,8 +117,7 @@ The action will ensure and check the health of OpenSearch and determine if the c
 [note type="caution"]
 **Caution**: Charmed OpenSearch supports performance profiles and will have different RAM consumption according to the profile chosen:
 
-* `production`: consumes 50% of the RAM available, up to 32G
-* `staging`: consumes 25% of the RAM available, up to 32G
+* `production`: consumes 50% of the RAM available, up to 31G
 * `testing`: consumes 1G of RAM
 
 In case your charm is running on revision prior to `185`, the `testing` profile will be your default value. Ensure you have it set at upgrade and then feel free to switch to another profile that is more suitable to your use-case.
