@@ -25,11 +25,6 @@ LIBAPI = 0
 # to 0 if you are raising the major API version
 LIBPATCH = 1
 
-
-MIN_HEAP_SIZE = 1024 * 1024  # 1GB in KB
-MAX_HEAP_SIZE = 32 * MIN_HEAP_SIZE  # 32GB in KB
-
-
 logger = logging.getLogger(__name__)
 
 
