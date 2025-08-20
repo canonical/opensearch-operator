@@ -40,7 +40,7 @@ async def get_constraints(ops_test: OpsTest) -> str | None:
     """Get constraints for the OpenSearch charm based on the cloud type."""
     cloud_type = await get_cloud_type(ops_test)
     if cloud_type == "lxd":
-        return "mem=4G"
+        return "mem=6G"
     return None
 
 
