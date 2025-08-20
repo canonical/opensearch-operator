@@ -251,4 +251,4 @@ async def test_large_deployment_cluster(ops_test: OpsTest, charm: str, series: s
     )
     data_app = ops_test.model.applications["data"]
     await data_app.add_units(count=2)
-    await wait_until(ops_test, apps=["main", "data"], wait_for_exact_units=3)
+    await wait_until(ops_test, apps=["main", "data"], wait_for_exact_units=3, timeout=2000)

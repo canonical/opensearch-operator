@@ -1132,14 +1132,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.peers_data.delete(Scope.UNIT, "started")
 
+        if not self._can_service_start(event.is_first_data_node):
+            logger.info("Conditions not met to start opensearch. Will retry next event.")
+            event.defer()
+            return
+
         if event.ignore_lock:
             # Only used for force upgrades and starting 1 data node on a large deployment
             # where the main orchestrator has cluster-manager only nodes
             logger.debug("Starting without lock")
-        elif not self._can_service_start(event.is_first_data_node):
-            logger.info("Conditions not met to start opensearch. Will retry next event.")
-            event.defer()
-            return
         elif not self.node_lock.acquired:
             logger.debug("Lock to start opensearch not acquired. Will retry next event")
             event.defer()
