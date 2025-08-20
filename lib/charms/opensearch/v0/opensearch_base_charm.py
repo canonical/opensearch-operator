@@ -719,6 +719,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if missing_requirements := self.profiles_manager.check_all_requirements():
             logger.error(f"Missing profile requirements: {missing_requirements}")
             self.status.set(BlockedStatus(" - ".join(missing_requirements)))
+            return
 
         # if node already shutdown - leave
         if not self.opensearch.is_node_up():
@@ -848,6 +849,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if missing_requirements:
             logger.error(f"Missing profile requirements: {missing_requirements}")
             self.status.set(BlockedStatus(" - ".join(missing_requirements)))
+            event.defer()
             return
 
         # if the profile hasn't been applied before

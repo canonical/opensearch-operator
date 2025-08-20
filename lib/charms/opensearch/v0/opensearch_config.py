@@ -108,19 +108,19 @@ class OpenSearchConfig:
             self.SECURITY_CONFIG_YML, "config/dynamic/authc/openid_auth_domain"
         )
 
-    def set_jvm_heap_size(self, heap_size_in_kb: float):
+    def set_jvm_heap_size(self, heap_size_in_kb: int):
         """Apply the performance profile to the opensearch config."""
         self._opensearch.config.replace(
             self.JVM_OPTIONS,
             "-Xms[0-9]+[kmgKMG]",
-            f"-Xms{str(int(heap_size_in_kb))}k",
+            f"-Xms{str(heap_size_in_kb)}k",
             regex=True,
         )
 
         self._opensearch.config.replace(
             self.JVM_OPTIONS,
             "-Xmx[0-9]+[kmgKMG]",
-            f"-Xmx{str(int(heap_size_in_kb))}k",
+            f"-Xmx{str(heap_size_in_kb)}k",
             regex=True,
         )
 
