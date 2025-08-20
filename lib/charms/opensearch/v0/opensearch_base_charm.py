@@ -1086,6 +1086,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
+        profile = self.profiles_manager.profile
+        self.opensearch_config.set_jvm_heap_size(
+            profile.get_jvm_heap_size(self.opensearch.meminfo()["MemTotal"])
+        )
+        if self.unit.is_leader():
+            self.state.app.profile = profile
+
         self.unit.status = WaitingStatus(WaitingToStart)
 
         try:
@@ -1390,7 +1397,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _can_service_start(self) -> bool:
         """Return if the opensearch service can start."""
-        # if there are any missing system requirements leave
+        # if there are any missing system requirements block
         if missing_sys_reqs := self.profiles_manager.check_all_requirements():
             self.status.set(BlockedStatus(" - ".join(missing_sys_reqs)))
             return False
