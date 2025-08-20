@@ -308,6 +308,6 @@ class TestPerformanceProfile(unittest.TestCase):
                 return_value=False,
             ),
         ):
-            self.charm._start_opensearch(MagicMock())
+            self.charm._start_opensearch(MagicMock(ignore_lock=False))
             assert self.charm.unit.status.name == "blocked"
             assert "Insufficient memory" in self.charm.unit.status.message

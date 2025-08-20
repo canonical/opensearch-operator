@@ -866,7 +866,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             plugin_needs_restart or profile_restart_needed
         ):
             logger.debug(
-                f"Restarting opensearch due to config change: plugin_needs_restart={plugin_needs_restart}, perf_profile_needs_restart={perf_profile_needs_restart}"
+                f"Restarting opensearch due to config change: plugin_needs_restart={plugin_needs_restart}, profile_restart_needed={profile_restart_needed}"
             )
             self._restart_opensearch_event.emit()
 
