@@ -6,6 +6,11 @@ This guide explains how to perform a minor upgrade of the OpenSearch cluster dep
 
 This guide will walk you through the steps to upgrade your OpenSearch cluster, including pre-upgrade checks, upgrading the OpenSearch cluster, preparing the application for the in-place upgrade, initiating the upgrade, resuming the upgrade, and checking the cluster's health.
 
+[note type="caution"]
+In large deployments, upgrades should follow a specific role-dependent order. **Upgrade all applications without the `cluster_manager` role first, then upgrade applications with the `cluster_manager` role.**
+The steps below describe upgrading a single application. In large deployments, repeat these steps for each application, following this order.
+[/note]
+
 ## Summary
   - [Pre-upgrade checks](#pre-upgrade-checks)
   - [Upgrade the OpenSearch cluster](#upgrade-the-opensearch-cluster)
