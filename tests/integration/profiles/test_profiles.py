@@ -28,9 +28,7 @@ async def get_cloud_type(ops_test: OpsTest) -> str:
         ops_test (OpsTest): ops_test plugin
 
     Returns:
-        Tuple:
-            string describing current type of the underlying cloud
-            bool   describing if VMs are enabled
+        string: current type of the underlying cloud
     """
     assert ops_test.model, "Model must be present"
     controller = await ops_test.model.get_controller()
@@ -112,6 +110,10 @@ async def test_scale_to_active(ops_test: OpsTest) -> None:
 @pytest.mark.abort_on_fail
 async def test_insufficient_memory(ops_test: OpsTest, charm: str, series: str) -> None:
     """Test insufficient memory scenario."""
+    cloud_name = await get_cloud_type(ops_test)
+    if cloud_name != "lxd":
+        pytest.skip("This test is only applicable for LXD cloud type")
+
     if APP_NAME in ops_test.model.applications:
         await ops_test.model.remove_application(APP_NAME, block_until_done=True)
 
@@ -123,6 +125,9 @@ async def test_insufficient_memory(ops_test: OpsTest, charm: str, series: str) -
         config={"profile": "production"},
     )
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    # we do not wait for idle in this wait because the 3 units will keep trying
+    # to acquire the lock but it will always be given to leader who cannot start
+    # because it is blocked and deferring
     await wait_until(
         ops_test,
         apps=[APP_NAME],
@@ -132,12 +137,13 @@ async def test_insufficient_memory(ops_test: OpsTest, charm: str, series: str) -
                 "units": {
                     "blocked": [
                         "Insufficient memory: 3145728.0 < 4194304",
+                    ],
+                    "waiting": [
                         "Requesting lock on operation: start",
-                    ]
+                    ],
                 }
             }
         },
-        wait_for_exact_units=3,
     )
 
 
