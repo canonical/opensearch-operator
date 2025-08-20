@@ -502,6 +502,7 @@ class PeerClusterRelData(Model):
     credentials: PeerClusterRelDataCredentials
     deployment_desc: Optional[DeploymentDescription]
     security_index_initialised: bool = False
+    first_data_node: Optional[str] = None
 
 
 class PeerClusterRelErrorData(Model):

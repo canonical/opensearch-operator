@@ -152,7 +152,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         self.refresh_relation_data(event, event_rel_id=event.relation.id, can_defer=False)
 
-    def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):
+    def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):  # noqa: C901
         """Event received by all units in sub-cluster when a new sub-cluster joins the relation."""
         if not self.charm.unit.is_leader():
             return
@@ -182,6 +182,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         if self._get_security_index_initialised():
             self.charm.peers_data.put(Scope.APP, "security_index_initialised", True)
+            # clean up the first data node when security index is initialised
+            self.charm.peers_data.delete(Scope.APP, "first_data_node")
+
+        if first_data_node := self._get_first_data_node():
+            self.charm.peers_data.put(Scope.APP, "first_data_node", first_data_node)
 
         # get list of relations with this orchestrator
         target_relation_ids = [
@@ -203,6 +208,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             and self.charm.is_admin_user_configured()
             and self.charm.tls.is_fully_configured()
         ):
+            # TODO migrate to _on_start hook instead
             self.charm.handle_joining_data_node()
 
         if data.get("is_candidate_failover_orchestrator") != "true":
@@ -619,6 +625,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             credentials=credentials,
             deployment_desc=deployment_desc,
             security_index_initialised=self._get_security_index_initialised(),
+            first_data_node=self._get_first_data_node(),
         )
 
     def _rel_data_credentials(
@@ -679,7 +686,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         ):
             if not self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
                 blocked_msg = f"Security index not initialized {message_suffix}."
-        elif ClusterTopology.data_role_in_cluster_fleet_apps(
+        elif ClusterTopology.is_data_role_in_cluster_fleet_apps(
             self.charm
         ) and self.charm.peers_data.get(Scope.APP, "security_index_initialised", False):
             # Requirer units should start after all provider units have started,
@@ -860,6 +867,24 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 return True
 
         return False
+
+    def _get_first_data_node(self) -> str | None:
+        """Get the first data node from the relation data."""
+        if first_data_node := self.charm.peers_data.get(Scope.APP, "first_data_node", None):
+            return first_data_node
+
+        # check all other clusters if they have initialised the security index
+        all_relation_ids = [
+            rel.id for rel in self.charm.model.relations[self.relation_name] if len(rel.units) > 0
+        ]
+
+        for rel_id in all_relation_ids:
+            if first_data_node := self.get_from_rel(
+                "first_data_node", rel_id=rel_id, remote_app=True
+            ):
+                return first_data_node
+
+        return None
 
 
 class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
@@ -1142,7 +1167,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
         )
 
-        if not orchestrators:
+        if orchestrators.main_app is None:
             return
 
         # set the security index as initialised in the unit data bag with the main orchestrator
@@ -1445,3 +1470,61 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             error = self.charm.peers_data.get(Scope.APP, error_label, "")
             self.charm.status.clear(error, app=True)
             self.charm.peers_data.delete(Scope.APP, error_label)
+
+    def set_first_data_node(self, first_data_node: str | None) -> None:
+        """Set the first data node in the relation data."""
+        orchestrators = PeerClusterOrchestrators.from_dict(
+            self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
+        )
+
+        if orchestrators.main_app is None:
+            return
+
+        logger.debug(
+            f"Setting first data node '{first_data_node}' for orchestrator {orchestrators.main_app.id}"
+        )
+
+        if first_data_node is None:
+            # if first data node is None, delete the key from the relation data
+            self.delete_from_rel(key="first_data_node", rel_id=orchestrators.main_rel_id)
+            return
+
+        # set the first data node in the relation data
+        self.put_in_rel(
+            data={"first_data_node": first_data_node},
+            rel_id=orchestrators.main_rel_id,
+        )
+
+    def get_local_first_data_node(self) -> str | None:
+        """Get first data node from the local app relation data."""
+        orchestrators = PeerClusterOrchestrators.from_dict(
+            self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
+        )
+
+        if orchestrators.main_app is None:
+            return
+
+        return self.get_from_rel(
+            key="first_data_node",
+            rel_id=orchestrators.main_rel_id,
+            remote_app=False,
+        )
+
+    def get_cluster_first_data_node(self) -> str | None:
+        """Get the first data node from the cluster relation data."""
+        orchestrators = PeerClusterOrchestrators.from_dict(
+            self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
+        )
+
+        if orchestrators.main_app is None:
+            return None
+
+        peer_cluster_data = self.get_from_rel(
+            "data", rel_id=orchestrators.main_rel_id, remote_app=True
+        )
+        logger.debug(f"get_cluster_first_data_node : data read: {peer_cluster_data}")
+
+        if not peer_cluster_data:
+            return None
+
+        return self.peer_cm.rel_data_from_str(peer_cluster_data).first_data_node

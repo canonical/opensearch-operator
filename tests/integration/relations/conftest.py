@@ -24,12 +24,6 @@ async def application_charm() -> str:
 
 
 @pytest.fixture(scope="module")
-async def opensearch_charm(ops_test: OpsTest):
-    """Build the opensearch charm."""
-    return await ops_test.build_charm(".")
-
-
-@pytest.fixture(scope="module")
 async def microk8s_cloud(ops_test: OpsTest) -> AsyncGenerator[None, Any]:
     """Install and configure MicroK8s as second cloud on the same juju controller.
 
