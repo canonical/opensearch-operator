@@ -5,7 +5,7 @@
 
 
 import logging
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Dict, Optional
 
 from charms.opensearch.v0.constants_charm import PERFORMANCE_PROFILE, PeerRelationName
 from charms.opensearch.v0.models import (
@@ -39,10 +39,10 @@ class OpenSearchApp:
         self.relation_data = RelationDataStore(charm, PeerRelationName)
 
     @property
-    def cluster_fleet_apps(self) -> List[PeerClusterApp]:
+    def cluster_fleet_apps(self) -> Dict[str, PeerClusterApp]:
         """Get the cluster fleet applications."""
         cluster_fleet_apps = self.relation_data.get_object(self.scope, "cluster_fleet_apps") or {}
-        return [PeerClusterApp.from_dict(app) for app in cluster_fleet_apps.values()]
+        return {id: PeerClusterApp.from_dict(app) for id, app in cluster_fleet_apps.items()}
 
     @property
     def deployment_description(self) -> DeploymentDescription | None:

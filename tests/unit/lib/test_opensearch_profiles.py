@@ -245,14 +245,23 @@ class TestPerformanceProfile(unittest.TestCase):
             patch(
                 "charms.opensearch.v0.state.OpenSearchApp.cluster_fleet_apps",
                 new_callable=PropertyMock(
-                    return_value=[
-                        PeerClusterApp(
+                    return_value={
+                        "opensearch": PeerClusterApp(
                             app=App(id="opensearch"),
                             roles=["cluster_manager", "data"],
                             planned_units=3,
                             units=["1", "2", "3"],
                         ),
-                    ]
+                    }
+                ),
+            ),
+            patch(
+                "charms.opensearch.v0.opensearch_profile.ProfilesManager._current_peer_cluster_app",
+                return_value=PeerClusterApp(
+                    app=App(id="opensearch"),
+                    roles=["cluster_manager", "data"],
+                    planned_units=3,
+                    units=["1", "2", "3"],
                 ),
             ),
             patch(
@@ -297,21 +306,19 @@ class TestPerformanceProfile(unittest.TestCase):
             patch(
                 "charms.opensearch.v0.state.OpenSearchApp.cluster_fleet_apps",
                 new_callable=PropertyMock(
-                    return_value=[
-                        PeerClusterApp(
+                    return_value={
+                        "opensearch": PeerClusterApp(
                             app=App(id="opensearch"),
                             roles=["cluster_manager", "data"],
                             planned_units=3,
                             units=["1", "2", "3"],
                         ),
-                    ]
+                    }
                 ),
             ),
             patch(
-                "charms.opensearch.v0.opensearch_config.OpenSearchConfig.set_jvm_heap_size",
-            ),
-            patch(
-                "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
+                "charms.opensearch.v0.state.OpenSearchApp.deployment_description",
+                new_callable=PropertyMock,
                 return_value=DeploymentDescription(
                     app=App(id="opensearch"),
                     config=PeerClusterConfig(
@@ -322,6 +329,18 @@ class TestPerformanceProfile(unittest.TestCase):
                     typ=DeploymentType.MAIN_ORCHESTRATOR,
                     promotion_time=1,
                 ),
+            ),
+            patch(
+                "charms.opensearch.v0.opensearch_profile.ProfilesManager._current_peer_cluster_app",
+                return_value=PeerClusterApp(
+                    app=App(id="opensearch"),
+                    roles=["cluster_manager", "data"],
+                    planned_units=3,
+                    units=["1", "2", "3"],
+                ),
+            ),
+            patch(
+                "charms.opensearch.v0.opensearch_config.OpenSearchConfig.set_jvm_heap_size",
             ),
             patch(
                 "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_started",

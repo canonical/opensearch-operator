@@ -87,6 +87,10 @@ class OpenSearchProfile(ABC):
             return min(int(self.memory_requirements.jvm_heap_percentage * mem_size), MAX_HEAP_SIZE)
         return _1GB_IN_KB
 
+    def __eq__(self, value: object) -> bool:
+        """Check equality with another OpenSearchProfile."""
+        return self.type == value.type if isinstance(value, OpenSearchProfile) else False
+
 
 class ProductionProfile(OpenSearchProfile):
     """Production profile for opensearch.
@@ -205,17 +209,23 @@ class ProfilesManager:
 
     def check_cluster_topology(self, profile: OpenSearchProfile) -> List[str]:
         """Check the cluster topology requirements."""
-        cluster_fleet_apps = self.state.app.cluster_fleet_apps or [
-            self._current_peer_cluster_app()
-        ]
+        cluster_fleet_apps = self.state.app.cluster_fleet_apps
+        current_app = self._current_peer_cluster_app()
+        # backwards compatibility for revisions that do not set generated roles
+        # in cluster_fleet_apps
+        if not cluster_fleet_apps or current_app.app.id in cluster_fleet_apps:
+            cluster_fleet_apps[current_app.app.id] = current_app
+
         logger.debug(f"current_cluster_fleet_apps: {cluster_fleet_apps}")
         missing_requirements = []
 
         nbr_cm_nodes = sum(
-            app.planned_units for app in cluster_fleet_apps if "cluster_manager" in app.roles
+            app.planned_units
+            for app in cluster_fleet_apps.values()
+            if "cluster_manager" in app.roles
         )
         nbr_data_nodes = sum(
-            app.planned_units for app in cluster_fleet_apps if "data" in app.roles
+            app.planned_units for app in cluster_fleet_apps.values() if "data" in app.roles
         )
 
         if nbr_cm_nodes < profile.cluster_topology_requirements.cluster_managers:
