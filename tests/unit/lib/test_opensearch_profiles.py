@@ -115,6 +115,11 @@ class TestPerformanceProfile(unittest.TestCase):
                     units=["1", "2", "3"],
                 ),
             ),
+            patch(
+                "charms.opensearch.v0.state.OpenSearchUnit.is_started",
+                new_callable=PropertyMock,
+                return_value=True,
+            ),
         ):
             self.charm._on_config_changed(MagicMock())
             assert self.charm.unit.status.name == "blocked"
@@ -156,6 +161,11 @@ class TestPerformanceProfile(unittest.TestCase):
                 "charms.opensearch.v0.opensearch_profile.ProfilesManager.get_config_profile",
                 return_value=ProductionProfile(),
             ),
+            patch(
+                "charms.opensearch.v0.state.OpenSearchUnit.is_started",
+                new_callable=PropertyMock,
+                return_value=True,
+            ),
         ):
             self.charm._on_config_changed(MagicMock())
             assert self.charm.unit.status.name == "blocked"
@@ -196,6 +206,11 @@ class TestPerformanceProfile(unittest.TestCase):
             patch(
                 "charms.opensearch.v0.opensearch_profile.ProfilesManager.get_config_profile",
                 return_value=ProductionProfile(),
+            ),
+            patch(
+                "charms.opensearch.v0.state.OpenSearchUnit.is_started",
+                new_callable=PropertyMock,
+                return_value=True,
             ),
         ):
             self.charm._on_config_changed(MagicMock())
@@ -246,6 +261,11 @@ class TestPerformanceProfile(unittest.TestCase):
             patch(
                 "charms.opensearch.v0.opensearch_profile.ProfilesManager.get_config_profile",
                 return_value=ProductionProfile(),
+            ),
+            patch(
+                "charms.opensearch.v0.state.OpenSearchUnit.is_started",
+                new_callable=PropertyMock,
+                return_value=True,
             ),
         ):
             self.charm._on_config_changed(MagicMock())
