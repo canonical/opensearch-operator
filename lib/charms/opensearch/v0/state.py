@@ -79,7 +79,7 @@ class OpenSearchUnit:
         """Set the performance profile for the unit."""
         logger.debug(f"Setting performance profile: {new_profile.type.value}")
         self.relation_data.put(self.scope, PERFORMANCE_PROFILE, new_profile.type.value)
-    
+
     @property
     def is_started(self) -> bool:
         return bool(self.relation_data.get(self.scope, "started", False))
