@@ -87,6 +87,10 @@ class OpenSearchProfile(ABC):
             return min(int(self.memory_requirements.jvm_heap_percentage * mem_size), MAX_HEAP_SIZE)
         return _1GB_IN_KB
 
+    def __hash__(self):
+        """Get the hash of the profile."""
+        return hash(self.type)
+
     def __eq__(self, value: object) -> bool:
         """Check equality with another OpenSearchProfile."""
         return self.type == value.type if isinstance(value, OpenSearchProfile) else False
