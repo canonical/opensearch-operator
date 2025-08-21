@@ -850,7 +850,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             if missing_requirements:
                 logger.error(f"Missing profile requirements: {missing_requirements}")
                 self.status.set(BlockedStatus(" - ".join(missing_requirements)))
-                event.defer()
                 return
 
             # if the profile hasn't been applied before
@@ -1186,6 +1185,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             OpenSearchStartTimeoutError,
             OpenSearchNotFullyReadyError,
         ) as e:
+            logger.debug(f"error of type: {type(e).__name__}")
             self.node_lock.release()
             self.status.set(BlockedStatus(ServiceStartError))
 
@@ -1197,6 +1197,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             logger.warning(e)
         except (OpenSearchStartError, OpenSearchUserMgmtError) as e:
+            logger.debug(f"error of type: {type(e).__name__}")
             logger.warning(e)
             self.node_lock.release()
             self.status.set(BlockedStatus(ServiceStartError))
