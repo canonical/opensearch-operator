@@ -45,6 +45,25 @@ class OpenSearchApp:
         return [PeerClusterApp.from_dict(app) for app in cluster_fleet_apps.values()]
 
     @property
+    def deployment_description(self) -> DeploymentDescription | None:
+        """Return DeploymentDescription from peer relation"""
+        deployment_desc_dict = self.relation_data.get_object(self.scope, "deployment-description")
+        if not deployment_desc_dict:
+            return None
+        return DeploymentDescription.from_dict(deployment_desc_dict)
+
+
+class OpenSearchUnit:
+    """State/Relation data collection for an opensearch node (juju uni)."""
+
+    def __init__(
+        self,
+        charm: "OpenSearchBaseCharm",
+    ):
+        self.scope = Scope.UNIT
+        self.relation_data = RelationDataStore(charm, PeerRelationName)
+
+    @property
     def profile(self) -> Optional[OpenSearchProfile]:
         """Current profile of the unit"""
         if profile_str := self.relation_data.get(self.scope, PERFORMANCE_PROFILE, None):
@@ -57,16 +76,13 @@ class OpenSearchApp:
 
     @profile.setter
     def profile(self, new_profile: OpenSearchProfile):
-        """Set the performance profile for the node."""
+        """Set the performance profile for the unit."""
+        logger.debug(f"Setting performance profile: {new_profile.type.value}")
         self.relation_data.put(self.scope, PERFORMANCE_PROFILE, new_profile.type.value)
-
+    
     @property
-    def deployment_description(self) -> DeploymentDescription | None:
-        """Return DeploymentDescription from peer relation"""
-        deployment_desc_dict = self.relation_data.get_object(self.scope, "deployment-description")
-        if not deployment_desc_dict:
-            return None
-        return DeploymentDescription.from_dict(deployment_desc_dict)
+    def is_started(self) -> bool:
+        return bool(self.relation_data.get(self.scope, "started", False))
 
 
 class OpenSearchClusterState(Object):
@@ -81,5 +97,12 @@ class OpenSearchClusterState(Object):
     def app(self) -> OpenSearchApp:
         """Get state of the local opensearch app."""
         return OpenSearchApp(
+            charm=self.charm,
+        )
+
+    @property
+    def unit(self) -> OpenSearchUnit:
+        """Get state of the local opensearch unit."""
+        return OpenSearchUnit(
             charm=self.charm,
         )

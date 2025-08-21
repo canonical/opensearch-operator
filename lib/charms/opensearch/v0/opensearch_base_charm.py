@@ -842,24 +842,25 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.status.set(original_status)
 
         profile_restart_needed = False
-        config_profile = self.profiles_manager.get_config_profile()
-        current_profile = self.state.app.profile
-        missing_requirements = self.profiles_manager.check_all_requirements(config_profile)
+        if self.state.unit.is_started:
+            config_profile = self.profiles_manager.get_config_profile()
+            current_profile = self.state.unit.profile
+            missing_requirements = self.profiles_manager.check_all_requirements(config_profile)
 
-        if missing_requirements:
-            logger.error(f"Missing profile requirements: {missing_requirements}")
-            self.status.set(BlockedStatus(" - ".join(missing_requirements)))
-            event.defer()
-            return
+            if missing_requirements:
+                logger.error(f"Missing profile requirements: {missing_requirements}")
+                self.status.set(BlockedStatus(" - ".join(missing_requirements)))
+                event.defer()
+                return
 
-        # if the profile hasn't been applied before
-        if current_profile is None or current_profile != config_profile:
-            self.opensearch_config.set_jvm_heap_size(
-                config_profile.get_jvm_heap_size(self.opensearch.meminfo()["MemTotal"])
-            )
-            profile_restart_needed = True
-            if self.unit.is_leader():
-                self.state.app.profile = config_profile
+            # if the profile hasn't been applied before
+            logger.debug(f"current profile: {current_profile}, config profile: {config_profile}")
+            if current_profile is None or current_profile != config_profile:
+                self.opensearch_config.set_jvm_heap_size(
+                    config_profile.get_jvm_heap_size(self.opensearch.meminfo()["MemTotal"])
+                )
+                profile_restart_needed = True
+                self.state.unit.profile = config_profile
 
         if not self.opensearch_provider.update_relations_roles_mapping():
             event.defer()
@@ -1156,8 +1157,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.opensearch_config.set_jvm_heap_size(
             profile.get_jvm_heap_size(self.opensearch.meminfo()["MemTotal"])
         )
-        if self.unit.is_leader():
-            self.state.app.profile = profile
+        self.state.unit.profile = profile
 
         self.unit.status = WaitingStatus(WaitingToStart)
 

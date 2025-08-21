@@ -144,7 +144,7 @@ class ProfilesManager:
     def __init__(self, state: "OpenSearchClusterState", workload: "OpenSearchDistribution"):
         self.state = state
         self.workload = workload
-        self.profile = self.state.app.profile or self.get_config_profile()
+        self.profile = self.state.unit.profile or self.get_config_profile()
         if self.profile.type == PerformanceType.TESTING:
             logger.warning(
                 "Testing profile is used. This profile is not suitable for production use and should only be used for testing purposes."

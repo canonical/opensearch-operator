@@ -168,6 +168,33 @@ async def test_testing_profile(ops_test: OpsTest, charm: str, series: str) -> No
 
 
 @pytest.mark.abort_on_fail
+async def test_config_changed_to_production(ops_test: OpsTest) -> None:
+    os_app = ops_test.model.applications[APP_NAME]
+    await os_app.set_config({"profile": "production"})
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        apps_full_statuses={
+            APP_NAME: {
+                "blocked": [
+                    "At least 3 cluster manager nodes are required. Found only 1. - At least 3 data nodes are required. Found only 1."
+                ]
+            }
+        },
+        units_full_statuses={
+            APP_NAME: {
+                "units": {
+                    "blocked": [
+                        "At least 3 cluster manager nodes are required. Found only 1. - At least 3 data nodes are required. Found only 1."
+                    ]
+                }
+            }
+        },
+        wait_for_exact_units=1,
+    )
+
+
+@pytest.mark.abort_on_fail
 async def test_large_deployment_cluster(ops_test: OpsTest, charm: str, series: str) -> None:
     """Test large deployment cluster scenario."""
     if APP_NAME in ops_test.model.applications:
