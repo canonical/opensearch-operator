@@ -82,6 +82,7 @@ class OpenSearchUnit:
 
     @property
     def is_started(self) -> bool:
+        """Return if opensearch has been started on this unit"""
         return bool(self.relation_data.get(self.scope, "started", False))
 
 
