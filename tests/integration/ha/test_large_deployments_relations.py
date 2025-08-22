@@ -32,8 +32,6 @@ INVALID_CLUSTER_NAME = "timeseries"
 
 APP_UNITS = {MAIN_APP: 3, FAILOVER_APP: 3, DATA_APP: 2, INVALID_APP: 1}
 
-NO_CM_STATUS_MESSAGE = "At least 1 cluster manager nodes are required. Found only 0."
-
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -104,8 +102,8 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
         units_full_statuses={
             MAIN_APP: {"units": {"blocked": [TLSRelationMissing]}},
             FAILOVER_APP: {"units": {"active": []}},
-            DATA_APP: {"units": {"blocked": [NO_CM_STATUS_MESSAGE]}},
-            INVALID_APP: {"units": {"blocked": [NO_CM_STATUS_MESSAGE]}},
+            DATA_APP: {"units": {"active": []}},
+            INVALID_APP: {"units": {"active": []}},
         },
         wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
         idle_period=IDLE_PERIOD,
@@ -152,12 +150,7 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
             DATA_APP: {"blocked": [PClusterNoRelation]},
             INVALID_APP: {"blocked": [PClusterNoRelation]},
         },
-        units_full_statuses={
-            MAIN_APP: {"units": {"active": []}},
-            FAILOVER_APP: {"units": {"active": []}},
-            DATA_APP: {"units": {"blocked": [NO_CM_STATUS_MESSAGE]}},
-            INVALID_APP: {"units": {"blocked": [NO_CM_STATUS_MESSAGE]}},
-        },
+        units_statuses=["active"],
         wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
         idle_period=IDLE_PERIOD,
         timeout=1800,
@@ -184,12 +177,7 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
                 "blocked": ["Cannot relate 2 clusters with different 'cluster_name' values."]
             },
         },
-        units_full_statuses={
-            MAIN_APP: {"units": {"active": []}},
-            FAILOVER_APP: {"units": {"active": []}},
-            DATA_APP: {"units": {"blocked": [NO_CM_STATUS_MESSAGE]}},
-            INVALID_APP: {"units": {"blocked": [NO_CM_STATUS_MESSAGE]}},
-        },
+        units_statuses=["active"],
         wait_for_exact_units={MAIN_APP: APP_UNITS[MAIN_APP], INVALID_APP: APP_UNITS[INVALID_APP]},
         idle_period=IDLE_PERIOD,
         timeout=1800,

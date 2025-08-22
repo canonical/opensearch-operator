@@ -593,6 +593,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             contributor_count = self.peers_data.get(Scope.APP, "bootstrap_contributors_count", 0)
             self.peers_data.put(Scope.APP, "bootstrap_contributors_count", contributor_count + 1)
 
+        # check requirements
+        if self.state.unit.is_started and (
+            missing_requirements := self.profiles_manager.check_all_requirements()
+        ):
+            logger.error(f"Missing profile requirements: {missing_requirements}")
+            self.status.set(BlockedStatus(" - ".join(missing_requirements)))
+
     def _on_peer_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
         if self.upgrade_in_progress:
