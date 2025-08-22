@@ -5,7 +5,7 @@
 
 import unittest
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, PropertyMock, call, patch
 
 from charms.opensearch.v0.constants_charm import NodeLockRelationName
 from charms.opensearch.v0.constants_tls import CertType
@@ -416,6 +416,11 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             start.assert_called_once()
             _post_start_init.assert_called_once()
 
+    @patch(
+        "charms.opensearch.v0.state.OpenSearchUnit.is_started",
+        new_callable=PropertyMock,
+        return_value=True,
+    )
     @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size")
     @patch(
         f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_all_requirements",
@@ -429,7 +434,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         f"{BASE_LIB_PATH}.opensearch_relation_provider.OpenSearchProvider.remove_lingering_relation_users_and_roles"
     )
     def test_on_update_status(
-        self, _, cert_expiration_remaining_hours, _stop_opensearch, __, ___, ____, _____
+        self, _, cert_expiration_remaining_hours, _stop_opensearch, __, ___, ____, _____, ______
     ):
         """Test on update status."""
         with patch(
