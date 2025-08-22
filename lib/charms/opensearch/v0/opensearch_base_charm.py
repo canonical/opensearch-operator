@@ -716,7 +716,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             without the user noticing in case the cert of the unit transport layer expires.
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
-        if missing_requirements := self.profiles_manager.check_all_requirements():
+        if self.state.unit.is_started and (
+            missing_requirements := self.profiles_manager.check_all_requirements()
+        ):
             logger.error(f"Missing profile requirements: {missing_requirements}")
             self.status.set(BlockedStatus(" - ".join(missing_requirements)))
             return
