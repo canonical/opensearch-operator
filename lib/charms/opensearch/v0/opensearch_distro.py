@@ -120,9 +120,10 @@ class OpenSearchDistribution(ABC):
         self._start_service()
 
         start = datetime.now()
-        while not _is_connected() and (datetime.now() - start).seconds < 180:
+        while not (connected := _is_connected()) and (datetime.now() - start).seconds < 180:
             time.sleep(3)
-        else:
+        if not connected:
+            logger.debug(f"waited {datetime.now() - start} opensearch did not start")
             raise OpenSearchStartTimeoutError()
 
     def restart(self):
