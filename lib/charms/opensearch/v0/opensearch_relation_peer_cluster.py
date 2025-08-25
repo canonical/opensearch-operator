@@ -14,6 +14,7 @@ from charms.opensearch.v0.constants_charm import (
     AdminUser,
     COSUser,
     KibanaserverUser,
+    PClusterMainIsRequirer,
     PClusterOrchestratorsRemoved,
     PClusterWaitingForFailoverPromotion,
     PeerClusterOrchestratorRelationName,
@@ -40,14 +41,17 @@ from charms.opensearch.v0.models import (
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import (
+    ActiveStatus,
     BlockedStatus,
     EventBase,
     Object,
     Relation,
+    RelationBrokenEvent,
     RelationChangedEvent,
     RelationDepartedEvent,
     RelationEvent,
     RelationJoinedEvent,
+    TooManyRelatedAppsError,
     WaitingStatus,
 )
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
@@ -144,6 +148,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             charm.on[self.relation_name].relation_departed,
             self._on_peer_cluster_relation_departed,
         )
+        self.framework.observe(
+            charm.on[self.relation_name].relation_broken,
+            self._on_peer_cluster_relation_broken,
+        )
 
     def _on_peer_cluster_relation_joined(self, event: RelationJoinedEvent):
         """Received by all units in main/failover clusters when new sub-cluster joins the rel."""
@@ -151,6 +159,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             return
 
         self.refresh_relation_data(event, event_rel_id=event.relation.id, can_defer=False)
+        self._block_if_main_orchestrator_is_requirer()
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):  # noqa: C901
         """Event received by all units in sub-cluster when a new sub-cluster joins the relation."""
@@ -173,10 +182,14 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             )
             self._promote_failover()
             self.refresh_relation_data(event)
+            self._block_if_main_orchestrator_is_requirer()
             return
 
         # only the main-orchestrator is able to designate a failover
         if deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR:
+            return
+
+        if self._block_if_main_orchestrator_is_requirer():
             return
 
         if not (data := event.relation.data.get(event.app)):
@@ -235,6 +248,23 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         self._broadcast_new_failover_app(peer_cluster_app, target_relation_ids)
 
+    def _block_if_main_orchestrator_is_requirer(self) -> bool:
+        """Block the charm if main orchestrator is a requirer"""
+        is_main_requirer = False
+        try:
+            if self.charm.model.get_relation(PeerClusterRelationName):
+                is_main_requirer = True
+        except TooManyRelatedAppsError:
+            is_main_requirer = True
+
+        if is_main_requirer:
+            self.charm.status.set(
+                BlockedStatus(PClusterMainIsRequirer),
+                app=True,
+            )
+            return True
+        return False
+
     def _broadcast_new_failover_app(
         self, peer_cluster_app: PeerClusterApp, target_relation_ids: List[int]
     ) -> None:
@@ -287,6 +317,19 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if event.relation.id == orchestrators.failover_rel_id:
             orchestrators.delete("failover")
             self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
+
+    def _on_peer_cluster_relation_broken(self, event: RelationBrokenEvent) -> None:
+        import pdb
+
+        pdb.set_trace()
+        if (
+            not self._block_if_main_orchestrator_is_requirer()
+            and self.charm.app.status.message == PClusterMainIsRequirer
+        ):
+            self.charm.status.set(
+                ActiveStatus(),
+                app=True,
+            )
 
     def should_promote_failover_to_main(self) -> bool:
         """Check if majority of related apps are disconnected from main orchestrator"""
