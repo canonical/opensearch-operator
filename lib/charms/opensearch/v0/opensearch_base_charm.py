@@ -669,7 +669,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                         self.peers_data.delete(Scope.APP, "bootstrapped")
                 if self.opensearch_peer_cm.is_provider():
                     self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
-                if self.opensearch_peer_cm.is_consumer():
+                    logger.debug("demoting main orhcestrator")
+                    self.opensearch_peer_cm.demote_deployment_type()
+                    self.peers_data.delete(Scope.APP, "orchestrators")
+                elif self.opensearch_peer_cm.is_consumer():
                     self.peer_cluster_requirer.refresh_requirer_relation_data()
 
         # we attempt to flush the translog to disk
