@@ -354,6 +354,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
     def _promote_failover(self) -> None:
         """Handle failover promotion to main orchestrator."""
+        logger.debug("Promoting unit %s from failover to main", self.charm.model.unit.name)
         # Promote failover's deployment description type
         self.charm.opensearch_peer_cm.promote_deployment_type()
 
@@ -465,6 +466,15 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         has_units = self.charm.app.planned_units() > 0
         for rel_id in all_relation_ids:
             orchestrators = self.get_obj_from_rel("orchestrators", rel_id=rel_id, remote_app=False)
+            logger.debug(
+                "Provider Updating orchestrators for requirer %s previous orchestrators %s. Updating with cluster type %s with %s",
+                self.model.get_relation(
+                    relation_name=self.relation_name, relation_id=rel_id
+                ).app.name,
+                orchestrators,
+                cluster_type,
+                deployment_desc.app.to_dict(),
+            )
             orchestrators.update(
                 {
                     f"{cluster_type}_app": deployment_desc.app.to_dict() if has_units else None,
@@ -518,6 +528,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         self.delete_from_rel("cluster_fleet_apps", rel_id=rel_id)
         self.delete_from_rel("data", rel_id=rel_id)
         self.delete_from_rel("rel_data_hash", rel_id=rel_id)
+        self.delete_from_rel("error_data", rel_id=rel_id)
+        self.delete_from_rel("trigger", rel_id=rel_id)
+        self.delete_from_rel("orchestrators", rel_id=rel_id)
 
     def _update_fleet(
         self, fleet_dict: dict[str, dict[str, Any]], app: PeerClusterApp, key: Optional[str] = None
@@ -930,18 +943,14 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         return None
 
-    def clean_relation_data(self) -> None:
+    def clean_all_relation_data(self) -> None:
         """Clean up all relation data."""
         if not self.charm.unit.is_leader():
             return
 
         for rel in self.charm.model.relations[self.relation_name]:
-            self.delete_from_rel("trigger", rel_id=rel.id)
-            self.delete_from_rel("data", rel_id=rel.id)
-            self.delete_from_rel("rel_data_hash", rel_id=rel.id)
-            self.delete_from_rel("error_data", rel_id=rel.id)
-            self.delete_from_rel("cluster_fleet_apps", rel_id=rel.id)
-            self.delete_from_rel("orchestrators", rel_id=rel.id)
+            self._delete_rel_data(rel.id)
+
 
 class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
     """Peer cluster relation requirer class."""
@@ -992,7 +1001,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         logger.debug(f"PeerClusterRelationChanged data: {data}")
         # fetch the trigger of this event
         trigger = data.get("trigger")
-
+        if not self.get_obj_from_rel(key="orchestrators", rel_id=event.relation.id):
+            logger.warning("Orchestrators not set yet")
+            return
         # fetch main and failover clusters relations ids if any
         orchestrators = self._orchestrators(event, data, trigger)
         logger.debug(f"Orchestrators: {orchestrators}")
@@ -1205,6 +1216,12 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         local_orchestrators = self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
         if trigger in {"main", "failover"} and len(event.relation.units) > 0:
+            logger.debug(
+                "Updating local orchestrator from provider %s. trigger %s The orchestrators are %s",
+                event.relation.app.name,
+                trigger,
+                remote_orchestrators,
+            )
             local_orchestrators.update(
                 {
                     f"{trigger}_rel_id": event.relation.id,
@@ -1591,3 +1608,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             return None
 
         return self.peer_cm.rel_data_from_str(peer_cluster_data).first_data_node
+
+    def clean_is_candidate_failover(self) -> None:
+        for rel in self.model.relations[self.relation_name]:
+            self.delete_from_rel(key="is_candidate_failover_orchestrator", rel_id=rel.id)
