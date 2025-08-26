@@ -385,6 +385,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # apply the directives computed and emitted by the peer cluster manager
         if not self._apply_peer_cm_directives_and_check_if_can_start():
+            logger.debug("cannot start peer cm had a blocking directive")
             event.defer()
             return
 
@@ -672,6 +673,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     logger.debug("demoting main orhcestrator")
                     self.opensearch_peer_cm.demote_deployment_type()
                     self.peers_data.delete(Scope.APP, "orchestrators")
+                    self.peer_cluster_provider.clean_relation_data()
                 elif self.opensearch_peer_cm.is_consumer():
                     self.peer_cluster_requirer.refresh_requirer_relation_data()
 

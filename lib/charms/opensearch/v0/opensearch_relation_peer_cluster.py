@@ -319,9 +319,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
 
     def _on_peer_cluster_relation_broken(self, event: RelationBrokenEvent) -> None:
-        import pdb
-
-        pdb.set_trace()
         if (
             not self._block_if_main_orchestrator_is_requirer()
             and self.charm.app.status.message == PClusterMainIsRequirer
@@ -933,6 +930,18 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         return None
 
+    def clean_relation_data(self) -> None:
+        """Clean up all relation data."""
+        if not self.charm.unit.is_leader():
+            return
+
+        for rel in self.charm.model.relations[self.relation_name]:
+            self.delete_from_rel("trigger", rel_id=rel.id)
+            self.delete_from_rel("data", rel_id=rel.id)
+            self.delete_from_rel("rel_data_hash", rel_id=rel.id)
+            self.delete_from_rel("error_data", rel_id=rel.id)
+            self.delete_from_rel("cluster_fleet_apps", rel_id=rel.id)
+            self.delete_from_rel("orchestrators", rel_id=rel.id)
 
 class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
     """Peer cluster relation requirer class."""

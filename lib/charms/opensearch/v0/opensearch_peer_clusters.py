@@ -76,6 +76,7 @@ class OpenSearchPeerClustersManager:
 
     def run(self) -> None:
         """Init, or updates / recomputes current peer cluster related config if applies."""
+        logger.debug("Running peer cluster manager run function")
         user_config = self._user_config()
         if not (current_deployment_desc := self.deployment_desc()):
             # new cluster
@@ -271,6 +272,13 @@ class OpenSearchPeerClustersManager:
             deployment_state = DeploymentState(value=State.ACTIVE, message="")
             directives.append(Directive.SHOW_STATUS)
             directives.remove(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
+        
+        if prev_deployment.typ == DeploymentType.FAILOVER_ORCHESTRATOR and not self.is_consumer("main"):
+            deployment_state = DeploymentState(
+                value=State.BLOCKED_WAITING_FOR_RELATION, message=PClusterNoRelation
+            )
+            directives.append(Directive.SHOW_STATUS)
+            directives.append(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
 
         deployment_type = self._deployment_type(config, start_mode)
         return DeploymentDescription(
@@ -305,8 +313,10 @@ class OpenSearchPeerClustersManager:
             Directive.VALIDATE_CLUSTER_NAME,
             Directive.INHERIT_CLUSTER_NAME,
         ]
+        logger.debug("Directives: %s", deployment_desc.pending_directives)
         for directive in deployment_desc.pending_directives:
             if directive in blocking_directives:
+                logger.debug("blocking directive %s", directive)
                 return False
 
         return True
