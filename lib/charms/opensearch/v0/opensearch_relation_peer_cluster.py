@@ -15,6 +15,7 @@ from charms.opensearch.v0.constants_charm import (
     COSUser,
     KibanaserverUser,
     PClusterMainIsRequirer,
+    PClusterNoRelation,
     PClusterOrchestratorsRemoved,
     PClusterWaitingForFailoverPromotion,
     PeerClusterOrchestratorRelationName,
@@ -157,6 +158,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         """Received by all units in main/failover clusters when new sub-cluster joins the rel."""
         if not self.charm.unit.is_leader():
             return
+        
+        if self._block_if_waiting_for_peer_cluster():
+            return
 
         self.refresh_relation_data(event, event_rel_id=event.relation.id, can_defer=False)
         self._block_if_main_orchestrator_is_requirer()
@@ -170,6 +174,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if not (deployment_desc := self.peer_cm.deployment_desc()):
             logger.debug("Current cluster not ready. Deferring event.")
             event.defer()
+            return
+        
+        if self._block_if_waiting_for_peer_cluster():
             return
 
         # if this is a failover orchestrator, check if it should promote itself
@@ -951,6 +958,21 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         for rel in self.charm.model.relations[self.relation_name]:
             self._delete_rel_data(rel.id)
 
+    def _block_if_waiting_for_peer_cluster(self) -> bool:
+        """Block the operation if waiting for peer cluster."""
+        if not self.charm.unit.is_leader():
+            return False
+
+        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+            return False
+
+        if Directive.WAIT_FOR_PEER_CLUSTER_RELATION in deployment_desc.pending_directives:
+            self.charm.status.set(
+                BlockedStatus(PClusterNoRelation),
+                app=True,
+            )
+            return True
+        return False
 
 class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
     """Peer cluster relation requirer class."""

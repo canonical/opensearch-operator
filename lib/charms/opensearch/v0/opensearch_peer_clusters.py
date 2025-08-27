@@ -178,6 +178,7 @@ class OpenSearchPeerClustersManager:
 
     def _new_cluster_setup(self, config: PeerClusterConfig) -> DeploymentDescription:
         """Build deployment description of a new cluster."""
+        logger.debug("New cluster setup")
         directives = []
         deployment_state = DeploymentState(value=State.ACTIVE)
         if config.init_hold:
@@ -244,6 +245,7 @@ class OpenSearchPeerClustersManager:
         self, config: PeerClusterConfig, prev_deployment: DeploymentDescription
     ) -> DeploymentDescription:
         """Build deployment description of an existing (started or not) cluster."""
+        logger.debug("Found deployment description using existing cluster setup. deployment desc: %s", prev_deployment)
         directives = prev_deployment.pending_directives
         deployment_state = prev_deployment.state
         try:
