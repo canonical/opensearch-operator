@@ -92,12 +92,12 @@ class OpenSearchPeerClustersManager:
         if current_deployment_desc == deployment_desc:
             return
 
-        if deployment_desc.state.value == State.ACTIVE:
-            # we only update the deployment desc if all is well.
-            # TODO: Should we add an entry on DeploymentDesc "errors" to reflect on status?
-            self._charm.peers_data.put_object(
-                Scope.APP, "deployment-description", deployment_desc.to_dict()
-            )
+        # if deployment_desc.state.value == State.ACTIVE:
+        # we only update the deployment desc if all is well. WHY??
+        # TODO: Should we add an entry on DeploymentDesc "errors" to reflect on status?
+        self._charm.peers_data.put_object(
+            Scope.APP, "deployment-description", deployment_desc.to_dict()
+        )
 
         if deployment_desc.start == StartMode.WITH_GENERATED_ROLES:
             # trigger roles change on the leader, other units will have their peer-rel-changed
@@ -111,6 +111,7 @@ class OpenSearchPeerClustersManager:
 
     def run_with_relation_data(self, data: PeerClusterRelData) -> None:  # noqa: C901
         """Update current peer cluster related config based on peer_cluster rel_data."""
+        logger.debug("running with relation data")
         current_deployment_desc = self.deployment_desc()
 
         config = current_deployment_desc.config
@@ -245,7 +246,10 @@ class OpenSearchPeerClustersManager:
         self, config: PeerClusterConfig, prev_deployment: DeploymentDescription
     ) -> DeploymentDescription:
         """Build deployment description of an existing (started or not) cluster."""
-        logger.debug("Found deployment description using existing cluster setup. deployment desc: %s", prev_deployment)
+        logger.debug(
+            "Found deployment description using existing cluster setup. deployment desc: %s",
+            prev_deployment,
+        )
         directives = prev_deployment.pending_directives
         deployment_state = prev_deployment.state
         try:
@@ -274,15 +278,17 @@ class OpenSearchPeerClustersManager:
             deployment_state = DeploymentState(value=State.ACTIVE, message="")
             directives.append(Directive.SHOW_STATUS)
             directives.remove(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
-        
-        if prev_deployment.typ == DeploymentType.FAILOVER_ORCHESTRATOR and not self.is_consumer("main"):
+
+        if prev_deployment.typ == DeploymentType.FAILOVER_ORCHESTRATOR and not self.is_consumer(
+            "main"
+        ):
             deployment_state = DeploymentState(
                 value=State.BLOCKED_WAITING_FOR_RELATION, message=PClusterNoRelation
             )
             directives.append(Directive.SHOW_STATUS)
             directives.append(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
 
-        deployment_type = self._deployment_type(config, start_mode)
+        deployment_type = prev_deployment.typ
         return DeploymentDescription(
             app=prev_deployment.app,
             config=PeerClusterConfig(

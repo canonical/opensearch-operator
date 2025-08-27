@@ -47,7 +47,6 @@ from ops import (
     EventBase,
     Object,
     Relation,
-    RelationBrokenEvent,
     RelationChangedEvent,
     RelationDepartedEvent,
     RelationEvent,
@@ -149,17 +148,17 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             charm.on[self.relation_name].relation_departed,
             self._on_peer_cluster_relation_departed,
         )
-        self.framework.observe(
-            charm.on[self.relation_name].relation_broken,
-            self._on_peer_cluster_relation_broken,
-        )
 
     def _on_peer_cluster_relation_joined(self, event: RelationJoinedEvent):
         """Received by all units in main/failover clusters when new sub-cluster joins the rel."""
         if not self.charm.unit.is_leader():
             return
-        
+
+        if not self.charm.opensearch_peer_cm.is_provider():
+            return
+
         if self._block_if_waiting_for_peer_cluster():
+            event.defer()
             return
 
         self.refresh_relation_data(event, event_rel_id=event.relation.id, can_defer=False)
@@ -170,13 +169,17 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if not self.charm.unit.is_leader():
             return
 
+        if not self.charm.opensearch_peer_cm.is_provider():
+            return
+
         # the current app is not ready
         if not (deployment_desc := self.peer_cm.deployment_desc()):
             logger.debug("Current cluster not ready. Deferring event.")
             event.defer()
             return
-        
+
         if self._block_if_waiting_for_peer_cluster():
+            event.defer()
             return
 
         # if this is a failover orchestrator, check if it should promote itself
@@ -191,6 +194,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             self.refresh_relation_data(event)
             self._block_if_main_orchestrator_is_requirer()
             return
+
+        self.refresh_relation_data(event)
 
         # only the main-orchestrator is able to designate a failover
         if deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR:
@@ -257,6 +262,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
     def _block_if_main_orchestrator_is_requirer(self) -> bool:
         """Block the charm if main orchestrator is a requirer"""
+        if (
+            not self.charm.unit.is_leader()
+            or not (deployment_desc := self.peer_cm.deployment_desc())
+            or deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
+        ):
+            return False
+
         is_main_requirer = False
         try:
             if self.charm.model.get_relation(PeerClusterRelationName):
@@ -270,6 +282,12 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 app=True,
             )
             return True
+        # clean the status if it is set
+        elif self.charm.app.status.message == PClusterMainIsRequirer:
+            self.charm.status.set(
+                ActiveStatus(),
+                app=True,
+            )
         return False
 
     def _broadcast_new_failover_app(
@@ -324,16 +342,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if event.relation.id == orchestrators.failover_rel_id:
             orchestrators.delete("failover")
             self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
-
-    def _on_peer_cluster_relation_broken(self, event: RelationBrokenEvent) -> None:
-        if (
-            not self._block_if_main_orchestrator_is_requirer()
-            and self.charm.app.status.message == PClusterMainIsRequirer
-        ):
-            self.charm.status.set(
-                ActiveStatus(),
-                app=True,
-            )
 
     def should_promote_failover_to_main(self) -> bool:
         """Check if majority of related apps are disconnected from main orchestrator"""
@@ -973,6 +981,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             )
             return True
         return False
+
 
 class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
     """Peer cluster relation requirer class."""
