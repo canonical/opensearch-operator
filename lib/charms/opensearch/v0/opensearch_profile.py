@@ -108,7 +108,7 @@ class ProductionProfile(OpenSearchProfile):
     def memory_requirements(self) -> ProfileMemoryRequirements:
         """Get the memory requirements for this profile."""
         return ProfileMemoryRequirements(
-            memory_size=4 * _1GB_IN_KB,  # 4GB in KB
+            memory_size=8 * _1GB_IN_KB,  # 4GB in KB
             jvm_heap_percentage=0.5,
         )
 

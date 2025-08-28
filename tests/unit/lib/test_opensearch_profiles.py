@@ -37,7 +37,7 @@ def mock_meminfo():
 def test_production_profile():
     production_profile = ProductionProfile()
     assert production_profile.memory_requirements == ProfileMemoryRequirements(
-        memory_size=4 * _1GB_IN_KB, jvm_heap_percentage=0.5
+        memory_size=8 * _1GB_IN_KB, jvm_heap_percentage=0.5
     )
     assert production_profile.cluster_topology_requirements == ClusterTopologyRequirements(
         cluster_managers=3, data=3
@@ -240,7 +240,7 @@ class TestPerformanceProfile(unittest.TestCase):
             ),
             patch(
                 "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.meminfo",
-                return_value={"MemTotal": 4.0 * _1GB_IN_KB},
+                return_value={"MemTotal": 8.0 * _1GB_IN_KB},
             ),
             patch(
                 "charms.opensearch.v0.state.OpenSearchApp.cluster_fleet_apps",
@@ -278,7 +278,7 @@ class TestPerformanceProfile(unittest.TestCase):
             ),
         ):
             self.charm._on_config_changed(MagicMock())
-            set_jvm_heap_size.assert_called_with(2097152.0)
+            set_jvm_heap_size.assert_called_with(4194304)
 
     def test_profile_update_on_start_blocked(self):
         """Test the update of the JVM options."""
@@ -301,7 +301,7 @@ class TestPerformanceProfile(unittest.TestCase):
             ),
             patch(
                 "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.meminfo",
-                return_value={"MemTotal": 3.0 * _1GB_IN_KB},
+                return_value={"MemTotal": 4.0 * _1GB_IN_KB},
             ),
             patch(
                 "charms.opensearch.v0.state.OpenSearchApp.cluster_fleet_apps",

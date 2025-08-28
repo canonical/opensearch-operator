@@ -40,7 +40,7 @@ async def get_constraints(ops_test: OpsTest) -> str | None:
     """Get constraints for the OpenSearch charm based on the cloud type."""
     cloud_type = await get_cloud_type(ops_test)
     if cloud_type == "lxd":
-        return "mem=6G"
+        return "mem=8G"
     return None
 
 
@@ -131,12 +131,12 @@ async def test_insufficient_memory(ops_test: OpsTest, charm: str, series: str) -
     await wait_until(
         ops_test,
         apps=[APP_NAME],
-        apps_full_statuses={APP_NAME: {"blocked": ["Insufficient memory: 3145728.0 < 4194304"]}},
+        apps_full_statuses={APP_NAME: {"blocked": ["Insufficient memory: 3145728.0 < 8388608"]}},
         units_full_statuses={
             APP_NAME: {
                 "units": {
                     "blocked": [
-                        "Insufficient memory: 3145728.0 < 4194304",
+                        "Insufficient memory: 3145728.0 < 8388608",
                     ],
                     "waiting": [
                         "Requesting lock on operation: start",
