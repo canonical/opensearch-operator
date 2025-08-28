@@ -1,9 +1,9 @@
-# Copyright 2024 Canonical Ltd.
+# Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Represents the performance profile of the OpenSearch cluster.
+"""Represents the profile of the OpenSearch cluster.
 
-The main goals of this library is to provide a way to manage the performance
+The main goals of this library is to provide a way to manage the
 profile of the OpenSearch cluster.
 
 There are two ways the charm can learn about its profile and when it changes:
@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 
 
 _1GB_IN_KB = 1024 * 1024  # 1GB in KB
-MAX_HEAP_SIZE = 31 * _1GB_IN_KB  # 32GB in KB
+MAX_HEAP_SIZE = 31 * _1GB_IN_KB  # 31GB in KB
 
 
 class ProfileMemoryRequirements(Model):
@@ -180,11 +180,11 @@ class ProfilesManager:
         ):
             missing_requirements.append(f"{prop} should be at least {val}")
 
-        prop, val = "vm.swappiness", 1
+        prop, val = "vm.swappiness", 0
         if self._get_kernel_property_value(prop) > val and not self._apply_system_requirement(
             prop, 0
         ):
-            missing_requirements.append(f"{prop} should be at most 1")
+            missing_requirements.append(f"{prop} should be at most {val}")
 
         prop, val = "net.ipv4.tcp_retries2", 5
         if self._get_kernel_property_value(prop) > val and not self._apply_system_requirement(
@@ -203,10 +203,13 @@ class ProfilesManager:
             and memory_size < profile.memory_requirements.memory_size
         ):
             logger.error(
-                f"Insufficient memory: {memory_size} < {profile.memory_requirements.memory_size}"
+                "Insufficient memory: %s < %s",
+                memory_size,
+                profile.memory_requirements.memory_size,
             )
             return [
-                f"Insufficient memory: {memory_size} < {profile.memory_requirements.memory_size}"
+                "Insufficient memory: %s < %s"
+                % (memory_size, profile.memory_requirements.memory_size)
             ]
 
         return []
@@ -220,7 +223,7 @@ class ProfilesManager:
         if not cluster_fleet_apps or current_app.app.id in cluster_fleet_apps:
             cluster_fleet_apps[current_app.app.id] = current_app
 
-        logger.debug(f"current_cluster_fleet_apps: {cluster_fleet_apps}")
+        logger.debug("current_cluster_fleet_apps: %s", cluster_fleet_apps)
         missing_requirements = []
 
         nbr_cm_nodes = sum(

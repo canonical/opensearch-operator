@@ -597,7 +597,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.state.unit.is_started and (
             missing_requirements := self.profiles_manager.check_all_requirements()
         ):
-            logger.error(f"Missing profile requirements: {missing_requirements}")
+            logger.error("Missing profile requirements: %s", missing_requirements)
             self.status.set(BlockedStatus(" - ".join(missing_requirements)))
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent):
@@ -726,7 +726,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.state.unit.is_started and (
             missing_requirements := self.profiles_manager.check_all_requirements()
         ):
-            logger.error(f"Missing profile requirements: {missing_requirements}")
+            logger.error("Missing profile requirements: %s", missing_requirements)
             self.status.set(BlockedStatus(" - ".join(missing_requirements)))
             return
 
@@ -862,7 +862,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 return
 
             # if the profile hasn't been applied before
-            logger.debug(f"current profile: {current_profile}, config profile: {config_profile}")
+            logger.debug(
+                "current profile: %s, config profile: %s", current_profile, config_profile
+            )
             if current_profile is None or current_profile != config_profile:
                 self.opensearch_config.set_jvm_heap_size(
                     config_profile.get_jvm_heap_size(self.opensearch.meminfo()["MemTotal"])
@@ -877,7 +879,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             plugin_needs_restart or profile_restart_needed
         ):
             logger.debug(
-                f"Restarting opensearch due to config change: plugin_needs_restart={plugin_needs_restart}, profile_restart_needed={profile_restart_needed}"
+                "Restarting opensearch due to config change: plugin_needs_restart=%s, profile_restart_needed=%s",
+                plugin_needs_restart,
+                profile_restart_needed,
             )
             self._restart_opensearch_event.emit()
 
@@ -1194,7 +1198,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             OpenSearchStartTimeoutError,
             OpenSearchNotFullyReadyError,
         ) as e:
-            logger.debug(f"error of type: {type(e).__name__}")
+            logger.debug("error of type: %s", type(e).__name__)
             self.node_lock.release()
             self.status.set(BlockedStatus(ServiceStartError))
 
@@ -1206,7 +1210,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             logger.warning(e)
         except (OpenSearchStartError, OpenSearchUserMgmtError) as e:
-            logger.debug(f"error of type: {type(e).__name__}")
+            logger.debug("error of type: %s", type(e).__name__)
             logger.warning(e)
             self.node_lock.release()
             self.status.set(BlockedStatus(ServiceStartError))

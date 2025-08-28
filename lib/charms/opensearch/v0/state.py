@@ -5,6 +5,7 @@
 
 
 import logging
+from functools import cached_property
 from typing import TYPE_CHECKING, Dict, Optional
 
 from charms.opensearch.v0.constants_charm import PERFORMANCE_PROFILE, PeerRelationName
@@ -54,7 +55,7 @@ class OpenSearchApp:
 
 
 class OpenSearchUnit:
-    """State/Relation data collection for an opensearch node (juju uni)."""
+    """State/Relation data collection for an opensearch node (juju unit)."""
 
     def __init__(
         self,
@@ -77,7 +78,7 @@ class OpenSearchUnit:
     @profile.setter
     def profile(self, new_profile: OpenSearchProfile):
         """Set the performance profile for the unit."""
-        logger.debug(f"Setting performance profile: {new_profile.type.value}")
+        logger.debug("Setting performance profile: %s", new_profile.type.value)
         self.relation_data.put(self.scope, PERFORMANCE_PROFILE, new_profile.type.value)
 
     @property
@@ -94,14 +95,14 @@ class OpenSearchClusterState(Object):
         self.charm = charm
         self.config = charm.config
 
-    @property
+    @cached_property
     def app(self) -> OpenSearchApp:
         """Get state of the local opensearch app."""
         return OpenSearchApp(
             charm=self.charm,
         )
 
-    @property
+    @cached_property
     def unit(self) -> OpenSearchUnit:
         """Get state of the local opensearch unit."""
         return OpenSearchUnit(
