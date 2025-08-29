@@ -152,12 +152,15 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
     def _on_peer_cluster_relation_joined(self, event: RelationJoinedEvent):
         """Received by all units in main/failover clusters when new sub-cluster joins the rel."""
         if not self.charm.unit.is_leader():
+            logger.debug("Node not a leader. Skipping refresh relation data")
             return
 
         if not self.charm.opensearch_peer_cm.is_provider():
+            logger.debug("Node not a provider. Skipping refresh relation data")
             return
 
         if self._block_if_waiting_for_peer_cluster():
+            logger.debug("Node blocked waiting for peer cluster deferring event not refreshing peer cluster relation data")
             event.defer()
             return
 
@@ -166,10 +169,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):  # noqa: C901
         """Event received by all units in sub-cluster when a new sub-cluster joins the relation."""
+        logger.debug("PeerClusterRelationChanged event handler starting")
         if not self.charm.unit.is_leader():
+            logger.debug("Node not a leader. Skipping refresh relation data")
             return
 
-        if not self.charm.opensearch_peer_cm.is_provider():
+        if not self.model.relations[PeerClusterOrchestratorRelationName]:
+            logger.debug("Node not a provider. Skipping refresh relation data")
             return
 
         # the current app is not ready
@@ -179,6 +185,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             return
 
         if self._block_if_waiting_for_peer_cluster():
+            logger.debug("Node blocked waiting for peer cluster deferring event not refreshing peer cluster relation data")
             event.defer()
             return
 
@@ -195,6 +202,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             self._block_if_main_orchestrator_is_requirer()
             return
 
+        logger.debug("refreshing relation data")
         self.refresh_relation_data(event)
 
         # only the main-orchestrator is able to designate a failover
@@ -1029,7 +1037,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             logger.debug("No data found in relation.")
             return
 
-        logger.debug(f"PeerClusterRelationChanged data: {data}")
+        logger.debug("PeerClusterRelationChanged from provider %s data: %s", event.relation.app.name, data)
         # fetch the trigger of this event
         trigger = data.get("trigger")
         if not self.get_obj_from_rel(key="orchestrators", rel_id=event.relation.id):
