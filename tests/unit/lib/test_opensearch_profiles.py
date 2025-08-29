@@ -346,6 +346,10 @@ class TestPerformanceProfile(unittest.TestCase):
                 "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_started",
                 return_value=False,
             ),
+            patch(
+                "charms.opensearch.v0.opensearch_profile.ProfilesManager.get_config_profile",
+                return_value=ProductionProfile(),
+            ),
         ):
             self.charm._start_opensearch(MagicMock(ignore_lock=False))
             assert self.charm.unit.status.name == "blocked"
