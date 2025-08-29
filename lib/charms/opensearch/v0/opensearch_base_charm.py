@@ -25,6 +25,7 @@ from charms.opensearch.v0.constants_charm import (
     OpenSearchSystemUsers,
     OpenSearchUsers,
     PClusterNoDataNode,
+    PClusterNoRelation,
     PeerClusterRelationName,
     PeerRelationName,
     PluginConfigChangeError,
@@ -405,6 +406,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.clear(AdminUserNotConfigured)
         self.status.clear(TLSNotFullyConfigured)
         self.status.clear(TLSRelationMissing)
+        self.status.clear(PClusterNoRelation)
 
         # Since system users are initialized, we should take them to local internal_users.yml
         # Leader should be done already
@@ -516,10 +518,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self._get_nodes(False)
             except OpenSearchHttpError:
                 return False
-            if self.unit.is_leader():
-                self.opensearch_peer_cm.apply_status_if_needed(
-                    deployment_desc, show_status_only_once=False
-                )
             return True
 
         if self.unit.is_leader():
