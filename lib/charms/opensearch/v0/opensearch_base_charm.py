@@ -72,8 +72,9 @@ from charms.opensearch.v0.opensearch_exceptions import (
 from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
-from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyError
+from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyError, OpenSearchKeystore
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
+from charms.opensearch.v0.opensearch_new_backups import OpenSearchBackupsManager, OpenSearchBackupsEvents
 from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
 from charms.opensearch.v0.opensearch_oauth import OAuthHandler
 from charms.opensearch.v0.opensearch_peer_clusters import (
@@ -200,6 +201,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.opensearch_config = OpenSearchConfig(self.opensearch)
         self.opensearch_exclusions = OpenSearchExclusions(self)
         self.opensearch_fixes = OpenSearchFixes(self)
+        self.keystore_manager = OpenSearchKeystore(self)
 
         self.peers_data = RelationDataStore(self, PeerRelationName)
         self.secrets = OpenSearchSecrets(self, PeerRelationName)
@@ -212,8 +214,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.node_lock = OpenSearchNodeLock(self)
 
         self.plugin_manager = OpenSearchPluginManager(self)
-
-        self.backup = backup(self)
+        self.backups_manager = OpenSearchBackupsManager(self)
 
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
@@ -268,6 +269,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # Ensure that only one instance of the `_on_peer_relation_changed` handler exists
         # in the deferred event queue
         self._is_peer_rel_changed_deferred = False
+
+        self.backups_events = OpenSearchBackupsEvents(self)
 
     @property
     @abc.abstractmethod

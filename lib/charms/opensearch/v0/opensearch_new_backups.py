@@ -1,0 +1,647 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+"""OpenSearch Backup."""
+
+import json
+import logging
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Literal
+from unittest import case
+
+from ops import (
+    ActionEvent,
+    BlockedStatus,
+    Object,
+)
+from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type, Retrying
+
+from charms.data_platform_libs.v0.object_storage import AzureStorageRequires, StorageConnectionInfoChangedEvent, \
+    StorageConnectionInfoGoneEvent
+from charms.data_platform_libs.v0.s3 import S3Requirer, CredentialsGoneEvent, CredentialsChangedEvent
+from charms.opensearch.v0.constants_charm import (
+    AZURE_RELATION,
+    OPENSEARCH_BACKUP_ID_FORMAT,
+    S3_RELATION,
+    GCS_RELATION,
+)
+from charms.opensearch.v0.helper_cluster import ClusterState
+from charms.opensearch.v0.helper_security import store_ca, list_cas, remove_ca
+from charms.opensearch.v0.models import AzureRelData, DeploymentType, S3RelData, ObjectStorageConfig, GcsRelData
+from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchHttpError, OpenSearchError,
+)
+from charms.opensearch.v0.opensearch_health import HealthColors
+from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
+
+# The unique Charmhub library identifier, never change it
+LIBID = "d301deee4d2c4c1b8e30cd3df8034be2"
+
+# Increment this major API version when introducing breaking changes
+LIBAPI = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
+
+logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
+
+
+class OpenSearchRestoreSnapshotMissingError(OpenSearchError):
+    """Exception raised when we're attempting """
+
+
+# Object storage types
+ObjectStorageType = Literal["s3", "azure", "gcs", "s3-pcluster", "azure-pcluster", "gcs-pcluster", "conflict"]
+
+# OpenSearch Backups
+S3_REPOSITORY = "s3-repository"
+AZURE_REPOSITORY = "azure-repository"
+GCS_REPOSITORY = "gcs-repository"
+
+# System indices that should not be snapshotted
+SYSTEM_INDICES = {
+    ".opendistro_security",
+    OpenSearchNodeLock.OPENSEARCH_INDEX,
+}
+
+
+class OpenSearchBackupsEvents(Object):
+
+    def __init__(self, charm: "OpenSearchBaseCharm"):
+        super().__init__(charm, key="backups")
+        self.charm = charm
+
+        self.s3_requirer = S3Requirer(charm, S3_RELATION)
+        self.azure_requirer = AzureStorageRequires(charm, AZURE_REPOSITORY)
+
+        self.framework.observe(
+            self.s3_requirer.on.credentials_changed, self._on_s3_credentials_changed
+        )
+        self.framework.observe(
+            self.s3_requirer.on.credentials_gone, self._on_s3_credentials_gone
+        )
+        self.framework.observe(
+            self.azure_requirer.on.storage_connection_info_changed, self._on_azure_credentials_changed
+        )
+        self.framework.observe(
+            self.azure_requirer.on.storage_connection_info_gone, self._on_azure_credentials_gone,
+        )
+        self.framework.observe(
+            self.charm.on.create_backup_action, self._on_create_backup_action
+        )
+        self.framework.observe(
+            self.charm.on.list_backups_action, self._on_list_backups_action
+        )
+        self.framework.observe(
+            self.charm.on.restore_action, self._on_restore_action
+        )
+
+    def _on_s3_credentials_changed(self, event: CredentialsChangedEvent) -> None:
+        if not (object_storage_type := self.object_storage_type):
+            # todo
+            return
+
+        if object_storage_type == "conflict":
+            self.charm.status.set(BlockedStatus("More than 1 object storage relation..."))
+            event.defer()
+            return
+
+        # handle the case where this was deferred in case of multiple object storage relations
+        # then s3 relation severed
+        if object_storage_type != "s3":
+            return
+
+        if self.charm.backups_manager.should_store_s3_ca(object_storage_type, self.object_storage_config):
+            self.charm.backups_manager.store_s3_ca(self.object_storage_config)
+
+        s3_credentials = self.object_storage_config.s3.credentials
+        self.charm.keystore_manager.put_entries({
+            "s3.client.default.access_key": s3_credentials.access_key,
+            "s3.client.default.secret_key": s3_credentials.secret_key,
+        })
+        self.charm.keystore_manager.reload()
+
+        if self.charm.backups_manager.should_restart_for_full_setup(object_storage_type, self.object_storage_config):
+            # todo: emit restart
+            event.defer()
+            return
+
+        if self.charm.unit.is_leader():
+            self.charm.backups_manager.create_repo(
+                object_storage_type=object_storage_type,
+                object_storage_config=self.object_storage_config,
+            )
+
+    def _on_s3_credentials_gone(self, event: CredentialsGoneEvent) -> None:
+        self.charm.keystore_manager.remove_entries([
+            "s3.client.default.access_key",
+            "s3.client.default.secret_key",
+        ])
+        self.charm.keystore_manager.reload()
+
+        # todo replace with check on the cacerts
+        if self.charm.backups_manager.is_custom_s3_ca_stored():
+            self.charm.backups_manager.remove_s3_ca()
+            if self.charm.opensearch.is_started():
+                # todo emit restart ONLY IF unit not removed !!!! offload this to the RestartEvent logic
+                pass
+
+    def _on_azure_credentials_changed(self, event: StorageConnectionInfoChangedEvent) -> None:
+        if not (object_storage_type := self.object_storage_type):
+            # todo
+            return
+
+        if object_storage_type == "conflict":
+            self.charm.status.set(BlockedStatus("More than 1 object storage relation..."))
+            event.defer()
+            return
+
+        # handle the case where this was deferred in case of multiple object storage relations
+        # then s3 relation severed
+        if object_storage_type != "azure":
+            return
+
+        azure_credentials = self.charm.backups_manager.object_storage_config.azure.credentials
+        self.charm.keystore_manager.put_entries({
+            "azure.client.default.account": azure_credentials.storage_account,
+            "azure.client.default.key": azure_credentials.secret_key,
+        })
+        self.charm.keystore_manager.reload()
+
+        self.charm.backups_manager.create_repo(
+            object_storage_type=object_storage_type,
+            object_storage_config=self.object_storage_config,
+        )
+
+    def _on_azure_credentials_gone(self, event: StorageConnectionInfoGoneEvent) -> None:
+        self.charm.keystore_manager.remove_entries([
+            "azure.client.default.account",
+            "azure.client.default.key",
+        ])
+        self.charm.keystore_manager.reload()
+
+    def _on_create_backup_action(self, event: ActionEvent) -> None:
+        if error_message := self._action_missing_pre_requisites():
+            event.fail(error_message)
+            return
+
+        try:
+            snapshot_id = self.charm.backups_manager.create_backup()
+        except OpenSearchHttpError as e:
+            event.fail(f"Backup request failed with: {str(e)}")
+            return
+
+        try:
+            state = self.charm.backups_manager.snapshot_status()
+            event.set_results({"backup-id": snapshot_id, "status": state})
+        except OpenSearchHttpError as e:
+            logger.error(e)
+            event.fail(f"Unknown state for backup {snapshot_id}: {str(e)}")
+
+    def _on_list_backups_action(self, event: ActionEvent) -> None:
+        if error_message := self._action_missing_pre_requisites(report_running_operations=False):
+            event.fail(error_message)
+            return
+
+        if (output_format := event.params.get("output", "").lower()) not in {"json", "table"}:
+            event.fail("Failed: invalid output format, must be either 'json' or 'table'.")
+            return
+
+        try:
+            snapshots = self.charm.backups_manager.list_snapshots()
+        except OpenSearchHttpError as e:
+            event.fail(f"Backup request failed with: {str(e)}")
+            return
+
+        if output_format == "json":
+            event.set_results({"backups": json.dumps(snapshots)})
+            return
+
+        table_output = ["{:<20s} | {:s}".format(" backup-id", "backup-status")]
+        table_output.append("-" * len(table_output[0]))
+        for _id, _snapshot in snapshots.items():
+            table_output.append("{:<20s} | {:s}".format(_id, _snapshot["state"]))
+
+        event.set_results({"backups": "\n".join(table_output)})
+
+    def _on_restore_action(self, event: ActionEvent) -> None:
+        snapshot_id = event.params.get("backup-id")
+        if error_message := self._action_missing_pre_requisites():
+            event.fail(error_message)
+            return
+
+        try:
+            if not (snapshot := self.charm.backups_manager.get_snapshot(snapshot_id)):
+                event.fail(f"Backup {snapshot_id} not found.")
+                return
+        except OpenSearchHttpError as e:
+            event.fail(f"Backup {snapshot_id} not found. Error: {str(e)}.")
+            return
+
+        try:
+            # close indices that were snapshotted if they still exist, so they can be restored
+            closed_indices, indices_failed_to_close = self.charm.backups_manager.close_open_indices(snapshot)
+            if indices_failed_to_close:
+                event.fail(f"Failed to close {len(indices_failed_to_close)} open indices. Check logs for details.")
+                return
+        except OpenSearchHttpError as e:
+            event.fail(f"Failed to close open indices. Error: {str(e)}.")
+            return
+
+        try:
+            self.charm.backups_manager.restore(object_storage_type=self.object_storage_type, snapshot=snapshot)
+            event.set_results({"backup-id": snapshot_id})
+        except OpenSearchHttpError as e:
+            event.fail(f"Failed to restore snapshot {snapshot_id}. Error: {str(e)}.")
+            return
+
+    @property
+    def object_storage_type(self) -> ObjectStorageType | None:
+        if self.charm.opensearch_peer_cm.deployment_desc() == DeploymentType.MAIN_ORCHESTRATOR:
+            active_rels = [
+                rel for rel
+                in [
+                    self.charm.model.get_relation(S3_RELATION),
+                    self.charm.model.get_relation(AZURE_RELATION),
+                    self.charm.model.get_relation(GCS_RELATION),
+                ]
+                if rel
+            ]
+            if len(active_rels) > 1:
+                return "conflict"
+
+            if self.charm.model.get_relation(S3_RELATION):
+                return "s3"
+            if self.charm.model.get_relation(AZURE_RELATION):
+                return "azure"
+            if self.charm.model.get_relation(GCS_RELATION):
+                return "gcs"
+            return None
+
+        pcluster_rel_data = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)
+        if not pcluster_rel_data or not pcluster_rel_data.credentials:
+            return None
+
+        if pcluster_rel_data.credentials.s3:
+            return "s3-pcluster"
+        if pcluster_rel_data.credentials.azure:
+            return "azure-pcluster"
+        if pcluster_rel_data.credentials.gcs:
+            return "gcs-pcluster"
+        return None
+
+    @property
+    def object_storage_config(self) -> ObjectStorageConfig | None:
+        """Fetch the object storage data depending on the relation."""
+        if not (object_storage_type := self.object_storage_type):
+            return None
+
+        if object_storage_type == "conflict":
+            return None
+
+        if object_storage_type == "s3":
+            s3_rel = self.charm.model.get_relation(S3_RELATION)
+            data = dict(s3_rel.data[s3_rel.app])
+            return ObjectStorageConfig(s3=S3RelData.from_relation(data))
+
+        if object_storage_type == "azure":
+            azure_rel = self.charm.model.get_relation(AZURE_RELATION)
+            data = dict(azure_rel.data[azure_rel.app])
+            return ObjectStorageConfig(azure=AzureRelData.from_relation(data))
+
+        if object_storage_type == "gcs":
+            gcs_rel = self.charm.model.get_relation(GCS_RELATION)
+            data = dict(gcs_rel.data[gcs_rel.app])
+            return ObjectStorageConfig(gcs=GcsRelData.from_relation(data))
+
+        pcluster_rel_data = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)
+        if object_storage_type == "s3-pcluster":
+            data = S3RelData.from_dict({
+                "credentials": pcluster_rel_data.credentials.s3,
+                "tls-ca-chain": pcluster_rel_data.credentials.s3_tls_ca_chain,
+            })
+            return ObjectStorageConfig(s3=data)
+
+        if object_storage_type == "azure-pcluster":
+            data = AzureRelData.from_dict({"credentials": pcluster_rel_data.credentials.azure})
+            return ObjectStorageConfig(azure=AzureRelData.from_dict(data))
+
+        data = GcsRelData.from_dict({"credentials": pcluster_rel_data.credentials.gcs})
+        return ObjectStorageConfig(gcs=data)
+
+    def _action_missing_pre_requisites(self, report_running_operations: bool = True) -> str | None:
+        if not self.charm.unit.is_leader():
+            return "Backup/Restore related actions must be run on the juju leader unit."
+
+        if self.charm.upgrade_in_progress:
+            return "Backup/Restore operations not supported while upgrade in-progress."
+
+        if not self.object_storage_type:
+            return "Missing relation with an object storage integrator."
+
+        if self.object_storage_type == "conflict":
+            return "Conflict: more than one object storage integrators integrated."
+
+        if not self.charm.opensearch.is_node_up() and not self.charm.alt_hosts:
+            return "Connectivity issue: the opensearch service is not reachable."
+
+        try:
+            if not self.charm.backups_manager.is_repository_created(self.object_storage_type):
+                return "The opensearch repository has not been created yet."
+        except OpenSearchHttpError as e:
+            return f"Action failed with: {str(e)}."
+
+        if not report_running_operations:
+            return None
+
+        match self.charm.health.get(wait_for_green_first=True):
+            case HealthColors.RED:
+                return "Cluster health red, current state must be resolved before."
+            case HealthColors.YELLOW_TEMP:
+                return "Shards are still relocating or initializing."
+            case HealthColors.UNKNOWN:
+                return "Cluster health unknown."
+
+        try:
+            if self.charm.backups_manager.is_snapshot_running() or self.charm.backups_manager.is_restore_running():
+                return "Backup / Restore operation in progress."
+        except OpenSearchHttpError as e:
+            return f"Action failed with: {str(e)}."
+
+        return None
+
+
+class OpenSearchBackupsManager:
+
+    def __init__(self, charm: "OpenSearchBaseCharm", opensearch: "OpenSearchDistribution"):
+        self.charm = charm  # todo this will need to be replaced by the clusterState
+        self.opensearch = opensearch
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
+    def create_repo(
+        self,
+        object_storage_type: ObjectStorageType,
+        object_storage_config: ObjectStorageConfig,
+        name: str | None = None
+    ) -> str:
+        """Create an opensearch 'repository' for storing backups."""
+        repo_name = name or self.repository_name(object_storage_type)
+
+        if object_storage_type == "s3":
+            settings = object_storage_config.s3.model_dump(
+                exclude={"tls_ca_chain", "credentials"}, exclude_none=True
+            )
+        else:  # azure
+            settings = {
+                "container": object_storage_config.azure.container,
+                "base_path": object_storage_config.azure.base_path,
+            }
+
+        response = self.opensearch.request(
+            "PUT",
+            f"_snapshot/{repo_name}",
+            payload={"type": object_storage_type, "settings": settings},
+            alt_hosts=self.charm.alt_hosts,
+        )
+        logger.debug("Snapshot repository creation response: %s", response)
+
+        # This should always pass and is set for documentation purposes
+        assert response.get("acknowledged") is True
+        return repo_name
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
+    def create_backup(self, object_storage_type: ObjectStorageType) -> str:
+        repo_name = self.repository_name(object_storage_type)
+        snapshot_id = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT).lower()
+
+        indices_to_ignore = '-,'.join(SYSTEM_INDICES)  # the prefix dash ensures opensearch discards it
+        response = self.opensearch.request(
+            "PUT",
+            f"_snapshot/{repo_name}/{snapshot_id}?wait_for_completion=false",
+            payload={"indices": f"*, -{indices_to_ignore}"},
+            alt_hosts=self.charm.alt_hosts,
+        )
+
+        logger.info(f"Snapshot request submitted with backup-id: {snapshot_id}")
+        logger.debug(f"Create snapshot request with id: {snapshot_id} - response: {response}")
+
+        # This should always pass and is set for documentation purposes
+        assert response.get("accepted") is True
+
+        return snapshot_id
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(3),
+        retry=retry_if_exception_type(OpenSearchHttpError),
+        reraise=True,
+    )
+    def restore(self, object_storage_type: ObjectStorageType, snapshot: dict[str, Any]) -> None:
+        repo_name = self.repository_name(object_storage_type)
+        snapshot_id = snapshot.get("snapshot")
+
+        # This is not necessary if our charm performed the backup itself, but we add this
+        # as a safeguard against manually run backups (through direct calls to the rest api)
+        indices_to_ignore = '-,'.join(SYSTEM_INDICES)  # the prefix dash ensures opensearch discards it
+
+        # restore
+        response = self.opensearch.request(
+            "POST",
+            f"_snapshot/{repo_name}/{snapshot_id}/_restore?wait_for_completion=true",
+            payload={"indices": f"*,-{indices_to_ignore}"},
+            alt_hosts=self.charm.alt_hosts,
+        )
+        if response.get("snapshot", {}).get("snapshot", None) != snapshot_id:
+            raise OpenSearchRestoreError(snapshot_id) # todo
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
+    def close_open_indices(self, snapshot: dict[str, Any]) -> (list[str] | None, dict[str, Any] | None):
+        if not (indices_to_close := self._get_open_indices(snapshot)):
+            logger.info("No indices to close.")
+            return None, None
+
+        logger.info("Attempting closing the indices: %s", indices_to_close)
+        response = self.opensearch.request("POST",f"{','.join(indices_to_close)}/_close")
+
+        # verify that the relevant indices are closed
+        if response["acknowledged"] and response["shards_acknowledged"]:
+            logger.info("Successfully closed all indices: %s.", indices_to_close)
+            return indices_to_close, None
+
+        indices_failed_to_close = {
+            index: payload
+            for index, payload in response["indices"].items()
+            if not payload["closed"]
+        }
+        closed_indices = [index for index in indices_to_close if index not in indices_failed_to_close]
+
+        logger.error("Failed to close some indices: \n%s", indices_failed_to_close)
+        return closed_indices, indices_failed_to_close
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
+    def _get_open_indices(self, snapshot: dict[str, Any]) -> list[str]:
+        current_indices = ClusterState.indices(self.opensearch)
+        return sorted([
+            index for index in snapshot.get("indices", [])
+            if index in current_indices
+               and index not in SYSTEM_INDICES
+               and current_indices[index]["state"] == "open"
+        ])
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
+    def get_snapshot(self, object_storage_type: ObjectStorageType, snapshot_id: str) -> dict[str, Any] | None:
+        repo_name = self.repository_name(object_storage_type)
+        try:
+            response = self.opensearch.request(
+                "GET", f"_snapshot/{repo_name}/{snapshot_id}", alt_hosts=self.charm.alt_hosts
+            )
+            return response["snapshots"][0]
+        except OpenSearchHttpError as e:
+            if e.response_body.get("error", {}).get("type") == "snapshot_missing_exception": # todo, really needed?
+                return None
+            raise
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
+    def get_restore_state(self, object_storage_type: ObjectStorageType, snapshot_id: str) -> dict[str, Any] | None:
+        # todo
+        pass
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
+    def list_snapshots(self, object_storage_type: ObjectStorageType) -> dict[Any, dict[str, Any]]:
+        repo_name = self.repository_name(object_storage_type)
+        response = self.opensearch.request(
+            "GET", f"_snapshot/{repo_name}/_all", alt_hosts=self.charm.alt_hosts
+        )
+        snapshots = {
+            snapshot["snapshot"].upper(): {
+                "state": snapshot["state"].lower(),
+                "indices": snapshot.get("indices", []),
+            }
+            for snapshot in response.get("snapshots", [])
+        }
+        return dict(sorted(snapshots.items(), reverse=True))
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
+    def cleanup(self, object_storage_type: ObjectStorageType) -> None:
+        repo_name = self.repository_name(object_storage_type)
+        try:
+            response = self.opensearch.request(
+                "DELETE", f"_snapshot/{repo_name}", alt_hosts=self.charm.alt_hosts
+            )
+            logger.debug("Snapshot repository creation response: %s", response)
+
+            # This should always pass and is set for documentation purposes
+            assert response.get("acknowledged") is True
+        except OpenSearchHttpError as e:
+            # we might be attempting to delete a nonexisting repository
+            if e.response_body.get("error", {}).get("type") == "repository_missing_exception":
+                return
+            raise
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
+    def is_repository_created(self, object_storage_type: ObjectStorageType, repository: str = None) -> bool:
+        repo_name = repository or self.repository_name(object_storage_type)
+        try:
+            response = self.opensearch.request(
+                "GET", f"_snapshot/{repo_name}", alt_hosts=self.charm.alt_hosts
+            )
+            return response.get(repo_name) is not None
+        except OpenSearchHttpError as e:
+            if e.response_body.get("error", {}).get("type") == "repository_missing_exception":
+                return False
+            raise # TODO
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
+    def is_snapshot_running(self, object_storage_type: ObjectStorageType) -> bool:
+        repo_name = self.repository_name(object_storage_type)
+        response = self.opensearch.request(
+            "GET", f"_snapshot/{repo_name}/_status", alt_hosts=self.charm.alt_hosts
+        )
+        return len(response.get("snapshots", [])) > 0
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
+    def is_restore_running(self, object_storage_type: ObjectStorageType) -> bool:
+
+        pass
+
+    def repository_name(self, object_storage_type: ObjectStorageType) -> str | None:
+        if object_storage_type in {"s3", "s3-pcluster"}:
+            return "s3-repository"
+
+        if object_storage_type in {"azure", "azure-pcluster"}:
+            return "azure-repository"
+
+        return "gcs-repository"
+
+    def requires_custom_s3_ca(
+        self, object_storage_type: ObjectStorageType, object_storage_config: ObjectStorageConfig
+    ) -> bool:
+        if object_storage_type != "s3":
+            return False
+
+        if object_storage_config.s3 and object_storage_config.s3.tls_ca_chain:
+            return True
+
+        return False
+
+    def is_custom_s3_ca_stored(self, object_storage_config: ObjectStorageConfig) -> bool:
+        stored_cacerts = list_cas(
+            store_pwd="changeit", store_path=f"{self.opensearch.paths.certs}/cacerts.p12"
+        ).values()
+        return object_storage_config.s3.tls_ca_chain in set(stored_cacerts)
+
+    def should_store_s3_ca(
+        self, object_storage_type: ObjectStorageType, object_storage_config: ObjectStorageConfig
+    ) -> bool:
+        if not self.requires_custom_s3_ca(object_storage_type, object_storage_config):
+            return False
+
+        return not self.is_custom_s3_ca_stored(object_storage_config)
+
+    def remove_s3_ca(self) -> None:
+        remove_ca(
+            alias="s3-gateway",
+            store_pwd="changeit",
+            store_path=f"{self.opensearch.paths.certs}/cacerts.p12",
+        )
+
+    def store_s3_ca(self, object_storage_config: ObjectStorageConfig) -> None:
+        is_stored = store_ca(
+            store_pwd="changeit",
+            store_path=f"{self.opensearch.paths.certs}/cacerts.p12",
+            alias="s3-gateway",
+            ca=object_storage_config.s3.tls_ca_chain,
+            keep_previous=False,
+        )
+        if is_stored:
+            # todo: store in state confirmation
+            return
+
+        raise Exception("Failed to store s3 ca")  # todo
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
+    def should_restart_for_full_setup(
+        self, object_storage_type: ObjectStorageType, object_storage_config: ObjectStorageConfig
+    ) -> bool:
+        if not self.requires_custom_s3_ca(object_storage_type, object_storage_config):
+            return False
+
+        if not self.is_custom_s3_ca_stored(object_storage_config):
+            return False
+
+        if not self.opensearch.is_started():
+            return False
+
+        try:
+            test_repo = f"tmp-{self.charm.unit_name}-s3-repository"
+            self.create_repo(name=test_repo)
+            return False
+        except OpenSearchHttpError as e:
+            if e.response_body.get("error", {}).get("type") == "repository_verification_exception":
+                return True
+            raise

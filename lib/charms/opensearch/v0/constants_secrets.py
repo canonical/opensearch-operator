@@ -34,3 +34,4 @@ AZURE_PEER_SECRET_KEYS = [
     "storage-account",
     AZURE_CREDENTIALS,
 ]
+GCS_CREDENTIALS = "gcs-creds"

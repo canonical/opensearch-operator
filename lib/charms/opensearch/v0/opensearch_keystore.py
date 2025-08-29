@@ -11,6 +11,8 @@ import os
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 
+from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
+from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
@@ -38,53 +40,55 @@ class OpenSearchKeystoreNotReadyError(OpenSearchKeystoreError):
     """Exception thrown when the keystore is not ready yet."""
 
 
-class Keystore(ABC):
-    """Abstract class that represents the keystore."""
-
-    def __init__(self, charm, password: str = None):
-        """Creates the keystore manager class."""
-        self._charm = charm
-        self._opensearch = charm.opensearch
-        self._keystore = "keystore"
-        self._keystore_path = ""
-
-    @abstractmethod
-    def update(self, entries: Dict[str, Any]) -> None:
-        """Updates the keystore value (adding or removing) and reload.
-
-        Raises:
-            OpenSearchHttpError: If the reload fails.
-        """
-        ...
-
-    @functools.cached_property
-    @abstractmethod
-    def list(self) -> List[str]:
-        """Lists the keys available in opensearch's keystore."""
-        ...
-
-    def _clean_cache_if_needed(self):
-        if self.list:
-            del self.list
-
-    @abstractmethod
-    def reload_keystore(self) -> None:
-        """Updates the keystore value (adding or removing) and reload.
-
-        Raises:
-            OpenSearchHttpError: If the reload fails.
-        """
-        ...
-
-
-class OpenSearchKeystore(Keystore):
+class OpenSearchKeystore:
     """Manages keystore."""
 
-    def __init__(self, charm):
+    def __init__(self, opensearch: 'OpenSearchDistribution'):
         """Creates the keystore manager class."""
-        super().__init__(charm)
-        self._keystore = "keystore"
-        self._keystore_path = f"{charm.opensearch.paths.conf}/opensearch.keystore"
+        self._opensearch = opensearch
+        self._keystore_path = f"{opensearch.paths.conf}/opensearch.keystore"
+
+    def _create_if_needed(self) -> None:
+        """Creates the keystore if not already present."""
+        if os.path.exists(self._keystore_path):
+            return
+
+        self._opensearch.run_bin("keystore", "create")
+
+    def put_entries(self, entries: dict[str, str]) -> None:
+        for key, val in entries.items():
+            # adding the '--force' flag will create the keystore if not present
+            self._opensearch.run_bin("keystore", f"add {key} --force", stdin=val)
+
+    def put_file_entry(self, key: str, filename: str) -> None:
+        self._opensearch.run_bin("keystore", f"add-file {key} {filename} --force")
+
+    def remove_entries(self, keys: list[str]) -> None:
+        self._create_if_needed()
+
+        for key in keys:
+            if key == "keystore.seed":
+                continue
+
+            try:
+                self._opensearch.run_bin("keystore", f"remove {key}")
+            except OpenSearchCmdError as e:
+                if e.err and "does not exist in the keystore" in e.err:
+                    continue
+                raise
+
+    def list_keys(self) -> list[str]:
+        self._create_if_needed()
+        return self._opensearch.run_bin("keystore", "list").splitlines()
+
+    def reload(self) -> None:
+        self._create_if_needed()
+        self._opensearch.run_bin("keystore", "upgrade")
+
+        if self._opensearch.is_node_up():
+            self._opensearch.request("POST", "_nodes/reload_secure_settings")
+            logger.debug("keystore reloaded.")
+
 
     def update(self, entries: Dict[str, Any]) -> None:
         """Updates the keystore value (adding or removing) and reload.
