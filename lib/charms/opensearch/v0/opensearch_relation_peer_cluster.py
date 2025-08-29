@@ -293,11 +293,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             )
             return True
         # clean the status if it is set
-        elif self.charm.app.status.message == PClusterMainIsRequirer:
-            self.charm.status.set(
-                ActiveStatus(),
-                app=True,
-            )
+        else:
+            self.charm.status.clear(PClusterMainIsRequirer, app=True)
         return False
 
     def _broadcast_new_failover_app(
@@ -990,9 +987,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 app=True,
             )
             return True
-        elif self.charm.app.status.message == PClusterNoRelation:
-            self.charm.status.set(
-                ActiveStatus(),
+        else:
+            self.charm.status.clear(
+                PClusterNoRelation,
                 app=True,
             )
 
