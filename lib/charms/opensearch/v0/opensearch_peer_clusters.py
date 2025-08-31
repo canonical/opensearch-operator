@@ -14,7 +14,6 @@ from charms.opensearch.v0.constants_charm import (
     COSUser,
     DataRoleRemovalForbidden,
     KibanaserverUser,
-    PClusterNoDataNode,
     PClusterNoRelation,
     PClusterWrongNodesCountForQuorum,
     PClusterWrongRelation,
@@ -121,7 +120,10 @@ class OpenSearchPeerClustersManager:
 
         if Directive.WAIT_FOR_PEER_CLUSTER_RELATION in pending_directives:
             pending_directives.remove(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
-            self._charm.status.clear(PClusterNoDataNode)
+            if deployment_state.value == State.BLOCKED_WAITING_FOR_RELATION:
+                deployment_state = DeploymentState(value=State.ACTIVE)
+            if self._charm.unit.is_leader():
+                self._charm.status.clear(PClusterNoRelation)
 
         if Directive.VALIDATE_CLUSTER_NAME in pending_directives:
             if config.cluster_name != data.cluster_name:

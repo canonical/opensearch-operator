@@ -406,7 +406,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.clear(AdminUserNotConfigured)
         self.status.clear(TLSNotFullyConfigured)
         self.status.clear(TLSRelationMissing)
-        self.status.clear(PClusterNoRelation)
+        if self.unit.is_leader():
+            self.status.clear(PClusterNoRelation, app=True)
 
         # Since system users are initialized, we should take them to local internal_users.yml
         # Leader should be done already
@@ -1279,6 +1280,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.clear(WaitingToStart)
         self.status.clear(ServiceStartError)
         self.status.clear(PClusterNoDataNode)
+        if self.unit.is_leader():
+            self.status.clear(PClusterNoRelation, app=True)
 
         if event.after_upgrade:
             health = self.health.get(local_app_only=False, wait_for_green_first=True)

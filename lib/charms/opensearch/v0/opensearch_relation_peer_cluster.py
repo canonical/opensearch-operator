@@ -1017,7 +1017,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
     def _on_peer_cluster_relation_joined(self, event: RelationJoinedEvent):
         """Event received when a new main-failover cluster unit joins the fleet."""
-        pass
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(PClusterNoRelation, app=True)
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):  # noqa: C901
         """Peer cluster relation change hook. Crucial to capture changes from the provider side."""
