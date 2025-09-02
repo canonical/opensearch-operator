@@ -22,6 +22,7 @@ from charms.opensearch.v0.constants_secrets import (
     REPOSITORY_AZURE_LABEL,
     REPOSITORY_S3_LABEL,
 )
+from charms.opensearch.v0.models import PluginConfigType, PluginSecret
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchHttpError,
@@ -33,6 +34,7 @@ from charms.opensearch.v0.opensearch_keystore import (
 from charms.smtp_integrator.v0.smtp import DEFAULT_RELATION_NAME as SMTP_RELATION
 from charms.smtp_integrator.v0.smtp import SmtpRequires
 from ops.framework import Object
+from ops.model import SecretNotFoundError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "da838485175f47dbbbb83d76c07cab4c"
@@ -50,7 +52,7 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
-PREFIX_NOTIFICATIONS_EMAIL = "opensearch.notifications.core.email"
+PREFIX_NOTIFICATIONS = "opensearch.notifications.core.email"
 PREFIX_S3_CLIENT = "s3.client.default"
 PREFIX_AZURE_CLIENT = "azure.client.default"
 
@@ -72,60 +74,17 @@ class PluginEvent(Object):
 
         # strip values
         for key, value in parameters.items():
-            if not (isinstance(key, str) and isinstance(value, str)):
-                return False
-            parameters[key] = value.strip()
+            if isinstance(value, str):
+                parameters[key] = value.strip()
         return True
-
-    def _on_credentials_changed(self, event):
-        """Creates secret containing key, value pairs for keystore"""
-        if not self.charm.unit.is_leader():
-            return
-
-        if not self.charm.opensearch.is_node_up():
-            # node must be reachable to reload settings after adding keys
-            event.defer()
-            return
-
-        # return if no relation data
-        if not (parameters := self.get_parameters()):
-            logger.debug("Missing relation %s", self.relation_name)
-            return
-
-        # validate data
-        if not self._validate(parameters):
-            return
-
-        # create keys for keystore
-        keys = self.create_keys(parameters)
-
-        # create secret
-        self.charm.secrets.put(Scope.APP, self.secret_label, json.dumps(keys))
-        secret_id = self.charm.secrets.get_secret_id(Scope.APP, self.secret_label)
-        self.charm.state.app.add_plugin_secret(self.secret_label, secret_id)
-
-        # if unit is main orchestrator leader, transfer keys to subclusters
-        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
-            self.charm.peer_cluster_provider.refresh_relation_data(event)
-
-    def _on_credentials_gone(self, event):
-        """Removes secret when credentials are gone"""
-        if not self.charm.unit.is_leader():
-            return
-
-        self.charm.secrets.delete(Scope.APP, self.secret_label)
-        self.charm.state.app.remove_plugin_secret(self.secret_label)
-
-        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
-            self.charm.peer_cluster_provider.refresh_relation_data(event)
 
     def _on_secret_changed(self, event):
         """Handles secret changes"""
-        secret = event.secret.get_content(refresh=True)
-        if self.secret_label in secret.keys():
-            keys = json.loads(secret.get(self.secret_label))
-
-            # validate?
+        label = self.charm.secrets.label(Scope.APP, self.secret_label)
+        if event.secret.label == label:
+            secret = event.secret.get_content(refresh=True)
+            raw = secret.get(self.secret_label)
+            keys = json.loads(raw)
             if not self.charm.plugin_manager.write_keystore(keys):
                 logger.info("Could not update keystore. Deferring event.")
                 event.defer()
@@ -143,21 +102,9 @@ class SmtpEvents(PluginEvent):
         self.charm = charm
         self.smtp = SmtpRequires(self.charm, self.relation_name)
 
-        self.framework.observe(self.smtp.on.smtp_data_available, self._on_credentials_changed)
-        self.framework.observe(self.charm.on.smtp_relation_broken, self._on_credentials_gone)
+        self.framework.observe(self.smtp.on.smtp_data_available, self._on_smtp_credentials_changed)
+        self.framework.observe(self.charm.on.smtp_relation_broken, self._on_smtp_credentials_gone)
         self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
-
-    def get_parameters(self):
-        """Returns S3 parameters"""
-        return self.smtp.get_relation_data()
-
-    def create_keys(self, parameters):
-        """Returns key value pairs based on given SMTP parameters"""
-        user = parameters.user
-        return {
-            f"{PREFIX_NOTIFICATIONS_EMAIL}.{user}.username": f"{user}",
-            f"{PREFIX_NOTIFICATIONS_EMAIL}.{user}.password": f"{parameters.password}",
-        }
 
     def _validate(self, parameters):
         """Returns missing expected parameters"""
@@ -165,6 +112,66 @@ class SmtpEvents(PluginEvent):
             logger.error("Parameters missing from smtp-intgrator: %s" % missing_parameters)
             return False
         return True
+
+    def _on_smtp_credentials_changed(self, event):
+        """Creates secret containing key, value pairs for keystore"""
+        if not self.charm.opensearch.is_node_up():
+            # node must be reachable to reload settings after adding keys
+            event.defer()
+            return
+
+        # return if no relation data
+        if not (parameters := self.smtp.get_relation_data()):
+            logger.debug("Missing relation %s", self.relation_name)
+            return
+
+        # validate data
+        if not self._validate(parameters):
+            return
+
+        # create keys for keystore
+        user = parameters.user
+        keys = {
+            f"{PREFIX_NOTIFICATIONS}.{user}.username": f"{user}",
+            f"{PREFIX_NOTIFICATIONS}.{user}.password": f"{parameters.password}",
+        }
+
+        self.charm.plugin_manager.write_keystore(keys)
+        self.charm.secrets.put(Scope.UNIT, self.secret_label, json.dumps(keys))
+
+        if not self.charm.unit.is_leader():
+            return
+
+        # if unit is main orchestrator leader, transfer keys to subclusters
+        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+            self.charm.secrets.put(Scope.UNIT, self.secret_label, json.dumps(keys))
+            secret_id = self.charm.secrets.get_secret_id(Scope.APP, self.secret_label)
+            plugin = PluginSecret(
+                relation_name=self.relation_name, secret_id=secret_id, typ=PluginConfigType.KEYS
+            )
+            self.charm.state.app.add_plugin_secret(self.secret_label, plugin)
+            self.charm.peer_cluster_provider.refresh_relation_data(event)
+
+    def _on_smtp_credentials_gone(self, event):
+        """Removes secret when credentials are gone"""
+        secret = self.charm.secrets.get(Scope.UNIT, self.secret_label)
+        keys = json.loads(secret)
+
+        nullified = {k: None for k in keys.keys()}
+        self.charm.plugin_manager.write_keystore(nullified)
+        self.charm.secrets.delete(Scope.UNIT, self.secret_label)
+
+        if not self.charm.unit.is_leader():
+            return
+
+        try:
+            self.charm.secrets.delete(Scope.APP, self.secret_label)
+            self.charm.state.app.remove_plugin_secret(self.secret_label)
+
+            if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+                self.charm.peer_cluster_provider.refresh_relation_data(event)
+        except SecretNotFoundError:
+            logger.debug("Can't find secret %s", self.secret_label)
 
 
 class S3Events(PluginEvent):
@@ -179,20 +186,63 @@ class S3Events(PluginEvent):
         self.charm = charm
         self.s3 = S3Requirer(self.charm, S3_RELATION)
 
-        self.framework.observe(self.s3.on.credentials_changed, self._on_credentials_changed)
-        self.framework.observe(self.s3.on.credentials_gone, self._on_credentials_gone)
+        self.framework.observe(self.s3.on.credentials_changed, self._on_s3_credentials_changed)
+        self.framework.observe(self.s3.on.credentials_gone, self._on_s3_credentials_gone)
         self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
 
-    def get_parameters(self):
-        """Returns S3 parameters"""
-        return self.s3.get_s3_connection_info()
+    def _on_s3_credentials_changed(self, event):
+        """Creates secret containing key, value pairs for keystore"""
+        if not self.charm.opensearch.is_node_up():
+            # node must be reachable to reload settings after adding keys
+            event.defer()
+            return
 
-    def create_keys(self, parameters):
-        """Returns key value pairs based on given S3 parameters"""
-        return {
-            f"{PREFIX_S3_CLIENT}.access_key": parameters["access-key"],
-            f"{PREFIX_S3_CLIENT}.secret_key": parameters["secret-key"],
+        # return if no relation data
+        if not (s3_parameters := self.s3.get_s3_connection_info()):
+            logger.debug("Missing relation %s", self.relation_name)
+            return
+
+        # validate data
+        if not self._validate(s3_parameters):
+            return
+
+        # create keys for keystore
+        keys = {
+            f"{PREFIX_S3_CLIENT}.access_key": s3_parameters["access-key"],
+            f"{PREFIX_S3_CLIENT}.secret_key": s3_parameters["secret-key"],
         }
+
+        self.charm.plugin_manager.write_keystore(keys)
+
+        if not self.charm.unit.is_leader():
+            return
+
+        # if unit is main orchestrator leader, transfer keys to subclusters
+        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+            self.charm.secrets.put(Scope.APP, self.secret_label, json.dumps(keys))
+            secret_id = self.charm.secrets.get_secret_id(Scope.APP, self.secret_label)
+            plugin = PluginSecret(
+                relation_name=self.relation_name, secret_id=secret_id, typ=PluginConfigType.KEYS
+            )
+            self.charm.state.app.add_plugin_secret(self.secret_label, plugin)
+            self.charm.peer_cluster_provider.refresh_relation_data(event)
+
+    def _on_s3_credentials_gone(self, event):
+        """Removes secret when credentials are gone"""
+        self.charm.plugin_manager.write_keystore(
+            {f"{PREFIX_S3_CLIENT}.access_key": None, f"{PREFIX_S3_CLIENT}.secret_key": None}
+        )
+
+        if not self.charm.unit.is_leader():
+            return
+
+        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+            try:
+                self.charm.secrets.delete(Scope.APP, self.secret_label)
+                self.charm.state.app.remove_plugin_secret(self.secret_label)
+                self.charm.peer_cluster_provider.refresh_relation_data(event)
+            except SecretNotFoundError:
+                logger.debug("Can't find secret %s", self.secret_label)
 
 
 class AzureEvents(PluginEvent):
@@ -208,23 +258,66 @@ class AzureEvents(PluginEvent):
         self.azure = AzureStorageRequires(self.charm, AZURE_RELATION)
 
         self.framework.observe(
-            self.azure.on.storage_connection_info_changed, self._on_credentials_changed
+            self.azure.on.storage_connection_info_changed, self._on_azure_credentials_changed
         )
         self.framework.observe(
-            self.azure.on.storage_connection_info_gone, self._on_credentials_gone
+            self.azure.on.storage_connection_info_gone, self._on_azure_credentials_gone
         )
         self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
 
-    def get_parameters(self):
-        """Returns Azure storage connection info"""
-        return self.azure.get_azure_storage_connection_info()
+    def _on_azure_credentials_changed(self, event):
+        """Creates secret containing key, value pairs for keystore"""
+        if not self.charm.opensearch.is_node_up():
+            # node must be reachable to reload settings after adding keys
+            event.defer()
+            return
 
-    def create_keys(self, parameters):
-        """Returns key value pairs based on given Azure parameters"""
-        return {
-            f"{PREFIX_AZURE_CLIENT}.account": parameters["storage-account"],
-            f"{PREFIX_AZURE_CLIENT}.key": parameters["secret-key"],
+        # return if no relation data
+        if not (azure_parameters := self.azure.get_azure_storage_connection_info()):
+            logger.debug("Missing relation %s", self.relation_name)
+            return
+
+        # validate data
+        if not self._validate(azure_parameters):
+            return
+
+        # create keys for keystore
+        keys = {
+            f"{PREFIX_AZURE_CLIENT}.account": azure_parameters["storage-account"],
+            f"{PREFIX_AZURE_CLIENT}.key": azure_parameters["secret-key"],
         }
+
+        self.charm.plugin_manager.write_keystore(keys)
+
+        if not self.charm.unit.is_leader():
+            return
+
+        # if unit is main orchestrator leader, transfer keys to subclusters
+        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+            self.charm.secrets.put(Scope.APP, self.secret_label, json.dumps(keys))
+            secret_id = self.charm.secrets.get_secret_id(Scope.APP, self.secret_label)
+            plugin = PluginSecret(
+                relation_name=self.relation_name, secret_id=secret_id, typ=PluginConfigType.KEYS
+            )
+            self.charm.state.app.add_plugin_secret(self.secret_label, plugin)
+            self.charm.peer_cluster_provider.refresh_relation_data(event)
+
+    def _on_azure_credentials_gone(self, event):
+        """Removes secret when credentials are gone"""
+        self.charm.plugin_manager.write_keystore(
+            {f"{PREFIX_AZURE_CLIENT}.account": None, f"{PREFIX_AZURE_CLIENT}.key": None}
+        )
+
+        if not self.charm.unit.is_leader():
+            return
+
+        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+            try:
+                self.charm.secrets.delete(Scope.APP, self.secret_label)
+                self.charm.state.app.remove_plugin_secret(self.secret_label)
+                self.charm.peer_cluster_provider.refresh_relation_data(event)
+            except SecretNotFoundError:
+                logger.debug("Can't find secret %s", self.secret_label)
 
 
 class OpenSearchPluginEvents(Object):
@@ -249,11 +342,12 @@ class OpenSearchPluginManager:
         try:
             self._keystore.update(config)
             response = self._keystore.reload_keystore()
-            failed = response.get("_nodes", {}).get("failed", -1)
-            return failed == 0
         except OpenSearchCmdError as e:
             logger.info("Could not update keystore %s.", e)
             return False
         except OpenSearchHttpError:
             logger.info("Could not request secure settings reload.")
             return False
+
+        failed = response.get("_nodes", {}).get("failed", -1)
+        return failed == 0

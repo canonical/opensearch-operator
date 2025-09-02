@@ -501,6 +501,20 @@ class PeerClusterFleetApps(Model):
         return self.__root__[item]
 
 
+class PluginConfigType(BaseStrEnum):
+    """Type of config (key, cert, etc)."""
+
+    KEYS = "keys"
+
+
+class PluginSecret(Model):
+    """Model class for representing tracked plugin secrets"""
+
+    relation_name: Optional[str]
+    secret_id: str
+    typ: PluginConfigType
+
+
 class PeerClusterRelData(Model):
     """Model class for the PCluster relation data."""
 
@@ -510,7 +524,7 @@ class PeerClusterRelData(Model):
     deployment_desc: Optional[DeploymentDescription]
     security_index_initialised: bool = False
     first_data_node: Optional[str] = None
-    plugins: Optional[Dict[str, Any]]
+    plugins: Optional[Dict[str, PluginSecret]]
 
 
 class PeerClusterRelErrorData(Model):

@@ -28,7 +28,7 @@ from charms.opensearch.v0.opensearch_internal_data import (
     Scope,
     SecretCache,
 )
-from ops import JujuVersion, Relation, Secret, SecretNotFoundError
+from ops import JujuVersion, ModelError, Relation, Secret, SecretNotFoundError
 from ops.charm import SecretChangedEvent
 from ops.framework import Object
 from overrides import override
@@ -374,12 +374,37 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
         logging.debug(f"Deleted secret {scope}:{key}")
 
+    def track_secret(self, secret_id: str, scope: Scope, key: str) -> Optional[Secret]:
+        """Track a granted secret and add it to the cache"""
+        label = self.label(scope, key)
+        cached_secret_meta = self.cached_secrets.get_meta(scope, label)
+        if cached_secret_meta:
+            # already tracking
+            return cached_secret_meta
+        try:
+            secret = self._charm.model.get_secret(id=secret_id, label=label)
+        except SecretNotFoundError:
+            logger.info("Could not find secret: %s - %", key, secret_id)
+            return None
+
+        self.cached_secrets.set_meta(scope, label, secret)
+        self.cached_secrets.put_content(scope, label, secret.get_content(refresh=True))
+        return secret
+
     def get_secret_id(self, scope: Scope, key: str) -> Optional[str]:
         """Get the secret ID from the cache."""
         label = self.label(scope, key)
         return self._charm.peers_data.get(scope, label)
 
-    def grant_secret_to_relation(self, secret_id: str, relation: Relation):
+    def grant_secret_to_relation(self, secret_id: str, relation: Relation) -> bool:
         """Grant a secret to a relation."""
-        secret = self._charm.model.get_secret(id=secret_id)
-        secret.grant(relation)
+        try:
+            secret = self._charm.model.get_secret(id=secret_id)
+            secret.grant(relation)
+        except SecretNotFoundError:
+            logger.error("Could not find secret: %s", secret_id)
+            return False
+        except ModelError:
+            logger.error("Not owner of secret: %s. Cannot grant to relation", secret_id)
+            return False
+        return True

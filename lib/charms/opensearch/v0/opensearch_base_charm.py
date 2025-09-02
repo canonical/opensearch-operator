@@ -115,7 +115,6 @@ from ops.framework import EventBase, EventSource
 from ops.model import (
     BlockedStatus,
     MaintenanceStatus,
-    SecretNotFoundError,
     WaitingStatus,
 )
 
@@ -585,46 +584,40 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # if app_data + app_data["nodes_config"]: Reconfigure + restart node on the unit
             self._reconfigure_and_restart_unit_if_needed()
 
-        def get_secret(id: str, label: str):
-            try:
-                raw_secret = self.model.get_secret(id=id).get_content().get(label)
-                return json.loads(raw_secret)
-            except SecretNotFoundError:
-                # secret has been removed by owner
-                return None
+        # all units need to add plugin keys from secrets to their keystores
+        if self.opensearch_peer_cm.is_consumer(of="main"):
+            keys_to_write = {}
+            app_plugins = self.state.app.plugin_secrets
+            unit_labels = set(self.state.unit.plugin_secrets.keys())
+            app_labels = set(app_plugins.keys())
 
-        # start tracking plugin secrets and write first secret to keystore
-        keys_to_write = {}
-        labels_to_delete = []
-        for label, secret_id in self.state.app.plugin_secrets.items():
-            unit_has_secret = self.secrets.has(Scope.UNIT, label)
-            if (secret_keys := get_secret(id=secret_id, label=label)) and not unit_has_secret:
-                for key, value in secret_keys.items():
-                    keys_to_write[key] = value
+            add = {label: app_plugins[label] for label in (app_labels - unit_labels)}
+            for label, plugin in add.items():
+                # start locally tracking secret and write transferred keys to keystore
+                app_secret = self.secrets.track_secret(plugin.secret_id, Scope.APP, label)
+                secret_content = app_secret.get_content().get(label)
+                keys = json.loads(secret_content)
+                self.secrets.put(Scope.UNIT, label, keys)
+                self.state.unit.add_plugin_secret_label(label, plugin.typ)
+                keys_to_write.update(keys)
 
-                # add unit secret:
-                # 1. to know which keys to delete after the secret has been removed by owner
-                # 2. to know which keys we have already started and can be deleted if no app secret
-                self.secrets.put(Scope.UNIT, label, json.dumps(secret_keys))
-            elif unit_has_secret and not secret_keys:
-                # we previously had this secret but it has been removed by the owner
-                saved_keys = self.secrets.get(Scope.UNIT, label)
-                secret_keys = json.loads(saved_keys)
-                for key in secret_keys.keys():
-                    keys_to_write[key] = None
-                labels_to_delete.append(label)
+            remove = unit_labels - app_labels
+            for label in remove:
+                # this unit should delete the keys it wrote as the secret has been removed
+                secret_content = self.secrets.get(Scope.UNIT, label)
+                keys = json.loads(secret_content)
+                keys_to_write.update({k: None for k in keys.keys()})
 
-        # write changes to keystore and reload
-        if keys_to_write and not self.plugin_manager.write_keystore(keys_to_write):
-            logger.info("Could not update keystore. Deferring event.")
-            event.defer()
-            return
+            # write changes to keystore
+            if keys_to_write and not self.plugin_manager.write_keystore(keys_to_write):
+                logger.info("Could not update keystore. Deferring event.")
+                event.defer()
+                return
 
-        # remove plugin secret from unit and app secret_id from peers data
-        for label in labels_to_delete:
-            self.secrets.delete(Scope.UNIT, label)
-            if self.unit.is_leader():
-                self.state.app.remove_plugin_secret(label)
+            # remove plugin secret and label from unit if no longer tracking
+            for label in remove:
+                self.secrets.delete(Scope.UNIT, label)
+                self.state.unit.remove_plugin_secret_label(label)
 
         if not (unit_data := event.relation.data.get(event.unit)):
             return

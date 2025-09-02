@@ -340,28 +340,18 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if not self.charm.unit.is_leader():
             return
 
-        credentials_to_check = {
-            "s3-integrator": {"key": S3_CREDENTIALS, "relation_name": S3_RELATION},
-            "azure-storage-integrator": {
-                "key": AZURE_CREDENTIALS,
-                "relation_name": AZURE_RELATION,
-            },
-        }
-
-        should_block = [
-            name
-            for name, info in credentials_to_check.items()
-            if self._has_secret_and_no_relation(info["key"], info["relation_name"])
+        plugin_secret_relations = [
+            s.relation_name
+            for s in self.charm.state.app.plugin_secrets.values()
+            if s.relation_name
         ]
-        if should_block:
-            message = f"Found credentials with missing relations. Add relation with {', '.join(should_block)} and any client applications."
+        if missing := [
+            relation
+            for relation in plugin_secret_relations
+            if not self.charm.model.get_relation(relation)
+        ]:
+            message = f"Found credentials with missing relations. Add relation for {', '.join(missing)} endpoints and any client applications."
             self.charm.status.set(BlockedStatus(message), app=True)
-
-    def _has_secret_and_no_relation(self, key: str, relation_name: str) -> bool:
-        """Checks if the relation data has credentials for a non-related app"""
-        return self.charm.secrets.has(Scope.APP, key) and not self.charm.model.get_relation(
-            relation_name
-        )
 
     def refresh_relation_data(  # noqa: C901
         self, event: EventBase, event_rel_id: int | None = None, can_defer: bool = True
@@ -626,17 +616,23 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             deployment_desc=deployment_desc,
             security_index_initialised=self._get_security_index_initialised(),
             first_data_node=self._get_first_data_node(),
-            plugins=self._plugin_secrets(),
+            plugins=(
+                self._plugin_secrets()
+                if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+                else None
+            ),
         )
 
     def _plugin_secrets(self):
         """Grants plugin secrets to subcluster relations and returns secret ids"""
         plugin_secrets = self.charm.state.app.plugin_secrets
         # grant secrets to subsclusters
+        granted = {}
         for relation in self.charm.model.relations[self.relation_name]:
-            for secret_id in plugin_secrets.values():
-                self.secrets.grant_secret_to_relation(secret_id, relation)
-        return plugin_secrets
+            for label, plugin in plugin_secrets.items():
+                if self.secrets.grant_secret_to_relation(plugin.secret_id, relation):
+                    granted[label] = plugin
+        return granted
 
     def _rel_data_credentials(self) -> Optional[PeerClusterRelDataCredentials]:
         """Build and return the rel data credentials to be shared with requirer sub-clusters."""
@@ -978,7 +974,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # fetch the success data
         data = self.peer_cm.rel_data_from_str(data["data"])
 
-        if plugin_secrets := data.plugins:
+        if (plugin_secrets := data.plugins) is not None:
             self._track_plugin_secrets(plugin_secrets)
 
         # check errors that can only be figured out from the requirer side
@@ -1031,18 +1027,17 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
     def _track_plugin_secrets(self, relation_plugins):
         """Track plugin secrets from relation data"""
-        current_plugins = self.charm.state.app.plugin_secrets
-        current_labels = set(current_plugins.keys())
-        updated_labels = set(relation_plugins.keys())
+        current_labels = set(self.charm.state.app.plugin_secrets.keys())
+        relation_labels = set(relation_plugins.keys())
 
-        remove = current_labels - updated_labels
+        remove = current_labels - relation_labels
+        add = {label: relation_plugins[label] for label in (relation_labels - current_labels)}
         for label in remove:
             self.charm.state.app.remove_plugin_secret(label)
 
-        for label, secret_id in relation_plugins.items():
-            if label not in current_labels:
-                self.charm.model.get_secret(id=secret_id, label=label).get_content().get(label)
-            self.charm.state.app.add_plugin_secret(label, secret_id)
+        for label, plugin in add.items():
+            self.charm.secrets.track_secret(plugin.secret_id, Scope.APP, label)
+            self.charm.state.app.add_plugin_secret(label, plugin)
 
     def apply_orchestrator_status(self) -> None:
         """Sets or clears status based on presence of local orchestrators."""
