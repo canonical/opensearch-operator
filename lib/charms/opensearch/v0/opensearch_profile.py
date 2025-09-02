@@ -17,6 +17,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, List, Optional
 
+from charms.opensearch.v0.constants_charm import InvalidProfileConfigOption
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 
 if TYPE_CHECKING:
@@ -263,9 +264,15 @@ class ProfilesManager:
         - Memory requirements
         - Cluster topology requirements
         """
-        if profile is None:
-            profile = self.profile
         missing_requirements: List[str] = []
+        if profile is None:
+            try:
+                profile = self.profile
+            except ValueError:
+                logger.error(
+                    "Invalid profile configuration. Value: %s", self.state.config.get("profile")
+                )
+                return [InvalidProfileConfigOption]
 
         missing_requirements.extend(self.check_missing_system_requirements())
         missing_requirements.extend(self.check_memory_requirements(profile))
