@@ -21,6 +21,7 @@ from charms.opensearch.v0.constants_charm import (
     COSPort,
     COSRelationName,
     COSUser,
+    InvalidProfileConfigOption,
     OpenSearchSystemUsers,
     OpenSearchUsers,
     PClusterNoDataNode,
@@ -846,8 +847,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         profile_restart_needed = False
         if self.state.unit.is_started:
-            config_profile = self.profiles_manager.get_config_profile()
-            current_profile = self.state.unit.profile
+            try:
+                config_profile = self.profiles_manager.get_config_profile()
+                current_profile = self.state.unit.profile
+            except ValueError:
+                logger.error(
+                    "Invalid profile configuration. Value: %s", self.state.config.get("profile")
+                )
+                self.status.set(BlockedStatus(InvalidProfileConfigOption))
+                return
             missing_requirements = self.profiles_manager.check_all_requirements(config_profile)
 
             if missing_requirements:
@@ -1158,8 +1166,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
             return
-
-        profile = self.profiles_manager.profile
+        try:
+            profile = self.profiles_manager.profile
+        except ValueError:
+            logger.error(
+                "Invalid profile configuration. Value: %s", self.state.config.get("profile")
+            )
+            self.status.set(BlockedStatus(InvalidProfileConfigOption))
+            return
         self.opensearch_config.set_jvm_heap_size(
             profile.get_jvm_heap_size(self.opensearch.meminfo()["MemTotal"])
         )
