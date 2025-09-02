@@ -118,8 +118,6 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
         logger.debug("Secret change for %s", str(label_key))
 
-        # all units should add plugins keys to the opensearch keystore
-
         if is_leader and label_key == self._charm.secrets.password_key(KibanaserverUser):
             self._charm.opensearch_provider.update_dashboards_password()
 

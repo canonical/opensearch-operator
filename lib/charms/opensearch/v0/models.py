@@ -549,11 +549,6 @@ class PeerClusterOrchestrators(Model):
         self.delete("failover")
 
 
-class Plugins(Model):
-    """Model class for managed plugins."""
-    keystore: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
-
-
 class OpenSearchPerfProfile(Model):
     """Generates an immutable description of the performance profile."""
 

@@ -3,23 +3,18 @@
 
 """Objects representing the state of OpenSearchBaseCharm."""
 
-from functools import cached_property
 import logging
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING
+
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
-from charms.opensearch.v0.models import (
-    Plugins,
-    PeerClusterApp,
-)
-
-import json
 from ops import Object
 
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 logger = logging.getLogger(__name__)
+
 
 class OpenSearchApp:
     """State/Relation data collection for an opensearch application."""
@@ -63,4 +58,3 @@ class OpenSearchClusterState(Object):
         return OpenSearchApp(
             charm=self.charm,
         )
-

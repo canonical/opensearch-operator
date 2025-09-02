@@ -10,20 +10,29 @@ This class is instantiated at the operator level and is called at every relevant
 config-changed, upgrade, s3-credentials-changed, etc.
 """
 
-import logging
 import json
+import logging
 from typing import TYPE_CHECKING
 
-from ops.framework import Object
-from charms.opensearch.v0.constants_secrets import NOTIFICATIONS_LABEL, REPOSITORY_AZURE_LABEL, REPOSITORY_S3_LABEL
-from charms.opensearch.v0.opensearch_internal_data import Scope
+from charms.data_platform_libs.v0.object_storage import AzureStorageRequires
+from charms.data_platform_libs.v0.s3 import S3Requirer
+from charms.opensearch.v0.constants_charm import AZURE_RELATION, S3_RELATION
+from charms.opensearch.v0.constants_secrets import (
+    NOTIFICATIONS_LABEL,
+    REPOSITORY_AZURE_LABEL,
+    REPOSITORY_S3_LABEL,
+)
 from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchCmdError,
     OpenSearchHttpError,
 )
-from charms.opensearch.v0.constants_charm import AZURE_RELATION, S3_RELATION
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_keystore import (
     OpenSearchKeystore,
 )
+from charms.smtp_integrator.v0.smtp import DEFAULT_RELATION_NAME as SMTP_RELATION
+from charms.smtp_integrator.v0.smtp import SmtpRequires
+from ops.framework import Object
 
 # The unique Charmhub library identifier, never change it
 LIBID = "da838485175f47dbbbb83d76c07cab4c"
@@ -38,10 +47,6 @@ LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
 
-from charms.data_platform_libs.v0.s3 import S3Requirer
-from charms.smtp_integrator.v0.smtp import SmtpRequires, DEFAULT_RELATION_NAME as SMTP_RELATION
-from charms.data_platform_libs.v0.object_storage import AzureStorageRequires
-
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
@@ -49,21 +54,27 @@ PREFIX_NOTIFICATIONS_EMAIL = "opensearch.notifications.core.email"
 PREFIX_S3_CLIENT = "s3.client.default"
 PREFIX_AZURE_CLIENT = "azure.client.default"
 
+
 class PluginEvent(Object):
+    """Base event handler for plugin events"""
+
     def __init__(self, charm: "OpenSearchBaseCharm", plugin):
         super().__init__(charm, f"plugin:{plugin}")
-        self.charm = charm 
+        self.charm = charm
 
     def _validate(self, parameters) -> bool:
         """Returns false if data invalid"""
         if missing_parameters := [p for p in self.required_params if p not in parameters]:
-            logger.error("Parameters missing from %s: %s" % (self.relation_name, missing_parameters))
+            logger.error(
+                "Parameters missing from %s: %s" % (self.relation_name, missing_parameters)
+            )
             return False
 
         # strip values
         for key, value in parameters.items():
-            if isinstance(value, str):
-                parameters[key] = value.strip()
+            if not (isinstance(key, str) and isinstance(value, str)):
+                return False
+            parameters[key] = value.strip()
         return True
 
     def _on_credentials_changed(self, event):
@@ -74,7 +85,7 @@ class PluginEvent(Object):
         if not self.charm.opensearch.is_node_up():
             # node must be reachable to reload settings after adding keys
             event.defer()
-            return 
+            return
 
         # return if no relation data
         if not (parameters := self.get_parameters()):
@@ -122,6 +133,7 @@ class PluginEvent(Object):
 
 class SmtpEvents(PluginEvent):
     """Events handler for smtp events"""
+
     relation_name = SMTP_RELATION
     required_params = ("user", "password")
     secret_label = NOTIFICATIONS_LABEL
@@ -140,23 +152,24 @@ class SmtpEvents(PluginEvent):
         return self.smtp.get_relation_data()
 
     def create_keys(self, parameters):
-        """Returns key value pairs based on parameters if given else returns keys set to None"""
+        """Returns key value pairs based on given SMTP parameters"""
         user = parameters.user
         return {
             f"{PREFIX_NOTIFICATIONS_EMAIL}.{user}.username": f"{user}",
-            f"{PREFIX_NOTIFICATIONS_EMAIL}.{user}.password": f"{parameters.password}"
+            f"{PREFIX_NOTIFICATIONS_EMAIL}.{user}.password": f"{parameters.password}",
         }
 
     def _validate(self, parameters):
         """Returns missing expected parameters"""
-        if missing_parameters := [p for p in self.required_params if not getattr(parameters, p)]:    
+        if missing_parameters := [p for p in self.required_params if not getattr(parameters, p)]:
             logger.error("Parameters missing from smtp-intgrator: %s" % missing_parameters)
             return False
         return True
 
+
 class S3Events(PluginEvent):
     """Events handler for s3-credentials events"""
-    
+
     relation_name = S3_RELATION
     required_params = ("access-key", "secret-key")
     secret_label = REPOSITORY_S3_LABEL
@@ -175,7 +188,7 @@ class S3Events(PluginEvent):
         return self.s3.get_s3_connection_info()
 
     def create_keys(self, parameters):
-        """Returns key value pairs based on given parameters"""
+        """Returns key value pairs based on given S3 parameters"""
         return {
             f"{PREFIX_S3_CLIENT}.access_key": parameters["access-key"],
             f"{PREFIX_S3_CLIENT}.secret_key": parameters["secret-key"],
@@ -184,9 +197,9 @@ class S3Events(PluginEvent):
 
 class AzureEvents(PluginEvent):
     """Events handler for azure-credentials events"""
-    
+
     relation_name = AZURE_RELATION
-    required_params = ("access-key", "secret-key")    
+    required_params = ("access-key", "secret-key")
     secret_label = REPOSITORY_AZURE_LABEL
 
     def __init__(self, charm: "OpenSearchBaseCharm"):
@@ -194,8 +207,12 @@ class AzureEvents(PluginEvent):
         self.charm = charm
         self.azure = AzureStorageRequires(self.charm, AZURE_RELATION)
 
-        self.framework.observe(self.azure.on.storage_connection_info_changed, self._on_credentials_changed)
-        self.framework.observe(self.azure.on.storage_connection_info_gone, self._on_credentials_gone)
+        self.framework.observe(
+            self.azure.on.storage_connection_info_changed, self._on_credentials_changed
+        )
+        self.framework.observe(
+            self.azure.on.storage_connection_info_gone, self._on_credentials_gone
+        )
         self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
 
     def get_parameters(self):
@@ -203,6 +220,7 @@ class AzureEvents(PluginEvent):
         return self.azure.get_azure_storage_connection_info()
 
     def create_keys(self, parameters):
+        """Returns key value pairs based on given Azure parameters"""
         return {
             f"{PREFIX_AZURE_CLIENT}.account": parameters["storage-account"],
             f"{PREFIX_AZURE_CLIENT}.key": parameters["secret-key"],
@@ -228,11 +246,14 @@ class OpenSearchPluginManager:
 
     def write_keystore(self, config):
         """Updates key,val pairs in OpenSearch keystore. Deletes key if val is None"""
-        self._keystore.update(config)
         try:
+            self._keystore.update(config)
             response = self._keystore.reload_keystore()
             failed = response.get("_nodes", {}).get("failed", -1)
             return failed == 0
+        except OpenSearchCmdError as e:
+            logger.info("Could not update keystore %s.", e)
+            return False
         except OpenSearchHttpError:
             logger.info("Could not request secure settings reload.")
             return False

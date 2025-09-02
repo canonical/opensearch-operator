@@ -37,4 +37,4 @@ AZURE_PEER_SECRET_KEYS = [
 
 NOTIFICATIONS_LABEL = "notifications-plugin"
 REPOSITORY_S3_LABEL = "repository-s3-plugin"
-REPOSITORY_AZURE_LABEL = f"repository-azure-plugin"
+REPOSITORY_AZURE_LABEL = "repository-azure-plugin"

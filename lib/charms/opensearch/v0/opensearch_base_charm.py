@@ -3,6 +3,7 @@
 
 """Base class for the OpenSearch Operators."""
 import abc
+import json
 import logging
 import random
 import typing
@@ -53,7 +54,6 @@ from charms.opensearch.v0.models import (
     DeploymentType,
     PerformanceType,
 )
-from charms.opensearch.v0.opensearch_backups import backup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -78,7 +78,10 @@ from charms.opensearch.v0.opensearch_peer_clusters import (
     StartMode,
 )
 from charms.opensearch.v0.opensearch_performance_profile import OpenSearchPerformance
-from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager, OpenSearchPluginEvents
+from charms.opensearch.v0.opensearch_plugin_manager import (
+    OpenSearchPluginEvents,
+    OpenSearchPluginManager,
+)
 from charms.opensearch.v0.opensearch_relation_peer_cluster import (
     OpenSearchPeerClusterProvider,
     OpenSearchPeerClusterRequirer,
@@ -109,7 +112,12 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.framework import EventBase, EventSource
-from ops.model import BlockedStatus, MaintenanceStatus, SecretNotFoundError, WaitingStatus
+from ops.model import (
+    BlockedStatus,
+    MaintenanceStatus,
+    SecretNotFoundError,
+    WaitingStatus,
+)
 
 import lifecycle
 import upgrade
@@ -211,8 +219,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.plugin_manager = OpenSearchPluginManager(self.opensearch)
         self.plugin_events = OpenSearchPluginEvents(self)
-
-        self.backup = backup(self)
 
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
@@ -579,7 +585,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # if app_data + app_data["nodes_config"]: Reconfigure + restart node on the unit
             self._reconfigure_and_restart_unit_if_needed()
 
-        import json
         def get_secret(id: str, label: str):
             try:
                 raw_secret = self.model.get_secret(id=id).get_content().get(label)
@@ -599,7 +604,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
                 # add unit secret:
                 # 1. to know which keys to delete after the secret has been removed by owner
-                # 2. to know which keys we have already started tracking so that subsequent writes are handled in secret-changed
+                # 2. to know which keys we have already started and can be deleted if no app secret
                 self.secrets.put(Scope.UNIT, label, json.dumps(secret_keys))
             elif unit_has_secret and not secret_keys:
                 # we previously had this secret but it has been removed by the owner
@@ -620,7 +625,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.secrets.delete(Scope.UNIT, label)
             if self.unit.is_leader():
                 self.state.app.remove_plugin_secret(label)
-                
 
         if not (unit_data := event.relation.data.get(event.unit)):
             return
@@ -856,36 +860,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return
 
         perf_profile_needs_restart = False
-        plugin_needs_restart = False #self.plugin_manager.run()
-
-        # try:
-        #     original_status = None
-        #     if self.unit.status.message not in [
-        #         PluginConfigChangeError,
-        #         PluginConfigCheck,
-        #     ]:
-        #         logger.debug(f"Plugin manager: storing status {self.unit.status.message}")
-        #         original_status = self.unit.status
-        #         self.status.set(MaintenanceStatus(PluginConfigCheck))
-        #
-        #     plugin_needs_restart = self.plugin_manager.run()
-        # except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
-        #     if isinstance(e, OpenSearchNotFullyReadyError):
-        #         logger.warning("Plugin management: cluster not ready yet at config changed")
-        #     else:
-        #         logger.warning(f"{PluginConfigChangeError}: {str(e)}")
-        #         self.status.set(BlockedStatus(PluginConfigChangeError))
-        #     event.defer()
-        #     self.status.clear(PluginConfigCheck)
-        # except OpenSearchKeystoreNotReadyError:
-        #     logger.warning("Keystore not ready yet")
-        #     # defer, and let it finish the status clearing down below
-        #     event.defer()
-        # else:
-        #     self.status.clear(PluginConfigChangeError)
-        #     self.status.clear(PluginConfigCheck)
-        #     if original_status:
-        #         self.status.set(original_status)
 
         perf_profile_needs_restart = self.performance_profile.apply(
             self.config.get(PERFORMANCE_PROFILE)
@@ -894,11 +868,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not self.opensearch_provider.update_relations_roles_mapping():
             event.defer()
 
-        if self.opensearch.is_service_started() and (
-            plugin_needs_restart or perf_profile_needs_restart
-        ):
+        if self.opensearch.is_service_started() and perf_profile_needs_restart:
             logger.debug(
-                f"Restarting opensearch due to config change: plugin_needs_restart={plugin_needs_restart}, perf_profile_needs_restart={perf_profile_needs_restart}"
+                f"Restarting opensearch due to config change: perf_profile_needs_restart={perf_profile_needs_restart}"
             )
             self._restart_opensearch_event.emit()
 

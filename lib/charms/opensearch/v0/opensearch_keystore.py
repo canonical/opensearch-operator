@@ -26,6 +26,8 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 KEYSTORE = "keystore"
+
+
 class OpenSearchKeystore:
     """Manages keystore."""
 
@@ -46,7 +48,6 @@ class OpenSearchKeystore:
 
     def _add(self, key: str, value: str):
         """Adds key, value pair to OpenSearch keystore"""
-        logger.info(f"PLUGINS: writing {key} {value}")
         self._opensearch.run_bin(KEYSTORE, f"add --force --stdin {key}", stdin=value)
 
     def _delete(self, key: str) -> None:
@@ -57,7 +58,7 @@ class OpenSearchKeystore:
             if "does not exist in the keystore" in str(e):
                 logger.info("Keystore command 'delete' failed for key: %s. Key not found.", key)
                 return
-            raise 
+            raise
 
     def reload_keystore(self):
         """Reloads local node's secure settings

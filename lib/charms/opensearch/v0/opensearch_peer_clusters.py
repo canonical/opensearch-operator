@@ -648,13 +648,6 @@ class OpenSearchPeerClustersManager:
                 id=credentials["admin_tls"]
             ).peek_content()
 
-        if "plugins" in credentials:
-            import pdb 
-            pdb.set_trace()
-            credentials["plugins"] = { label: self._charm.model.get_secret(
-                id=secret_id
-            ).peek_content() for label, secret_id in credentials["plugins"]}
-
         if (
             "s3" in credentials
             and credentials["s3"].get("access-key")

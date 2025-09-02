@@ -608,7 +608,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             logger.debug("Cluster not ready to populate relation data")
             return None
 
-        credentials = self._rel_data_credentials(deployment_desc)
+        credentials = self._rel_data_credentials()
         if not credentials:
             logger.debug("Admin user not initialized. Relation data not ready")
             return None
@@ -638,10 +638,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 self.secrets.grant_secret_to_relation(secret_id, relation)
         return plugin_secrets
 
-
-    def _rel_data_credentials(
-        self, deployment_desc: DeploymentDescription
-    ) -> Optional[PeerClusterRelDataCredentials]:
+    def _rel_data_credentials(self) -> Optional[PeerClusterRelDataCredentials]:
         """Build and return the rel data credentials to be shared with requirer sub-clusters."""
         if self.charm.is_admin_user_configured():
             return PeerClusterRelDataCredentials(
@@ -656,8 +653,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 ),
                 monitor_password=self.secrets.get(Scope.APP, self.secrets.password_key(COSUser)),
                 admin_tls=self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val),
-                s3=self._s3_credentials(deployment_desc),
-                azure=self._azure_credentials(deployment_desc),
             )
         return None
 
@@ -802,9 +797,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             redacted_dict["credentials"]["monitor_password"] = monitor_password
         if admin_tls := self.secrets.get_secret_id(Scope.APP, CertType.APP_ADMIN.val):
             redacted_dict["credentials"]["admin_tls"] = admin_tls
-
-        # if (plugins := getattr(rel_data.credentials, "plugins")):
-        #     redacted_dict["credentials"]["plugins"] = { label: secret_id for label in plugins if (secret_id := self.secrets.get_secret_id(Scope.APP, label)) }
 
         if (
             rel_data.credentials.s3
@@ -985,8 +977,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # fetch the success data
         data = self.peer_cm.rel_data_from_str(data["data"])
-        
-        if (plugin_secrets := data.plugins):
+
+        if plugin_secrets := data.plugins:
             self._track_plugin_secrets(plugin_secrets)
 
         # check errors that can only be figured out from the requirer side
@@ -1043,15 +1035,14 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         current_labels = set(current_plugins.keys())
         updated_labels = set(relation_plugins.keys())
 
-        to_remove = current_labels - updated_labels
-        for label in to_remove:
+        remove = current_labels - updated_labels
+        for label in remove:
             self.charm.state.app.remove_plugin_secret(label)
 
         for label, secret_id in relation_plugins.items():
             if label not in current_labels:
                 self.charm.model.get_secret(id=secret_id, label=label).get_content().get(label)
             self.charm.state.app.add_plugin_secret(label, secret_id)
-
 
     def apply_orchestrator_status(self) -> None:
         """Sets or clears status based on presence of local orchestrators."""
