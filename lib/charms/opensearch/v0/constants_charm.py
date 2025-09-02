@@ -78,7 +78,9 @@ BackupDeferRelBrokenAsInProgress = "Backup service cannot be stopped: backup in 
 PClusterWaitingForFailoverPromotion = (
     "Main-cluster-orchestrator removed, waiting for failover promotion."
 )
-InvalidProfileConfigOption = "Invalid profile configuration option. Only `production` and `testing` values are allowed."
+InvalidProfileConfigOption = (
+    "Invalid profile configuration option. Only `production` and `testing` values are allowed."
+)
 
 # Maintenance statuses
 InstallProgress = "Installing OpenSearch..."
