@@ -575,9 +575,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.unit.is_leader():
             # Recompute the node roles in case self-healing didn't trigger leader related event
             self._recompute_roles_if_needed(event)
-            if self.peers_data.get(Scope.APP, "is_expecting_cm_unit"):
-                # indicates we previously scaled down to <3 CM-eligible units in the cluster
-                self.opensearch_peer_cm.validate_recommended_cm_unit_count()
             if self.model.relations[PeerClusterRelationName]:
                 self.peer_cluster_requirer.apply_orchestrator_status()
         elif event.relation.data.get(event.app):
@@ -640,8 +637,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not self.unit.is_leader():
             return
 
-        self.opensearch_peer_cm.validate_recommended_cm_unit_count(remaining_nodes)
-
         self.opensearch_exclusions.add_to_cleanup_list(
             unit_name=format_unit_name(event.departing_unit.name, deployment_desc.app)
         )
@@ -668,7 +663,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     if node.name != self.unit_name
                 ]
                 self._compute_and_broadcast_updated_topology(remaining_nodes)
-                self.opensearch_peer_cm.validate_recommended_cm_unit_count(remaining_nodes)
             elif self.app.planned_units() == 0:
                 if self.model.get_relation(PeerRelationName):
                     self.peers_data.delete(Scope.APP, "bootstrap_contributors_count")

@@ -330,11 +330,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         # check if any credentials exist without relations
         self._block_if_has_credentials_with_missing_relations()
 
-        # ensuring quorum
-        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
-        cms = self._fetch_local_cm_nodes(deployment_desc)
-        self.charm.opensearch_peer_cm.validate_recommended_cm_unit_count(cms)
-
     def _block_if_has_credentials_with_missing_relations(self) -> None:
         """Checks if the relation data has credentials for non-related apps"""
         if not self.charm.unit.is_leader():
