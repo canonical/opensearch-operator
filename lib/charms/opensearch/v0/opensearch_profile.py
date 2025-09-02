@@ -152,9 +152,14 @@ class ProfilesManager:
     def __init__(self, state: "OpenSearchClusterState", workload: "OpenSearchDistribution"):
         self.state = state
         self.workload = workload
-        if self.profile.type == PerformanceType.TESTING:
-            logger.warning(
-                "Testing profile is used. This profile is not suitable for production use and should only be used for testing purposes."
+        try:
+            if self.profile.type == PerformanceType.TESTING:
+                logger.warning(
+                    "Testing profile is used. This profile is not suitable for production use and should only be used for testing purposes."
+                )
+        except ValueError:
+            logger.error(
+                "Invalid profile configuration. Value: %s", self.state.config.get("profile")
             )
 
     def _apply_system_requirement(self, system_requirement: str, value: int) -> bool:
@@ -191,6 +196,8 @@ class ProfilesManager:
         ):
             missing_requirements.append(f"{prop} should be at most {val}")
 
+        if missing_requirements:
+            logger.error("Missing system requirements: %s", missing_requirements)
         return missing_requirements
 
     def check_memory_requirements(self, profile: OpenSearchProfile) -> List[str]:
@@ -244,6 +251,8 @@ class ProfilesManager:
                 f"At least {profile.cluster_topology_requirements.data} data nodes are required. Found only {nbr_data_nodes}."
             )
 
+        if missing_requirements:
+            logger.error("Missing cluster topology requirements: %s", missing_requirements)
         return missing_requirements
 
     def check_all_requirements(self, profile: Optional[OpenSearchProfile] = None) -> List[str]:
