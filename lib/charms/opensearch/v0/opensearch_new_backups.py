@@ -7,14 +7,13 @@ import json
 import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal
-from unittest import case
 
 from ops import (
     ActionEvent,
     BlockedStatus,
-    Object,
+    Object, MaintenanceStatus,
 )
-from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type, Retrying
+from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 
 from charms.data_platform_libs.v0.object_storage import AzureStorageRequires, StorageConnectionInfoChangedEvent, \
     StorageConnectionInfoGoneEvent
@@ -23,7 +22,7 @@ from charms.opensearch.v0.constants_charm import (
     AZURE_RELATION,
     OPENSEARCH_BACKUP_ID_FORMAT,
     S3_RELATION,
-    GCS_RELATION,
+    GCS_RELATION, RestoreInProgress, BackupInProgress,
 )
 from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.helper_security import store_ca, list_cas, remove_ca
@@ -103,7 +102,6 @@ class OpenSearchBackupsEvents(Object):
 
     def _on_s3_credentials_changed(self, event: CredentialsChangedEvent) -> None:
         if not (object_storage_type := self.object_storage_type):
-            # todo
             return
 
         if object_storage_type == "conflict":
@@ -111,13 +109,16 @@ class OpenSearchBackupsEvents(Object):
             event.defer()
             return
 
-        # handle the case where this was deferred in case of multiple object storage relations
-        # then s3 relation severed
-        if object_storage_type != "s3":
+        # handle case where this was deferred in the previous case, then the s3 relation was severed
+        if (
+            object_storage_type != "s3"
+            or not self.object_storage_config.s3
+            or not self.object_storage_config.s3.credentials
+        ):
+            logger.warning("No S3 object storage configuration.")
             return
 
-        if self.charm.backups_manager.should_store_s3_ca(object_storage_type, self.object_storage_config):
-            self.charm.backups_manager.store_s3_ca(self.object_storage_config)
+        self.charm.backups_manager.store_s3_ca(self.object_storage_config.s3.tls_ca_chain)
 
         s3_credentials = self.object_storage_config.s3.credentials
         self.charm.keystore_manager.put_entries({
@@ -126,7 +127,7 @@ class OpenSearchBackupsEvents(Object):
         })
         self.charm.keystore_manager.reload()
 
-        if self.charm.backups_manager.should_restart_for_full_setup(object_storage_type, self.object_storage_config):
+        if self.charm.backups_manager.should_restart_for_full_setup():
             # todo: emit restart
             event.defer()
             return
@@ -137,19 +138,21 @@ class OpenSearchBackupsEvents(Object):
                 object_storage_config=self.object_storage_config,
             )
 
-    def _on_s3_credentials_gone(self, event: CredentialsGoneEvent) -> None:
+    def _on_s3_credentials_gone(self, _: CredentialsGoneEvent) -> None:
         self.charm.keystore_manager.remove_entries([
             "s3.client.default.access_key",
             "s3.client.default.secret_key",
         ])
         self.charm.keystore_manager.reload()
 
-        # todo replace with check on the cacerts
-        if self.charm.backups_manager.is_custom_s3_ca_stored():
-            self.charm.backups_manager.remove_s3_ca()
-            if self.charm.opensearch.is_started():
-                # todo emit restart ONLY IF unit not removed !!!! offload this to the RestartEvent logic
-                pass
+        if not self.charm.backups_manager.is_custom_s3_ca_stored():
+            return
+
+        self.charm.backups_manager.store_s3_ca(s3_tls_ca_chain=None)
+        if not self.charm.opensearch.is_started():
+            return
+
+        # todo emit a restart.
 
     def _on_azure_credentials_changed(self, event: StorageConnectionInfoChangedEvent) -> None:
         if not (object_storage_type := self.object_storage_type):
@@ -178,7 +181,7 @@ class OpenSearchBackupsEvents(Object):
             object_storage_config=self.object_storage_config,
         )
 
-    def _on_azure_credentials_gone(self, event: StorageConnectionInfoGoneEvent) -> None:
+    def _on_azure_credentials_gone(self, _: StorageConnectionInfoGoneEvent) -> None:
         self.charm.keystore_manager.remove_entries([
             "azure.client.default.account",
             "azure.client.default.key",
@@ -191,14 +194,19 @@ class OpenSearchBackupsEvents(Object):
             return
 
         try:
-            snapshot_id = self.charm.backups_manager.create_backup()
+            snapshot_id = self.charm.backups_manager.create_backup(
+                object_storage_type=self.object_storage_type
+            )
         except OpenSearchHttpError as e:
             event.fail(f"Backup request failed with: {str(e)}")
             return
 
         try:
-            state = self.charm.backups_manager.snapshot_status()
-            event.set_results({"backup-id": snapshot_id, "status": state})
+            snapshot = self.charm.backups_manager.get_snapshot(
+                object_storage_type=self.object_storage_type, snapshot_id=snapshot_id
+            )
+            self.charm.status.set(MaintenanceStatus(BackupInProgress))
+            event.set_results({"backup-id": snapshot_id, "status": snapshot["state"]})
         except OpenSearchHttpError as e:
             logger.error(e)
             event.fail(f"Unknown state for backup {snapshot_id}: {str(e)}")
@@ -222,7 +230,7 @@ class OpenSearchBackupsEvents(Object):
             event.set_results({"backups": json.dumps(snapshots)})
             return
 
-        table_output = ["{:<20s} | {:s}".format(" backup-id", "backup-status")]
+        table_output = ["{:<20s} | {:s}".format("backup-id", "backup-status")]
         table_output.append("-" * len(table_output[0]))
         for _id, _snapshot in snapshots.items():
             table_output.append("{:<20s} | {:s}".format(_id, _snapshot["state"]))
@@ -245,7 +253,7 @@ class OpenSearchBackupsEvents(Object):
 
         try:
             # close indices that were snapshotted if they still exist, so they can be restored
-            closed_indices, indices_failed_to_close = self.charm.backups_manager.close_open_indices(snapshot)
+            closed_indices, indices_failed_to_close = self.charm.backups_manager.close_snapshot_indices_open_in_cluster(snapshot)
             if indices_failed_to_close:
                 event.fail(f"Failed to close {len(indices_failed_to_close)} open indices. Check logs for details.")
                 return
@@ -255,7 +263,7 @@ class OpenSearchBackupsEvents(Object):
 
         try:
             self.charm.backups_manager.restore(object_storage_type=self.object_storage_type, snapshot=snapshot)
-            event.set_results({"backup-id": snapshot_id})
+            self.charm.status.set(MaintenanceStatus(RestoreInProgress))
         except OpenSearchHttpError as e:
             event.fail(f"Failed to restore snapshot {snapshot_id}. Error: {str(e)}.")
             return
@@ -305,14 +313,14 @@ class OpenSearchBackupsEvents(Object):
             return None
 
         if object_storage_type == "s3":
-            s3_rel = self.charm.model.get_relation(S3_RELATION)
-            data = dict(s3_rel.data[s3_rel.app])
-            return ObjectStorageConfig(s3=S3RelData.from_relation(data))
+            return ObjectStorageConfig(
+                s3=S3RelData.from_relation(self.s3_requirer.get_s3_connection_info())
+            )
 
         if object_storage_type == "azure":
-            azure_rel = self.charm.model.get_relation(AZURE_RELATION)
-            data = dict(azure_rel.data[azure_rel.app])
-            return ObjectStorageConfig(azure=AzureRelData.from_relation(data))
+            return ObjectStorageConfig(
+                azure=AzureRelData.from_relation(self.azure_requirer.get_azure_storage_connection_info())
+            )
 
         if object_storage_type == "gcs":
             gcs_rel = self.charm.model.get_relation(GCS_RELATION)
@@ -406,7 +414,6 @@ class OpenSearchBackupsManager:
             "PUT",
             f"_snapshot/{repo_name}",
             payload={"type": object_storage_type, "settings": settings},
-            alt_hosts=self.charm.alt_hosts,
         )
         logger.debug("Snapshot repository creation response: %s", response)
 
@@ -449,19 +456,56 @@ class OpenSearchBackupsManager:
         # as a safeguard against manually run backups (through direct calls to the rest api)
         indices_to_ignore = '-,'.join(SYSTEM_INDICES)  # the prefix dash ensures opensearch discards it
 
+        restore_id = f"restore:{datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT).lower()}-snapshot:{snapshot_id}"
+
         # restore
         response = self.opensearch.request(
             "POST",
             f"_snapshot/{repo_name}/{snapshot_id}/_restore?wait_for_completion=true",
+            headers={"X-Opaque-Id": restore_id},
             payload={"indices": f"*,-{indices_to_ignore}"},
             alt_hosts=self.charm.alt_hosts,
         )
-        if response.get("snapshot", {}).get("snapshot", None) != snapshot_id:
-            raise OpenSearchRestoreError(snapshot_id) # todo
+
+        # this only serves as documentation and should always be true if no previous HTTP error
+        assert response["accepted"] is True
+
+        # in the background:
+        resp: dict[str, Any] = self.opensearch.request(
+            "GET", "/_tasks?actions=*recovery*&detailed=true&group_by=parents"
+        )
+        for task_id, task in resp["tasks"].items():
+            if task["headers"].get("X-Opaque-Id") == restore_id:
+                return # todo retry in 30sec or so
+
+        # now sanity check
+        resp: list[dict[str, str]] = self.opensearch.request("GET", "_cat/recovery")
+        snapshot_recoveries = [
+            recovery
+            for recovery in resp
+            if (
+                recovery["type"] == "snapshot"
+                and recovery["repository"] == repo_name
+                and recovery["snapshot"] == snapshot_id
+            )
+        ]
+        recovered_indices = set(
+            [recovery["index"] for recovery in snapshot_recoveries if recovery["stage"] == "done"]
+        )
+
+        if len(recovered_indices) < len(snapshot_recoveries):
+            return # todo retry this bit, as restore not complete
+
+        self.charm.status.clear(RestoreInProgress)
+        if recovered_indices - set(snapshot.get("indices", [])):
+            return # todo, mark restore as failed
+
+        self.charm.health.apply(wait_for_green_first=True)
+
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
-    def close_open_indices(self, snapshot: dict[str, Any]) -> (list[str] | None, dict[str, Any] | None):
-        if not (indices_to_close := self._get_open_indices(snapshot)):
+    def close_snapshot_indices_open_in_cluster(self, snapshot: dict[str, Any]) -> (list[str] | None, dict[str, Any] | None):
+        if not (indices_to_close := self._get_snapshot_indices_open_in_cluster(snapshot)):
             logger.info("No indices to close.")
             return None, None
 
@@ -484,7 +528,7 @@ class OpenSearchBackupsManager:
         return closed_indices, indices_failed_to_close
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
-    def _get_open_indices(self, snapshot: dict[str, Any]) -> list[str]:
+    def _get_snapshot_indices_open_in_cluster(self, snapshot: dict[str, Any]) -> list[str]:
         current_indices = ClusterState.indices(self.opensearch)
         return sorted([
             index for index in snapshot.get("indices", [])
@@ -557,17 +601,21 @@ class OpenSearchBackupsManager:
             raise # TODO
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
-    def is_snapshot_running(self, object_storage_type: ObjectStorageType) -> bool:
-        repo_name = self.repository_name(object_storage_type)
+    def is_snapshot_running(self) -> bool:
         response = self.opensearch.request(
-            "GET", f"_snapshot/{repo_name}/_status", alt_hosts=self.charm.alt_hosts
+            "GET", f"_snapshot/_status", alt_hosts=self.charm.alt_hosts
         )
         return len(response.get("snapshots", [])) > 0
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
-    def is_restore_running(self, object_storage_type: ObjectStorageType) -> bool:
-
-        pass
+    def is_restore_running(self) -> bool:
+        response: list[dict[str, str]] = self.opensearch.request(
+            "GET", "/_cat/recovery?format=json&h=type,stage", alt_hosts=self.charm.alt_hosts
+        )
+        for operation in response:
+            if operation["type"] == "snapshot" and operation["state"] == "open":
+                return True
+        return False
 
     def repository_name(self, object_storage_type: ObjectStorageType) -> str | None:
         if object_storage_type in {"s3", "s3-pcluster"}:
@@ -584,62 +632,51 @@ class OpenSearchBackupsManager:
         if object_storage_type != "s3":
             return False
 
-        if object_storage_config.s3 and object_storage_config.s3.tls_ca_chain:
+        stored_cacerts = list_cas(
+            store_pwd="changeit", store_path=f"{self.opensearch.paths.certs}/cacerts.p12"
+        ).values()
+        if (
+            object_storage_config.s3
+            and object_storage_config.s3.tls_ca_chain
+            and object_storage_config.s3.tls_ca_chain not in stored_cacerts
+        ):
             return True
 
         return False
 
-    def is_custom_s3_ca_stored(self, object_storage_config: ObjectStorageConfig) -> bool:
+    def is_custom_s3_ca_stored(self, s3_ca_chain: str | None = None) -> bool:
         stored_cacerts = list_cas(
             store_pwd="changeit", store_path=f"{self.opensearch.paths.certs}/cacerts.p12"
-        ).values()
-        return object_storage_config.s3.tls_ca_chain in set(stored_cacerts)
-
-    def should_store_s3_ca(
-        self, object_storage_type: ObjectStorageType, object_storage_config: ObjectStorageConfig
-    ) -> bool:
-        if not self.requires_custom_s3_ca(object_storage_type, object_storage_config):
-            return False
-
-        return not self.is_custom_s3_ca_stored(object_storage_config)
-
-    def remove_s3_ca(self) -> None:
-        remove_ca(
-            alias="s3-gateway",
-            store_pwd="changeit",
-            store_path=f"{self.opensearch.paths.certs}/cacerts.p12",
         )
+        if not s3_ca_chain:
+            return stored_cacerts.get("s3-gateway") is not None
 
-    def store_s3_ca(self, object_storage_config: ObjectStorageConfig) -> None:
-        is_stored = store_ca(
-            store_pwd="changeit",
-            store_path=f"{self.opensearch.paths.certs}/cacerts.p12",
-            alias="s3-gateway",
-            ca=object_storage_config.s3.tls_ca_chain,
-            keep_previous=False,
-        )
-        if is_stored:
-            # todo: store in state confirmation
-            return
+        return stored_cacerts.get("s3-gateway") == s3_ca_chain
 
-        raise Exception("Failed to store s3 ca")  # todo
+    def store_s3_ca(self, s3_tls_ca_chain: str | None) -> None:
+        if s3_tls_ca_chain:
+            store_ca(
+                store_pwd="changeit",
+                store_path=f"{self.opensearch.paths.certs}/cacerts.p12",
+                alias="s3-gateway",
+                ca=s3_tls_ca_chain,
+                keep_previous=False,
+            )
+        else:
+            remove_ca(
+                alias="s3-gateway",
+                store_pwd="changeit",
+                store_path=f"{self.opensearch.paths.certs}/cacerts.p12",
+            )
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
-    def should_restart_for_full_setup(
-        self, object_storage_type: ObjectStorageType, object_storage_config: ObjectStorageConfig
-    ) -> bool:
-        if not self.requires_custom_s3_ca(object_storage_type, object_storage_config):
-            return False
-
-        if not self.is_custom_s3_ca_stored(object_storage_config):
-            return False
-
+    def should_restart_for_full_setup(self) -> bool:
         if not self.opensearch.is_started():
             return False
 
         try:
             test_repo = f"tmp-{self.charm.unit_name}-s3-repository"
-            self.create_repo(name=test_repo)
+            self.create_repo(name=test_repo)  # todo: verify?
             return False
         except OpenSearchHttpError as e:
             if e.response_body.get("error", {}).get("type") == "repository_verification_exception":
