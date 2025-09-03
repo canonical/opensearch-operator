@@ -1,0 +1,59 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  01:41:59Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+application                        active      1  application                                0  no       
+opensearch                         active      2  opensearch                                 0  no       
+opensearch-dashboards              active      1  opensearch-dashboards     2/edge          47  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+application/0*               active    idle   2        10.98.142.84              
+opensearch-dashboards/0*     active    idle   1        10.98.142.96    5601/tcp  
+opensearch/0*                active    idle   3        10.98.142.141   9200/tcp  
+opensearch/1                 active    idle   4        10.98.142.142   9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.98.142.3               
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.98.142.3    juju-0d7170-0  ubuntu@22.04  github-runner  Running
+1        started  10.98.142.96   juju-0d7170-1  ubuntu@22.04  github-runner  Running
+2        started  10.98.142.84   juju-0d7170-2  ubuntu@22.04  github-runner  Running
+3        started  10.98.142.141  juju-0d7170-3  ubuntu@24.04  github-runner  Running
+4        started  10.98.142.142  juju-0d7170-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-3: 01:34:42 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:34:42 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:34:42 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:34:46 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:34:46 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 01:34:47 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-5: 01:34:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:34:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 01:34:51 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:35:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:35:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:35:09 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:36:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:36:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-application-0: 01:36:13 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:36:14 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:36:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-dashboards-0: 01:36:14 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-application-0: 01:37:14 ERROR unit.application/0.juju-log connection check to opensearch charm failed
+unit-application-0: 01:38:11 ERROR unit.application/0.juju-log first-index:7: writing cert to /tmp/test_cert.ca.
+unit-opensearch-dashboards-0: 01:38:58 ERROR unit.opensearch-dashboards/0.juju-log opensearch-client:8: Request GET to http://10.98.142.96:5601/api/status with payload: None failed. 
+503 Server Error: Service Unavailable for url: http://10.98.142.96:5601/api/status
+unit-opensearch-dashboards-0: 01:38:59 ERROR unit.opensearch-dashboards/0.juju-log opensearch-client:8: Request GET to http://10.98.142.96:5601/api/status with payload: None failed. 
+HTTPConnectionPool(host='10.98.142.96', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x76d23ec8ebf0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 01:39:04 ERROR unit.opensearch-dashboards/0.juju-log opensearch-client:8: Request GET to http://10.98.142.96:5601/api/status with payload: None failed. 
+503 Server Error: Service Unavailable for url: http://10.98.142.96:5601/api/status
+unit-opensearch-dashboards-0: 01:39:21 ERROR unit.opensearch-dashboards/0.juju-log Request GET to http://10.98.142.96:5601/api/status with payload: None failed. 
+401 Client Error: Unauthorized for url: http://10.98.142.96:5601/api/status
+unit-opensearch-dashboards-0: 01:40:14 ERROR unit.opensearch-dashboards/0.juju-log Request GET to http://10.98.142.96:5601/api/status with payload: None failed. 
+HTTPConnectionPool(host='10.98.142.96', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x77cfb4382650>: Failed to establish a new connection: [Errno 111] Connection refused'))
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
