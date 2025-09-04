@@ -81,26 +81,15 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Set
 
 import pydantic
 from charms.data_platform_libs.v0.data_interfaces import RequirerData
-from charms.data_platform_libs.v0.object_storage import AzureStorageRequires
-from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.opensearch.v0.constants_charm import (
     AZURE_RELATION,
     OPENSEARCH_BACKUP_ID_FORMAT,
     S3_RELATION,
     BackupConfigureStart,
-    BackupDeferRelBrokenAsInProgress,
-    BackupInDisabling,
-    BackupRelDataIncomplete,
     BackupRelShouldNotExist,
     BackupSetupFailed,
-    BackupSetupStart,
     PeerClusterRelationName,
-    PluginConfigError,
     RestoreInProgress,
-)
-from charms.opensearch.v0.constants_secrets import (
-    AZURE_PEER_SECRET_KEYS,
-    S3_PEER_SECRET_KEYS,
 )
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
@@ -108,19 +97,11 @@ from charms.opensearch.v0.models import AzureRelData, DeploymentType, Model, S3R
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
-    OpenSearchNotFullyReadyError,
-)
-from charms.opensearch.v0.opensearch_keystore import (
-    OpenSearchKeystoreError,
-    OpenSearchKeystoreNotReadyError,
 )
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchAzurePlugin,
-    OpenSearchPluginMissingConfigError,
-    OpenSearchPluginMissingDepsError,
     OpenSearchS3Plugin,
-    PluginState,
 )
 from ops import (
     ActionEvent,
@@ -129,8 +110,6 @@ from ops import (
     Object,
     RelationEvent,
     SecretEvent,
-    SecretNotFoundError,
-    WaitingStatus,
 )
 from ops.framework import EventBase, EventSource, Handle
 from overrides import override
@@ -632,27 +611,6 @@ class OpenSearchBackupBase(Object):
         self.relation_name = relation_name
         self.backup_manager = BackupManager(charm, repository=self.repository)
 
-        self.framework.observe(self._disable_backup_event, self._on_backup_disable)
-
-        # We can reuse the same method, as the plugin manager will apply configs accordingly.
-        self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
-        self.framework.observe(self.charm.on.secret_remove, self._on_secret_changed)
-
-        for relation in (S3_RELATION, AZURE_RELATION):
-            for event in [
-                self.charm.on[relation].relation_joined,
-                self.charm.on[relation].relation_changed,
-                self.charm.on[relation].relation_departed,
-                self.charm.on[relation].relation_broken,
-            ]:
-                self.framework.observe(event, self._on_backup_relation_event)
-            self.framework.observe(
-                self.charm.on[relation].relation_created, self._on_backup_relation_created
-            )
-            self.framework.observe(
-                self.charm.on[relation].relation_broken, self._on_backup_relation_broken
-            )
-
         for event in [
             self.charm.on.create_backup_action,
             self.charm.on.list_backups_action,
@@ -673,134 +631,6 @@ class OpenSearchBackupBase(Object):
             logger.warning(
                 "Modifying relations during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
-
-    def _on_backup_relation_broken(self, event: RelationEvent) -> None:
-        """Emits the backup disable event."""
-        if event.relation.name in [S3_RELATION, AZURE_RELATION]:
-            self._disable_backup_event.emit(
-                relation_name=(
-                    S3_RELATION if event.relation.name == S3_RELATION else AZURE_RELATION
-                ),
-            )
-            return
-
-        # We have a peer relation going away, so we still must clean up the keystore.
-        # In this case, we must disable all backup systems, as the peer cluster always
-        # carry all the information.
-
-        # We disable both plugins
-        plugins = [OpenSearchAzurePlugin(self.charm, None), OpenSearchS3Plugin(self.charm, None)]
-        for plug in plugins:
-            # We only catch the keystore not ready exception
-            # This exception happens after the keystore itself has been cleaned but the API call
-            # to reload failed.
-            # In this case, we can ignore the exception and continue, as it will be called for
-            # other units and the keystore is clean.
-            # Any other exception should result in actual errors.
-            try:
-                self.charm.plugin_manager.apply_config(plug.disable())
-            except OpenSearchKeystoreNotReadyError:
-                if self.charm.opensearch.is_service_started():
-                    # We have an application up and running but not responding
-                    # We cannot defer either, so we will fail and retry later
-                    raise
-                logger.debug("Backup broken relation: keystore not ready yet")
-                # No need to defer, we already cleaned the keystore.
-                return
-
-    def _on_backup_disable(self, event: _DisableBackupRelationEvent) -> None:  # noqa C901
-        """Disables the backup relation."""
-        self.charm.status.clear(BackupRelDataIncomplete)
-        self.charm.status.clear(BackupRelShouldNotExist)
-        if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupRelShouldNotExist, app=True)
-
-        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
-            event.defer()
-            return
-
-        if deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR:
-            # Nothing to do besides fixing the status
-            return
-
-        if self.charm.upgrade_in_progress:
-            logger.warning(
-                "Modifying relations during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
-            )
-
-        if (
-            self.charm.model.get_relation(event.relation_name)
-            and self.charm.model.get_relation(event.relation_name).units
-        ):
-            # The main app units must defer this event
-            # as they are related directly with the backup integrator
-            # and they are still seeing data in the relation databag.
-            event.defer()
-            return
-
-        self.charm.status.set(MaintenanceStatus(BackupInDisabling))
-        # Check snapshot
-        # This will call a generic GET /_snapshot/_status, independent of the repository type
-        snapshot_status = BackupManager.check_snapshot_status(self.charm)
-        if snapshot_status in [
-            BackupServiceState.SNAPSHOT_IN_PROGRESS,
-        ]:
-            # 1) snapshot is either in progress or partially taken: block and defer this event
-            self.charm.status.set(WaitingStatus(BackupDeferRelBrokenAsInProgress))
-            event.defer()
-            return
-        self.charm.status.clear(BackupDeferRelBrokenAsInProgress)
-
-        if snapshot_status in [
-            BackupServiceState.SNAPSHOT_PARTIALLY_TAKEN,
-        ]:
-            logger.warning(
-                "Snapshot has been partially taken, but not completed. Continuing with relation removal..."
-            )
-
-        # Run the check here, instead of the start of this hook, as we want all the
-        # units to keep deferring the event if needed.
-        # That avoids a condition where we have:
-        # 1) A long snapshot is taking place
-        # 2) Relation is removed
-        # 3) Only leader is checking for that and deferring the event
-        # 4) The leader is lost or removed
-        # 5) The snapshot is removed: self._execute_s3_broken_calls() never happens
-        # That is why we are running the leader check here and not at first
-        if (
-            self.charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR
-            and self.charm.unit.is_leader()
-        ):
-            # Run the API calls
-            self.backup_manager.clean()
-
-        plug = (
-            OpenSearchAzurePlugin(self.charm, None)
-            if event.relation_name == AZURE_RELATION
-            else OpenSearchS3Plugin(self.charm, None)
-        )
-
-        try:
-            self.charm.plugin_manager.apply_config(plug.disable())
-        except OpenSearchKeystoreError:
-            # The plugin is not present, we can ignore it
-            logger.info(f"Error while removing {plug.name}")
-            event.defer()
-            return
-        except OpenSearchError as e:
-            self.charm.status.set(BlockedStatus(PluginConfigError))
-            # There was an unexpected error, log it and block the unit
-            logger.error(e)
-            event.defer()
-            return
-
-        # Now, as this is related strictly to the MAIN orchestrator,
-        # we must update any peer relation.
-        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
-            self.charm.peer_cluster_provider.refresh_relation_data(event)
-
-        self.charm.status.clear(BackupInDisabling)
-        self.charm.status.clear(PluginConfigError)
 
     def _on_backup_action(self, event: ActionEvent) -> None:
         """No deployment description yet, fail any actions."""
@@ -870,54 +700,6 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         super().__init__(charm, relation_name)
 
     @override
-    def _on_secret_changed(self, event: SecretEvent) -> None:  # noqa: C901
-        """Processes the secret changes."""
-        try:
-            if not any(
-                [
-                    k in S3_PEER_SECRET_KEYS + AZURE_PEER_SECRET_KEYS
-                    for k in event.secret.get_content().keys()
-                ]
-            ):
-                logger.info(
-                    f"Secret not relevant for backups, abandoning secret id {event.secret.id}"
-                )
-                return
-        except SecretNotFoundError:
-            logger.warning("Secret not found, abandoning secret event")
-            return
-
-        if not (data := self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)):
-            event.defer()
-            return
-
-        plugins = [
-            OpenSearchS3Plugin(
-                charm=self.charm,
-                relation_data=data.credentials.s3,
-            ),
-            OpenSearchAzurePlugin(
-                charm=self.charm,
-                relation_data=data.credentials.azure,
-            ),
-        ]
-
-        for plugin in plugins:
-            # Early check to avoid trying to configure both with empty credentials
-            if not plugin.data:
-                continue
-            try:
-                if not self.charm.plugin_manager.is_ready_for_api():
-                    raise OpenSearchNotFullyReadyError()
-                self.charm.plugin_manager.apply_config(plugin.config())
-            except (OpenSearchKeystoreNotReadyError, OpenSearchNotFullyReadyError):
-                logger.info(f"{plugin.name}: not ready, we wait for another peer cluster.")
-            except OpenSearchPluginMissingConfigError as e:
-                logger.info(f"Missing configs for {plugin.name}: {e}")
-
-        event.secret.get_content(refresh=True)
-
-    @override
     def _on_backup_relation_event(self, event: RelationEvent) -> None:
         """Processes the non-orchestrator cluster events."""
         self.charm.status.set(BlockedStatus(BackupRelShouldNotExist))
@@ -957,10 +739,6 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
     def data(self) -> Model | None:
         """Returns the data for the backup backend."""
         ...
-
-    @property
-    def _plugin_status(self):
-        return self.charm.plugin_manager.status(self.plugin)
 
     @override
     def _on_backup_relation_event(self, event: RelationEvent) -> None:
@@ -1083,78 +861,6 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
             return
         event.set_results({"backup-id": new_backup_id, "status": "Backup is running."})
 
-    def _on_backup_credentials_changed(self, event: EventBase) -> None:  # noqa: C901
-        """Calls the plugin manager config handler.
-
-        This method will iterate over the s3 relation and check:
-        1) Is S3 fully configured? If not, we can abandon this event
-        2) Try to enable the plugin
-        3) If the plugin is not enabled, then defer the event
-        4) Send the API calls to setup the backup service
-        """
-        if not self.plugin.requested_to_enable():
-            # Always check if a relation actually exists and if options are available
-            # in this case, seems one of the conditions above is not yet present
-            # abandon this restart event, as it will be called later once s3 configuration
-            # is correctly set
-            self.charm.status.clear(PluginConfigError)
-            self.charm.status.clear(BackupSetupStart)
-            self.charm.status.clear(BackupRelDataIncomplete)
-            return
-
-        self.charm.status.set(MaintenanceStatus(BackupSetupStart))
-
-        try:
-            if not self.charm.plugin_manager.is_ready_for_api():
-                raise OpenSearchNotFullyReadyError()
-            self.charm.plugin_manager.apply_config(self.plugin.config())
-        except (OpenSearchKeystoreNotReadyError, OpenSearchNotFullyReadyError):
-            logger.warning("s3-changed: cluster not ready yet")
-            event.defer()
-            return
-        except (OpenSearchPluginMissingConfigError, OpenSearchPluginMissingDepsError) as e:
-            self.charm.status.set(BlockedStatus(BackupRelDataIncomplete))
-            logger.error(e)
-            return
-        except OpenSearchError as e:
-            self.charm.status.set(BlockedStatus(PluginConfigError))
-            # There was an unexpected error, log it and block the unit
-            logger.error(e)
-            event.defer()
-            return
-
-        if self._plugin_status not in [
-            PluginState.ENABLED,
-            PluginState.WAITING_FOR_UPGRADE,
-        ]:
-            logger.warning("_on_s3_credentials_changed: plugin is not enabled.")
-            event.defer()
-            return
-
-        if not self.charm.unit.is_leader():
-            # Plugin is configured locally for this unit. Now the leader proceed.
-            self.charm.status.clear(PluginConfigError)
-            self.charm.status.clear(BackupSetupStart)
-            self.charm.status.clear(BackupRelDataIncomplete)
-            return
-
-        # Leader configures this plugin
-        try:
-            self.apply_api_config_if_needed()
-        except OpenSearchBackupError as e:
-            # Finish here and wait for the user to reconfigure it and retrigger a new event
-            logger.error(e)
-            event.defer()
-            return
-        except pydantic.error_wrappers.ValidationError as e:
-            logger.error(f"Failed to parse S3 relation data: {e}")
-            # It means we are missing some data in the relation
-            self.charm.status.set(BlockedStatus(BackupRelDataIncomplete))
-            return
-        self.charm.status.clear(PluginConfigError)
-        self.charm.status.clear(BackupSetupStart)
-        self.charm.status.clear(BackupRelDataIncomplete)
-
     def apply_api_config_if_needed(self) -> None:
         """Runs the post restart routine and API calls needed to setup/disable backup.
 
@@ -1197,10 +903,7 @@ class OpenSearchS3Backup(OpenSearchMainBackup):
     def __init__(self, charm: "OpenSearchBaseCharm", relation_name: str = S3_RELATION):
         """Manager of OpenSearch backup relations."""
         super().__init__(charm, relation_name)
-        self.client = S3Requirer(self.charm, S3_RELATION)
-        self.framework.observe(
-            self.client.on.credentials_changed, self._on_backup_credentials_changed
-        )
+        self.client = charm.plugin_events.s3_events.s3  # S3Requirer(self.charm, S3_RELATION)
 
     @property
     def _model(self) -> S3RelData | None:
@@ -1251,11 +954,7 @@ class OpenSearchAzureBackup(OpenSearchMainBackup):
     def __init__(self, charm: "OpenSearchBaseCharm", relation_name: str = AZURE_RELATION):
         """Manager of OpenSearch backup relations."""
         super().__init__(charm, relation_name)
-        self.client = AzureStorageRequires(self.charm, AZURE_RELATION)
-        self.framework.observe(
-            self.client.on.storage_connection_info_changed,
-            self._on_backup_credentials_changed,
-        )
+        self.client = charm.plugin_events.azure.azure
         self._relation = self.charm.model.get_relation(AZURE_RELATION)
 
     @property

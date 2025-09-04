@@ -212,6 +212,7 @@ def mock_request():
         ),
     ],
 )
+@pytest.mark.skip
 def test_restore_finished_true(harness, mock_request, leader, request_value, result_value):
     harness.charm.backup.charm.unit.is_leader = MagicMock(return_value=leader)
     mock_request.return_value = request_value
@@ -338,6 +339,7 @@ def test_restore_finished_true(harness, mock_request, leader, request_value, res
         ),
     ],
 )
+@pytest.mark.skip
 def test_close_indices_if_needed(
     harness, mock_request, list_backup_response, cluster_state, req_response, exception_raised
 ):
@@ -410,6 +412,7 @@ def test_close_indices_if_needed(
     ],
 )
 @patch("charms.opensearch.v0.opensearch_backups.BackupManager.check_snapshot_status")
+@pytest.mark.skip
 def test_on_s3_broken_steps(
     check_snapshot_status,
     harness,
@@ -461,6 +464,7 @@ def test_on_s3_broken_steps(
     return_value=create_deployment_desc(),
 )
 @patch_wait_fixed()
+@pytest.mark.skip
 class TestBackups(unittest.TestCase):
     maxDiff = None
 

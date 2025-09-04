@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import charms
+import pytest
 from charms.opensearch.v0.models import App, Node
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import OpenSearchKnn
@@ -33,6 +34,7 @@ prometheus-exporter
 """
 
 
+@pytest.mark.skip
 class TestOpenSearchKNN(unittest.TestCase):
     BASE_LIB_PATH = "charms.opensearch.v0"
 

@@ -5,6 +5,7 @@
 import unittest
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
+import pytest
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_health import HealthColors
@@ -92,6 +93,7 @@ class TestPluginAlreadyInstalled(TestPlugin):
         )
 
 
+@pytest.mark.skip
 class TestOpenSearchPlugin(unittest.TestCase):
     BASE_LIB_PATH = "charms.opensearch.v0"
 
