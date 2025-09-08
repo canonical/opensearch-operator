@@ -133,12 +133,12 @@ class OpenSearchSecrets(Object, RelationDataStore):
                 self._charm.user_manager.put_internal_user(sys_user, password)
 
         if label_key == JWT_AUTH_CONFIG:
-            jwt_config = event.secret.get_content()[label_key]
+            jwt_config = event.secret.get_content()
             self.charm.opensearch_config.set_jwt_auth(jwt_config)
 
             if (
                 is_leader
-                and self.charm.peers_data.get(Scope.APP, "security_index_initialised")
+                and self.charm.peers_data.get(Scope.APP, "security_index_initialised", False)
                 and "data" in self.charm.opensearch_peer_cm.deployment_desc().config.roles
             ):
                 logger.info("Updating security configuration")

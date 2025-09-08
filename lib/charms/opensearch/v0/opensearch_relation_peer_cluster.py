@@ -19,7 +19,11 @@ from charms.opensearch.v0.constants_charm import (
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
 )
-from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS
+from charms.opensearch.v0.constants_secrets import (
+    AZURE_CREDENTIALS,
+    JWT_AUTH_CONFIG,
+    S3_CREDENTIALS,
+)
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology
@@ -647,6 +651,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 admin_tls=self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val),
                 s3=self._s3_credentials(deployment_desc),
                 azure=self._azure_credentials(deployment_desc),
+                jwt_auth_config=self.secrets.get_object(Scope.APP, JWT_AUTH_CONFIG)
             )
         return None
 
@@ -812,6 +817,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 "storage-account": self.secrets.get_secret_id(Scope.APP, "azure-storage-account"),
                 "secret-key": self.secrets.get_secret_id(Scope.APP, "azure-secret-key"),
             }
+
+        if jwt_auth_config := self.secrets.get_secret_id(Scope.APP, JWT_AUTH_CONFIG):
+            redacted_dict["credentials"]["jwt_auth_config"] = jwt_auth_config
 
         return redacted_dict
 
@@ -1119,6 +1127,12 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 Scope.APP,
                 AZURE_CREDENTIALS,
                 AzureRelDataCredentials().to_dict(by_alias=True),
+            )
+
+        # todo: only if `data` in roles?
+        if jwt_auth_config := data.credentials.jwt_auth_config:
+            self.secrets.put_object(
+                Scope.APP, JWT_AUTH_CONFIG, jwt_auth_config.to_dict()
             )
 
     def _orchestrators(
