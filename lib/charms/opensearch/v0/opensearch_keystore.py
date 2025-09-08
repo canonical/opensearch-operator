@@ -42,15 +42,15 @@ class OpenSearchKeystore:
 
         for key, value in entries.items():
             if value:
-                self._add(key, value)
+                self.add(key, value)
             else:
-                self._delete(key)
+                self.delete(key)
 
-    def _add(self, key: str, value: str):
+    def add(self, key: str, value: str):
         """Adds key, value pair to OpenSearch keystore"""
         self._opensearch.run_bin(KEYSTORE, f"add --force --stdin {key}", stdin=value)
 
-    def _delete(self, key: str) -> None:
+    def delete(self, key: str) -> None:
         """Deletes key from OpenSearch keystore if it exists"""
         try:
             self._opensearch.run_bin(KEYSTORE, f"remove {key}")
@@ -60,7 +60,7 @@ class OpenSearchKeystore:
                 return
             raise
 
-    def reload_keystore(self):
+    def reload(self):
         """Reloads local node's secure settings
 
         Raises:

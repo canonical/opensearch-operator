@@ -337,6 +337,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
     def _block_if_has_credentials_with_missing_relations(self) -> None:
         """Checks if the relation data has credentials for non-related apps"""
+        # For failover promotions: new main orchestrator may have secrets transferred
+        # by the previous main orchestrator for credentials from applications
+        # only related to the previous main orchestrator.
+        # The user needs to relate the integrators to the new main orchestrator
         if not self.charm.unit.is_leader():
             return
 
@@ -345,9 +349,17 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             for s in self.charm.state.app.plugin_secrets.values()
             if s.relation_name
         ]
+        backup_relations = [
+            rel_name
+            for rel_name, label in [
+                (S3_RELATION, S3_CREDENTIALS),
+                (AZURE_RELATION, AZURE_CREDENTIALS),
+            ]
+            if self.charm.secrets.has_secret(Scope.APP, label)
+        ]
         if missing := [
             relation
-            for relation in plugin_secret_relations
+            for relation in plugin_secret_relations + backup_relations
             if not self.charm.model.get_relation(relation)
         ]:
             message = f"Found credentials with missing relations. Add relation for {', '.join(missing)} endpoints and any client applications."
@@ -598,7 +610,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             logger.debug("Cluster not ready to populate relation data")
             return None
 
-        credentials = self._rel_data_credentials()
+        credentials = self._rel_data_credentials(deployment_desc)
         if not credentials:
             logger.debug("Admin user not initialized. Relation data not ready")
             return None
@@ -634,7 +646,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                     granted[label] = plugin
         return granted
 
-    def _rel_data_credentials(self) -> Optional[PeerClusterRelDataCredentials]:
+    def _rel_data_credentials(
+        self, deployment_desc: DeploymentDescription
+    ) -> Optional[PeerClusterRelDataCredentials]:
         """Build and return the rel data credentials to be shared with requirer sub-clusters."""
         if self.charm.is_admin_user_configured():
             return PeerClusterRelDataCredentials(
@@ -649,6 +663,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 ),
                 monitor_password=self.secrets.get(Scope.APP, self.secrets.password_key(COSUser)),
                 admin_tls=self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val),
+                s3=self._s3_credentials(deployment_desc),
+                azure=self._azure_credentials(deployment_desc),
             )
         return None
 
