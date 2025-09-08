@@ -14,7 +14,6 @@ import json
 import logging
 from typing import TYPE_CHECKING
 
-from charms.opensearch.v0.constants_secrets import NOTIFICATIONS_LABEL
 from charms.opensearch.v0.models import PluginConfigType, PluginSecret
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
@@ -50,7 +49,7 @@ class SmtpEvents(Object):
     """Events handler for smtp events"""
 
     relation_name = SMTP_RELATION
-    secret_label = NOTIFICATIONS_LABEL
+    secret_label = "notifications-plugin"
 
     def __init__(self, charm: "OpenSearchBaseCharm"):
         super().__init__(charm, "plugin:notifications")
