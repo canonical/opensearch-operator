@@ -355,7 +355,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 (S3_RELATION, S3_CREDENTIALS),
                 (AZURE_RELATION, AZURE_CREDENTIALS),
             ]
-            if self.charm.secrets.has_secret(Scope.APP, label)
+            if self.charm.secrets.has(Scope.APP, label)
         ]
         if missing := [
             relation

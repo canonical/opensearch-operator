@@ -888,8 +888,6 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
             if not plugin.data:
                 continue
             try:
-                if not self.charm.plugin_manager.is_ready_for_api():
-                    raise OpenSearchNotFullyReadyError()
                 self.charm.plugin_manager.add_to_keystore(plugin.config().secret_entries)
             except OpenSearchNotFullyReadyError:
                 logger.info(f"{plugin.name}: not ready, we wait for another peer cluster.")
