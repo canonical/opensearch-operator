@@ -18,11 +18,15 @@ from charms.opensearch.v0.constants_charm import KibanaserverUser, OpenSearchSys
 from charms.opensearch.v0.constants_secrets import (
     AZURE_CREDENTIALS,
     HASH_POSTFIX,
+    JWT_AUTH_CONFIG,
     PW_POSTFIX,
     S3_CREDENTIALS,
 )
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchSecretInsertionError
+from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchCmdError,
+    OpenSearchSecretInsertionError,
+)
 from charms.opensearch.v0.opensearch_internal_data import (
     RelationDataStore,
     Scope,
@@ -88,10 +92,10 @@ class OpenSearchSecrets(Object, RelationDataStore):
         # 3. System user hash secret update
         #     - Action: Every unit needs to update local internal_users.yml
         #     - Note: Leader is updated already
-        # 4.  S3 credentials (secret / access keys) in large relations
+        # 4. S3 credentials (secret / access keys) in large relations
         #     - Action: write them into the opensearch.yml by running backup module
-        #
-        # 5.  Azure credentials (storage account / secret key)
+        # 5. Azure credentials (storage account / secret key)
+        # 6. JWT authentication configuration
 
         system_user_hash_keys = [
             self._charm.secrets.hash_key(user) for user in OpenSearchSystemUsers
@@ -101,6 +105,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
             self._charm.secrets.password_key(KibanaserverUser),
             S3_CREDENTIALS,
             AZURE_CREDENTIALS,
+            JWT_AUTH_CONFIG,
         ]
 
         # Variables for better readability
@@ -126,6 +131,27 @@ class OpenSearchSecrets(Object, RelationDataStore):
             password = event.secret.get_content()[label_key]
             if sys_user := self._user_from_hash_key(label_key):
                 self._charm.user_manager.put_internal_user(sys_user, password)
+
+        if label_key == JWT_AUTH_CONFIG:
+            jwt_config = event.secret.get_content()[label_key]
+            self.charm.opensearch_config.set_jwt_auth(jwt_config)
+
+            if (
+                is_leader
+                and self.charm.peers_data.get(Scope.APP, "security_index_initialised")
+                and "data" in self.charm.opensearch_peer_cm.deployment_desc().config.roles
+            ):
+                logger.info("Updating security configuration")
+                admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+
+                try:
+                    self.charm.update_security_config(
+                        admin_secrets, self.charm.opensearch_config.SECURITY_CONFIG_YML
+                    )
+                except OpenSearchCmdError as e:
+                    logger.debug(f"Error when updating the security index: {e.out}")
+                    event.defer()
+                    return
 
         # broadcast secret updates to related sub-clusters
         if self.charm.opensearch_peer_cm.is_provider(typ="main"):

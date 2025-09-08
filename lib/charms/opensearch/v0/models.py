@@ -603,3 +603,16 @@ class OpenSearchPerfProfile(Model):
             meminfo = [line.split() for line in meminfo if line.strip()]
 
         return {line[0][:-1]: float(line[1]) for line in meminfo}
+
+
+class JWTAuthConfiguration(Model):
+    """Model class for the configuration parameters of JWT authentication."""
+
+    signing_key: str
+    jwt_header: Optional[str] = None
+    jwt_url_parameter: Optional[str] = None
+    roles_key: str
+    subject_key: Optional[str] = None
+    required_audience: Optional[str] = None
+    required_issuer: Optional[str] = None
+    jwt_clock_skew_tolerance_seconds: Optional[int] = None
