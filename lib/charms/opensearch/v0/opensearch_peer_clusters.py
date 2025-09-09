@@ -512,6 +512,15 @@ class OpenSearchPeerClustersManager:
         else:
             return of_main or of_failover
 
+    def is_admin_script_eligible(self) -> bool:
+        return (
+            self.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR
+            and (
+                "data" in self.deployment_desc().config.roles
+                or self.deployment_desc().start == StartMode.WITH_GENERATED_ROLES
+            )
+        ) or self.is_provider(typ="main")
+
     def is_peer_cluster_orchestrator_relation_set(self) -> bool:
         """Return whether the peer cluster relation is established."""
         orchestrators = PeerClusterOrchestrators.from_dict(
