@@ -5,8 +5,15 @@
 import unittest
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
-from charms.opensearch.v0.constants_charm import PeerRelationName
-from charms.opensearch.v0.models import App, PeerClusterApp
+from charms.opensearch.v0.constants_charm import GeneratedRoles, PeerRelationName
+from charms.opensearch.v0.models import (
+    App,
+    DeploymentDescription,
+    DeploymentType,
+    PeerClusterApp,
+    PeerClusterConfig,
+    StartMode,
+)
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_internal_data import Scope
@@ -154,6 +161,20 @@ class TestOpenSearchPlugin(unittest.TestCase):
         assert self.plugin_manager.status(test_plugin) == PluginState.WAITING_FOR_UPGRADE
 
     @patch(
+        "charms.opensearch.v0.state.OpenSearchApp.deployment_description",
+        new_callable=PropertyMock,
+        return_value=DeploymentDescription(
+            app=App(id="opensearch"),
+            config=PeerClusterConfig(
+                cluster_name="opensearch", init_hold=False, roles=GeneratedRoles
+            ),
+            start=StartMode.WITH_GENERATED_ROLES,
+            pending_directives=[],
+            typ=DeploymentType.MAIN_ORCHESTRATOR,
+            promotion_time=1,
+        ),
+    )
+    @patch(
         "charms.opensearch.v0.opensearch_profile.ProfilesManager.check_all_requirements",
         return_value=[],
     )
@@ -175,7 +196,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         new_callable=PropertyMock,
     )
     def test_check_plugin_called_on_config_changed(
-        self, mock_version, deployment_desc, _, __, ___
+        self, mock_version, deployment_desc, _, __, ___, ____
     ) -> None:
         """Triggers a config change and should call plugin manager."""
         self.harness.set_leader(True)

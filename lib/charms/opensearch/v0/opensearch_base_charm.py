@@ -797,6 +797,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # handle cluster change to main-orchestrator (i.e: init_hold: true -> false)
             self._handle_change_to_main_orchestrator_if_needed(event, previous_deployment_desc)
 
+        if not self.state.app.deployment_description:
+            logger.debug("Deployment description not yet computed, deferring event.")
+            event.defer()
+            return
+
         if self.upgrade_in_progress:
             logger.warning(
                 "Changing config during an upgrade is not supported. The charm may be in a broken, unrecoverable state"

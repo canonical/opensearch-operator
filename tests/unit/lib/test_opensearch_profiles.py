@@ -83,6 +83,20 @@ class TestPerformanceProfile(unittest.TestCase):
         """Test the update of the JVM options."""
         with (
             patch(
+                "charms.opensearch.v0.state.OpenSearchApp.deployment_description",
+                new_callable=PropertyMock,
+                return_value=DeploymentDescription(
+                    app=App(id="opensearch"),
+                    config=PeerClusterConfig(
+                        cluster_name="opensearch", init_hold=False, roles=GeneratedRoles
+                    ),
+                    start=StartMode.WITH_GENERATED_ROLES,
+                    pending_directives=[],
+                    typ=DeploymentType.MAIN_ORCHESTRATOR,
+                    promotion_time=1,
+                ),
+            ),
+            patch(
                 "charms.opensearch.v0.opensearch_config.OpenSearchConfig.update_host_if_needed",
                 return_value=False,
             ),
@@ -156,6 +170,20 @@ class TestPerformanceProfile(unittest.TestCase):
                 "charms.opensearch.v0.opensearch_profile.ProfilesManager.get_config_profile",
                 return_value=ProductionProfile(),
             ),
+            patch(
+                "charms.opensearch.v0.state.OpenSearchApp.deployment_description",
+                new_callable=PropertyMock,
+                return_value=DeploymentDescription(
+                    app=App(id="opensearch"),
+                    config=PeerClusterConfig(
+                        cluster_name="opensearch", init_hold=False, roles=GeneratedRoles
+                    ),
+                    start=StartMode.WITH_GENERATED_ROLES,
+                    pending_directives=[],
+                    typ=DeploymentType.MAIN_ORCHESTRATOR,
+                    promotion_time=1,
+                ),
+            ),
         ):
             self.charm._on_config_changed(MagicMock())
             assert self.charm.unit.status.name == "blocked"
@@ -164,6 +192,20 @@ class TestPerformanceProfile(unittest.TestCase):
     def test_profile_update_on_config_cluster_topology_not_met(self):
         """Test the update of the JVM options."""
         with (
+            patch(
+                "charms.opensearch.v0.state.OpenSearchApp.deployment_description",
+                new_callable=PropertyMock,
+                return_value=DeploymentDescription(
+                    app=App(id="opensearch"),
+                    config=PeerClusterConfig(
+                        cluster_name="opensearch", init_hold=False, roles=GeneratedRoles
+                    ),
+                    start=StartMode.WITH_GENERATED_ROLES,
+                    pending_directives=[],
+                    typ=DeploymentType.MAIN_ORCHESTRATOR,
+                    promotion_time=1,
+                ),
+            ),
             patch(
                 "charms.opensearch.v0.opensearch_config.OpenSearchConfig.update_host_if_needed",
                 return_value=False,
@@ -207,6 +249,20 @@ class TestPerformanceProfile(unittest.TestCase):
     def test_profile_update_on_config_happy_path(self):
         """Test the update of the JVM options."""
         with (
+            patch(
+                "charms.opensearch.v0.state.OpenSearchApp.deployment_description",
+                new_callable=PropertyMock,
+                return_value=DeploymentDescription(
+                    app=App(id="opensearch"),
+                    config=PeerClusterConfig(
+                        cluster_name="opensearch", init_hold=False, roles=GeneratedRoles
+                    ),
+                    start=StartMode.WITH_GENERATED_ROLES,
+                    pending_directives=[],
+                    typ=DeploymentType.MAIN_ORCHESTRATOR,
+                    promotion_time=1,
+                ),
+            ),
             patch(
                 "charms.opensearch.v0.opensearch_config.OpenSearchConfig.update_host_if_needed",
                 return_value=False,

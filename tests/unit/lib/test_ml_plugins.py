@@ -6,7 +6,15 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import charms
-from charms.opensearch.v0.models import App, Node
+from charms.opensearch.v0.constants_charm import GeneratedRoles
+from charms.opensearch.v0.models import (
+    App,
+    DeploymentDescription,
+    DeploymentType,
+    Node,
+    PeerClusterConfig,
+    StartMode,
+)
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_plugins import OpenSearchKnn
 from ops.testing import Harness
@@ -61,6 +69,20 @@ class TestOpenSearchKNN(unittest.TestCase):
         self.charm.performance_profile = MagicMock()
         self.charm.performance_profile.apply = MagicMock(return_value=False)
 
+    @patch(
+        "charms.opensearch.v0.state.OpenSearchApp.deployment_description",
+        new_callable=PropertyMock,
+        return_value=DeploymentDescription(
+            app=App(id="opensearch"),
+            config=PeerClusterConfig(
+                cluster_name="opensearch", init_hold=False, roles=GeneratedRoles
+            ),
+            start=StartMode.WITH_GENERATED_ROLES,
+            pending_directives=[],
+            typ=DeploymentType.MAIN_ORCHESTRATOR,
+            promotion_time=1,
+        ),
+    )
     @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size")
     @patch(
         f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_all_requirements",
@@ -109,6 +131,7 @@ class TestOpenSearchKNN(unittest.TestCase):
         mock_is_ready_for_api,
         _____,
         ______,
+        _______,
     ) -> None:
         """Tests entire config_changed event with KNN plugin."""
         mock_is_enabled.return_value = True
@@ -147,6 +170,20 @@ class TestOpenSearchKNN(unittest.TestCase):
             {"knn.plugin.enabled": "false"}
         )
 
+    @patch(
+        "charms.opensearch.v0.state.OpenSearchApp.deployment_description",
+        new_callable=PropertyMock,
+        return_value=DeploymentDescription(
+            app=App(id="opensearch"),
+            config=PeerClusterConfig(
+                cluster_name="opensearch", init_hold=False, roles=GeneratedRoles
+            ),
+            start=StartMode.WITH_GENERATED_ROLES,
+            pending_directives=[],
+            typ=DeploymentType.MAIN_ORCHESTRATOR,
+            promotion_time=1,
+        ),
+    )
     @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size")
     @patch(
         f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_all_requirements",
@@ -202,6 +239,7 @@ class TestOpenSearchKNN(unittest.TestCase):
         mock_api_request,
         _____,
         ______,
+        _______,
     ) -> None:
         """Tests entire config_changed event with KNN plugin."""
         mock_is_enabled.return_value = True
