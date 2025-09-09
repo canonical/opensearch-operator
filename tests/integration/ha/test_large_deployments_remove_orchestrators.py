@@ -189,7 +189,13 @@ async def test_large_deployment_remove_orchestrators(ops_test: OpsTest) -> None:
         apps_full_statuses={
             DATA_APP: {"blocked": [PClusterOrchestratorsRemoved]},
         },
-        units_statuses=["blocked"],
+        units_full_statuses={
+            DATA_APP: {
+                "units": {
+                    "blocked": ["At least 1 cluster manager nodes are required. Found only 0."]
+                }
+            },
+        },
         wait_for_exact_units={
             DATA_APP: APP_UNITS[DATA_APP],
         },
