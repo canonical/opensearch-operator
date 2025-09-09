@@ -153,6 +153,10 @@ class TestOpenSearchPlugin(unittest.TestCase):
         assert test_plugin.version == "2.9.0.0"
         assert self.plugin_manager.status(test_plugin) == PluginState.WAITING_FOR_UPGRADE
 
+    @patch(
+        "charms.opensearch.v0.opensearch_profile.ProfilesManager.check_all_requirements",
+        return_value=[],
+    )
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.set_jvm_heap_size")
     @patch(
         "charms.opensearch.v0.opensearch_profile.ProfilesManager._current_peer_cluster_app",
@@ -171,7 +175,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         new_callable=PropertyMock,
     )
     def test_check_plugin_called_on_config_changed(
-        self, mock_version, deployment_desc, _, __
+        self, mock_version, deployment_desc, _, __, ___
     ) -> None:
         """Triggers a config change and should call plugin manager."""
         self.harness.set_leader(True)
@@ -188,13 +192,20 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.plugin_manager.run.assert_called()
 
     @patch(
+        "charms.opensearch.v0.opensearch_profile.ProfilesManager.check_all_requirements",
+        return_value=[],
+    )
+    @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.set_jvm_heap_size")
+    @patch(
         f"{BASE_LIB_PATH}.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc"
     )
     @patch(
         "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.version",
         new_callable=PropertyMock,
     )
-    def test_check_plugin_not_called_if_not_started(self, mock_version, deployment_desc) -> None:
+    def test_check_plugin_not_called_if_not_started(
+        self, mock_version, deployment_desc, _, __
+    ) -> None:
         """Plugin manager should not be called if node not started."""
         self.harness.set_leader(True)
         self.peers_data.put(Scope.APP, "security_index_initialised", True)
