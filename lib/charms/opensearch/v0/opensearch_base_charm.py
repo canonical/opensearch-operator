@@ -592,9 +592,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.peers_data.put(Scope.APP, "bootstrap_contributors_count", contributor_count + 1)
 
         # check requirements
-        if self.state.unit.is_started and (
-            missing_requirements := self.profiles_manager.check_all_requirements()
-        ):
+        if missing_requirements := self.profiles_manager.check_all_requirements():
             logger.error("Missing profile requirements: %s", missing_requirements)
             self.status.set(BlockedStatus(" - ".join(missing_requirements)))
 
@@ -718,9 +716,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             without the user noticing in case the cert of the unit transport layer expires.
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
-        if self.state.unit.is_started and (
-            missing_requirements := self.profiles_manager.check_all_requirements()
-        ):
+        if missing_requirements := self.profiles_manager.check_all_requirements():
             logger.error("Missing profile requirements: %s", missing_requirements)
             self.status.set(BlockedStatus(" - ".join(missing_requirements)))
             return
@@ -846,33 +842,30 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.status.set(original_status)
 
         profile_restart_needed = False
-        if self.state.unit.is_started:
-            try:
-                config_profile = self.profiles_manager.get_config_profile()
-                current_profile = self.state.unit.profile
-            except ValueError:
-                logger.error(
-                    "Invalid profile configuration. Value: %s", self.state.config.get("profile")
-                )
-                self.status.set(BlockedStatus(InvalidProfileConfigOption))
-                return
-            missing_requirements = self.profiles_manager.check_all_requirements(config_profile)
-
-            if missing_requirements:
-                logger.error(f"Missing profile requirements: {missing_requirements}")
-                self.status.set(BlockedStatus(" - ".join(missing_requirements)))
-                return
-
-            # if the profile hasn't been applied before
-            logger.debug(
-                "current profile: %s, config profile: %s", current_profile, config_profile
+        try:
+            config_profile = self.profiles_manager.get_config_profile()
+            current_profile = self.state.unit.profile
+        except ValueError:
+            logger.error(
+                "Invalid profile configuration. Value: %s", self.state.config.get("profile")
             )
-            if current_profile is None or current_profile != config_profile:
-                self.opensearch_config.set_jvm_heap_size(
-                    config_profile.get_jvm_heap_size(self.opensearch.meminfo()["MemTotal"])
-                )
-                profile_restart_needed = True
-                self.state.unit.profile = config_profile
+            self.status.set(BlockedStatus(InvalidProfileConfigOption))
+            return
+        missing_requirements = self.profiles_manager.check_all_requirements(config_profile)
+
+        if missing_requirements:
+            logger.error(f"Missing profile requirements: {missing_requirements}")
+            self.status.set(BlockedStatus(" - ".join(missing_requirements)))
+            return
+
+        # if the profile hasn't been applied before
+        logger.debug("current profile: %s, config profile: %s", current_profile, config_profile)
+        if current_profile is None or current_profile != config_profile:
+            self.opensearch_config.set_jvm_heap_size(
+                config_profile.get_jvm_heap_size(self.opensearch.meminfo()["MemTotal"])
+            )
+            profile_restart_needed = True
+            self.state.unit.profile = config_profile
 
         if not self.opensearch_provider.update_relations_roles_mapping():
             event.defer()
