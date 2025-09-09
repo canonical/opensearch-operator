@@ -592,7 +592,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.peers_data.put(Scope.APP, "bootstrap_contributors_count", contributor_count + 1)
 
         # check requirements
-        if missing_requirements := self.profiles_manager.check_all_requirements():
+        if self.state.app.deployment_description and (
+            missing_requirements := self.profiles_manager.check_all_requirements()
+        ):
             logger.error("Missing profile requirements: %s", missing_requirements)
             self.status.set(BlockedStatus(" - ".join(missing_requirements)))
 
