@@ -802,6 +802,32 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
+        profile_restart_needed = False
+        try:
+            config_profile = self.profiles_manager.get_config_profile()
+            current_profile = self.state.unit.profile
+        except ValueError:
+            logger.error(
+                "Invalid profile configuration. Value: %s", self.state.config.get("profile")
+            )
+            self.status.set(BlockedStatus(InvalidProfileConfigOption))
+            return
+        missing_requirements = self.profiles_manager.check_all_requirements(config_profile)
+
+        if missing_requirements:
+            logger.error(f"Missing profile requirements: {missing_requirements}")
+            self.status.set(BlockedStatus(" - ".join(missing_requirements)))
+            return
+
+        # if the profile hasn't been applied before
+        logger.debug("current profile: %s, config profile: %s", current_profile, config_profile)
+        if current_profile is None or current_profile != config_profile:
+            self.opensearch_config.set_jvm_heap_size(
+                config_profile.get_jvm_heap_size(self.opensearch.meminfo()["MemTotal"])
+            )
+            profile_restart_needed = True
+            self.state.unit.profile = config_profile
+
         if not self.opensearch.is_node_up():
             logger.debug("Node not up yet, deferring plugin check")
             # possible enhancement:
@@ -840,32 +866,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.status.clear(PluginConfigCheck)
             if original_status:
                 self.status.set(original_status)
-
-        profile_restart_needed = False
-        try:
-            config_profile = self.profiles_manager.get_config_profile()
-            current_profile = self.state.unit.profile
-        except ValueError:
-            logger.error(
-                "Invalid profile configuration. Value: %s", self.state.config.get("profile")
-            )
-            self.status.set(BlockedStatus(InvalidProfileConfigOption))
-            return
-        missing_requirements = self.profiles_manager.check_all_requirements(config_profile)
-
-        if missing_requirements:
-            logger.error(f"Missing profile requirements: {missing_requirements}")
-            self.status.set(BlockedStatus(" - ".join(missing_requirements)))
-            return
-
-        # if the profile hasn't been applied before
-        logger.debug("current profile: %s, config profile: %s", current_profile, config_profile)
-        if current_profile is None or current_profile != config_profile:
-            self.opensearch_config.set_jvm_heap_size(
-                config_profile.get_jvm_heap_size(self.opensearch.meminfo()["MemTotal"])
-            )
-            profile_restart_needed = True
-            self.state.unit.profile = config_profile
 
         if not self.opensearch_provider.update_relations_roles_mapping():
             event.defer()
@@ -1107,6 +1107,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # TODO: remove this IF condition once LP#2076599 is fixed in Juju.
             return
 
+        # update any orchestrators about planned units this is useful when a new data node joins
+        # the orchestrator needs to know the planned units to determine if it can start or not
+        # if the data node is trying to initialize the security index it might take a long time
+        # before the peer relation changed event is executed on the data node
+        if self.opensearch_peer_cm.is_consumer():
+            self.peer_cluster_requirer.refresh_requirer_relation_data()
+
         if self.opensearch.is_started():
             try:
                 self._post_start_init(event)
@@ -1159,18 +1166,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.status.set(BlockedStatus(ServiceStartError))
             event.defer()
             return
-        try:
-            profile = self.profiles_manager.profile
-        except ValueError:
-            logger.error(
-                "Invalid profile configuration. Value: %s", self.state.config.get("profile")
-            )
-            self.status.set(BlockedStatus(InvalidProfileConfigOption))
-            return
-        self.opensearch_config.set_jvm_heap_size(
-            profile.get_jvm_heap_size(self.opensearch.meminfo()["MemTotal"])
-        )
-        self.state.unit.profile = profile
 
         self.unit.status = WaitingStatus(WaitingToStart)
 
