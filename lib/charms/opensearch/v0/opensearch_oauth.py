@@ -77,7 +77,7 @@ class OAuthHandler(Object):
             openid_connect_url=f"{relation.data[relation.app].get('issuer_url')}/.well-known/openid-configuration"
         )
 
-        if not self.charm.unit.is_leader() or not self.charm.opensearch_peer_cm.is_admin_script_eligible():
+        if not self.charm.unit.is_leader() or not self._is_admin_script_eligible():
             return
 
         if not (admin_secrets := self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)):
@@ -106,7 +106,7 @@ class OAuthHandler(Object):
 
         self.charm.opensearch_config.remove_oidc_auth()
 
-        if not self.charm.unit.is_leader() or not self.charm.opensearch_peer_cm.is_admin_script_eligible():
+        if not self.charm.unit.is_leader() or not self._is_admin_script_eligible():
             return
 
         if not (admin_secrets := self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)):
@@ -125,3 +125,13 @@ class OAuthHandler(Object):
         return bool(self.charm.opensearch_peer_cm.deployment_desc()) and bool(
             self.charm.peers_data.get(Scope.APP, "security_index_initialised")
         )
+
+    def _is_admin_script_eligible(self) -> bool:
+        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
+        return (
+            deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+            and (
+                "data" in deployment_desc.config.roles
+                or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+            )
+        ) or self.charm.opensearch_peer_cm.is_provider(typ="main")
