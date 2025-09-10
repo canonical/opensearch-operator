@@ -109,11 +109,11 @@ class TestPerformanceProfile(unittest.TestCase):
                 return_value=False,
             ),
             patch(
-                "charms.opensearch.v0.opensearch_profile.ProfilesManager._apply_system_requirement",
+                "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._apply_system_requirement",
                 return_value=False,
             ),
             patch(
-                "charms.opensearch.v0.opensearch_profile.ProfilesManager._get_kernel_property_value",
+                "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._get_kernel_property_value",
                 return_value=10,
             ),
             patch(
@@ -150,7 +150,7 @@ class TestPerformanceProfile(unittest.TestCase):
                 return_value=False,
             ),
             patch(
-                "charms.opensearch.v0.opensearch_profile.ProfilesManager._apply_system_requirement",
+                "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._apply_system_requirement",
                 return_value=True,
             ),
             patch(
@@ -219,7 +219,7 @@ class TestPerformanceProfile(unittest.TestCase):
                 return_value=False,
             ),
             patch(
-                "charms.opensearch.v0.opensearch_profile.ProfilesManager._apply_system_requirement",
+                "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._apply_system_requirement",
                 return_value=True,
             ),
             patch(
@@ -276,7 +276,7 @@ class TestPerformanceProfile(unittest.TestCase):
                 return_value=False,
             ),
             patch(
-                "charms.opensearch.v0.opensearch_profile.ProfilesManager._apply_system_requirement",
+                "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._apply_system_requirement",
                 return_value=True,
             ),
             patch(
@@ -332,7 +332,7 @@ class TestPerformanceProfile(unittest.TestCase):
                 return_value=False,
             ),
             patch(
-                "charms.opensearch.v0.opensearch_profile.ProfilesManager._apply_system_requirement",
+                "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._apply_system_requirement",
                 return_value=True,
             ),
             patch(
