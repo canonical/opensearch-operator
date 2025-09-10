@@ -753,9 +753,4 @@ class OpenSearchPeerClustersManager:
                 credentials["azure"]["secret-key"], content_key="azure-secret-key"
             )
 
-        if credentials.get("jwt_auth_config") and isinstance(credentials["jwt_auth_config"], str):
-            credentials["jwt_auth_config"] = self._charm.model.get_secret(
-                id=credentials["jwt_auth_config"]
-            ).get_content()
-
         return PeerClusterRelData.from_dict(content)

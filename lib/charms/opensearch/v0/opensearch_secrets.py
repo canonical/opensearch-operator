@@ -139,7 +139,6 @@ class OpenSearchSecrets(Object, RelationDataStore):
             if (
                 is_leader
                 and self.charm.peers_data.get(Scope.APP, "security_index_initialised", False)
-                and "data" in self.charm.opensearch_peer_cm.deployment_desc().config.roles
             ):
                 logger.info("Updating security configuration")
                 admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
