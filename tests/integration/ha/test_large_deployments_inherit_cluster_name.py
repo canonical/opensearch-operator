@@ -205,7 +205,10 @@ async def test_invalid_inherit_cluster_name_integration(ops_test: OpsTest) -> No
                 "blocked": ["Cannot relate 2 clusters with different 'cluster_name' values."]
             },
         },
-        units_statuses=["active"],
+        units_full_statuses={
+            MAIN_APP_NOT_AUTOGEN: {"units": {"active": []}},
+            INVALID_FAILOVER_APP: {"units": {"blocked": [NO_DATA_NODE_STATUS_MESSAGE]}},
+        },
         wait_for_exact_units={app: units for app, units in NON_AUTOGEN_APP_UNITS.items()},
         idle_period=IDLE_PERIOD,
     )
