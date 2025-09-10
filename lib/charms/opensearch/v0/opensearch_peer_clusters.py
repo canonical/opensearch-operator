@@ -81,6 +81,7 @@ class OpenSearchPeerClustersManager:
         if not (current_deployment_desc := self.deployment_desc()):
             # new cluster
             deployment_desc = self._new_cluster_setup(user_config)
+            logger.debug("New deployment_desc from new cluster setup: %s", deployment_desc)
             self._charm.peers_data.put_object(
                 Scope.APP, "deployment-description", deployment_desc.to_dict()
             )
@@ -88,7 +89,9 @@ class OpenSearchPeerClustersManager:
             return
 
         # update cluster deployment desc
+        logger.debug("Existing deployment_desc before cluster setup: %s", current_deployment_desc)
         deployment_desc = self._existing_cluster_setup(user_config, current_deployment_desc)
+        logger.debug("Existing deployment_desc after cluster setup: %s", deployment_desc)
         if current_deployment_desc == deployment_desc:
             return
 
@@ -380,6 +383,7 @@ class OpenSearchPeerClustersManager:
             return
 
         deployment_desc.pending_directives.remove(directive)
+        logger.debug("Clearing directive %s. DeploymentDesc: %s", directive, deployment_desc)
         self._charm.peers_data.put_object(
             Scope.APP, "deployment-description", deployment_desc.to_dict()
         )
@@ -402,8 +406,10 @@ class OpenSearchPeerClustersManager:
         if deployment_desc.typ != DeploymentType.FAILOVER_ORCHESTRATOR:
             return
 
+        logger.debug("Promoting deployment type to MAIN_ORCHESTRATOR")
         deployment_desc.typ = DeploymentType.MAIN_ORCHESTRATOR
         deployment_desc.promotion_time = datetime.now().timestamp()
+        logger.debug("New deployment description: %s", deployment_desc)
         self._charm.peers_data.put_object(
             Scope.APP, "deployment-description", deployment_desc.to_dict()
         )
@@ -418,6 +424,7 @@ class OpenSearchPeerClustersManager:
 
         deployment_desc.typ = DeploymentType.FAILOVER_ORCHESTRATOR
         deployment_desc.promotion_time = None
+        logger.debug("Demoting deployment type to FAILOVER_ORCHESTRATOR: %s", deployment_desc)
         self._charm.peers_data.put_object(
             Scope.APP, "deployment-description", deployment_desc.to_dict()
         )

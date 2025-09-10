@@ -191,21 +191,19 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         #     event.defer()
         #     return
 
+        logger.debug("refreshing relation data")
+        if self.refresh_relation_data(event, event_rel_id=event.relation.id):
+            return
+
         # if this is a failover orchestrator, check if it should promote itself
         if (
             deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR
             and self.should_promote_failover_to_main()
         ):
-            logger.info(
-                f"Promoting failover: {deployment_desc.app.name} orchestrator to main orchestrator"
-            )
             self._promote_failover()
             self.refresh_relation_data(event)
             self._block_if_main_orchestrator_is_requirer()
             return
-
-        logger.debug("refreshing relation data")
-        self.refresh_relation_data(event, event_rel_id=event.relation.id)
 
         # only the main-orchestrator is able to designate a failover
         if deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR:
@@ -426,10 +424,12 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
     def refresh_relation_data(  # noqa: C901
         self, event: EventBase, event_rel_id: int | None = None, can_defer: bool = True
-    ) -> None:
-        """Refresh the peer cluster rel data (new cm node, admin password change etc.)."""
+    ) -> bool:
+        """Refresh the peer cluster rel data (new cm node, admin password change etc.).
+
+        returns whether the event was deferred or not"""
         if not self.charm.unit.is_leader():
-            return
+            return False
 
         # all relations with the current orchestrator
         all_relation_ids = [
@@ -458,7 +458,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         # exit if current cluster should not have been considered a provider
         if self._notify_if_wrong_integration(rel_err_data, all_relation_ids) and event_rel_id:
             self.delete_from_rel("trigger", rel_id=event_rel_id)
-            return
+            return False
 
         # store the main/failover-cm planned units count
         self._put_fleet_apps(deployment_desc, all_relation_ids)
@@ -524,6 +524,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if can_defer and should_defer:
             logger.debug("Event deferred after refreshing relation data.")
             event.defer()
+            return True
+        return False
 
     def _notify_if_wrong_integration(
         self,
