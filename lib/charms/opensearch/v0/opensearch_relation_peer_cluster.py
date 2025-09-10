@@ -42,7 +42,6 @@ from charms.opensearch.v0.models import (
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import (
-    ActiveStatus,
     BlockedStatus,
     EventBase,
     Object,
@@ -293,8 +292,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             )
             return True
         # clean the status if it is set
-        else:
-            self.charm.status.clear(PClusterMainIsRequirer, app=True)
+        self.charm.status.clear(PClusterMainIsRequirer, app=True)
         return False
 
     def _broadcast_new_failover_app(
@@ -987,12 +985,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 app=True,
             )
             return True
-        else:
-            self.charm.status.clear(
-                PClusterNoRelation,
-                app=True,
-            )
 
+        self.charm.status.clear(PClusterNoRelation, app=True)
         return False
 
 
@@ -1678,11 +1672,5 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             if rel.id != departing_relation.id
         ]
         # clean the status if it is set
-        if (
-            not peer_cluster_requirer_relations
-            and self.charm.app.status.message == PClusterMainIsRequirer
-        ):
-            self.charm.status.set(
-                ActiveStatus(),
-                app=True,
-            )
+        if not peer_cluster_requirer_relations:
+            self.charm.status.clear(PClusterMainIsRequirer, app=True)

@@ -673,7 +673,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                         self.peers_data.delete(Scope.APP, "bootstrapped")
                 if self.opensearch_peer_cm.is_provider():
                     self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
-                    logger.debug("demoting main orhcestrator")
+                    logger.debug("demoting main orchestrator")
                     self.opensearch_peer_cm.demote_deployment_type()
                     self.peers_data.delete(Scope.APP, "orchestrators")
                     self.peer_cluster_provider.clean_all_relation_data()
