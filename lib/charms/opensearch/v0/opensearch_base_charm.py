@@ -1280,8 +1280,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.clear(WaitingToStart)
         self.status.clear(ServiceStartError)
         self.status.clear(PClusterNoDataNode)
-        if self.unit.is_leader():
-            self.status.clear(PClusterNoRelation, app=True)
 
         if event.after_upgrade:
             health = self.health.get(local_app_only=False, wait_for_green_first=True)
