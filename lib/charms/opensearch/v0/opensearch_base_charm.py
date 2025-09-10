@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Type
 
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
+    JWT_AUTH_CONFIG_OPTION,
     PERFORMANCE_PROFILE,
     AdminUser,
     AdminUserInitProgress,
@@ -97,6 +98,7 @@ from charms.opensearch.v0.opensearch_users import (
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
 )
+from ops import ModelError, SecretNotFoundError
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -861,9 +863,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self._restart_opensearch_event.emit()
 
         # handle changes for the jwt_auth_config option
-        # todo: get the secret content from the configured secret URI
-        jwt_config = secret.get_content()
-        self.charm.validate_and_apply_jwt_auth_config(jwt_config)
+        if jwt_auth_user_secret := self.charm.config.get(JWT_AUTH_CONFIG_OPTION):
+            self.charm.validate_and_apply_jwt_auth_config(jwt_auth_user_secret)
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
@@ -1934,14 +1935,20 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             )
         )
 
-    def validate_and_apply_jwt_auth_config(self, jwt_auth_config: Dict[str, Any]) -> None:
+    def validate_and_apply_jwt_auth_config(self, user_secret_id: str) -> None:
         """Check the provided configuration and apply, if valid."""
+        try:
+            jwt_auth_config = self.secrets.get_secret_from_id(user_secret_id)
+        except (ModelError, SecretNotFoundError) as e:
+            logger.error(e)
+            # todo: set status to `blocked`
+            return
+
         # todo: validate
         self.charm.opensearch_config.set_jwt_auth(jwt_auth_config)
 
-        if (
-            self.unit.is_leader()
-            and self.charm.peers_data.get(Scope.APP, "security_index_initialised", False)
+        if self.unit.is_leader() and self.charm.peers_data.get(
+            Scope.APP, "security_index_initialised", False
         ):
             logger.info("Updating security configuration")
             admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)

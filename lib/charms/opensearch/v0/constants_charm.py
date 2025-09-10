@@ -130,3 +130,5 @@ AZURE_RELATION = "azure-credentials"
 OAUTH_RELATION = "oauth"
 
 PERFORMANCE_PROFILE = "profile"
+
+JWT_AUTH_CONFIG_OPTION = "jwt_auth_config"

@@ -14,7 +14,11 @@ information for the Opensearch charm.
 import logging
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
-from charms.opensearch.v0.constants_charm import KibanaserverUser, OpenSearchSystemUsers
+from charms.opensearch.v0.constants_charm import (
+    JWT_AUTH_CONFIG_OPTION,
+    KibanaserverUser,
+    OpenSearchSystemUsers,
+)
 from charms.opensearch.v0.constants_secrets import (
     AZURE_CREDENTIALS,
     HASH_POSTFIX,
@@ -22,16 +26,13 @@ from charms.opensearch.v0.constants_secrets import (
     S3_CREDENTIALS,
 )
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.opensearch_exceptions import (
-    OpenSearchCmdError,
-    OpenSearchSecretInsertionError,
-)
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchSecretInsertionError
 from charms.opensearch.v0.opensearch_internal_data import (
     RelationDataStore,
     Scope,
     SecretCache,
 )
-from ops import JujuVersion, Relation, Secret, SecretNotFoundError
+from ops import JujuVersion, ModelError, Relation, Secret, SecretNotFoundError
 from ops.charm import SecretChangedEvent
 from ops.framework import Object
 from overrides import override
@@ -72,6 +73,12 @@ class OpenSearchSecrets(Object, RelationDataStore):
         """Refresh secret and re-run corresponding actions if needed."""
         secret = event.secret
         secret.get_content(refresh=True)
+
+        # handle changes for the jwt_auth_config secret
+        # this is a user secret and not owned by opensearch -> process it before the general logic
+        if jwt_auth_user_secret := self.charm.config.get(JWT_AUTH_CONFIG_OPTION):
+            if jwt_auth_user_secret == event.secret.id:
+                self.charm.validate_and_apply_jwt_auth_config(jwt_auth_user_secret)
 
         if not event.secret.label:
             logger.info("Secret %s has no label, ignoring it.", event.secret.id)
@@ -133,13 +140,6 @@ class OpenSearchSecrets(Object, RelationDataStore):
         # broadcast secret updates to related sub-clusters
         if self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
-
-        # handle user secret for configuration of JWT authentication
-        # todo: implement check if it is the secret configured for `jwt_auth_config`
-        if label_key == JWT_AUTH_CONFIG:
-            jwt_config = event.secret.get_content()
-            self.charm.validate_and_apply_jwt_auth_config(jwt_config)
-
 
     def _user_from_hash_key(self, key):
         """Which user is referred to by key?"""
@@ -393,3 +393,21 @@ class OpenSearchSecrets(Object, RelationDataStore):
         """Grant a secret to a relation."""
         secret = self._charm.model.get_secret(id=secret_id)
         secret.grant(relation)
+
+    def get_secret_from_id(self, secret_id: str) -> dict[str, str]:
+        """Resolve the given id of a Juju secret and return the content as a dict.
+
+        Args:
+            secret_id (str): The id of the secret.
+
+        Returns:
+            dict: The content of the secret.
+        """
+        try:
+            secret_content = self.charm.model.get_secret(id=secret_id).get_content(refresh=True)
+        except SecretNotFoundError:
+            raise SecretNotFoundError(f"The secret '{secret_id}' does not exist.")
+        except ModelError:
+            raise
+
+        return secret_content
