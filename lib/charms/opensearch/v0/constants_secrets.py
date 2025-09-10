@@ -34,4 +34,3 @@ AZURE_PEER_SECRET_KEYS = [
     "storage-account",
     AZURE_CREDENTIALS,
 ]
-JWT_AUTH_CONFIG = "jwt-auth-config"

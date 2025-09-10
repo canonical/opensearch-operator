@@ -18,7 +18,6 @@ from charms.opensearch.v0.constants_charm import KibanaserverUser, OpenSearchSys
 from charms.opensearch.v0.constants_secrets import (
     AZURE_CREDENTIALS,
     HASH_POSTFIX,
-    JWT_AUTH_CONFIG,
     PW_POSTFIX,
     S3_CREDENTIALS,
 )
@@ -105,7 +104,6 @@ class OpenSearchSecrets(Object, RelationDataStore):
             self._charm.secrets.password_key(KibanaserverUser),
             S3_CREDENTIALS,
             AZURE_CREDENTIALS,
-            JWT_AUTH_CONFIG,
         ]
 
         # Variables for better readability
@@ -132,29 +130,16 @@ class OpenSearchSecrets(Object, RelationDataStore):
             if sys_user := self._user_from_hash_key(label_key):
                 self._charm.user_manager.put_internal_user(sys_user, password)
 
-        if label_key == JWT_AUTH_CONFIG:
-            jwt_config = event.secret.get_content()
-            self.charm.opensearch_config.set_jwt_auth(jwt_config)
-
-            if (
-                is_leader
-                and self.charm.peers_data.get(Scope.APP, "security_index_initialised", False)
-            ):
-                logger.info("Updating security configuration")
-                admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-
-                try:
-                    self.charm.update_security_config(
-                        admin_secrets, self.charm.opensearch_config.SECURITY_CONFIG_YML
-                    )
-                except OpenSearchCmdError as e:
-                    logger.debug(f"Error when updating the security index: {e.out}")
-                    event.defer()
-                    return
-
         # broadcast secret updates to related sub-clusters
         if self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+
+        # handle user secret for configuration of JWT authentication
+        # todo: implement check if it is the secret configured for `jwt_auth_config`
+        if label_key == JWT_AUTH_CONFIG:
+            jwt_config = event.secret.get_content()
+            self.charm.validate_and_apply_jwt_auth_config(jwt_config)
+
 
     def _user_from_hash_key(self, key):
         """Which user is referred to by key?"""

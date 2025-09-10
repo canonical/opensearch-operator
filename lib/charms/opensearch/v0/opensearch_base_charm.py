@@ -860,6 +860,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             )
             self._restart_opensearch_event.emit()
 
+        # handle changes for the jwt_auth_config option
+        # todo: get the secret content from the configured secret URI
+        jwt_config = secret.get_content()
+        self.charm.validate_and_apply_jwt_auth_config(jwt_config)
+
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
         if not self.opensearch_peer_cm.deployment_desc():
@@ -1928,6 +1933,27 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 for app in cluster_fleet_apps
             )
         )
+
+    def validate_and_apply_jwt_auth_config(self, jwt_auth_config: Dict[str, Any]) -> None:
+        """Check the provided configuration and apply, if valid."""
+        # todo: validate
+        self.charm.opensearch_config.set_jwt_auth(jwt_auth_config)
+
+        if (
+            self.unit.is_leader()
+            and self.charm.peers_data.get(Scope.APP, "security_index_initialised", False)
+        ):
+            logger.info("Updating security configuration")
+            admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+
+            try:
+                self.charm.update_security_config(
+                    admin_secrets, self.charm.opensearch_config.SECURITY_CONFIG_YML
+                )
+            except OpenSearchCmdError as e:
+                logger.debug(f"Error when updating the security index: {e.out}")
+                # no need to defer here; the config should be fixed, triggering a new event
+                # todo: set status to `blocked`
 
     @property
     def unit_ip(self) -> str:
