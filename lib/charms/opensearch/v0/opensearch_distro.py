@@ -555,3 +555,41 @@ class OpenSearchDistribution(ABC):
             meminfo = [line.split() for line in meminfo if line.strip()]
 
         return {line[0][:-1]: float(line[1]) for line in meminfo}
+
+    def _apply_system_requirement(self, system_requirement: str, value: int) -> bool:
+        """Apply a system requirement."""
+        try:
+            self._run_cmd(f"sysctl -w {system_requirement}={value}")
+            return int(self._run_cmd(f"sysctl -n {system_requirement}")) == value
+        except OpenSearchCmdError:
+            return False
+
+    def _get_kernel_property_value(self, prop: str) -> int:
+        """Get the value of a kernel parameter."""
+        return int(self._run_cmd(f"sysctl -n {prop}"))
+
+    def check_missing_system_requirements(self) -> List[str]:
+        """Checks the system requirements."""
+        missing_requirements = []
+
+        prop, val = "vm.max_map_count", 262144
+        if self._get_kernel_property_value(prop) < val and not self._apply_system_requirement(
+            prop, val
+        ):
+            missing_requirements.append(f"{prop} should be at least {val}")
+
+        prop, val = "vm.swappiness", 0
+        if self._get_kernel_property_value(prop) > val and not self._apply_system_requirement(
+            prop, 0
+        ):
+            missing_requirements.append(f"{prop} should be at most {val}")
+
+        prop, val = "net.ipv4.tcp_retries2", 5
+        if self._get_kernel_property_value(prop) > val and not self._apply_system_requirement(
+            prop, val
+        ):
+            missing_requirements.append(f"{prop} should be at most {val}")
+
+        if missing_requirements:
+            logger.error("Missing system requirements: %s", missing_requirements)
+        return missing_requirements

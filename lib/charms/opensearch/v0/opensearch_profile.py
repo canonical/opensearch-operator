@@ -31,7 +31,6 @@ from charms.opensearch.v0.models import (
     PerformanceType,
     StartMode,
 )
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "8b7aa39016e748ea908787df1d7fb089"
@@ -163,43 +162,9 @@ class ProfilesManager:
                 "Invalid profile configuration. Value: %s", self.state.config.get("profile")
             )
 
-    def _apply_system_requirement(self, system_requirement: str, value: int) -> bool:
-        """Apply a system requirement."""
-        try:
-            self.workload._run_cmd(f"sysctl -w {system_requirement}={value}")
-            return int(self.workload._run_cmd(f"sysctl -n {system_requirement}")) == value
-        except OpenSearchCmdError:
-            return False
-
-    def _get_kernel_property_value(self, prop: str) -> int:
-        """Get the value of a kernel parameter."""
-        return int(self.workload._run_cmd(f"sysctl -n {prop}"))
-
     def check_missing_system_requirements(self) -> List[str]:
         """Checks the system requirements."""
-        missing_requirements = []
-
-        prop, val = "vm.max_map_count", 262144
-        if self._get_kernel_property_value(prop) < val and not self._apply_system_requirement(
-            prop, val
-        ):
-            missing_requirements.append(f"{prop} should be at least {val}")
-
-        prop, val = "vm.swappiness", 0
-        if self._get_kernel_property_value(prop) > val and not self._apply_system_requirement(
-            prop, 0
-        ):
-            missing_requirements.append(f"{prop} should be at most {val}")
-
-        prop, val = "net.ipv4.tcp_retries2", 5
-        if self._get_kernel_property_value(prop) > val and not self._apply_system_requirement(
-            prop, val
-        ):
-            missing_requirements.append(f"{prop} should be at most {val}")
-
-        if missing_requirements:
-            logger.error("Missing system requirements: %s", missing_requirements)
-        return missing_requirements
+        return self.workload.check_missing_system_requirements()
 
     def check_memory_requirements(self, profile: OpenSearchProfile) -> List[str]:
         """Checks memory requirements for the unit."""
