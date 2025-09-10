@@ -153,18 +153,14 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             logger.debug("Node not a leader. Skipping refresh relation data")
             return
 
-        if not self.charm.opensearch_peer_cm.is_provider():
-            logger.debug("Node not a provider. Skipping refresh relation data")
-            return
+        # if self._block_if_waiting_for_peer_cluster():
+        #     logger.debug(
+        #         "Node blocked waiting for peer cluster deferring event not refreshing peer cluster relation data"
+        #     )
+        #     event.defer()
+        #     return
 
-        if self._block_if_waiting_for_peer_cluster():
-            logger.debug(
-                "Node blocked waiting for peer cluster deferring event not refreshing peer cluster relation data"
-            )
-            event.defer()
-            return
-
-        self.refresh_relation_data(event, event_rel_id=event.relation.id, can_defer=False)
+        self.refresh_relation_data(event, event_rel_id=event.relation.id, can_defer=True)
         self._block_if_main_orchestrator_is_requirer()
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):  # noqa: C901
@@ -188,12 +184,12 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             event.defer()
             return
 
-        if self._block_if_waiting_for_peer_cluster():
-            logger.debug(
-                "Node blocked waiting for peer cluster deferring event not refreshing peer cluster relation data"
-            )
-            event.defer()
-            return
+        # if self._block_if_waiting_for_peer_cluster():
+        #     logger.debug(
+        #         "Node blocked waiting for peer cluster deferring event not refreshing peer cluster relation data"
+        #     )
+        #     event.defer()
+        #     return
 
         # if this is a failover orchestrator, check if it should promote itself
         if (
@@ -742,6 +738,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         elif deployment_desc.typ == DeploymentType.OTHER:
             should_sever_relation, should_retry = True, False
             blocked_msg = "Related to non 'main/failover'-orchestrator cluster."
+        elif Directive.WAIT_FOR_PEER_CLUSTER_RELATION in deployment_desc.pending_directives:
+            blocked_msg = f"Waiting for peer cluster relation to be created {message_suffix}."
         elif (
             orchestrators.main_app
             and orchestrators.main_app.id != deployment_desc.app.id
