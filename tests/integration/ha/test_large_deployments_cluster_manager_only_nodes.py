@@ -7,7 +7,7 @@ import logging
 import time
 
 import pytest
-from charms.opensearch.v0.constants_charm import PClusterNoDataNode, PClusterNoRelation
+from charms.opensearch.v0.constants_charm import PClusterNoRelation
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import CONFIG_OPTS, MODEL_CONFIG, get_leader_unit_ip
@@ -89,14 +89,26 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
         ops_test,
         apps=list(APP_UNITS.keys()),
         apps_full_statuses={
-            MAIN_APP: {"blocked": [PClusterNoDataNode]},
+            MAIN_APP: {
+                "blocked": ["Cannot run cluster with current roles. Waiting for data node..."]
+            },
             FAILOVER_APP: {"blocked": [PClusterNoRelation]},
             DATA_APP: {"blocked": [PClusterNoRelation]},
         },
         units_full_statuses={
-            MAIN_APP: {"units": {"blocked": [PClusterNoDataNode]}},
-            FAILOVER_APP: {"units": {"active": []}},
-            DATA_APP: {"units": {"active": []}},
+            MAIN_APP: {
+                "units": {
+                    "blocked": ["Cannot run cluster with current roles. Waiting for data node..."]
+                }
+            },
+            FAILOVER_APP: {
+                "units": {"blocked": ["At least 1 data nodes are required. Found only 0."]}
+            },
+            DATA_APP: {
+                "units": {
+                    "blocked": ["At least 1 cluster manager nodes are required. Found only 0."]
+                }
+            },
         },
         wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
         idle_period=IDLE_PERIOD,
