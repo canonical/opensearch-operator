@@ -23,6 +23,7 @@ from charms.opensearch.v0.constants_charm import (
     COSPort,
     COSRelationName,
     COSUser,
+    JWTAuthConfigInvalid,
     OpenSearchSystemUsers,
     OpenSearchUsers,
     PClusterNoDataNode,
@@ -31,7 +32,9 @@ from charms.opensearch.v0.constants_charm import (
     PluginConfigChangeError,
     PluginConfigCheck,
     RequestUnitServiceOps,
+    SecretAccessError,
     SecurityIndexInitProgress,
+    SecurityIndexUpdateError,
     ServiceIsStopping,
     ServiceStartError,
     ServiceStopped,
@@ -54,6 +57,7 @@ from charms.opensearch.v0.helper_security import (
 from charms.opensearch.v0.models import (
     DeploymentDescription,
     DeploymentType,
+    JWTAuthConfiguration,
     PerformanceType,
 )
 from charms.opensearch.v0.opensearch_backups import backup
@@ -115,6 +119,7 @@ from ops.charm import (
 )
 from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+from pydantic.error_wrappers import ValidationError
 
 import lifecycle
 import upgrade
@@ -1938,13 +1943,30 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def validate_and_apply_jwt_auth_config(self, user_secret_id: str) -> None:
         """Check the provided configuration and apply, if valid."""
         try:
-            jwt_auth_config = self.secrets.get_secret_from_id(user_secret_id)
+            secret_content = self.secrets.get_secret_from_id(user_secret_id)
         except (ModelError, SecretNotFoundError) as e:
             logger.error(e)
-            # todo: set status to `blocked`
+            self.status.set(BlockedStatus(SecretAccessError))
             return
 
-        # todo: validate
+        try:
+            jwt_auth_config = JWTAuthConfiguration(
+                signing_key=secret_content.get("signing-key"),
+                jwt_header=secret_content.get("jwt-header"),
+                jwt_url_parameter=secret_content.get("jwt-url-parameter"),
+                roles_key=secret_content.get("roles-key"),
+                subject_key=secret_content.get("subject-key"),
+                required_audience=secret_content.get("required-audience"),
+                required_issuer=secret_content.get("required-issuer"),
+                jwt_clock_skew_tolerance_seconds=secret_content.get(
+                    "jwt-clock-skew-tolerance-seconds"
+                ),
+            )
+        except ValidationError as e:
+            logger.error(f"Validation failed for JWT authentication config: {e}")
+            self.status.set(BlockedStatus(JWTAuthConfigInvalid))
+            return
+
         self.charm.opensearch_config.set_jwt_auth(jwt_auth_config)
 
         if self.unit.is_leader() and self.charm.peers_data.get(
@@ -1960,7 +1982,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             except OpenSearchCmdError as e:
                 logger.debug(f"Error when updating the security index: {e.out}")
                 # no need to defer here; the config should be fixed, triggering a new event
-                # todo: set status to `blocked`
+                self.status.set(BlockedStatus(SecurityIndexUpdateError))
+                return
+
+        self.status.clear(SecretAccessError)
+        self.status.clear(SecurityIndexUpdateError)
+        self.status.clear(JWTAuthConfigInvalid)
 
     @property
     def unit_ip(self) -> str:

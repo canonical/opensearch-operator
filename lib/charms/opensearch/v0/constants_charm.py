@@ -71,6 +71,11 @@ BackupSetupFailed = "Backup setup failed, check logs for details"
 BackupRelShouldNotExist = "This unit should not be related to backup relation"
 BackupRelDataIncomplete = "Backup relation data missing or incomplete."
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
+SecretAccessError = "Failed to access secret, please check permissions."
+JWTAuthConfigInvalid = (
+    "Configuration for JWT authentication is invalid. Check and correct parameters."
+)
+SecurityIndexUpdateError = "Failed to update security configuration, check logs for details."
 
 # Wait status
 RequestUnitServiceOps = "Requesting lock on operation: {}"
