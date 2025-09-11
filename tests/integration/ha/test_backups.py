@@ -296,7 +296,13 @@ async def _configure_azure(
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_small_deployment_build_and_deploy(
-    ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
+    ops_test: OpsTest,
+    cloud_configs: Dict[str, Dict[str, str]],
+    cloud_credentials: Dict[str, Dict[str, str]],
+    charm,
+    series,
+    cloud_name: str,
+    deploy_type: str,
 ) -> None:
     """Build and deploy an HA cluster of OpenSearch and corresponding S3 integration."""
     if await app_name(ops_test):
@@ -327,6 +333,14 @@ async def test_small_deployment_build_and_deploy(
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
+    config = cloud_configs[cloud_name]
+
+    logger.info(f"Syncing credentials for {cloud_name}")
+    if cloud_name == "azure":
+        await _configure_azure(ops_test, config, cloud_credentials[cloud_name], APP_NAME)
+    else:
+        await _configure_s3(ops_test, config, cloud_credentials[cloud_name], APP_NAME)
+
     # Credentials not set yet, this will move the opensearch to blocked state
     # Credentials are set per test scenario
     await ops_test.model.integrate(APP_NAME, backup_integrator)
@@ -336,7 +350,13 @@ async def test_small_deployment_build_and_deploy(
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_large_deployment_build_and_deploy(
-    ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
+    ops_test: OpsTest,
+    cloud_configs: Dict[str, Dict[str, str]],
+    cloud_credentials: Dict[str, Dict[str, str]],
+    charm,
+    series,
+    cloud_name: str,
+    deploy_type: str,
 ) -> None:
     """Build and deploy a large deployment for OpenSearch.
 
@@ -428,15 +448,17 @@ async def test_large_deployment_build_and_deploy(
         timeout=3600,
     )
 
+    config = cloud_configs[cloud_name]
+
+    logger.info(f"Syncing credentials for {cloud_name}")
+    if cloud_name == "azure":
+        await _configure_azure(ops_test, config, cloud_credentials[cloud_name], APP_NAME)
+    else:
+        await _configure_s3(ops_test, config, cloud_credentials[cloud_name], APP_NAME)
+
     # Credentials not set yet, this will move the opensearch to blocked state
     # Credentials are set per test scenario
     await ops_test.model.integrate("main", backup_integrator)
-    await wait_until(
-        ops_test,
-        apps=["main", "failover", APP_NAME],
-        apps_statuses=["active"],
-        idle_period=IDLE_PERIOD,
-    )
 
 
 @pytest.mark.parametrize("cloud_name,deploy_type", ALL_DEPLOYMENTS_ALL_CLOUDS)
