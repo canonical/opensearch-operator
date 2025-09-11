@@ -692,7 +692,8 @@ class OpenSearchBackupBase(Object):
             # In this case, we can ignore the exception and continue, as it will be called for
             # other units and the keystore is clean.
             # Any other exception should result in actual errors.
-            self.charm.plugin_manager.remove_from_keystore(plug.disable().secret_entries.keys())
+            keys_to_remove = plug.disable().secret_entries.keys()
+            self.charm.plugin_manager.remove_from_keystore(keys_to_remove)
 
     def _on_backup_disable(self, event: _DisableBackupRelationEvent) -> None:  # noqa C901
         """Disables the backup relation."""
@@ -767,7 +768,8 @@ class OpenSearchBackupBase(Object):
         )
 
         try:
-            self.charm.plugin_manager.remove_from_keystore(plug.disable().secret_entries.keys())
+            keys_to_remove = plug.disable().secret_entries.keys()
+            self.charm.plugin_manager.remove_from_keystore(keys_to_remove)
         except OpenSearchError as e:
             self.charm.status.set(BlockedStatus(PluginConfigError))
             # There was an unexpected error, log it and block the unit
@@ -888,7 +890,8 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
             if not plugin.data:
                 continue
             try:
-                self.charm.plugin_manager.add_to_keystore(plugin.config().secret_entries)
+                entries_to_add = plugin.config().secret_entries
+                self.charm.plugin_manager.add_to_keystore(entries_to_add)
             except OpenSearchNotFullyReadyError:
                 logger.info(f"{plugin.name}: not ready, we wait for another peer cluster.")
             except OpenSearchPluginMissingConfigError as e:
@@ -1080,7 +1083,8 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
         self.charm.status.set(MaintenanceStatus(BackupSetupStart))
 
         try:
-            self.charm.plugin_manager.add_to_keystore(self.plugin.config().secret_entries)
+            entries_to_add = self.plugin.config().secret_entries
+            self.charm.plugin_manager.add_to_keystore(entries_to_add)
         except (OpenSearchPluginMissingConfigError, OpenSearchPluginMissingDepsError) as e:
             self.charm.status.set(BlockedStatus(BackupRelDataIncomplete))
             logger.error(e)
