@@ -1030,12 +1030,14 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         if self._error_set_from_requirer(orchestrators, deployment_desc, data, event.relation.id):
             logger.debug("Error from requirer")
             return
-        
+
         # this means it's a previous "main orchestrator" that was unrelated then re-related
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             self.charm.opensearch_peer_cm.demote_deployment_type()
             deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
-            self.charm.peer_cluster_provider.refresh_relation_data(event, event.relation.id, can_defer=False)
+            self.charm.peer_cluster_provider.refresh_relation_data(
+                event, event.relation.id, can_defer=False
+            )
 
         # broadcast that this cluster is a failover candidate, and let the main CM elect it or not
         if deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR:
