@@ -466,6 +466,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                     f"{cluster_type}_rel_id": rel_id if has_units else -1,
                 }
             )
+            # in case of demotion update the trigger
+            self.put_in_rel(data={"trigger": cluster_type}, rel_id=rel_id)
             self.put_in_rel(data={"orchestrators": json.dumps(orchestrators)}, rel_id=rel_id)
 
             # we add the hash of the rel_data to only emit a change event
@@ -1024,15 +1026,16 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # fetch the success data
         data = self.peer_cm.rel_data_from_str(data["data"])
 
-        # this means it's a previous "main orchestrator" that was unrelated then re-related
-        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
-            self.charm.opensearch_peer_cm.demote_deployment_type()
-            deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
-
         # check errors that can only be figured out from the requirer side
         if self._error_set_from_requirer(orchestrators, deployment_desc, data, event.relation.id):
             logger.debug("Error from requirer")
             return
+        
+        # this means it's a previous "main orchestrator" that was unrelated then re-related
+        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+            self.charm.opensearch_peer_cm.demote_deployment_type()
+            deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
+            self.charm.peer_cluster_provider.refresh_relation_data(event, event.relation.id, can_defer=False)
 
         # broadcast that this cluster is a failover candidate, and let the main CM elect it or not
         if deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR:
