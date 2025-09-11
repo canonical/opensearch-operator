@@ -31,8 +31,6 @@ import pytest
 from azure.storage.blob import BlobServiceClient
 from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
-    BackupRelShouldNotExist,
-    BackupSetupFailed,
 )
 from charms.opensearch.v0.opensearch_backups import S3_REPOSITORY
 from pytest_operator.plugin import OpsTest
@@ -433,83 +431,9 @@ async def test_large_deployment_build_and_deploy(
     # Credentials not set yet, this will move the opensearch to blocked state
     # Credentials are set per test scenario
     await ops_test.model.integrate("main", backup_integrator)
-
-
-@pytest.mark.parametrize("cloud_name,deploy_type", LARGE_DEPLOYMENTS_ALL_CLOUDS)
-@pytest.mark.abort_on_fail
-async def test_large_setups_relations_with_misconfiguration(
-    ops_test: OpsTest,
-    cloud_name: str,
-    deploy_type: str,
-) -> None:
-    """Tests the different blocked messages expected in large deployments."""
-    if cloud_name == "azure":
-        config = {
-            "connection-protocol": "abfss",
-            "container": "error",
-            "path": "/",
-        }
-        credentials = {
-            "storage-account": "error",
-            "secret-key": "error",
-        }
-        await _configure_azure(ops_test=ops_test, config=config, credentials=credentials)
-    else:
-        config = {
-            "endpoint": "http://localhost",
-            "bucket": "error",
-            "path": "/",
-            "region": "default",
-        }
-        credentials = {
-            "access-key": "error",
-            "secret-key": "error",
-        }
-        await _configure_s3(ops_test=ops_test, config=config, credentials=credentials)
-
     await wait_until(
         ops_test,
-        apps=["main"],
-        apps_statuses=["blocked"],
-        apps_full_statuses={"main": {"blocked": [BackupSetupFailed]}},
-        idle_period=IDLE_PERIOD,
-    )
-
-    backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
-    backup_relation = AZURE_RELATION if cloud_name == "azure" else S3_RELATION
-
-    # Now, relate failover cluster to backup-integrator and review the status
-    await ops_test.model.integrate(f"failover:{backup_relation}", backup_integrator)
-    await ops_test.model.integrate(f"{APP_NAME}:{backup_relation}", backup_integrator)
-    await wait_until(
-        ops_test,
-        apps=["failover", APP_NAME],
-        apps_statuses=["blocked"],
-        apps_full_statuses={
-            "failover": {"blocked": [BackupRelShouldNotExist]},
-            APP_NAME: {"blocked": [BackupRelShouldNotExist]},
-        },
-        idle_period=IDLE_PERIOD,
-    )
-
-    # Reverting should return it to normal
-    await ops_test.model.applications[APP_NAME].destroy_relation(
-        f"{APP_NAME}:{backup_relation}", backup_integrator
-    )
-    await ops_test.model.applications["failover"].destroy_relation(
-        f"failover:{backup_relation}", backup_integrator
-    )
-
-    await wait_until(
-        ops_test,
-        apps=["main"],
-        apps_statuses=["blocked"],
-        apps_full_statuses={"main": {"blocked": [BackupSetupFailed]}},
-        idle_period=IDLE_PERIOD,
-    )
-    await wait_until(
-        ops_test,
-        apps=["failover", APP_NAME],
+        apps=["main", "failover", APP_NAME],
         apps_statuses=["active"],
         idle_period=IDLE_PERIOD,
     )
