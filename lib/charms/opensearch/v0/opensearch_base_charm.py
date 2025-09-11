@@ -868,8 +868,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self._restart_opensearch_event.emit()
 
         # handle changes for the jwt_auth_config option
-        if jwt_auth_user_secret := self.charm.config.get(JWT_AUTH_CONFIG_OPTION):
-            self.charm.validate_and_apply_jwt_auth_config(jwt_auth_user_secret)
+        if jwt_auth_user_secret := self.config.get(JWT_AUTH_CONFIG_OPTION):
+            self.validate_and_apply_jwt_auth_config(jwt_auth_user_secret)
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
@@ -1967,17 +1967,17 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.status.set(BlockedStatus(JWTAuthConfigInvalid))
             return
 
-        self.charm.opensearch_config.set_jwt_auth(jwt_auth_config)
+        self.opensearch_config.set_jwt_auth(jwt_auth_config)
 
-        if self.unit.is_leader() and self.charm.peers_data.get(
+        if self.unit.is_leader() and self.peers_data.get(
             Scope.APP, "security_index_initialised", False
         ):
             logger.info("Updating security configuration")
-            admin_secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
 
             try:
-                self.charm.update_security_config(
-                    admin_secrets, self.charm.opensearch_config.SECURITY_CONFIG_YML
+                self.update_security_config(
+                    admin_secrets, self.opensearch_config.SECURITY_CONFIG_YML
                 )
             except OpenSearchCmdError as e:
                 logger.debug(f"Error when updating the security index: {e.out}")
