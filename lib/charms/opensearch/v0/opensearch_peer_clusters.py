@@ -95,8 +95,6 @@ class OpenSearchPeerClustersManager:
         if current_deployment_desc == deployment_desc:
             return
 
-        # if deployment_desc.state.value == State.ACTIVE:
-        # we only update the deployment desc if all is well. WHY??
         # TODO: Should we add an entry on DeploymentDesc "errors" to reflect on status?
         self._charm.peers_data.put_object(
             Scope.APP, "deployment-description", deployment_desc.to_dict()
@@ -129,8 +127,6 @@ class OpenSearchPeerClustersManager:
             if deployment_state.value == State.BLOCKED_WAITING_FOR_RELATION:
                 logger.debug("clearing deployment_state")
                 deployment_state = DeploymentState(value=State.ACTIVE)
-            if self._charm.unit.is_leader():
-                self._charm.status.clear(PClusterNoRelation)
 
         if Directive.VALIDATE_CLUSTER_NAME in pending_directives:
             if config.cluster_name != data.cluster_name:
@@ -292,6 +288,8 @@ class OpenSearchPeerClustersManager:
             directives.append(Directive.SHOW_STATUS)
             directives.remove(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
 
+        # When scaling back up from 0 with the main orchestrator demoted to failover.
+        # We won't have the BLOCKED_WAITING_FOR_RELATION so we need to set it.
         if (
             prev_deployment.typ == DeploymentType.FAILOVER_ORCHESTRATOR
             and not self._charm.model.relations[PeerClusterRelationName]

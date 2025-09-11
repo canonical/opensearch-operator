@@ -15,7 +15,6 @@ from charms.opensearch.v0.constants_charm import (
     COSUser,
     KibanaserverUser,
     PClusterMainIsRequirer,
-    PClusterNoRelation,
     PClusterOrchestratorsRemoved,
     PClusterWaitingForFailoverPromotion,
     PeerClusterOrchestratorRelationName,
@@ -968,10 +967,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         super().__init__(charm, PeerClusterRelationName)
 
         self.framework.observe(
-            charm.on[self.relation_name].relation_joined,
-            self._on_peer_cluster_relation_joined,
-        )
-        self.framework.observe(
             charm.on[self.relation_name].relation_changed,
             self._on_peer_cluster_relation_changed,
         )
@@ -979,11 +974,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             charm.on[self.relation_name].relation_departed,
             self._on_peer_cluster_relation_departed,
         )
-
-    def _on_peer_cluster_relation_joined(self, event: RelationJoinedEvent):
-        """Event received when a new main-failover cluster unit joins the fleet."""
-        if self.charm.unit.is_leader():
-            self.charm.status.clear(PClusterNoRelation, app=True)
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):  # noqa: C901
         """Peer cluster relation change hook. Crucial to capture changes from the provider side."""
