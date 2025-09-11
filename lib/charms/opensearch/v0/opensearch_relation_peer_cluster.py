@@ -153,7 +153,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             return
 
         self.refresh_relation_data(event, event_rel_id=event.relation.id, can_defer=False)
-        self._block_if_main_orchestrator_is_requirer()
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):  # noqa: C901
         """Event received by all units in sub-cluster when a new sub-cluster joins the relation."""
@@ -195,14 +194,14 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         ):
             self._promote_failover()
             self.refresh_relation_data(event)
-            self._block_if_main_orchestrator_is_requirer()
             return
 
         # only the main-orchestrator is able to designate a failover
         if deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR:
             return
 
-        if self._block_if_main_orchestrator_is_requirer():
+        # if the main orchestrator is a requirer return
+        if self.model.relations[PeerClusterRelationName]:
             return
 
         if not (data := event.relation.data.get(event.app)):
@@ -260,26 +259,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         self.charm.peers_data.put_object(Scope.APP, "orchestrators", orchestrators.to_dict())
 
         self._broadcast_new_failover_app(peer_cluster_app, target_relation_ids)
-
-    def _block_if_main_orchestrator_is_requirer(self) -> bool:
-        """Block the charm if main orchestrator is a requirer"""
-        if (
-            not (deployment_desc := self.peer_cm.deployment_desc())
-            or deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
-        ):
-            return False
-
-        peer_cluster_requirer_relations = self.model.relations[PeerClusterRelationName]
-
-        if peer_cluster_requirer_relations:
-            self.charm.status.set(
-                BlockedStatus(PClusterMainIsRequirer),
-                app=True,
-            )
-            return True
-        # clean the status if it is set
-        self.charm.status.clear(PClusterMainIsRequirer, app=True)
-        return False
 
     def _broadcast_new_failover_app(
         self, peer_cluster_app: PeerClusterApp, target_relation_ids: List[int]
@@ -1454,11 +1433,19 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         """Fetch error when relation is wrong and can only be computed on the requirer side."""
         blocked_msg = None
         provider_deployment_desc = peer_cluster_rel_data.deployment_desc
-        if (
-            deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
-            and self.model.relations[PeerClusterRelationName]
+        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR and (
+            provider_deployment_desc.promotion_time is None
+            or deployment_desc.promotion_time > provider_deployment_desc.promotion_time
         ):
-            blocked_msg = PClusterMainIsRequirer
+            cluster_fleet_apps = (
+                self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
+            )
+            provider_app_id = provider_deployment_desc.app.id
+            if (
+                provider_app_id in cluster_fleet_apps
+                and cluster_fleet_apps[provider_app_id]["planned_units"] > 0
+            ):
+                blocked_msg = PClusterMainIsRequirer
         elif event_rel_id not in [
             orchestrators.main_rel_id,
             orchestrators.failover_rel_id,
