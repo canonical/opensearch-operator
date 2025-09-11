@@ -153,14 +153,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             logger.debug("Node not a leader. Skipping refresh relation data")
             return
 
-        # if self._block_if_waiting_for_peer_cluster():
-        #     logger.debug(
-        #         "Node blocked waiting for peer cluster deferring event not refreshing peer cluster relation data"
-        #     )
-        #     event.defer()
-        #     return
-
-        self.refresh_relation_data(event, event_rel_id=event.relation.id, can_defer=True)
+        self.refresh_relation_data(event, event_rel_id=event.relation.id, can_defer=False)
         self._block_if_main_orchestrator_is_requirer()
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):  # noqa: C901
@@ -184,15 +177,16 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             event.defer()
             return
 
-        # if self._block_if_waiting_for_peer_cluster():
-        #     logger.debug(
-        #         "Node blocked waiting for peer cluster deferring event not refreshing peer cluster relation data"
-        #     )
-        #     event.defer()
-        #     return
-
         logger.debug("refreshing relation data")
-        if self.refresh_relation_data(event, event_rel_id=event.relation.id):
+        is_failover_waiting_for_peer_relation = (
+            Directive.WAIT_FOR_PEER_CLUSTER_RELATION in deployment_desc.pending_directives
+        )
+        self.refresh_relation_data(
+            event,
+            event_rel_id=event.relation.id,
+            can_defer=not is_failover_waiting_for_peer_relation,
+        )
+        if is_failover_waiting_for_peer_relation:
             return
 
         # if this is a failover orchestrator, check if it should promote itself
@@ -271,8 +265,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
     def _block_if_main_orchestrator_is_requirer(self) -> bool:
         """Block the charm if main orchestrator is a requirer"""
         if (
-            not self.charm.unit.is_leader()
-            or not (deployment_desc := self.peer_cm.deployment_desc())
+            not (deployment_desc := self.peer_cm.deployment_desc())
             or deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
         ):
             return False
@@ -424,12 +417,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
     def refresh_relation_data(  # noqa: C901
         self, event: EventBase, event_rel_id: int | None = None, can_defer: bool = True
-    ) -> bool:
-        """Refresh the peer cluster rel data (new cm node, admin password change etc.).
-
-        returns whether the event was deferred or not"""
+    ) -> None:
+        """Refresh the peer cluster rel data (new cm node, admin password change etc.)."""
         if not self.charm.unit.is_leader():
-            return False
+            return
 
         # all relations with the current orchestrator
         all_relation_ids = [
@@ -458,7 +449,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         # exit if current cluster should not have been considered a provider
         if self._notify_if_wrong_integration(rel_err_data, all_relation_ids) and event_rel_id:
             self.delete_from_rel("trigger", rel_id=event_rel_id)
-            return False
+            return
 
         # store the main/failover-cm planned units count
         self._put_fleet_apps(deployment_desc, all_relation_ids)
@@ -524,8 +515,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if can_defer and should_defer:
             logger.debug("Event deferred after refreshing relation data.")
             event.defer()
-            return True
-        return False
 
     def _notify_if_wrong_integration(
         self,
@@ -971,24 +960,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         for rel in self.charm.model.relations[self.relation_name]:
             self._delete_rel_data(rel.id)
 
-    def _block_if_waiting_for_peer_cluster(self) -> bool:
-        """Block the operation if waiting for peer cluster."""
-        if not self.charm.unit.is_leader():
-            return False
-
-        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
-            return False
-
-        if Directive.WAIT_FOR_PEER_CLUSTER_RELATION in deployment_desc.pending_directives:
-            self.charm.status.set(
-                BlockedStatus(PClusterNoRelation),
-                app=True,
-            )
-            return True
-
-        self.charm.status.clear(PClusterNoRelation, app=True)
-        return False
-
 
 class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
     """Peer cluster relation requirer class."""
@@ -1083,15 +1054,16 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # fetch the success data
         data = self.peer_cm.rel_data_from_str(data["data"])
-        # check errors that can only be figured out from the requirer side
-        if self._error_set_from_requirer(orchestrators, deployment_desc, data, event.relation.id):
-            logger.debug("Error from requirer")
-            return
 
         # this means it's a previous "main orchestrator" that was unrelated then re-related
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             self.charm.opensearch_peer_cm.demote_deployment_type()
             deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
+
+        # check errors that can only be figured out from the requirer side
+        if self._error_set_from_requirer(orchestrators, deployment_desc, data, event.relation.id):
+            logger.debug("Error from requirer")
+            return
 
         # broadcast that this cluster is a failover candidate, and let the main CM elect it or not
         if deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR:
@@ -1349,13 +1321,14 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             self.charm.peers_data.get_object(Scope.APP, "orchestrators")
         )
 
-        # a cluster of type "other" is departing (wrong relation), or, the current is a main
+        # a non registered cluster is departing (wrong relation), or, the current is a main
         # orchestrator and a failover is departing, we can safely ignore.
         if event.relation.id not in [
             orchestrators.main_rel_id,
             orchestrators.failover_rel_id,
         ]:
             self._clear_errors(f"error_from_requirer-{event.relation.id}")
+            self._clear_errors(f"error_from_providers-{event.relation.id}")
             return
 
         # handle scale-down at the charm level storage detaching, or??
@@ -1493,18 +1466,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         provider_deployment_desc = peer_cluster_rel_data.deployment_desc
         if (
             deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
-            and provider_deployment_desc.promotion_time
-            and deployment_desc.promotion_time > provider_deployment_desc.promotion_time
+            and self.model.relations[PeerClusterRelationName]
         ):
-            cluster_fleet_apps = (
-                self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
-            )
-            provider_app_id = provider_deployment_desc.app.id
-            if (
-                provider_app_id in cluster_fleet_apps
-                and cluster_fleet_apps[provider_app_id]["planned_units"] > 0
-            ):
-                blocked_msg = "Main cluster-orchestrator cannot be requirer of relation."
+            blocked_msg = PClusterMainIsRequirer
         elif event_rel_id not in [
             orchestrators.main_rel_id,
             orchestrators.failover_rel_id,
