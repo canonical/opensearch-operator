@@ -15,10 +15,6 @@ import logging
 from typing import TYPE_CHECKING
 
 from charms.opensearch.v0.models import PluginConfigType, PluginSecret
-from charms.opensearch.v0.opensearch_exceptions import (
-    OpenSearchCmdError,
-    OpenSearchHttpError,
-)
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_keystore import (
     OpenSearchKeystore,
@@ -44,12 +40,14 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
+SMTP_SECRET_LABEL = "notifications-plugin"
+
 
 class SmtpEvents(Object):
     """Events handler for smtp events"""
 
     relation_name = SMTP_RELATION
-    secret_label = "notifications-plugin"
+    secret_label = SMTP_SECRET_LABEL
 
     def __init__(self, charm: "OpenSearchBaseCharm"):
         super().__init__(charm, "plugin:notifications")
@@ -85,21 +83,24 @@ class SmtpEvents(Object):
             f"opensearch.notifications.core.email.{user}.password": f"{parameters.password}",
         }
 
-        self.charm.plugin_manager.add_to_keystore(entries)
+        if not self.charm.plugin_manager.add_to_keystore(entries):
+            event.defer()
+            return
+
         self.charm.secrets.put(Scope.UNIT, self.secret_label, json.dumps(list(entries.keys())))
 
+        # if unit is main orchestrator leader, transfer keys to subclusters
         if not self.charm.unit.is_leader() or not self.charm.opensearch_peer_cm.is_provider(
             typ="main"
         ):
             return
 
-        # if unit is main orchestrator leader, transfer keys to subclusters
         self.charm.secrets.put(Scope.APP, self.secret_label, json.dumps(entries))
         secret_id = self.charm.secrets.get_secret_id(Scope.APP, self.secret_label)
         plugin = PluginSecret(
             relation_name=self.relation_name, secret_id=secret_id, typ=PluginConfigType.KEYS
         )
-        self.charm.state.app.add_plugin_secret(self.secret_label, plugin)
+        self.charm.state.app.put_plugin_secret(self.secret_label, plugin)
         self.charm.peer_cluster_provider.refresh_relation_data(event)
 
     def _on_smtp_credentials_gone(self, event):
@@ -110,6 +111,7 @@ class SmtpEvents(Object):
         self.charm.plugin_manager.remove_from_keystore(keys)
         self.charm.secrets.delete(Scope.UNIT, self.secret_label)
 
+        # if unit is main orchestrator leader, remove secrets transferred to subclusters
         if not self.charm.unit.is_leader() or not self.charm.opensearch_peer_cm.is_provider(
             typ="main"
         ):
@@ -131,7 +133,7 @@ class SmtpEvents(Object):
             secret = event.secret.get_content(refresh=True)
             raw = secret.get(self.secret_label)
             keys = json.loads(raw)
-            if not self.charm.plugin_manager.write_keystore(keys):
+            if not self.charm.plugin_manager.add_to_keystore(keys):
                 logger.info("Could not update keystore. Deferring event.")
                 event.defer()
 
@@ -155,25 +157,15 @@ class OpenSearchPluginManager:
         """Adds given entries to OpenSearch keystore"""
         for k, v in entries.items():
             self._keystore.add(k, v)
-        self._keystore.reload()
+        return self._keystore.reload()
 
     def remove_from_keystore(self, keys):
         """Deletes given keys from OpenSearch keystore"""
         for k in keys:
             self._keystore.delete(k)
-        self._keystore.reload()
+        return self._keystore.reload()
 
-    def write_keystore(self, config):
+    def update_keystore(self, entries_to_update):
         """Updates key,val pairs in OpenSearch keystore. Deletes key if val is None"""
-        try:
-            self._keystore.update(config)
-            response = self._keystore.reload_keystore()
-        except OpenSearchCmdError as e:
-            logger.info("Could not update keystore %s.", e)
-            return False
-        except OpenSearchHttpError:
-            logger.info("Could not request secure settings reload.")
-            return False
-
-        failed = response.get("_nodes", {}).get("failed", -1)
-        return failed == 0
+        self._keystore.update(entries_to_update)
+        return self._keystore.reload()

@@ -45,6 +45,23 @@ class ClusterTopology:
         return GeneratedRoles
 
     @staticmethod
+    def get_cluster_settings(
+        opensearch: OpenSearchDistribution,
+        host: Optional[str] = None,
+        alt_hosts: Optional[List[str]] = None,
+        include_defaults: bool = False,
+    ) -> Dict[str, any]:
+        """Get the cluster settings."""
+        settings = opensearch.request(
+            "GET",
+            f"/_cluster/settings?flat_settings=true&include_defaults={str(include_defaults).lower()}",
+            host=host,
+            alt_hosts=alt_hosts,
+        )
+
+        return dict(settings["defaults"] | settings["persistent"] | settings["transient"])
+
+    @staticmethod
     def recompute_nodes_conf(app_id: str, nodes: List[Node]) -> Dict[str, Node]:
         """Recompute the configuration of all the nodes (cluster set to auto-generate roles)."""
         if not nodes:

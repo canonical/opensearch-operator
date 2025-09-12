@@ -21,7 +21,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.helper_charm import all_units, format_unit_name
+from charms.opensearch.v0.helper_charm import all_units, diff, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.models import (
     AzureRelDataCredentials,
@@ -327,13 +327,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         for rel_id in target_relation_ids:
             self.put_in_rel({"trigger": "main"}, rel_id=rel_id)
 
-        # check if any credentials exist without relations
-        self._block_if_has_credentials_with_missing_relations()
-
         # ensuring quorum
         deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
         cms = self._fetch_local_cm_nodes(deployment_desc)
         self.charm.opensearch_peer_cm.validate_recommended_cm_unit_count(cms)
+
+        # check if any credentials exist without relations
+        self._block_if_has_credentials_with_missing_relations()
 
     def _block_if_has_credentials_with_missing_relations(self) -> None:
         """Checks if the relation data has credentials for non-related apps"""
@@ -1041,19 +1041,18 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # recompute the deployment desc
         self.charm.opensearch_peer_cm.run_with_relation_data(data)
 
-    def _track_plugin_secrets(self, relation_plugins):
+    def _track_plugin_secrets(self, secrets_from_relation):
         """Track plugin secrets from relation data"""
-        current_labels = set(self.charm.state.app.plugin_secrets.keys())
-        relation_labels = set(relation_plugins.keys())
+        current_app_secrets = self.charm.state.app.plugin_secrets
+        add, remove = diff(secrets_from_relation.keys(), current_app_secrets.keys())
 
-        remove = current_labels - relation_labels
-        add = {label: relation_plugins[label] for label in (relation_labels - current_labels)}
         for label in remove:
             self.charm.state.app.remove_plugin_secret(label)
 
-        for label, plugin in add.items():
+        for label in add:
+            plugin = secrets_from_relation[label]
             self.charm.secrets.track_secret(plugin.secret_id, Scope.APP, label)
-            self.charm.state.app.add_plugin_secret(label, plugin)
+            self.charm.state.app.put_plugin_secret(label, plugin)
 
     def apply_orchestrator_status(self) -> None:
         """Sets or clears status based on presence of local orchestrators."""

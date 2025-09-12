@@ -41,7 +41,7 @@ from charms.opensearch.v0.constants_charm import (
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.helper_charm import Status, all_units, format_unit_name
+from charms.opensearch.v0.helper_charm import Status, all_units, diff, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import get_host_ip, units_ips
 from charms.opensearch.v0.helper_security import (
@@ -586,38 +586,40 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # if app_data + app_data["nodes_config"]: Reconfigure + restart node on the unit
             self._reconfigure_and_restart_unit_if_needed()
 
-        # all units need to add plugin keys from secrets to their keystores
+        # if this is a subcluster, all units must add plugin keys from secrets to their keystores
         if self.opensearch_peer_cm.is_consumer(of="main"):
             keys_to_write = {}
-            app_plugins = self.state.app.plugin_secrets
-            unit_labels = set(self.state.unit.plugin_secrets.keys())
-            app_labels = set(app_plugins.keys())
-
-            add = {label: app_plugins[label] for label in (app_labels - unit_labels)}
-            for label, plugin in add.items():
+            app_plugin_secrets = self.state.app.plugin_secrets
+            added, removed = diff(app_plugin_secrets.keys(), self.state.unit.plugin_secrets)
+            for label in added:
+                plugin = app_plugin_secrets[label]
                 # start locally tracking secret and write transferred keys to keystore
-                app_secret = self.secrets.track_secret(plugin.secret_id, Scope.APP, label)
-                secret_content = app_secret.get_content().get(label)
-                keys = json.loads(secret_content)
-                self.secrets.put(Scope.UNIT, label, keys)
-                self.state.unit.add_plugin_secret_label(label, plugin.typ)
-                keys_to_write.update(keys)
+                app_secret = (
+                    self.secrets.track_secret(plugin.secret_id, Scope.APP, label)
+                    .get_content()
+                    .get(label)
+                )
+                keys_to_add = json.loads(app_secret)
 
-            remove = unit_labels - app_labels
-            for label in remove:
-                # this unit should delete the keys it wrote as the secret has been removed
-                secret_content = self.secrets.get(Scope.UNIT, label)
-                keys = json.loads(secret_content)
-                keys_to_write.update({k: None for k in keys.keys()})
+                # store on unit for later removal (only keys needed and not values)
+                self.secrets.put(Scope.UNIT, label, json.dumps(list(keys_to_add.keys())))
+                self.state.unit.put_plugin_secret_label(label, plugin.typ)
+                keys_to_write.update(keys_to_add)
+
+            for label in removed:
+                # this unit should delete the keys it wrote as the app secret has been removed
+                unit_secret = self.secrets.get(Scope.UNIT, label)
+                keys_to_remove = json.loads(unit_secret)
+                keys_to_write.update({k: None for k in keys_to_remove})
 
             # write changes to keystore
-            if keys_to_write and not self.plugin_manager.write_keystore(keys_to_write):
+            if keys_to_write and not self.plugin_manager.update_keystore(keys_to_write):
                 logger.info("Could not update keystore. Deferring event.")
                 event.defer()
                 return
 
             # remove plugin secret and label from unit if no longer tracking
-            for label in remove:
+            for label in removed:
                 self.secrets.delete(Scope.UNIT, label)
                 self.state.unit.remove_plugin_secret_label(label)
 

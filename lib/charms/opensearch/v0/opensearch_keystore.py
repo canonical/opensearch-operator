@@ -10,6 +10,7 @@ from typing import Any, Dict
 
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
+    OpenSearchHttpError,
 )
 
 # The unique Charmhub library identifier, never change it
@@ -66,4 +67,10 @@ class OpenSearchKeystore:
         Raises:
             OpenSearchHttpError: If the reload fails.
         """
-        return self._opensearch.request("POST", "_nodes/_local/reload_secure_settings")
+        try:
+            response = self._opensearch.request("POST", "_nodes/_local/reload_secure_settings")
+        except OpenSearchHttpError:
+            logger.info("Could not request secure settings reload.")
+            return False
+        failed = response.get("_nodes", {}).get("failed", -1)
+        return failed == 0
