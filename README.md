@@ -68,7 +68,7 @@ The relevant provided [relations](https://juju.is/docs/olm/relations) of Charmed
 To connect to the Charmed OpenSearch Operator and exchange data, relate to the `opensearch-client` endpoint:
 
 ```shell
-juju deploy data-integrator --channel=stable
+juju deploy data-integrator --channel=latest/stable
 juju integrate opensearch data-integrator
 ```
 
