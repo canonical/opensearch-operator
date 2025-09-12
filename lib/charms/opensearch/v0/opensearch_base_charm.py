@@ -870,6 +870,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # handle changes for the jwt_auth_config option
         if jwt_auth_user_secret := self.config.get(JWT_AUTH_CONFIG_OPTION):
             self.validate_and_apply_jwt_auth_config(jwt_auth_user_secret)
+        else:
+            # the config option not being set means it could have been removed
+            try:
+                security_conf = self.opensearch_config.load_security_config()
+                if security_conf["config"]["dynamic"]["authc"]["jwt_auth_domain"]["http_enabled"]:
+                    self.disable_jwt_authentication()
+            except (KeyError, FileNotFoundError) as e:
+                logger.error(f"Error reading security config: {e}")
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
@@ -1988,6 +1996,23 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.status.clear(SecretAccessError)
         self.status.clear(SecurityIndexUpdateError)
         self.status.clear(JWTAuthConfigInvalid)
+
+    def disable_jwt_authentication(self) -> None:
+        """Unset the configuration and update the security index."""
+        self.opensearch_config.unset_jwt_auth()
+
+        if self.unit.is_leader() and self.peers_data.get(
+            Scope.APP, "security_index_initialised", False
+        ):
+            logger.info("Updating security configuration")
+            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
+
+            try:
+                self.update_security_config(
+                    admin_secrets, self.opensearch_config.SECURITY_CONFIG_YML
+                )
+            except OpenSearchCmdError as e:
+                logger.debug(f"Error when updating the security index: {e.out}")
 
     @property
     def unit_ip(self) -> str:

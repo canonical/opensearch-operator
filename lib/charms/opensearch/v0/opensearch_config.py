@@ -39,6 +39,10 @@ class OpenSearchConfig:
         """Load the opensearch.yml config of the node."""
         return self._opensearch.config.load(self.CONFIG_YML)
 
+    def load_security_config(self) -> Dict[str, any]:
+        """Load the SECURITY_CONFIG_YML of the node."""
+        return self._opensearch.config.load(self.SECURITY_CONFIG_YML)
+
     def set_client_auth(self):
         """Configure TLS and basic http for clients."""
         # The security plugin will accept TLS client certs if certs but doesn't require them
@@ -158,7 +162,7 @@ class OpenSearchConfig:
             jwt_config.jwt_clock_skew_tolerance_seconds,
         )
 
-    def disable_jwt_auth(self) -> None:
+    def unset_jwt_auth(self) -> None:
         """Unset JSON Web Token authentication parameters in security config."""
         self._opensearch.config.put(
             self.SECURITY_CONFIG_YML,
