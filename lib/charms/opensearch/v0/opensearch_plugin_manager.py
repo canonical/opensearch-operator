@@ -14,7 +14,7 @@ import json
 import logging
 from typing import TYPE_CHECKING
 
-from charms.opensearch.v0.models import PluginConfigType, PluginSecret
+from charms.opensearch.v0.models import PluginConfigType
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_keystore import (
     OpenSearchKeystore,
@@ -96,12 +96,14 @@ class SmtpEvents(Object):
             return
 
         self.charm.secrets.put(Scope.APP, self.secret_label, json.dumps(entries))
-        secret_id = self.charm.secrets.get_secret_id(Scope.APP, self.secret_label)
-        plugin = PluginSecret(
-            relation_name=self.relation_name, secret_id=secret_id, typ=PluginConfigType.KEYS
-        )
-        self.charm.state.app.put_plugin_secret(self.secret_label, plugin)
-        self.charm.peer_cluster_provider.refresh_relation_data(event)
+        if secret_id := self.charm.secrets.get_secret_id(Scope.APP, self.secret_label):
+            self.charm.state.app.put_plugin_secret(
+                self.secret_label,
+                secret_id=secret_id,
+                relation_name=self.relation_name,
+                typ=PluginConfigType.KEYS,
+            )
+            self.charm.peer_cluster_provider.refresh_relation_data(event)
 
     def _on_smtp_credentials_gone(self, event):
         """Removes secret when credentials are gone"""

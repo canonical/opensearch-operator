@@ -33,10 +33,14 @@ class OpenSearchApp:
         plugins = self.relation_data.get_object(self.scope, "plugin_secrets") or {}
         return {label: PluginSecret.from_dict(plugin) for label, plugin in plugins.items()}
 
-    def put_plugin_secret(self, label: str, plugin: PluginSecret) -> None:
+    def put_plugin_secret(
+        self, label: str, secret_id: str, relation_name: str, typ: PluginConfigType
+    ) -> None:
         """Adds plugin secret being tracked by app"""
         plugin_secrets = self.plugin_secrets
-        plugin_secrets[label] = plugin
+        plugin_secrets[label] = PluginSecret(
+            relation_name=relation_name, secret_id=secret_id, typ=typ
+        )
         self.relation_data.put_object(self.scope, "plugin_secrets", plugin_secrets)
 
     def remove_plugin_secret(self, label: str) -> None:
