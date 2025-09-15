@@ -68,7 +68,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 17
+LIBPATCH = 18
 
 PYDEPS = ["pydantic>=2"]
 
@@ -312,7 +312,7 @@ class SmtpRequires(ops.Object):
         if password is None and relation_data.get("password_id"):
             try:
                 password = (
-                    self.model.get_secret(id=relation_data.get("password_id"), label=f"smtp-integrator-data-{relation.id}")
+                    self.model.get_secret(id=relation_data.get("password_id"))
                     .get_content()
                     .get("password")
                 )
@@ -369,15 +369,42 @@ class SmtpRequires(ops.Object):
             if self._is_relation_data_valid(event.relation):
                 self.on.smtp_data_available.emit(event.relation, app=event.app, unit=event.unit)
 
+    @staticmethod
+    def _secret_uri_equal(left: str, right: str) -> bool:
+        """Check if two juju secret URIs are equal."""
+        left_without_protocol = left.removeprefix("secret://")
+        left_without_protocol = left_without_protocol.removeprefix("secret:")
+        right_without_protocol = right.removeprefix("secret://")
+        right_without_protocol = right_without_protocol.removeprefix("secret:")
+        # If they are both fully qualified secret URLs, compare them directly
+        if "/" in left_without_protocol and "/" in right_without_protocol:
+            return left_without_protocol == right_without_protocol
+        # Otherwise, compare only the secret ID part and ignore the potential model UUID
+        left_id = left_without_protocol.split("/")[-1]
+        right_id = right_without_protocol.split("/")[-1]
+        return left_id == right_id
+
     def _on_secret_changed(self, event: ops.SecretChangedEvent) -> None:
         """Handle the relation secret event."""
-        if label := event.secret.label:
-            if label.startswith("smtp-integrator-data"):
-                for relation in self.charm.model.relations[self.relation_name]:
-                    if label == f"smtp-integrator-data-{relation.id}":
-                        if self._is_relation_data_valid(relation):
-                            self.on.smtp_data_available.emit(relation, app=self.charm.model.app, unit=self.charm.model.unit)
-                        return
+        changed_secret_uri = event.secret.id
+        if changed_secret_uri is None:
+            return
+        for relation in self.charm.model.relations[self.relation_name]:
+            if relation.app is None:
+                continue
+            relation_data = relation.data[relation.app]
+            password_id = relation_data.get("password_id")
+            if not password_id:
+                continue
+            try:
+                secret = self.model.get_secret(id=password_id)
+            except ops.ModelError:
+                continue
+            secret_uri = secret.id
+            if secret_uri is None:
+                continue
+            if self._secret_uri_equal(changed_secret_uri, secret_uri):
+                self.on.smtp_data_available.emit(relation, app=relation.app, unit=None)
 
 
 class SmtpProvides(ops.Object):
