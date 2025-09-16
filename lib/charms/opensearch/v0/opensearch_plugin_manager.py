@@ -14,6 +14,8 @@ import json
 import logging
 from typing import TYPE_CHECKING
 
+from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.helper_charm import diff
 from charms.opensearch.v0.models import PluginConfigType
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_keystore import (
@@ -87,31 +89,36 @@ class SmtpEvents(Object):
             event.defer()
             return
 
-        self.charm.secrets.put(Scope.UNIT, self.secret_label, json.dumps(list(entries.keys())))
-
-        # if unit is main orchestrator leader, transfer keys to subclusters
-        if not self.charm.unit.is_leader() or not self.charm.opensearch_peer_cm.is_provider(
-            typ="main"
-        ):
+        # self.charm.secrets.put(Scope.UNIT, self.secret_label, json.dumps(list(entries.keys())))
+        self.charm.state.unit.put_plugin_config_removal_info(
+            self.secret_label, PluginConfigType.KEYS, list(entries.keys())
+        )
+        if not self.charm.unit.is_leader():
             return
 
         self.charm.secrets.put(Scope.APP, self.secret_label, json.dumps(entries))
         if secret_id := self.charm.secrets.get_secret_id(Scope.APP, self.secret_label):
-            self.charm.state.app.put_plugin_secret(
+            self.charm.state.app.put_plugin_config_info(
                 self.secret_label,
                 secret_id=secret_id,
                 relation_name=self.relation_name,
                 typ=PluginConfigType.KEYS,
             )
+
+        # if unit is main orchestrator leader, transfer keys to subclusters
+        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event)
 
     def _on_smtp_credentials_gone(self, event):
         """Removes secret when credentials are gone"""
-        secret = self.charm.secrets.get(Scope.UNIT, self.secret_label)
-        keys = json.loads(secret)
+        # secret = self.charm.secrets.get(Scope.UNIT, self.secret_label)
+        # keys = json.loads(secret)
+        removal_info = self.charm.state.unit.plugin_config_removal_info.get(self.secret_label)
+        keys = removal_info.content
 
         self.charm.plugin_manager.remove_from_keystore(keys)
-        self.charm.secrets.delete(Scope.UNIT, self.secret_label)
+        # self.charm.secrets.delete(Scope.UNIT, self.secret_label)
+        self.charm.state.unit.remove_plugin_config_removal_info(self.secret_label)
 
         # if unit is main orchestrator leader, remove secrets transferred to subclusters
         if not self.charm.unit.is_leader() or not self.charm.opensearch_peer_cm.is_provider(
@@ -121,7 +128,7 @@ class SmtpEvents(Object):
 
         try:
             self.charm.secrets.delete(Scope.APP, self.secret_label)
-            self.charm.state.app.remove_plugin_secret(self.secret_label)
+            self.charm.state.app.remove_plugin_config_info(self.secret_label)
 
             if self.charm.opensearch_peer_cm.is_provider(typ="main"):
                 self.charm.peer_cluster_provider.refresh_relation_data(event)
@@ -135,6 +142,9 @@ class SmtpEvents(Object):
             secret = event.secret.get_content(refresh=True)
             raw = secret.get(self.secret_label)
             keys = json.loads(raw)
+            self.charm.state.unit.put_plugin_config_removal_info(
+                self.secret_label, PluginConfigType.KEYS, list(keys.keys())
+            )
             if not self.charm.plugin_manager.add_to_keystore(keys):
                 logger.info("Could not update keystore. Deferring event.")
                 event.defer()
@@ -145,7 +155,55 @@ class OpenSearchPluginEvents(Object):
 
     def __init__(self, charm: "OpenSearchBaseCharm"):
         super().__init__(charm, "plugins")
-        self.smtp_events = SmtpEvents(charm)
+        self.charm = charm
+        self.smtp_events = SmtpEvents(self.charm)
+        self.framework.observe(
+            self.charm.on[PeerRelationName].relation_changed, self._on_peer_relation_changed
+        )
+
+    def _on_peer_relation_changed(self, event):
+        # if this is a subcluster, all units must add plugin keys from secrets to their keystores
+        if self.charm.opensearch_peer_cm.is_consumer(of="main"):
+            keys_to_write = {}
+            app_plugin_config_info = self.charm.state.app.plugin_config_info
+            unit_plugin_config_info = self.charm.state.unit.plugin_config_removal_info
+            added, removed = diff(
+                list(app_plugin_config_info.keys()), list(unit_plugin_config_info.keys())
+            )
+            for label in added:
+                plugin = app_plugin_config_info[label]
+                # start locally tracking secret and write transferred keys to keystore
+                app_secret = (
+                    self.charm.secrets.track_secret(plugin.secret_id, Scope.APP, label)
+                    .get_content()
+                    .get(label)
+                )
+                keys_to_add = json.loads(app_secret)
+
+                # store on unit for later removal (only keys needed and not values)
+                # self.charm.secrets.put(Scope.UNIT, label, json.dumps(list(keys_to_add.keys())))
+                self.charm.state.unit.put_plugin_config_removal_info(
+                    label, plugin.typ, list(keys_to_add.keys())
+                )
+                keys_to_write.update(keys_to_add)
+
+            for label in removed:
+                # this unit should delete the keys it wrote as the app secret has been removed
+                # unit_secret = self.charm.secrets.get(Scope.UNIT, label)
+                # keys_to_remove = json.loads(unit_secret)
+                removal_info = self.charm.state.unit.plugin_config_removal_info[label]
+                keys_to_write.update({k: None for k in removal_info.content})
+
+            # write changes to keystore
+            if keys_to_write and not self.charm.plugin_manager.update_keystore(keys_to_write):
+                logger.info("Could not update keystore. Deferring event.")
+                event.defer()
+                return
+
+            # remove plugin secret and label from unit if no longer tracking
+            for label in removed:
+                # self.charm.secrets.delete(Scope.UNIT, label)
+                self.charm.state.unit.remove_plugin_config_removal_info(label)
 
 
 class OpenSearchPluginManager:

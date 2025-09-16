@@ -507,8 +507,23 @@ class PluginConfigType(BaseStrEnum):
     KEYS = "keys"
 
 
-class PluginSecret(Model):
-    """Model class for representing tracked plugin secrets"""
+class PluginConfigRemovalInfo(Model):
+    """Model class for representing data needed to remove plugin configuration"""
+
+    typ: PluginConfigType
+    content: List[str] = Field(default_factory=list)
+
+    def add(self, items: List[str]) -> None:
+        """Append items to content list avoiding duplicates."""
+        current = set(self.content)
+        for item in items:
+            if item not in current:
+                self.content.append(item)
+                current.add(item)
+
+
+class PluginConfigAddInfo(Model):
+    """Model class for representing data needed to configure plugins"""
 
     relation_name: Optional[str]
     secret_id: str
@@ -524,7 +539,7 @@ class PeerClusterRelData(Model):
     deployment_desc: Optional[DeploymentDescription]
     security_index_initialised: bool = False
     first_data_node: Optional[str] = None
-    plugins: Optional[Dict[str, PluginSecret]]
+    plugins: Optional[Dict[str, PluginConfigAddInfo]]
 
 
 class PeerClusterRelErrorData(Model):

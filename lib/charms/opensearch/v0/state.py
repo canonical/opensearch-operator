@@ -4,10 +4,14 @@
 """Objects representing the state of OpenSearchBaseCharm."""
 
 import logging
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, List
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
-from charms.opensearch.v0.models import PluginConfigType, PluginSecret
+from charms.opensearch.v0.models import (
+    PluginConfigAddInfo,
+    PluginConfigRemovalInfo,
+    PluginConfigType,
+)
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
 from ops import Object
 
@@ -28,27 +32,30 @@ class OpenSearchApp:
         self.relation_data = RelationDataStore(charm, PeerRelationName)
 
     @property
-    def plugin_secrets(self) -> Dict[str, PluginSecret]:
+    def plugin_config_info(self) -> Dict[str, PluginConfigAddInfo]:
         """Returns plugin secrets this app is tracking"""
-        plugins = self.relation_data.get_object(self.scope, "plugin_secrets") or {}
-        return {label: PluginSecret.from_dict(plugin) for label, plugin in plugins.items()}
+        plugin_config_info = self.relation_data.get_object(self.scope, "plugin_config_info") or {}
+        return {
+            label: PluginConfigAddInfo.from_dict(plugin)
+            for label, plugin in plugin_config_info.items()
+        }
 
-    def put_plugin_secret(
+    def put_plugin_config_info(
         self, label: str, secret_id: str, relation_name: str, typ: PluginConfigType
     ) -> None:
         """Adds plugin secret being tracked by app"""
-        plugin_secrets = self.plugin_secrets
-        plugin_secrets[label] = PluginSecret(
+        plugin_config = self.plugin_config_info
+        plugin_config[label] = PluginConfigAddInfo(
             relation_name=relation_name, secret_id=secret_id, typ=typ
         )
-        self.relation_data.put_object(self.scope, "plugin_secrets", plugin_secrets)
+        self.relation_data.put_object(self.scope, "plugin_config_info", plugin_config)
 
-    def remove_plugin_secret(self, label: str) -> None:
+    def remove_plugin_config_info(self, label: str) -> None:
         """Remove plugin secret no longer being tracked by app"""
-        plugin_secrets = self.plugin_secrets
-        if label in plugin_secrets:
-            del plugin_secrets[label]
-            self.relation_data.put_object(self.scope, "plugin_secrets", plugin_secrets)
+        plugin_config_info = self.plugin_config_info
+        if label in plugin_config_info:
+            del plugin_config_info[label]
+            self.relation_data.put_object(self.scope, "plugin_config_info", plugin_config_info)
 
 
 class OpenSearchUnit:
@@ -62,23 +69,30 @@ class OpenSearchUnit:
         self.relation_data = RelationDataStore(charm, PeerRelationName)
 
     @property
-    def plugin_secrets(self) -> Dict[str, PluginConfigType]:
+    def plugin_config_removal_info(self) -> Dict[str, PluginConfigRemovalInfo]:
         """Returns plugin secret labels this unit is tracking"""
-        secret_labels = self.relation_data.get_object(self.scope, "plugin_secret_labels") or {}
-        return {label: PluginConfigType(typ) for label, typ in secret_labels.items()}
+        plugin_config_info = self.relation_data.get_object(self.scope, "plugin_config_info") or {}
+        return {
+            label: PluginConfigRemovalInfo.from_dict(info)
+            for label, info in plugin_config_info.items()
+        }
 
-    def put_plugin_secret_label(self, label: str, typ: PluginConfigType) -> None:
+    def put_plugin_config_removal_info(
+        self, label: str, typ: PluginConfigType, content: List[str]
+    ) -> None:
         """Adds plugin secret being tracked by unit"""
-        plugin_secrets = self.plugin_secrets
-        plugin_secrets[label] = typ
-        self.relation_data.put_object(self.scope, "plugin_secret_labels", plugin_secrets)
+        plugin_config_info = self.plugin_config_removal_info
+        removal_info = plugin_config_info.get(label) or PluginConfigRemovalInfo(typ=typ)
+        removal_info.add(content)
+        plugin_config_info[label] = removal_info
+        self.relation_data.put_object(self.scope, "plugin_config_info", plugin_config_info)
 
-    def remove_plugin_secret_label(self, label: str) -> None:
+    def remove_plugin_config_removal_info(self, label: str) -> None:
         """Remove plugin secret no longer being tracked by unit"""
-        plugin_secrets = self.plugin_secrets
-        if label in plugin_secrets:
-            del plugin_secrets[label]
-            self.relation_data.put_object(self.scope, "plugin_secret_labels", plugin_secrets)
+        plugin_config_info = self.plugin_config_removal_info
+        if label in plugin_config_info:
+            del plugin_config_info[label]
+            self.relation_data.put_object(self.scope, "plugin_config_info", plugin_config_info)
 
 
 class OpenSearchClusterState(Object):

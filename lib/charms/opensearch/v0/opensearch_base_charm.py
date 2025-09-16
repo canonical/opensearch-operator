@@ -3,7 +3,6 @@
 
 """Base class for the OpenSearch Operators."""
 import abc
-import json
 import logging
 import random
 import typing
@@ -41,7 +40,7 @@ from charms.opensearch.v0.constants_charm import (
     WaitingToStart,
 )
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.helper_charm import Status, all_units, diff, format_unit_name
+from charms.opensearch.v0.helper_charm import Status, all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import get_host_ip, units_ips
 from charms.opensearch.v0.helper_security import (
@@ -585,43 +584,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         elif event.relation.data.get(event.app):
             # if app_data + app_data["nodes_config"]: Reconfigure + restart node on the unit
             self._reconfigure_and_restart_unit_if_needed()
-
-        # if this is a subcluster, all units must add plugin keys from secrets to their keystores
-        if self.opensearch_peer_cm.is_consumer(of="main"):
-            keys_to_write = {}
-            app_plugin_secrets = self.state.app.plugin_secrets
-            added, removed = diff(app_plugin_secrets.keys(), self.state.unit.plugin_secrets)
-            for label in added:
-                plugin = app_plugin_secrets[label]
-                # start locally tracking secret and write transferred keys to keystore
-                app_secret = (
-                    self.secrets.track_secret(plugin.secret_id, Scope.APP, label)
-                    .get_content()
-                    .get(label)
-                )
-                keys_to_add = json.loads(app_secret)
-
-                # store on unit for later removal (only keys needed and not values)
-                self.secrets.put(Scope.UNIT, label, json.dumps(list(keys_to_add.keys())))
-                self.state.unit.put_plugin_secret_label(label, plugin.typ)
-                keys_to_write.update(keys_to_add)
-
-            for label in removed:
-                # this unit should delete the keys it wrote as the app secret has been removed
-                unit_secret = self.secrets.get(Scope.UNIT, label)
-                keys_to_remove = json.loads(unit_secret)
-                keys_to_write.update({k: None for k in keys_to_remove})
-
-            # write changes to keystore
-            if keys_to_write and not self.plugin_manager.update_keystore(keys_to_write):
-                logger.info("Could not update keystore. Deferring event.")
-                event.defer()
-                return
-
-            # remove plugin secret and label from unit if no longer tracking
-            for label in removed:
-                self.secrets.delete(Scope.UNIT, label)
-                self.state.unit.remove_plugin_secret_label(label)
 
         if not (unit_data := event.relation.data.get(event.unit)):
             return

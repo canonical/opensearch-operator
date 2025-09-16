@@ -344,9 +344,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if not self.charm.unit.is_leader():
             return
 
-        plugin_secret_relations = [
+        plugin_relation_names = [
             s.relation_name
-            for s in self.charm.state.app.plugin_secrets.values()
+            for s in self.charm.state.app.plugin_config_info.values()
             if s.relation_name
         ]
         backup_relations = [
@@ -359,7 +359,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         ]
         if missing := [
             relation
-            for relation in plugin_secret_relations + backup_relations
+            for relation in plugin_relation_names + backup_relations
             if not self.charm.model.get_relation(relation)
         ]:
             message = f"Found credentials with missing relations. Add relation for {', '.join(missing)} endpoints and any client applications."
@@ -629,19 +629,19 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             security_index_initialised=self._get_security_index_initialised(),
             first_data_node=self._get_first_data_node(),
             plugins=(
-                self._plugin_secrets()
+                self._plugin_config_info()
                 if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
                 else None
             ),
         )
 
-    def _plugin_secrets(self):
+    def _plugin_config_info(self):
         """Grants plugin secrets to subcluster relations and returns secret ids"""
-        plugin_secrets = self.charm.state.app.plugin_secrets
+        plugin_config_info = self.charm.state.app.plugin_config_info
         # grant secrets to subsclusters
         granted = {}
         for relation in self.charm.model.relations[self.relation_name]:
-            for label, plugin in plugin_secrets.items():
+            for label, plugin in plugin_config_info.items():
                 if self.secrets.grant_secret_to_relation(plugin.secret_id, relation):
                     granted[label] = plugin
         return granted
@@ -990,8 +990,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # fetch the success data
         data = self.peer_cm.rel_data_from_str(data["data"])
 
-        if (plugin_secrets := data.plugins) is not None:
-            self._track_plugin_secrets(plugin_secrets)
+        if (plugin_configs := data.plugins) is not None:
+            self._track_plugin_secrets(plugin_configs)
 
         # check errors that can only be figured out from the requirer side
         if self._error_set_from_requirer(orchestrators, deployment_desc, data, event.relation.id):
@@ -1041,18 +1041,18 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # recompute the deployment desc
         self.charm.opensearch_peer_cm.run_with_relation_data(data)
 
-    def _track_plugin_secrets(self, secrets_from_relation):
+    def _track_plugin_secrets(self, configs_from_relation):
         """Track plugin secrets from relation data"""
-        current_app_secrets = self.charm.state.app.plugin_secrets
-        add, remove = diff(secrets_from_relation.keys(), current_app_secrets.keys())
+        current_app_plugin_info = self.charm.state.app.plugin_config_info
+        add, remove = diff(configs_from_relation.keys(), current_app_plugin_info.keys())
 
         for label in remove:
-            self.charm.state.app.remove_plugin_secret(label)
+            self.charm.state.app.remove_plugin_config_info(label)
 
         for label in add:
-            plugin = secrets_from_relation[label]
+            plugin = configs_from_relation[label]
             self.charm.secrets.track_secret(plugin.secret_id, Scope.APP, label)
-            self.charm.state.app.put_plugin_secret(
+            self.charm.state.app.put_plugin_config_info(
                 label,
                 secret_id=plugin.secret_id,
                 relation_name=plugin.relation_name,
