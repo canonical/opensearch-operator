@@ -136,4 +136,4 @@ OAUTH_RELATION = "oauth"
 
 PERFORMANCE_PROFILE = "profile"
 
-JWT_AUTH_CONFIG_OPTION = "jwt_auth_config"
+JWT_CONFIG_RELATION = "jwt-configuration"

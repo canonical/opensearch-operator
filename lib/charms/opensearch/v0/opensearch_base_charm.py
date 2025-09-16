@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional, Type
 
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
-    JWT_AUTH_CONFIG_OPTION,
     PERFORMANCE_PROFILE,
     AdminUser,
     AdminUserInitProgress,
@@ -23,7 +22,6 @@ from charms.opensearch.v0.constants_charm import (
     COSPort,
     COSRelationName,
     COSUser,
-    JWTAuthConfigInvalid,
     OpenSearchSystemUsers,
     OpenSearchUsers,
     PClusterNoDataNode,
@@ -32,9 +30,7 @@ from charms.opensearch.v0.constants_charm import (
     PluginConfigChangeError,
     PluginConfigCheck,
     RequestUnitServiceOps,
-    SecretAccessError,
     SecurityIndexInitProgress,
-    SecurityIndexUpdateError,
     ServiceIsStopping,
     ServiceStartError,
     ServiceStopped,
@@ -57,7 +53,6 @@ from charms.opensearch.v0.helper_security import (
 from charms.opensearch.v0.models import (
     DeploymentDescription,
     DeploymentType,
-    JWTAuthConfiguration,
     PerformanceType,
 )
 from charms.opensearch.v0.opensearch_backups import backup
@@ -77,6 +72,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
+from charms.opensearch.v0.opensearch_jwt import JwtHandler
 from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyError
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
@@ -102,7 +98,6 @@ from charms.opensearch.v0.opensearch_users import (
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
 )
-from ops import ModelError, SecretNotFoundError
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -119,7 +114,6 @@ from ops.charm import (
 )
 from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
-from pydantic.error_wrappers import ValidationError
 
 import lifecycle
 import upgrade
@@ -214,6 +208,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self, PeerRelationName, self.opensearch.paths.jdk, self.opensearch.paths.certs
         )
         self.oauth = OAuthHandler(self)
+        self.jwt = JwtHandler(self)
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
         self.node_lock = OpenSearchNodeLock(self)
@@ -866,18 +861,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 f"Restarting opensearch due to config change: plugin_needs_restart={plugin_needs_restart}, perf_profile_needs_restart={perf_profile_needs_restart}"
             )
             self._restart_opensearch_event.emit()
-
-        # handle changes for the jwt_auth_config option
-        if jwt_auth_user_secret := self.config.get(JWT_AUTH_CONFIG_OPTION):
-            self.validate_and_apply_jwt_auth_config(jwt_auth_user_secret)
-        else:
-            # the config option not being set means it could have been removed
-            try:
-                security_conf = self.opensearch_config.load_security_config()
-                if security_conf["config"]["dynamic"]["authc"]["jwt_auth_domain"]["http_enabled"]:
-                    self.disable_jwt_authentication()
-            except (KeyError, FileNotFoundError) as e:
-                logger.error(f"Error reading security config: {e}")
 
     def _on_set_password_action(self, event: ActionEvent):
         """Set new admin password from user input or generate if not passed."""
@@ -1947,72 +1930,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 for app in cluster_fleet_apps
             )
         )
-
-    def validate_and_apply_jwt_auth_config(self, user_secret_id: str) -> None:
-        """Check the provided configuration and apply, if valid."""
-        try:
-            secret_content = self.secrets.get_secret_from_id(user_secret_id)
-        except (ModelError, SecretNotFoundError) as e:
-            logger.error(e)
-            self.status.set(BlockedStatus(SecretAccessError))
-            return
-
-        try:
-            jwt_auth_config = JWTAuthConfiguration(
-                signing_key=secret_content.get("signing-key"),
-                jwt_header=secret_content.get("jwt-header"),
-                jwt_url_parameter=secret_content.get("jwt-url-parameter"),
-                roles_key=secret_content.get("roles-key"),
-                subject_key=secret_content.get("subject-key"),
-                required_audience=secret_content.get("required-audience"),
-                required_issuer=secret_content.get("required-issuer"),
-                jwt_clock_skew_tolerance_seconds=secret_content.get(
-                    "jwt-clock-skew-tolerance-seconds"
-                ),
-            )
-        except ValidationError as e:
-            logger.error(f"Validation failed for JWT authentication config: {e}")
-            self.status.set(BlockedStatus(JWTAuthConfigInvalid))
-            return
-
-        self.opensearch_config.set_jwt_auth(jwt_auth_config)
-
-        if self.unit.is_leader() and self.peers_data.get(
-            Scope.APP, "security_index_initialised", False
-        ):
-            logger.info("Updating security configuration")
-            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-
-            try:
-                self.update_security_config(
-                    admin_secrets, self.opensearch_config.SECURITY_CONFIG_YML
-                )
-            except OpenSearchCmdError as e:
-                logger.debug(f"Error when updating the security index: {e.out}")
-                # no need to defer here; the config should be fixed, triggering a new event
-                self.status.set(BlockedStatus(SecurityIndexUpdateError))
-                return
-
-        self.status.clear(SecretAccessError)
-        self.status.clear(SecurityIndexUpdateError)
-        self.status.clear(JWTAuthConfigInvalid)
-
-    def disable_jwt_authentication(self) -> None:
-        """Unset the configuration and update the security index."""
-        self.opensearch_config.unset_jwt_auth()
-
-        if self.unit.is_leader() and self.peers_data.get(
-            Scope.APP, "security_index_initialised", False
-        ):
-            logger.info("Updating security configuration")
-            admin_secrets = self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)
-
-            try:
-                self.update_security_config(
-                    admin_secrets, self.opensearch_config.SECURITY_CONFIG_YML
-                )
-            except OpenSearchCmdError as e:
-                logger.debug(f"Error when updating the security index: {e.out}")
 
     @property
     def unit_ip(self) -> str:

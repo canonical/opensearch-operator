@@ -15,7 +15,6 @@ import logging
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
 from charms.opensearch.v0.constants_charm import (
-    JWT_AUTH_CONFIG_OPTION,
     KibanaserverUser,
     OpenSearchSystemUsers,
 )
@@ -32,7 +31,7 @@ from charms.opensearch.v0.opensearch_internal_data import (
     Scope,
     SecretCache,
 )
-from ops import JujuVersion, ModelError, Relation, Secret, SecretNotFoundError
+from ops import JujuVersion, Relation, Secret, SecretNotFoundError
 from ops.charm import SecretChangedEvent
 from ops.framework import Object
 from overrides import override
@@ -74,12 +73,6 @@ class OpenSearchSecrets(Object, RelationDataStore):
         secret = event.secret
         secret.get_content(refresh=True)
 
-        # handle changes for the jwt_auth_config secret
-        # this is a user secret and not owned by opensearch -> process it before the general logic
-        if jwt_auth_user_secret := self.charm.config.get(JWT_AUTH_CONFIG_OPTION):
-            if jwt_auth_user_secret == event.secret.id:
-                self.charm.validate_and_apply_jwt_auth_config(jwt_auth_user_secret)
-
         if not event.secret.label:
             logger.info("Secret %s has no label, ignoring it.", event.secret.id)
             return
@@ -101,7 +94,6 @@ class OpenSearchSecrets(Object, RelationDataStore):
         # 4. S3 credentials (secret / access keys) in large relations
         #     - Action: write them into the opensearch.yml by running backup module
         # 5. Azure credentials (storage account / secret key)
-        # 6. JWT authentication configuration
 
         system_user_hash_keys = [
             self._charm.secrets.hash_key(user) for user in OpenSearchSystemUsers
@@ -393,21 +385,3 @@ class OpenSearchSecrets(Object, RelationDataStore):
         """Grant a secret to a relation."""
         secret = self._charm.model.get_secret(id=secret_id)
         secret.grant(relation)
-
-    def get_secret_from_id(self, secret_id: str) -> dict[str, str]:
-        """Resolve the given id of a Juju secret and return the content as a dict.
-
-        Args:
-            secret_id (str): The id of the secret.
-
-        Returns:
-            dict: The content of the secret.
-        """
-        try:
-            secret_content = self.charm.model.get_secret(id=secret_id).get_content(refresh=True)
-        except SecretNotFoundError:
-            raise SecretNotFoundError(f"The secret '{secret_id}' does not exist.")
-        except ModelError:
-            raise
-
-        return secret_content
