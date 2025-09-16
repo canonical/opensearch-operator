@@ -49,12 +49,10 @@ class OpenSearchKeystore:
 
     def add(self, key: str, value: str):
         """Adds key, value pair to OpenSearch keystore"""
-        logger.info(f"PLUGINS keys add {key} {value}")
         self._opensearch.run_bin(KEYSTORE, f"add --force --stdin {key}", stdin=value)
 
     def delete(self, key: str) -> None:
         """Deletes key from OpenSearch keystore if it exists"""
-        logger.info(f"PLUGINS keys remove {key}")
         try:
             self._opensearch.run_bin(KEYSTORE, f"remove {key}")
         except OpenSearchCmdError as e:

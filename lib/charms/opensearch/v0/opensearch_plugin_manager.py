@@ -89,7 +89,6 @@ class SmtpEvents(Object):
             event.defer()
             return
 
-        # self.charm.secrets.put(Scope.UNIT, self.secret_label, json.dumps(list(entries.keys())))
         self.charm.state.unit.put_plugin_config_removal_info(
             self.secret_label, PluginConfigType.KEYS, list(entries.keys())
         )
@@ -111,13 +110,10 @@ class SmtpEvents(Object):
 
     def _on_smtp_credentials_gone(self, event):
         """Removes secret when credentials are gone"""
-        # secret = self.charm.secrets.get(Scope.UNIT, self.secret_label)
-        # keys = json.loads(secret)
         removal_info = self.charm.state.unit.plugin_config_removal_info.get(self.secret_label)
         keys = removal_info.content
 
         self.charm.plugin_manager.remove_from_keystore(keys)
-        # self.charm.secrets.delete(Scope.UNIT, self.secret_label)
         self.charm.state.unit.remove_plugin_config_removal_info(self.secret_label)
 
         # if unit is main orchestrator leader, remove secrets transferred to subclusters
@@ -142,9 +138,12 @@ class SmtpEvents(Object):
             secret = event.secret.get_content(refresh=True)
             raw = secret.get(self.secret_label)
             keys = json.loads(raw)
+
+            # update keys to remove as they may change here
             self.charm.state.unit.put_plugin_config_removal_info(
                 self.secret_label, PluginConfigType.KEYS, list(keys.keys())
             )
+
             if not self.charm.plugin_manager.add_to_keystore(keys):
                 logger.info("Could not update keystore. Deferring event.")
                 event.defer()
@@ -167,21 +166,17 @@ class OpenSearchPluginEvents(Object):
             keys_to_write = {}
             app_plugin_config_info = self.charm.state.app.plugin_config_info
             unit_plugin_config_info = self.charm.state.unit.plugin_config_removal_info
-            added, removed = diff(
-                list(app_plugin_config_info.keys()), list(unit_plugin_config_info.keys())
-            )
+            added, removed = diff(app_plugin_config_info.keys(), unit_plugin_config_info.keys())
             for label in added:
                 plugin = app_plugin_config_info[label]
                 # start locally tracking secret and write transferred keys to keystore
-                app_secret = (
+                keys_to_add = json.loads(
                     self.charm.secrets.track_secret(plugin.secret_id, Scope.APP, label)
                     .get_content()
                     .get(label)
                 )
-                keys_to_add = json.loads(app_secret)
 
                 # store on unit for later removal (only keys needed and not values)
-                # self.charm.secrets.put(Scope.UNIT, label, json.dumps(list(keys_to_add.keys())))
                 self.charm.state.unit.put_plugin_config_removal_info(
                     label, plugin.typ, list(keys_to_add.keys())
                 )
@@ -189,8 +184,6 @@ class OpenSearchPluginEvents(Object):
 
             for label in removed:
                 # this unit should delete the keys it wrote as the app secret has been removed
-                # unit_secret = self.charm.secrets.get(Scope.UNIT, label)
-                # keys_to_remove = json.loads(unit_secret)
                 removal_info = self.charm.state.unit.plugin_config_removal_info[label]
                 keys_to_write.update({k: None for k in removal_info.content})
 
@@ -202,7 +195,6 @@ class OpenSearchPluginEvents(Object):
 
             # remove plugin secret and label from unit if no longer tracking
             for label in removed:
-                # self.charm.secrets.delete(Scope.UNIT, label)
                 self.charm.state.unit.remove_plugin_config_removal_info(label)
 
 
