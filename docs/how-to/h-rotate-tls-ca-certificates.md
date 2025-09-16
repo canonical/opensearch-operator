@@ -24,7 +24,7 @@ Two scenarios trigger the rotation of TLS certificates:
 ### Manually rotate the TLS certificates
 You can manually start a rotation of the TLS certificates by changing the TLS private key for the type of certificate you want to rotate. 
 ```bash
-juju run-action opensearch/leader set-tls-private-key category=<category>
+juju run opensearch/leader set-tls-private-key category=<category>
 ```
 Where `<category>` is one of `app-admin`, `unit-transport`, or `unit-http`.
 
@@ -55,7 +55,7 @@ Until the rolling restart is complete, the OpenSearch cluster will ignore the ne
 As indicated in the ["Check certificates in use" section of How to enable TLS encryption](https://charmhub.io/opensearch/docs/h-enable-tls#check-certificates-in-use), you can check the certificates in use by running the following command:
 
 ```bash
-openssl s_client -showcerts -connect `leader_unit_IP:port` < /dev/null | grep issuer
+openssl s_client -showcerts -connect leader_unit_IP:port < /dev/null | grep issuer
 ```
 
 Where `leader_unit_IP` is the IP address of the leader unit and `port` is the port number of the OpenSearch service. This command will show the issuer of the certificate in use which should include the new CA certificate common name.
@@ -88,7 +88,7 @@ This process needs to be repeated for each unit in the OpenSearch cluster. Once 
 As indicated in the ["Check certificates in use" section of How to enable TLS encryption](https://charmhub.io/opensearch/docs/h-enable-tls#check-certificates-in-use), you can check the certificates in use by running the following command:
 
 ```bash
-openssl s_client -showcerts -connect `leader_unit_IP:port` < /dev/null | grep issuer
+openssl s_client -showcerts -connect leader_unit_IP:port < /dev/null | grep issuer
 ```
 
 Where `leader_unit_IP` is the IP address of the leader unit and `port` is the port number of the OpenSearch service. This command will show the issuer of the certificate in use which should include the new CA certificate common name.

@@ -99,5 +99,4 @@ In a single host deployment with LXD, we recommend using the `testing` profile, 
 
 To deploy OpenSearch with the testing profile, run
 ```shell
-juju deploy opensearch --config profile=testing
-```
+juju deploy opensearch

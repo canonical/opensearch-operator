@@ -42,7 +42,7 @@ TLS is a requirement for Charmed OpenSearch, therefore TLS should not be disable
 To check the certificates in use by OpenSearch, you can run:
 
 ```shell
-openssl s_client -showcerts -connect `leader_unit_IP:port` < /dev/null | grep issuer
+openssl s_client -showcerts -connect leader_unit_IP:port < /dev/null | grep issuer
 ```
 
 ### Update keys
