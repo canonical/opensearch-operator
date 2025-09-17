@@ -94,6 +94,9 @@ class OpenSearchSecrets(Object, RelationDataStore):
         # 4. S3 credentials (secret / access keys) in large relations
         #     - Action: write them into the opensearch.yml by running backup module
         # 5. Azure credentials (storage account / secret key)
+        #
+        # On a separate note: Handling for JWT-config related secrets (e.g. signing-key) happens
+        # in the `JwtHandler` class, as it is a secret that is provided from another application
 
         system_user_hash_keys = [
             self._charm.secrets.hash_key(user) for user in OpenSearchSystemUsers
