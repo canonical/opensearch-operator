@@ -489,7 +489,6 @@ class PeerClusterRelDataCredentials(Model):
     admin_tls: Optional[Dict[str, Optional[str]]]
     s3: Optional[S3RelDataCredentials]
     azure: Optional[AzureRelDataCredentials]
-    jwt_auth_config: Optional[JWTAuthConfiguration]
 
 
 class PeerClusterApp(Model):
