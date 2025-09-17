@@ -75,6 +75,7 @@ SecretAccessError = "Failed to access secret, please check permissions."
 JWTAuthConfigInvalid = (
     "Configuration for JWT authentication is invalid. Check and correct parameters."
 )
+JWTRelationInvalid = "JWT relation must be created with Main-cluster-orchestrator"
 SecurityIndexUpdateError = "Failed to update security configuration, check logs for details."
 
 # Wait status

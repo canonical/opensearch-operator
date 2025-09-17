@@ -11,10 +11,11 @@ from charms.data_platform_libs.v0.data_interfaces import RequirerData
 from charms.opensearch.v0.constants_charm import (
     JWT_CONFIG_RELATION,
     JWTAuthConfigInvalid,
+    JWTRelationInvalid,
     SecurityIndexUpdateError,
 )
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.models import JWTAuthConfiguration
+from charms.opensearch.v0.models import DeploymentType, JWTAuthConfiguration
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from pydantic.error_wrappers import ValidationError
@@ -58,6 +59,9 @@ class JwtHandler(ops.Object):
         # --- EVENT HANDLERS ---
         self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
         self.framework.observe(
+            self.charm.on[JWT_CONFIG_RELATION].relation_created, self._on_jwt_relation_created
+        )
+        self.framework.observe(
             self.charm.on[JWT_CONFIG_RELATION].relation_changed, self._on_jwt_relation_changed
         )
         self.framework.observe(
@@ -69,9 +73,55 @@ class JwtHandler(ops.Object):
         """Return the jwt relation if present."""
         return self.jwt_requires.relations[0] if len(self.jwt_requires.relations) else None
 
+    def _on_jwt_relation_created(self, event: ops.RelationCreatedEvent) -> None:
+        """Handle relation creation."""
+        if self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
+            # in large deployments, JWT configuration must only be handled by the main orchestrator
+            # this is a safeguard to avoid different sources for applying security configuration
+            self.charm.status.set(ops.BlockedStatus(JWTRelationInvalid))
+
+    def _on_jwt_relation_changed(self, event: ops.RelationChangedEvent) -> None:
+        """Handle changed relation data."""
+        if self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
+            self.charm.status.set(ops.BlockedStatus(JWTRelationInvalid))
+            return
+
+        if not self.jwt_relation:
+            logger.error(f"Cannot access relation data for {JWT_CONFIG_RELATION}")
+            return
+
+        relation_data = self.jwt_requires.fetch_relation_data([self.jwt_relation.id])
+        jwt_config = relation_data[self.jwt_relation.id]
+
+        self._validate_and_apply_jwt_auth_config(jwt_config)
+
+    def _on_jwt_relation_broken(self, event: ops.RelationBrokenEvent) -> None:
+        """Handle the removal of the relation."""
+        if self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
+            self.charm.status.clear(JWTRelationInvalid)
+            return
+
+        self.charm.opensearch_config.unset_jwt_auth()
+
+        try:
+            self._update_security_index()
+            logger.info("Updated Opensearch security index")
+        except OpenSearchCmdError as e:
+            logger.debug(f"Error when updating the security index: {e.out}")
+            self.charm.status.set(ops.BlockedStatus(SecurityIndexUpdateError))
+            # we need to come back in this case because there will not be a follow-up event
+            event.defer()
+            return
+
+        self.charm.status.clear(SecurityIndexUpdateError)
+
     def _on_secret_changed(self, event: ops.SecretChangedEvent) -> None:
         """Handle changed secret data."""
         if not self.jwt_relation:
+            return
+
+        if self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
+            self.charm.status.set(ops.BlockedStatus(JWTRelationInvalid))
             return
 
         if not (relation := self.jwt_requires._relation_from_secret_label(event.secret.label)):
@@ -88,35 +138,7 @@ class JwtHandler(ops.Object):
 
         relation_data = self.jwt_requires.fetch_relation_data([self.jwt_relation.id])
         jwt_config = relation_data[self.jwt_relation.id]
-
         self._validate_and_apply_jwt_auth_config(jwt_config)
-
-    def _on_jwt_relation_changed(self, event: ops.RelationChangedEvent) -> None:
-        """Handle changed relation data."""
-        if not self.jwt_relation:
-            logger.error(f"Cannot access relation data for {JWT_CONFIG_RELATION}")
-            return
-
-        relation_data = self.jwt_requires.fetch_relation_data([self.jwt_relation.id])
-        jwt_config = relation_data[self.jwt_relation.id]
-
-        self._validate_and_apply_jwt_auth_config(jwt_config)
-
-    def _on_jwt_relation_broken(self, event: ops.RelationBrokenEvent) -> None:
-        """Handle the removal of the relation."""
-        self.charm.opensearch_config.unset_jwt_auth()
-
-        try:
-            self._update_security_index()
-            logger.info("Updated Opensearch security index")
-        except OpenSearchCmdError as e:
-            logger.debug(f"Error when updating the security index: {e.out}")
-            self.charm.status.set(ops.BlockedStatus(SecurityIndexUpdateError))
-            # we need to come back in this case because there will not be a follow-up event
-            event.defer()
-            return
-
-        self.charm.status.clear(SecurityIndexUpdateError)
 
     def _validate_and_apply_jwt_auth_config(self, jwt_config: dict[str, str]) -> None:
         """Check the provided configuration and apply, if valid."""
