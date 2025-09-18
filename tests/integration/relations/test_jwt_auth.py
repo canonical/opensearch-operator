@@ -61,7 +61,7 @@ async def test_deploy_small_cluster(charm, series, ops_test: OpsTest) -> None:
     )
 
     # todo: replace with charm name once published
-    await ops_test.model.deploy("jwt-integrator")
+    await ops_test.model.deploy("jwt-integrator", channel="1/edge")
     await wait_until(ops_test, apps=[JWT_APP_NAME], apps_statuses=["blocked"])
 
 
@@ -69,6 +69,8 @@ async def test_deploy_small_cluster(charm, series, ops_test: OpsTest) -> None:
 async def test_configure_and_use_jwt(charm, series, ops_test: OpsTest) -> None:
     """Configure JWT authentication and access the cluster with the token."""
     generated_jwt = generate_json_web_token()
+    # todo: remove logger
+    logger.info(f"generated token: {generated_jwt}")
 
     logger.info("Creating signing-key secret")
     secret_name = "jwt-signing-key"
@@ -161,6 +163,8 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
 
     logger.info("Create new JWT and signing-key")
     generated_jwt = generate_json_web_token()
+    # todo: remove logger
+    logger.info(f"generated token: {generated_jwt}")
     secret_name = "jwt-signing-key"
     await ops_test.model.update_secret(
         name=secret_name,
@@ -174,7 +178,7 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
         ops_test,
         apps=[DATA_APP],
         units_statuses=["blocked"],
-        wait_for_exact_units=3,
+        wait_for_exact_units={DATA_APP: 3},
     )
 
     logger.info("Test access to `/_cat/nodes` with JWT")
@@ -187,8 +191,8 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
     logger.info("Access with JWT failed as expected")
 
     logger.info(f"Remove relation with {DATA_APP}")
-    ops_test.model.applications[JWT_APP_NAME].remove_relation(
-        JWT_CONFIG_RELATION, f"{DATA_APP}:{JWT_CONFIG_RELATION}"
+    ops_test.model.applications[DATA_APP].remove_relation(
+        JWT_CONFIG_RELATION, f"{JWT_APP_NAME}:{JWT_CONFIG_RELATION}"
     )
 
     await wait_until(
@@ -196,16 +200,21 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
         apps=[DATA_APP],
         apps_full_statuses={DATA_APP: {"active": []}},
         units_statuses=["active"],
-        wait_for_exact_units=3,
+        wait_for_exact_units={DATA_APP: 3},
     )
 
     logger.info(f"Integrating {MAIN_APP} with {JWT_APP_NAME}")
     await ops_test.model.integrate(JWT_APP_NAME, MAIN_APP)
     await wait_until(
         ops_test,
-        apps=[MAIN_APP],
+        apps=[MAIN_APP, DATA_APP, FAILOVER_APP],
+        apps_full_statuses={
+            MAIN_APP: {"active": []},
+            DATA_APP: {"active": []},
+            FAILOVER_APP: {"active": []},
+        },
         units_statuses=["active"],
-        wait_for_exact_units=1,
+        wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
     )
 
     logger.info("Test access to `/_cat/nodes` with JWT")
