@@ -61,7 +61,7 @@ async def test_deploy_small_cluster(charm, series, ops_test: OpsTest) -> None:
     )
 
     # todo: replace with charm name once published
-    await ops_test.model.deploy("./jwt-integrator_ubuntu@24.04-amd64.charm")
+    await ops_test.model.deploy("jwt-integrator")
     await wait_until(ops_test, apps=[JWT_APP_NAME], apps_statuses=["blocked"])
 
 
@@ -174,7 +174,7 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
         ops_test,
         apps=[DATA_APP],
         units_statuses=["blocked"],
-        wait_for_exact_units={DATA_APP: APP_UNITS[DATA_APP]},
+        wait_for_exact_units=3,
     )
 
     logger.info("Test access to `/_cat/nodes` with JWT")
@@ -196,7 +196,7 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
         apps=[DATA_APP],
         apps_full_statuses={DATA_APP: {"active": []}},
         units_statuses=["active"],
-        wait_for_exact_units={DATA_APP: APP_UNITS[DATA_APP]},
+        wait_for_exact_units=3,
     )
 
     logger.info(f"Integrating {MAIN_APP} with {JWT_APP_NAME}")
@@ -205,7 +205,7 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
         ops_test,
         apps=[MAIN_APP],
         units_statuses=["active"],
-        wait_for_exact_units={MAIN_APP: APP_UNITS[MAIN_APP]},
+        wait_for_exact_units=1,
     )
 
     logger.info("Test access to `/_cat/nodes` with JWT")
