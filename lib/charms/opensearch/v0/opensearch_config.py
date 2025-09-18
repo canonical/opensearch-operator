@@ -160,8 +160,32 @@ class OpenSearchConfig:
 
     def unset_jwt_auth(self) -> None:
         """Unset JSON Web Token authentication parameters in security config."""
-        self._opensearch.config.delete(
-            self.SECURITY_CONFIG_YML, "config/dynamic/authc/jwt_auth_domain"
+        prefix = "config/dynamic/authc/jwt_auth_domain/http_authenticator/config"
+
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML,
+            "config/dynamic/authc/jwt_auth_domain/http_enabled",
+            False,
+        )
+
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML,
+            "config/dynamic/authc/jwt_auth_domain/transport_enabled",
+            False,
+        )
+
+        self._opensearch.config.put(self.SECURITY_CONFIG_YML, f"{prefix}/signing_key", "")
+        self._opensearch.config.put(self.SECURITY_CONFIG_YML, f"{prefix}/jwt_header", "")
+        self._opensearch.config.put(self.SECURITY_CONFIG_YML, f"{prefix}/jwt_url_parameter", "")
+        self._opensearch.config.put(self.SECURITY_CONFIG_YML, f"{prefix}/roles_key", "")
+        self._opensearch.config.put(self.SECURITY_CONFIG_YML, f"{prefix}/subject_key", "")
+        self._opensearch.config.put(self.SECURITY_CONFIG_YML, f"{prefix}/required_audience", "")
+        self._opensearch.config.put(self.SECURITY_CONFIG_YML, f"{prefix}/required_issuer", "")
+
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML,
+            f"{prefix}/jwt_clock_skew_tolerance_seconds",
+            "",
         )
 
     def apply_performance_profile(self, profile: OpenSearchPerfProfile):
