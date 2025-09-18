@@ -78,12 +78,14 @@ class JwtHandler(ops.Object):
         if self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
             # in large deployments, JWT configuration must only be handled by the main orchestrator
             # this is a safeguard to avoid different sources for applying security configuration
-            self.charm.status.set(ops.BlockedStatus(JWTRelationInvalid), app=True)
+            if self.charm.unit.is_leader():
+                self.charm.status.set(ops.BlockedStatus(JWTRelationInvalid), app=True)
 
     def _on_jwt_relation_changed(self, event: ops.RelationChangedEvent) -> None:
         """Handle changed relation data."""
         if self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
-            self.charm.status.set(ops.BlockedStatus(JWTRelationInvalid), app=True)
+            if self.charm.unit.is_leader():
+                self.charm.status.set(ops.BlockedStatus(JWTRelationInvalid), app=True)
             return
 
         if not self.jwt_relation:
@@ -98,7 +100,8 @@ class JwtHandler(ops.Object):
     def _on_jwt_relation_broken(self, event: ops.RelationBrokenEvent) -> None:
         """Handle the removal of the relation."""
         if self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
-            self.charm.status.clear(JWTRelationInvalid, app=True)
+            if self.charm.unit.is_leader():
+                self.charm.status.clear(JWTRelationInvalid, app=True)
             return
 
         self.charm.opensearch_config.unset_jwt_auth()
@@ -108,12 +111,14 @@ class JwtHandler(ops.Object):
             logger.info("Updated Opensearch security index")
         except OpenSearchCmdError as e:
             logger.debug(f"Error when updating the security index: {e.out}")
-            self.charm.status.set(ops.BlockedStatus(SecurityIndexUpdateError), app=True)
+            if self.charm.unit.is_leader():
+                self.charm.status.set(ops.BlockedStatus(SecurityIndexUpdateError), app=True)
             # we need to come back in this case because there will not be a follow-up event
             event.defer()
             return
 
-        self.charm.status.clear(SecurityIndexUpdateError, app=True)
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(SecurityIndexUpdateError, app=True)
 
     def _on_secret_changed(self, event: ops.SecretChangedEvent) -> None:
         """Handle changed secret data."""
@@ -121,7 +126,8 @@ class JwtHandler(ops.Object):
             return
 
         if self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
-            self.charm.status.set(ops.BlockedStatus(JWTRelationInvalid), app=True)
+            if self.charm.unit.is_leader():
+                self.charm.status.set(ops.BlockedStatus(JWTRelationInvalid), app=True)
             return
 
         if not (relation := self.jwt_requires._relation_from_secret_label(event.secret.label)):
@@ -158,7 +164,8 @@ class JwtHandler(ops.Object):
         except ValidationError as e:
             # safety mechanism, this should not happen; config is validated on the jwt-integrator
             logger.error(f"Validation failed for JWT authentication config: {e}")
-            self.charm.status.set(ops.BlockedStatus(JWTAuthConfigInvalid), app=True)
+            if self.charm.unit.is_leader():
+                self.charm.status.set(ops.BlockedStatus(JWTAuthConfigInvalid), app=True)
             return
 
         self.charm.opensearch_config.set_jwt_auth(jwt_auth_config)
@@ -169,11 +176,13 @@ class JwtHandler(ops.Object):
             logger.info("Updated Opensearch security index")
         except OpenSearchCmdError as e:
             logger.debug(f"Error when updating the security index: {e.out}")
-            self.charm.status.set(ops.BlockedStatus(SecurityIndexUpdateError), app=True)
+            if self.charm.unit.is_leader():
+                self.charm.status.set(ops.BlockedStatus(SecurityIndexUpdateError), app=True)
             return
 
-        self.charm.status.clear(SecurityIndexUpdateError, app=True)
-        self.charm.status.clear(JWTAuthConfigInvalid, app=True)
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(SecurityIndexUpdateError, app=True)
+            self.charm.status.clear(JWTAuthConfigInvalid, app=True)
 
     def _update_security_index(self) -> None:
         """Update Opensearch's security index after updating the JWT auth configuration."""
