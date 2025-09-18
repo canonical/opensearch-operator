@@ -8,7 +8,6 @@ import logging
 import pytest
 import requests
 from charms.opensearch.v0.constants_charm import JWT_CONFIG_RELATION
-from .helpers_jwt import generate_json_web_token
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
@@ -19,6 +18,7 @@ from ..helpers import (
 )
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
+from .helpers_jwt import generate_json_web_token
 
 logger = logging.getLogger(__name__)
 
@@ -68,9 +68,8 @@ async def test_deploy_small_cluster(charm, series, ops_test: OpsTest) -> None:
 @pytest.mark.abort_on_fail
 async def test_configure_and_use_jwt(charm, series, ops_test: OpsTest) -> None:
     """Configure JWT authentication and access the cluster with the token."""
+    global generated_jwt
     generated_jwt = generate_json_web_token()
-    # todo: remove logger
-    logger.info(f"generated token: {generated_jwt}")
 
     logger.info("Creating signing-key secret")
     secret_name = "jwt-signing-key"
@@ -108,12 +107,14 @@ async def test_configure_and_use_jwt(charm, series, ops_test: OpsTest) -> None:
     logger.info("Access with JWT successful")
 
     # remove Opensearch to allow for follow-up test
+    logger.info("Remove Opensearch cluster")
     await ops_test.model.remove_application(APP_NAME, block_until_done=True)
 
 
 @pytest.mark.abort_on_fail
 async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsTest) -> None:
     """Create a large deployment of OpenSearch."""
+    logger.info("Create large deployment cluster of Opensearch")
     await asyncio.gather(
         ops_test.model.deploy(
             charm,
@@ -161,17 +162,6 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
         wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
     )
 
-    logger.info("Create new JWT and signing-key")
-    generated_jwt = generate_json_web_token()
-    # todo: remove logger
-    logger.info(f"generated token: {generated_jwt}")
-    secret_name = "jwt-signing-key"
-    await ops_test.model.update_secret(
-        name=secret_name,
-        data_args=[f"signing-key={generated_jwt['signing-key']}"],
-        new_name=secret_name,
-    )
-
     logger.info(f"Integrating {DATA_APP} with {JWT_APP_NAME} - this will result in blocked status")
     await ops_test.model.integrate(JWT_APP_NAME, DATA_APP)
     await wait_until(
@@ -192,7 +182,8 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
 
     logger.info(f"Remove relation with {DATA_APP}")
     ops_test.model.applications[DATA_APP].remove_relation(
-        JWT_CONFIG_RELATION, f"{JWT_APP_NAME}:{JWT_CONFIG_RELATION}"
+        f"{DATA_APP}:{JWT_CONFIG_RELATION}",
+        f"{JWT_APP_NAME}:{JWT_CONFIG_RELATION}",
     )
 
     await wait_until(
