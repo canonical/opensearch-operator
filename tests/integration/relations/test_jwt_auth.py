@@ -8,7 +8,7 @@ import logging
 import pytest
 import requests
 from charms.opensearch.v0.constants_charm import JWT_CONFIG_RELATION
-from helpers_jwt import generate_json_web_token
+from .helpers_jwt import generate_json_web_token
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
@@ -102,7 +102,8 @@ async def test_configure_and_use_jwt(charm, series, ops_test: OpsTest) -> None:
     result = requests.get(
         url, headers={"Authorization": f"Bearer {generated_jwt['token']}"}, verify=False
     )
-    assert result.json().get("status") == 200, "Request failed"
+    assert result.status_code == 200, "Request failed"
+    logger.info("Access with JWT successful")
 
     # remove Opensearch to allow for follow-up test
     await ops_test.model.remove_application(APP_NAME, block_until_done=True)
@@ -169,7 +170,12 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
 
     logger.info(f"Integrating {DATA_APP} with {JWT_APP_NAME} - this will result in blocked status")
     await ops_test.model.integrate(JWT_APP_NAME, DATA_APP)
-    await wait_until(ops_test, apps=[DATA_APP], apps_statuses=["blocked"])
+    await wait_until(
+        ops_test,
+        apps=[DATA_APP],
+        units_statuses=["blocked"],
+        wait_for_exact_units={DATA_APP: APP_UNITS[DATA_APP]},
+    )
 
     logger.info("Test access to `/_cat/nodes` with JWT")
     ip_address = await get_leader_unit_ip(ops_test, app=DATA_APP)
@@ -177,7 +183,8 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
     result = requests.get(
         url, headers={"Authorization": f"Bearer {generated_jwt['token']}"}, verify=False
     )
-    assert result.json().get("status") == 401, "`Unauthorized` error expected"
+    assert result.status_code == 401, "`Unauthorized` error expected"
+    logger.info("Access with JWT failed as expected")
 
     logger.info(f"Remove relation with {DATA_APP}")
     ops_test.model.applications[JWT_APP_NAME].remove_relation(
@@ -194,7 +201,12 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
 
     logger.info(f"Integrating {MAIN_APP} with {JWT_APP_NAME}")
     await ops_test.model.integrate(JWT_APP_NAME, MAIN_APP)
-    await wait_until(ops_test, apps=[MAIN_APP], apps_statuses=["active"])
+    await wait_until(
+        ops_test,
+        apps=[MAIN_APP],
+        units_statuses=["active"],
+        wait_for_exact_units={MAIN_APP: APP_UNITS[MAIN_APP]},
+    )
 
     logger.info("Test access to `/_cat/nodes` with JWT")
     ip_address = await get_leader_unit_ip(ops_test, app=MAIN_APP)
@@ -202,4 +214,5 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
     result = requests.get(
         url, headers={"Authorization": f"Bearer {generated_jwt['token']}"}, verify=False
     )
-    assert result.json().get("status") == 200, "Request failed"
+    assert result.status_code == 200, "Request failed"
+    logger.info("Access with JWT successful")
