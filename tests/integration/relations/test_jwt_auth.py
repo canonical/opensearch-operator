@@ -181,7 +181,7 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
     logger.info("Access with JWT failed as expected")
 
     logger.info(f"Remove relation with {DATA_APP}")
-    ops_test.model.applications[DATA_APP].remove_relation(
+    ops_test.model.applications[JWT_APP_NAME].remove_relation(
         f"{DATA_APP}:{JWT_CONFIG_RELATION}",
         f"{JWT_APP_NAME}:{JWT_CONFIG_RELATION}",
     )
