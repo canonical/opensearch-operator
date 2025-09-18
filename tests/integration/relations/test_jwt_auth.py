@@ -7,7 +7,10 @@ import logging
 
 import pytest
 import requests
-from charms.opensearch.v0.constants_charm import JWT_CONFIG_RELATION
+from charms.opensearch.v0.constants_charm import (
+    JWT_CONFIG_RELATION,
+    JWTRelationInvalid,
+)
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
@@ -15,6 +18,7 @@ from ..helpers import (
     CONFIG_OPTS,
     MODEL_CONFIG,
     get_leader_unit_ip,
+    http_request,
 )
 from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
@@ -60,7 +64,6 @@ async def test_deploy_small_cluster(charm, series, ops_test: OpsTest) -> None:
         wait_for_exact_units=DEFAULT_NUM_UNITS,
     )
 
-    # todo: replace with charm name once published
     await ops_test.model.deploy("jwt-integrator", channel="1/edge")
     await wait_until(ops_test, apps=[JWT_APP_NAME], apps_statuses=["blocked"])
 
@@ -100,11 +103,39 @@ async def test_configure_and_use_jwt(charm, series, ops_test: OpsTest) -> None:
     logger.info("Test access to `/_cat/nodes` with JWT")
     ip_address = await get_leader_unit_ip(ops_test, app=APP_NAME)
     url = f"https://{ip_address}:9200/_cat/nodes"
+    jwt_result = requests.get(
+        url, headers={"Authorization": f"Bearer {generated_jwt['token']}"}, verify=False
+    )
+    assert jwt_result.status_code == 200, "Request failed"
+    logger.info("Access with JWT successful")
+
+    basic_auth_result = await http_request(ops_test, "GET", url, resp_status_code=True)
+    assert basic_auth_result == 200, "Request failed"
+    logger.info("Access with Basic Auth successful")
+
+    logger.info(f"Remove relation with {JWT_APP_NAME}")
+    remove_relation_cmd = (
+        f"remove-relation {JWT_APP_NAME}:{JWT_CONFIG_RELATION} {APP_NAME}:{JWT_CONFIG_RELATION}"
+    )
+    await ops_test.juju(*remove_relation_cmd.split(), check=True)
+    await wait_until(
+        ops_test,
+        apps=[APP_NAME],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=DEFAULT_NUM_UNITS,
+    )
+
+    logger.info("Test access to `/_cat/nodes` with JWT")
     result = requests.get(
         url, headers={"Authorization": f"Bearer {generated_jwt['token']}"}, verify=False
     )
-    assert result.status_code == 200, "Request failed"
-    logger.info("Access with JWT successful")
+    assert result.status_code == 401, "`Unauthorized` error expected"
+    logger.info("Access with JWT failed as expected")
+
+    basic_auth_result = await http_request(ops_test, "GET", url, resp_status_code=True)
+    assert basic_auth_result == 200, "Request failed"
+    logger.info("Access with Basic Auth successful")
 
     # remove Opensearch to allow for follow-up test
     logger.info("Remove Opensearch cluster")
@@ -170,7 +201,9 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
     await wait_until(
         ops_test,
         apps=[DATA_APP],
-        units_statuses=["blocked"],
+        apps_full_statuses={
+            DATA_APP: {"blocked": [JWTRelationInvalid]},
+        },
         wait_for_exact_units={DATA_APP: 3},
     )
 

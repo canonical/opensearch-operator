@@ -160,16 +160,8 @@ class OpenSearchConfig:
 
     def unset_jwt_auth(self) -> None:
         """Unset JSON Web Token authentication parameters in security config."""
-        self._opensearch.config.put(
-            self.SECURITY_CONFIG_YML,
-            "config/dynamic/authc/jwt_auth_domain/http_enabled",
-            False,
-        )
-
-        self._opensearch.config.put(
-            self.SECURITY_CONFIG_YML,
-            "config/dynamic/authc/jwt_auth_domain/transport_enabled",
-            False,
+        self._opensearch.config.delete(
+            self.SECURITY_CONFIG_YML, "config/dynamic/authc/jwt_auth_domain"
         )
 
     def apply_performance_profile(self, profile: OpenSearchPerfProfile):
