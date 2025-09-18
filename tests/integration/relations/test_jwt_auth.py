@@ -163,7 +163,10 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
     )
 
     logger.info(f"Integrating {DATA_APP} with {JWT_APP_NAME} - this will result in blocked status")
-    await ops_test.model.integrate(JWT_APP_NAME, DATA_APP)
+    await ops_test.model.integrate(
+        f"{JWT_APP_NAME}:{JWT_CONFIG_RELATION}",
+        f"{DATA_APP}:{JWT_CONFIG_RELATION}",
+    )
     await wait_until(
         ops_test,
         apps=[DATA_APP],
@@ -182,8 +185,8 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
 
     logger.info(f"Remove relation with {DATA_APP}")
     ops_test.model.applications[JWT_APP_NAME].remove_relation(
-        f"{DATA_APP}:{JWT_CONFIG_RELATION}",
         f"{JWT_APP_NAME}:{JWT_CONFIG_RELATION}",
+        f"{DATA_APP}:{JWT_CONFIG_RELATION}",
     )
 
     await wait_until(
@@ -195,7 +198,10 @@ async def test_configure_and_use_jwt_large_cluster(charm, series, ops_test: OpsT
     )
 
     logger.info(f"Integrating {MAIN_APP} with {JWT_APP_NAME}")
-    await ops_test.model.integrate(JWT_APP_NAME, MAIN_APP)
+    await ops_test.model.integrate(
+        f"{JWT_APP_NAME}:{JWT_CONFIG_RELATION}",
+        f"{MAIN_APP}:{JWT_CONFIG_RELATION}",
+    )
     await wait_until(
         ops_test,
         apps=[MAIN_APP, DATA_APP, FAILOVER_APP],
