@@ -75,12 +75,6 @@ class OpenSearchUnit:
             )
         return None
 
-    @profile.setter
-    def profile(self, new_profile: OpenSearchProfile):
-        """Set the performance profile for the unit."""
-        logger.debug("Setting performance profile: %s", new_profile.type.value)
-        self.relation_data.put(self.scope, PERFORMANCE_PROFILE, new_profile.type.value)
-
 
 class OpenSearchClusterState(Object):
     """Global state object for an opensearch cluster"""

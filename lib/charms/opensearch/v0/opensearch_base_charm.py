@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Type
 
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
+    PERFORMANCE_PROFILE,
     AdminUser,
     AdminUserInitProgress,
     AdminUserNotConfigured,
@@ -837,7 +838,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 config_profile.get_jvm_heap_size(self.opensearch.meminfo()["MemTotal"])
             )
             profile_restart_needed = True
-            self.state.unit.profile = config_profile
+            # store profile in unit state
+            self.state.unit.relation_data.put(
+                Scope.UNIT, PERFORMANCE_PROFILE, config_profile.type.value
+            )
 
         if not self.opensearch.is_node_up():
             logger.debug("Node not up yet, deferring plugin check")
