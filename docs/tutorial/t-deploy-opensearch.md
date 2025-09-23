@@ -7,7 +7,7 @@ Charmed OpenSearch supports performance profile. It is recommended in a single h
 To deploy Charmed OpenSearch, run the following command:
 
 ```shell
-juju deploy opensearch -n 3 --config profile=testing
+juju deploy opensearch -n 3
 ```
 
 > The `-n` flag is optional and specifies the number of units to deploy. In this case, we are deploying three units of Charmed OpenSearch. We recommend deploying at least three units for high availability.
