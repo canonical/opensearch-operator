@@ -77,17 +77,13 @@ async def test_wait_blocked_cluster_topology(ops_test: OpsTest) -> None:
         apps=[APP_NAME],
         apps_full_statuses={
             APP_NAME: {
-                "blocked": [
-                    "At least 3 cluster manager nodes are required. Found only 1. - At least 3 data nodes are required. Found only 1."
-                ]
+                "blocked": ["At least 3 cluster manager nodes and 3 data nodes are required."]
             }
         },
         units_full_statuses={
             APP_NAME: {
                 "units": {
-                    "blocked": [
-                        "At least 3 cluster manager nodes are required. Found only 1. - At least 3 data nodes are required. Found only 1."
-                    ]
+                    "blocked": ["At least 3 cluster manager nodes and 3 data nodes are required."]
                 }
             }
         },
@@ -176,17 +172,13 @@ async def test_config_changed_to_production(ops_test: OpsTest) -> None:
         apps=[APP_NAME],
         apps_full_statuses={
             APP_NAME: {
-                "blocked": [
-                    "At least 3 cluster manager nodes are required. Found only 1. - At least 3 data nodes are required. Found only 1."
-                ]
+                "blocked": ["At least 3 cluster manager nodes and 3 data nodes are required."]
             }
         },
         units_full_statuses={
             APP_NAME: {
                 "units": {
-                    "blocked": [
-                        "At least 3 cluster manager nodes are required. Found only 1. - At least 3 data nodes are required. Found only 1."
-                    ]
+                    "blocked": ["At least 3 cluster manager nodes and 3 data nodes are required."]
                 }
             }
         },
@@ -235,16 +227,12 @@ async def test_large_deployment_cluster(ops_test: OpsTest, charm: str, series: s
         units_full_statuses={
             "main": {
                 "units": {
-                    "blocked": [
-                        "At least 3 cluster manager nodes are required. Found only 1. - At least 3 data nodes are required. Found only 1."
-                    ]
+                    "blocked": ["At least 3 cluster manager nodes and 3 data nodes are required."]
                 }
             },
             "data": {
                 "units": {
-                    "blocked": [
-                        "At least 3 cluster manager nodes are required. Found only 1. - At least 3 data nodes are required. Found only 1."
-                    ]
+                    "blocked": ["At least 3 cluster manager nodes and 3 data nodes are required."]
                 }
             },
         },
@@ -261,7 +249,7 @@ async def test_large_deployment_cluster(ops_test: OpsTest, charm: str, series: s
             "main": {
                 "units": {
                     "blocked": [
-                        "At least 3 data nodes are required. Found only 1.",
+                        "At least 3 data nodes are required.",
                         PClusterNoDataNode,
                     ]
                 }
@@ -269,7 +257,7 @@ async def test_large_deployment_cluster(ops_test: OpsTest, charm: str, series: s
             "data": {
                 "units": {
                     "blocked": [
-                        "At least 3 data nodes are required. Found only 1.",
+                        "At least 3 data nodes are required.",
                     ]
                 }
             },

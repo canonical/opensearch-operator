@@ -196,7 +196,7 @@ class ProfilesManager:
             cluster_fleet_apps[current_app.app.id] = current_app
 
         logger.debug("current_cluster_fleet_apps: %s", cluster_fleet_apps)
-        missing_requirements = []
+        error_message = None
 
         nbr_cm_nodes = sum(
             app.planned_units
@@ -207,19 +207,18 @@ class ProfilesManager:
             app.planned_units for app in cluster_fleet_apps.values() if "data" in app.roles
         )
 
-        if nbr_cm_nodes < profile.cluster_topology_requirements.cluster_managers:
-            missing_requirements.append(
-                f"At least {profile.cluster_topology_requirements.cluster_managers} cluster manager nodes are required. Found only {nbr_cm_nodes}."
-            )
+        match nbr_cm_nodes < profile.cluster_topology_requirements.cluster_managers, nbr_data_nodes < profile.cluster_topology_requirements.data:
+            case (True, True):
+                error_message = f"At least {profile.cluster_topology_requirements.cluster_managers} cluster manager nodes and {profile.cluster_topology_requirements.data} data nodes are required."
+            case (True, False):
+                error_message = f"At least {profile.cluster_topology_requirements.cluster_managers} cluster manager nodes are required."
+            case (False, True):
+                error_message = f"At least {profile.cluster_topology_requirements.data} data nodes are required."
+            case _:
+                return []
 
-        if nbr_data_nodes < profile.cluster_topology_requirements.data:
-            missing_requirements.append(
-                f"At least {profile.cluster_topology_requirements.data} data nodes are required. Found only {nbr_data_nodes}."
-            )
-
-        if missing_requirements:
-            logger.error("Missing cluster topology requirements: %s", missing_requirements)
-        return missing_requirements
+        logger.error("Missing cluster topology requirements: %s", error_message)
+        return [error_message]
 
     def check_all_requirements(self, profile: Optional[OpenSearchProfile] = None) -> List[str]:
         """Check all requirements of profile

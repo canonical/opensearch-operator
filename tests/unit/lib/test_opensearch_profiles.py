@@ -243,7 +243,8 @@ class TestPerformanceProfile(unittest.TestCase):
             self.charm._on_config_changed(MagicMock())
             assert self.charm.unit.status.name == "blocked"
             assert (
-                "At least 3 cluster manager nodes are required" in self.charm.unit.status.message
+                "At least 3 cluster manager nodes and 3 data nodes are required"
+                in self.charm.unit.status.message
             )
 
     def test_profile_update_on_config_happy_path(self):
