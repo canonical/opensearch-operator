@@ -5,6 +5,7 @@
 import abc
 import logging
 import random
+import time
 import typing
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Type
@@ -813,6 +814,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         try:
             config_profile = self.profiles_manager.get_config_profile()
             current_profile = self.state.unit.profile
+            self.status.clear(InvalidProfileConfigOption)
         except ValueError:
             logger.error(
                 "Invalid profile configuration. Value: %s", self.state.config.get("profile")
@@ -1035,7 +1037,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         rel = self.model.get_relation(PeerRelationName)
         all_started = True
         for unit in all_units(self):
-            if rel.data[unit].get("started") != "True":
+            if not rel.data[unit].get("started"):
                 all_started = False
                 break
 
@@ -1283,7 +1285,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 event.defer()
                 return
 
-        self.peers_data.put(Scope.UNIT, "started", True)
+        # Add a timestamp instead of just a boolean to be able to trigger
+        # a relation changed event in case of restarts
+        # if you remove the flag and add it again in the same hook the
+        # relation changed event won't be triggered
+        self.peers_data.put(Scope.UNIT, "started", time.time())
 
         # apply post_start fixes to resolve start related upstream bugs
         self.opensearch_fixes.apply_on_start()
