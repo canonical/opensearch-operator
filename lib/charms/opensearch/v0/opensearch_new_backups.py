@@ -24,6 +24,7 @@ from charms.opensearch.v0.constants_charm import (
     S3_RELATION,
     GCS_RELATION, RestoreInProgress, BackupInProgress,
 )
+from charms.opensearch.v0.helper_charm import run_cmd
 from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.helper_security import store_ca, list_cas, remove_ca
 from charms.opensearch.v0.models import AzureRelData, DeploymentType, S3RelData, ObjectStorageConfig, GcsRelData
@@ -69,6 +70,8 @@ SYSTEM_INDICES = {
 }
 
 
+
+
 class OpenSearchBackupsEvents(Object):
 
     def __init__(self, charm: "OpenSearchBaseCharm"):
@@ -101,6 +104,7 @@ class OpenSearchBackupsEvents(Object):
         )
 
     def _on_s3_credentials_changed(self, event: CredentialsChangedEvent) -> None:
+        """Handler for s3 credentials changed event."""
         if not (object_storage_type := self.object_storage_type):
             return
 
@@ -139,6 +143,7 @@ class OpenSearchBackupsEvents(Object):
             )
 
     def _on_s3_credentials_gone(self, _: CredentialsGoneEvent) -> None:
+        """Handler for s3 credentials gone event."""
         self.charm.keystore_manager.remove_entries([
             "s3.client.default.access_key",
             "s3.client.default.secret_key",
@@ -155,6 +160,7 @@ class OpenSearchBackupsEvents(Object):
         # todo emit a restart.
 
     def _on_azure_credentials_changed(self, event: StorageConnectionInfoChangedEvent) -> None:
+        """Handler for azure credentials changed event."""
         if not (object_storage_type := self.object_storage_type):
             # todo
             return
@@ -182,6 +188,7 @@ class OpenSearchBackupsEvents(Object):
         )
 
     def _on_azure_credentials_gone(self, _: StorageConnectionInfoGoneEvent) -> None:
+        """Handler for azure credentials gone event."""
         self.charm.keystore_manager.remove_entries([
             "azure.client.default.account",
             "azure.client.default.key",
@@ -189,6 +196,7 @@ class OpenSearchBackupsEvents(Object):
         self.charm.keystore_manager.reload()
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
+        """Handler for s3 create backup action event."""
         if error_message := self._action_missing_pre_requisites():
             event.fail(error_message)
             return
@@ -212,6 +220,7 @@ class OpenSearchBackupsEvents(Object):
             event.fail(f"Unknown state for backup {snapshot_id}: {str(e)}")
 
     def _on_list_backups_action(self, event: ActionEvent) -> None:
+        """Handler for list backups  changes."""
         if error_message := self._action_missing_pre_requisites(report_running_operations=False):
             event.fail(error_message)
             return
@@ -389,6 +398,21 @@ class OpenSearchBackupsManager:
     def __init__(self, charm: "OpenSearchBaseCharm", opensearch: "OpenSearchDistribution"):
         self.charm = charm  # todo this will need to be replaced by the clusterState
         self.opensearch = opensearch
+
+    def create_snapshot_monitor_user(self) -> None:
+        permissions = {
+            "cluster_permissions": [
+                "cluster:monitor/tasks/list",
+                "cluster:monitor/tasks/get",
+                "cluster:admin/snapshot/get",
+                "cluster:admin/repository/get",
+                "monitor_snapshot",
+            ],
+            "index_permissions": [
+                { "index_patterns": ["*"], "allowed_actions": ["indices:monitor/recovery"] }
+            ],
+        }
+
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def create_repo(
@@ -682,3 +706,7 @@ class OpenSearchBackupsManager:
             if e.response_body.get("error", {}).get("type") == "repository_verification_exception":
                 return True
             raise
+
+    def create_snapshot_watchdog_user(self) -> (str, str):
+        self.opensearch.request("PUT", "")
+        pass
