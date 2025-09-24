@@ -119,30 +119,27 @@ async def get_unit_hostname(ops_test: OpsTest, unit_id: int, app: str) -> str:
     return hostname.strip()
 
 
-async def unit_from_raw(
+async def _get_unit(
     ops_test: OpsTest,
+    app: str,
+    raw_app: dict[str, Any],
     unit_name: str,
-    raw_unit: Dict[str, Any],
-    app_name: str,
-    raw_app: Dict[str, Any],
+    raw_unit: dict[str, Any],
     subordinate: bool = False,
 ) -> Unit:
     """Create a Unit object from raw unit data."""
     unit_id = int(unit_name.split("/")[-1])
 
-    app_id = f"{ops_test.model.uuid}/{app_name}"
+    app_id = f"{ops_test.model.uuid}/{app}"
     app_short_id = md5(app_id.encode()).hexdigest()[:3]
-    if subordinate:
-        machine_id = -1
-    else:
-        machine_id = int(raw_unit["machine"])
+    machine_id = -1 if subordinate else int(raw_unit["machine"])
 
     return Unit(
         id=unit_id,
         short_name=unit_name.replace("/", "-"),
         name=f"{unit_name.replace('/', '-')}.{app_short_id}",
         ip=raw_unit["public-address"],
-        hostname=await get_unit_hostname(ops_test, unit_id, app_name),
+        hostname=await get_unit_hostname(ops_test, unit_id, app),
         is_leader=raw_unit.get("leader", False),
         machine_id=machine_id,
         workload_status=Status(
@@ -173,7 +170,7 @@ async def get_application_units(ops_test: OpsTest, app: str) -> List[Unit]:
         if not raw_unit.get("public-address"):
             # unit not ready yet...
             continue
-        unit = await unit_from_raw(ops_test, u_name, raw_unit, app, raw_app)
+        unit = await _get_unit(ops_test, app, raw_app, u_name, raw_unit)
         units.append(unit)
 
     return units
@@ -199,7 +196,7 @@ async def get_application_subordinate_units(
         if not raw_unit.get("public-address"):
             # unit not ready yet...
             continue
-        unit = await unit_from_raw(ops_test, u_name, raw_unit, app, raw_app, subordinate=True)
+        unit = await _get_unit(ops_test, app, raw_app, u_name, raw_unit, subordinate=True)
         units.append(unit)
 
     return units
