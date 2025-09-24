@@ -165,6 +165,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             logger.debug("Relation no longer active")
             return
 
+        if not event.relation.units:
+            logger.debug("No units in relation. Skipping refresh relation data")
+            return
+
         if not self.model.relations[PeerClusterOrchestratorRelationName]:
             logger.debug("Node not a provider. Skipping refresh relation data")
             return
@@ -175,7 +179,15 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             event.defer()
             return
 
-        logger.debug("refreshing relation data")
+        # if this is a failover orchestrator, check if it should promote itself
+        if (
+            deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR
+            and self.should_promote_failover_to_main()
+        ):
+            self._promote_failover()
+            self.refresh_relation_data(event)
+            return
+
         is_failover_waiting_for_peer_relation = (
             Directive.WAIT_FOR_PEER_CLUSTER_RELATION in deployment_desc.pending_directives
         )
@@ -184,16 +196,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             event_rel_id=event.relation.id,
             can_defer=not is_failover_waiting_for_peer_relation,
         )
-        if is_failover_waiting_for_peer_relation:
-            return
 
-        # if this is a failover orchestrator, check if it should promote itself
-        if (
-            deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR
-            and self.should_promote_failover_to_main()
-        ):
-            self._promote_failover()
-            self.refresh_relation_data(event)
+        if is_failover_waiting_for_peer_relation:
             return
 
         # only the main-orchestrator is able to designate a failover
@@ -975,6 +979,14 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # register in the 'main/failover'-CMs the number of planned units of the current app
         self._put_current_app(event.relation.id, deployment_desc)
 
+        # set the main orchestrator registered flag for this relation
+        local_orchestrators = PeerClusterOrchestrators.from_dict(
+            self.charm.peers_data.get_object(Scope.APP, "orchestrators") or {}
+        )
+        self._put_main_orchestrator_registered(
+            event.relation.id, local_orchestrators.main_app is not None
+        )
+
         if not (data := event.relation.data.get(event.app)):
             logger.debug("No data found in relation.")
             return
@@ -1107,6 +1119,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         if not (self.charm.is_admin_user_configured() and self.charm.tls.is_fully_configured()):
             return
+
         self.put_in_rel(
             data={"main_orchestrator_registered": "true" if is_registered else "false"},
             rel_id=failover_rel_id,

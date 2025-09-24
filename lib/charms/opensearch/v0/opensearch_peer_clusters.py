@@ -408,6 +408,8 @@ class OpenSearchPeerClustersManager:
         deployment_desc.typ = DeploymentType.MAIN_ORCHESTRATOR
         deployment_desc.promotion_time = datetime.now().timestamp()
         logger.debug("New deployment description: %s", deployment_desc)
+        if Directive.WAIT_FOR_PEER_CLUSTER_RELATION in deployment_desc.pending_directives:
+            deployment_desc.pending_directives.remove(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
         self._charm.peers_data.put_object(
             Scope.APP, "deployment-description", deployment_desc.to_dict()
         )
@@ -426,6 +428,7 @@ class OpenSearchPeerClustersManager:
         self._charm.peers_data.put_object(
             Scope.APP, "deployment-description", deployment_desc.to_dict()
         )
+        self._charm.peer_cluster_provider.clean_all_relation_data()
 
     def has_recommended_cm_count(self, nodes: List[Node]) -> bool:
         """Validate cluster-wide count for CM-eligible nodes is at least 3"""
