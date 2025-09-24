@@ -1,0 +1,145 @@
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:393 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:394 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.10   unsupported  03:34:26Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+application                        blocked      1  application                                0  no       No connection to opensearch charm
+opensearch                         active       2  opensearch                                 0  no       
+opensearch-dashboards              active       1  opensearch-dashboards     2/edge          51  no       
+secondary-application              active       1  application                                1  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+application/0*               blocked   executing  2        10.87.0.11                No connection to opensearch charm
+opensearch-dashboards/0*     active    idle       1        10.87.0.165     5601/tcp  
+opensearch/0*                active    executing  3        10.87.0.245     9200/tcp  
+opensearch/1                 active    executing  4        10.87.0.144     9200/tcp  
+secondary-application/0*     active    idle       7        10.87.0.102               
+self-signed-certificates/0*  active    idle       0        10.87.0.138               
+
+Machine  State    Address      Inst id        Base          AZ             Message
+0        started  10.87.0.138  juju-607e90-0  ubuntu@22.04  github-runner  Running
+1        started  10.87.0.165  juju-607e90-1  ubuntu@22.04  github-runner  Running
+2        started  10.87.0.11   juju-607e90-2  ubuntu@22.04  github-runner  Running
+3        started  10.87.0.245  juju-607e90-3  ubuntu@24.04  github-runner  Running
+4        started  10.87.0.144  juju-607e90-4  ubuntu@24.04  github-runner  Running
+7        started  10.87.0.102  juju-607e90-7  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:34:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: application - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: application blocked -- message: No connection to opensearch charm
+		application-0.fd8* -- (10.87.0.11) -- [idle (since: 03:34:29)] blocked: No connection to opensearch charm
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:34:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 	App: application - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:326 
+	app: application blocked -- message: No connection to opensearch charm
+		application-0.fd8* -- (10.87.0.11) -- [idle (since: 03:34:34)] blocked: No connection to opensearch charm
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:401 
+
+
+03:34:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:412 03:35:08 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m root:helpers.py:168 request results: namespace(status='completed', response={'results': '{"took": 4, "timed_out": false, "_shards": {"total": 1, "successful": 1, "skipped": 0, "failed": 0}, "hits": {"total": {"value": 3, "relation": "eq"}, "max_score": 0.41299206, "hits": [{"_index": "albums", "_id": "1", "_score": 0.41299206, "_source": {"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}}, {"_index": "albums", "_id": "2", "_score": 0.41299206, "_source": {"artist": "Herbie Hancock", "genre": ["Jazz"], "title": "Head Hunters"}}, {"_index": "albums", "_id": "3", "_score": 0.41299206, "_source": {"artist": "Lydian Collective", "genre": ["Jazz"], "title": "Adventure"}}]}}', 'return-code': 0})
+[32mINFO    [0m root:test_opensearch_provider.py:682 {'took': 4, 'timed_out': False, '_shards': {'total': 1, 'successful': 1, 'skipped': 0, 'failed': 0}, 'hits': {'total': {'value': 3, 'relation': 'eq'}, 'max_score': 0.41299206, 'hits': [{'_index': 'albums', '_id': '1', '_score': 0.41299206, '_source': {'artist': 'Vulfpeck', 'genre': ['Funk', 'Jazz'], 'title': 'Thrill of the Arts'}}, {'_index': 'albums', '_id': '2', '_score': 0.41299206, '_source': {'artist': 'Herbie Hancock', 'genre': ['Jazz'], 'title': 'Head Hunters'}}, {'_index': 'albums', '_id': '3', '_score': 0.41299206, '_source': {'artist': 'Lydian Collective', 'genre': ['Jazz'], 'title': 'Adventure'}}]}}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.10   unsupported  03:35:09Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+application                        active      1  application                                0  no       
+opensearch                         active      2  opensearch                                 0  no       
+opensearch-dashboards              active      1  opensearch-dashboards     2/edge          51  no       
+secondary-application              active      1  application                                1  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+application/0*               active    idle   2        10.87.0.11                
+opensearch-dashboards/0*     active    idle   1        10.87.0.165     5601/tcp  
+opensearch/0*                active    idle   3        10.87.0.245     9200/tcp  
+opensearch/1                 active    idle   4        10.87.0.144     9200/tcp  
+secondary-application/0*     active    idle   7        10.87.0.102               
+self-signed-certificates/0*  active    idle   0        10.87.0.138               
+
+Machine  State    Address      Inst id        Base          AZ             Message
+0        started  10.87.0.138  juju-607e90-0  ubuntu@22.04  github-runner  Running
+1        started  10.87.0.165  juju-607e90-1  ubuntu@22.04  github-runner  Running
+2        started  10.87.0.11   juju-607e90-2  ubuntu@22.04  github-runner  Running
+3        started  10.87.0.245  juju-607e90-3  ubuntu@24.04  github-runner  Running
+4        started  10.87.0.144  juju-607e90-4  ubuntu@24.04  github-runner  Running
+7        started  10.87.0.102  juju-607e90-7  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-3: 03:11:17 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 03:11:17 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 03:11:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 03:11:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 03:11:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 03:11:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 03:11:52 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 03:11:52 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 03:12:49 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 03:12:49 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 03:12:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 03:12:54 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-application-0: 03:13:48 ERROR unit.application/0.juju-log connection check to opensearch charm failed
+unit-application-0: 03:14:54 ERROR unit.application/0.juju-log connection check to opensearch charm failed
+unit-application-0: 03:16:12 ERROR unit.application/0.juju-log first-index:7: writing cert to /tmp/test_cert.ca.
+unit-opensearch-dashboards-0: 03:17:52 ERROR unit.opensearch-dashboards/0.juju-log opensearch-client:8: Request GET to http://10.87.0.165:5601/api/status with payload: None failed. 
+503 Server Error: Service Unavailable for url: http://10.87.0.165:5601/api/status
+unit-opensearch-dashboards-0: 03:17:53 ERROR unit.opensearch-dashboards/0.juju-log opensearch-client:8: Request GET to http://10.87.0.165:5601/api/status with payload: None failed. 
+HTTPConnectionPool(host='10.87.0.165', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x77430aa9b580>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:17:58 ERROR unit.opensearch-dashboards/0.juju-log opensearch-client:8: Request GET to http://10.87.0.165:5601/api/status with payload: None failed. 
+HTTPConnectionPool(host='10.87.0.165', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x77430aa9bd00>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:19:01 ERROR unit.opensearch-dashboards/0.juju-log Request GET to http://10.87.0.165:5601/api/status with payload: None failed. 
+HTTPConnectionPool(host='10.87.0.165', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x736bbb58abc0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:19:06 ERROR unit.opensearch-dashboards/0.juju-log Request GET to http://10.87.0.165:5601/api/status with payload: None failed. 
+HTTPConnectionPool(host='10.87.0.165', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x736bbb58b790>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:19:11 ERROR unit.opensearch-dashboards/0.juju-log Request GET to http://10.87.0.165:5601/api/status with payload: None failed. 
+503 Server Error: Service Unavailable for url: http://10.87.0.165:5601/api/status
+unit-opensearch-0: 03:21:40 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 03:21:42 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-1: 03:22:03 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-application-0: 03:22:05 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-dashboards-0: 03:22:08 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+machine-6: 03:23:11 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 03:23:11 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 03:25:24 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 03:25:51 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-1: 03:26:53 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-3: 03:27:01 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-application-0: 03:27:04 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-dashboards-0: 03:27:42 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-0: 03:28:17 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+machine-7: 03:31:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 03:31:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-secondary-application-0: 03:31:22 ERROR unit.secondary-application/0.juju-log second-index:9: writing cert to /tmp/test_cert.ca.
+unit-opensearch-0: 03:32:30 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-application-0: 03:33:47 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-application-0: 03:33:47 ERROR unit.application/0.juju-log Request DELETE to https://10.87.0.144:9200/.opendistro-anomaly-results with payload: None failed. 
+403 Client Error: Forbidden for url: https://10.87.0.144:9200/.opendistro-anomaly-results
+unit-application-0: 03:33:48 ERROR unit.application/0.juju-log Request DELETE to https://10.87.0.144:9200/.opendistro-anomaly-detector with payload: None failed. 
+403 Client Error: Forbidden for url: https://10.87.0.144:9200/.opendistro-anomaly-detector
+unit-application-0: 03:33:49 ERROR unit.application/0.juju-log Request DELETE to https://10.87.0.144:9200/.opendistro-anomaly-checkpoints with payload: None failed. 
+403 Client Error: Forbidden for url: https://10.87.0.144:9200/.opendistro-anomaly-checkpoints
+unit-application-0: 03:33:50 ERROR unit.application/0.juju-log Request DELETE to https://10.87.0.144:9200/.opendistro-anomaly-detection-state with payload: None failed. 
+403 Client Error: Forbidden for url: https://10.87.0.144:9200/.opendistro-anomaly-detection-state
+unit-opensearch-1: 03:34:04 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
