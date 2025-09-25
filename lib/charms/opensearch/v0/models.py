@@ -501,19 +501,13 @@ class PeerClusterFleetApps(Model):
         return self.__root__[item]
 
 
-class PluginConfigType(BaseStrEnum):
-    """Type of config (key, cert, etc)."""
-
-    KEYS = "keys"
-
-
 class PluginConfigInfo(Model):
     """Model class for representing data needed to add or remove plugin configuration"""
 
     relation_name: Optional[str] = None
     secret_id: Optional[str] = None
     cleanup: list[str] = Field(default_factory=list)
-    typ: PluginConfigType
+    typ: Literal["keys"]
 
     def add_cleanup_items(self, items: List[str]) -> None:
         """Append items to cleanup list avoiding duplicates."""

@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_charm import Status, diff
-from charms.opensearch.v0.models import PluginConfigInfo, PluginConfigType
+from charms.opensearch.v0.models import PluginConfigInfo
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.smtp_integrator.v0.smtp import DEFAULT_RELATION_NAME as SMTP_RELATION
 from charms.smtp_integrator.v0.smtp import SmtpRequires
@@ -104,7 +104,7 @@ class SmtpEvents(Object):
         self.charm.plugin_manager.put_plugin_config(
             scope=Scope.UNIT,
             label=self.secret_label,
-            typ=PluginConfigType.KEYS,
+            typ="keys",
             cleanup=list(entries.keys()),
         )
         if not self.charm.unit.is_leader():
@@ -117,7 +117,7 @@ class SmtpEvents(Object):
             label=self.secret_label,
             secret_id=secret_id,
             relation_name=self.relation_name,
-            typ=PluginConfigType.KEYS,
+            typ="keys",
         )
 
         # if unit is main orchestrator leader, transfer keys to subclusters
@@ -162,7 +162,7 @@ class SmtpEvents(Object):
         self.charm.plugin_manager.put_plugin_config(
             scope=Scope.UNIT,
             label=self.secret_label,
-            typ=PluginConfigType.KEYS,
+            typ="keys",
             cleanup=list(keys.keys()),
         )
 
@@ -227,7 +227,7 @@ class OpenSearchPluginManager:
         self,
         scope: Scope,
         label: str,
-        typ: PluginConfigType,
+        typ: str,
         secret_id: Optional[str] = None,
         relation_name: Optional[str] = None,
         cleanup: Optional[List[str]] = [],
