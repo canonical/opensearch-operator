@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+import asyncio
 import json
 import logging
 import subprocess
@@ -170,10 +171,9 @@ async def get_application_units(ops_test: OpsTest, app: str) -> List[Unit]:
         if not raw_unit.get("public-address"):
             # unit not ready yet...
             continue
-        unit = await _get_unit(ops_test, app, raw_app, u_name, raw_unit)
-        units.append(unit)
+        units.append(_get_unit(ops_test, app, raw_app, u_name, raw_unit))
 
-    return units
+    return await asyncio.gather(*units) if units else []
 
 
 async def get_application_subordinate_units(
@@ -185,10 +185,12 @@ async def get_application_subordinate_units(
     # `get_unit_ip` should be replaced with `.public_address`
     raw_app = get_raw_application(ops_test, app)
     units = []
-    for principal_unit in get_raw_application(ops_test, principal_app)["units"].values():
+    for principal_unit in get_raw_application(ops_test, principal_app)[
+        "units"
+    ].values():
         u_name, raw_unit = None, None
         for u_name, raw_unit in principal_unit["subordinates"].items():
-            if app in u_name:
+            if u_name.startswith(f"${app}/"):
                 break
         else:
             raise ValueError(f"Subordinate unit for {app} not found in {principal_app}")
@@ -196,10 +198,11 @@ async def get_application_subordinate_units(
         if not raw_unit.get("public-address"):
             # unit not ready yet...
             continue
-        unit = await _get_unit(ops_test, app, raw_app, u_name, raw_unit, subordinate=True)
-        units.append(unit)
 
-    return units
+        units.append(
+            _get_unit(ops_test, app, raw_app, u_name, raw_unit, subordinate=True)
+        )
+    return await asyncio.gather(*units) if units else []
 
 
 def _is_every_condition_on_app_met(
@@ -227,7 +230,8 @@ def _is_every_condition_on_app_met(
         any_match = False
         for status_val, messages in apps_full_statuses[app].items():
             any_match = any_match or (
-                app_status.value == status_val and app_status.message in (messages or ["", None])
+                app_status.value == status_val
+                and app_status.message in (messages or ["", None])
             )
         if not any_match:
             return False
@@ -296,7 +300,9 @@ async def _is_every_condition_met(
             units = await get_application_units(ops_test, app)
 
         if -1 < expected_units != len(units):
-            logger.info(f"{app} -- expected units: {expected_units} -- current: {len(units)}")
+            logger.info(
+                f"{app} -- expected units: {expected_units} -- current: {len(units)}"
+            )
             return False
 
         if (apps_statuses or apps_full_statuses) and not _is_every_condition_on_app_met(
@@ -362,7 +368,9 @@ async def wait_until(  # noqa: C901
     """
     if not apps:
         raise ValueError("apps must be specified.")
-    if not (apps_statuses or apps_full_statuses or units_statuses or units_full_statuses):
+    if not (
+        apps_statuses or apps_full_statuses or units_statuses or units_full_statuses
+    ):
         apps_statuses = ["active"]
         units_statuses = ["active"]
     if isinstance(wait_for_exact_units, int):
