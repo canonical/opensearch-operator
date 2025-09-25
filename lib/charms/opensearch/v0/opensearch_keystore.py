@@ -7,7 +7,6 @@ This module manages OpenSearch keystore access and lifecycle.
 """
 import logging
 import os
-from typing import Any, Dict
 
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
@@ -38,17 +37,6 @@ class OpenSearchKeystore:
         self._opensearch = opensearch
         self._keystore_path = f"{opensearch.paths.conf}/opensearch.keystore"
 
-    def update(self, entries: Dict[str, Any]) -> None:
-        """Updates the keystore value (adding or removing)"""
-        if not entries:
-            return
-
-        for key, value in entries.items():
-            if value:
-                self.add(key, value)
-            else:
-                self.delete(key)
-
     def _create_if_needed(self) -> None:
         """Creates the keystore if not already present."""
         if os.path.exists(self._keystore_path):
@@ -71,20 +59,6 @@ class OpenSearchKeystore:
                 if e.err and "does not exist in the keystore" in e.err:
                     continue
                 raise
-
-    def add(self, key: str, value: str):
-        """Adds key, value pair to OpenSearch keystore"""
-        self._opensearch.run_bin(KEYSTORE, f"add --force --stdin {key}", stdin=value)
-
-    def delete(self, key: str) -> None:
-        """Deletes key from OpenSearch keystore if it exists"""
-        try:
-            self._opensearch.run_bin(KEYSTORE, f"remove {key}")
-        except OpenSearchCmdError as e:
-            if e.err and "does not exist in the keystore" in e.err:
-                logger.info("Keystore command 'delete' failed for key: %s. Key not found.", key)
-                return
-            raise
 
     def reload(self):
         """Reloads local node's secure settings

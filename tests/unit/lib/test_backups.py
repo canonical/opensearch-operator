@@ -29,9 +29,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
 )
 from charms.opensearch.v0.opensearch_health import HealthColors
-from charms.opensearch.v0.opensearch_plugins import (
-    OpenSearchPluginError,
-)
 from ops.model import MaintenanceStatus, WaitingStatus
 from ops.testing import Harness
 
@@ -356,44 +353,25 @@ def test_close_indices_if_needed(
 
 
 @pytest.mark.parametrize(
-    "test_type,s3_units,snapshot_status,is_leader,apply_config_exc",
+    "test_type,s3_units,snapshot_status,is_leader",
     [
         (
             "s3-still-units-present",
             ["some_unit"],  # This is a dummy value, so we trigger the .units check
             None,
             True,
-            None,
         ),
         (
             "snapshot-in-progress",
             None,
             BackupServiceState.SNAPSHOT_IN_PROGRESS,
             True,
-            None,
-        ),
-        (
-            "apply-config-error",
-            None,
-            BackupServiceState.SUCCESS,
-            True,
-            OpenSearchPluginError("Error"),
-        ),
-        # Using this test case so we validate that a non-leader unit goes through
-        # and eventually calls apply_config
-        (
-            "apply-config-error-not-leader",
-            None,
-            BackupServiceState.SUCCESS,
-            True,
-            OpenSearchPluginError("Error"),
         ),
         (
             "success",
             None,
             BackupServiceState.SUCCESS,
             True,
-            None,
         ),
     ],
 )
@@ -405,7 +383,6 @@ def test_on_s3_broken_steps(
     s3_units,
     snapshot_status,
     is_leader,
-    apply_config_exc,
 ):
     relation = MagicMock()
     relation.units = s3_units
@@ -413,9 +390,7 @@ def test_on_s3_broken_steps(
     event = MagicMock()
     event.relation_name = "s3-credentials"
     harness.charm.backup._execute_s3_broken_calls = MagicMock()
-    harness.charm.keystore.remove_entries = (
-        MagicMock(side_effect=apply_config_exc) if apply_config_exc else MagicMock()
-    )
+    harness.charm.keystore.remove_entries = MagicMock()
     check_snapshot_status.return_value = snapshot_status
     harness.charm.unit.is_leader = MagicMock(return_value=is_leader)
     harness.charm.status.set = MagicMock()
@@ -432,10 +407,6 @@ def test_on_s3_broken_steps(
         harness.charm.status.set.assert_any_call(MaintenanceStatus(BackupInDisabling))
         harness.charm.status.set.assert_any_call(WaitingStatus(BackupDeferRelBrokenAsInProgress))
         harness.charm.backup.backup_manager.clean.assert_not_called()
-    elif test_type == "apply-config-error" or test_type == "apply-config-error-not-leader":
-        event.defer.assert_called()
-        harness.charm.status.set.assert_any_call(MaintenanceStatus(BackupInDisabling))
-        harness.charm.backup.backup_manager.clean.assert_called_once()
     elif test_type == "success":
         event.defer.assert_not_called()
         harness.charm.status.set.assert_any_call(MaintenanceStatus(BackupInDisabling))

@@ -512,15 +512,15 @@ class PluginConfigInfo(Model):
 
     relation_name: Optional[str] = None
     secret_id: Optional[str] = None
-    removal_info: list[str] = Field(default_factory=list)
+    cleanup: list[str] = Field(default_factory=list)
     typ: PluginConfigType
 
-    def add_removal_info(self, items: List[str]) -> None:
-        """Append items to removal_info list avoiding duplicates."""
-        current = set(self.removal_info)
+    def add_cleanup_items(self, items: List[str]) -> None:
+        """Append items to cleanup list avoiding duplicates."""
+        current = set(self.cleanup)
         for item in items:
             if item not in current:
-                self.removal_info.append(item)
+                self.cleanup.append(item)
                 current.add(item)
 
 

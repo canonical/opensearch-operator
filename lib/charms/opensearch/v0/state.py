@@ -50,7 +50,7 @@ class OpenSearchUnit:
         self.relation_data = RelationDataStore(charm, PeerRelationName)
 
     @property
-    def plugin_config_removal_info(self) -> Dict[str, PluginConfigInfo]:
+    def plugin_config_info(self) -> Dict[str, PluginConfigInfo]:
         """Returns plugin secret labels this unit is tracking"""
         plugin_configs = self.relation_data.get_object(self.scope, "plugin_config_info") or {}
         return {label: PluginConfigInfo.from_dict(info) for label, info in plugin_configs.items()}

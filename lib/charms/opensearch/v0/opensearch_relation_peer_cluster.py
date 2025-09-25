@@ -1050,18 +1050,25 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         add, remove = diff(configs_from_relation.keys(), current_app_plugin_info.keys())
 
         for label in remove:
-            self.charm.plugin_manager.remove_plugin_config_info(label)
+            self.charm.plugin_manager.remove_plugin_config(scope=Scope.APP, label=label)
 
         for label in add:
             plugin = configs_from_relation[label]
             if plugin.secret_id:
                 self.charm.secrets.track_secret(plugin.secret_id, Scope.APP, label)
-            self.charm.plugin_manager.put_plugin_config_info(
-                label,
+            self.charm.plugin_manager.put_plugin_config(
+                scope=Scope.APP,
+                label=label,
                 secret_id=plugin.secret_id,
                 relation_name=plugin.relation_name,
                 typ=plugin.typ,
             )
+            # self.charm.plugin_manager.put_plugin_config_info(
+            #     label,
+            #     secret_id=plugin.secret_id,
+            #     relation_name=plugin.relation_name,
+            #     typ=plugin.typ,
+            # )
 
     def apply_orchestrator_status(self) -> None:
         """Sets or clears status based on presence of local orchestrators."""
