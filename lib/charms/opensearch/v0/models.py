@@ -507,30 +507,6 @@ class PluginConfigType(BaseStrEnum):
     KEYS = "keys"
 
 
-#
-# class PluginConfigRemovalInfo(Model):
-#     """Model class for representing data needed to remove plugin configuration"""
-#
-#     typ: PluginConfigType
-#     content: List[str] = Field(default_factory=list)
-#
-#     def add(self, items: List[str]) -> None:
-#         """Append items to content list avoiding duplicates."""
-#         current = set(self.content)
-#         for item in items:
-#             if item not in current:
-#                 self.content.append(item)
-#                 current.add(item)
-#
-#
-# class PluginConfigAddInfo(Model):
-#     """Model class for representing data needed to configure plugins"""
-#
-#     relation_name: Optional[str]
-#     secret_id: str
-#     typ: PluginConfigType
-
-
 class PluginConfigInfo(Model):
     """Model class for representing data needed to add or remove plugin configuration"""
 

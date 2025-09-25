@@ -413,7 +413,7 @@ def test_on_s3_broken_steps(
     event = MagicMock()
     event.relation_name = "s3-credentials"
     harness.charm.backup._execute_s3_broken_calls = MagicMock()
-    harness.charm.plugin_manager.remove_from_keystore = (
+    harness.charm.keystore.remove_entries = (
         MagicMock(side_effect=apply_config_exc) if apply_config_exc else MagicMock()
     )
     check_snapshot_status.return_value = snapshot_status
@@ -485,7 +485,7 @@ class TestBackups(unittest.TestCase):
 
         # Relate and run first check
         with patch(
-            "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.remove_from_keystore"
+            "charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.remove_entries"
         ) as mock_pm_run:
             self.s3_rel_id = self.harness.add_relation(S3_RELATION, "s3-integrator")
             self.harness.add_relation_unit(self.s3_rel_id, "s3-integrator/0")
@@ -527,9 +527,7 @@ class TestBackups(unittest.TestCase):
         self.assertFalse(result)
 
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchS3Backup.apply_api_config_if_needed")
-    @patch(
-        "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.remove_from_keystore"
-    )
+    @patch("charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.remove_entries")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     @patch("charms.opensearch.v0.opensearch_backups.BackupManager.clean")
     def test_relation_broken(
