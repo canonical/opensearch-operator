@@ -233,7 +233,7 @@ def mask_sensitive_information(cmd: str) -> str:
     return re.sub(pattern, r"\1" + "xxx", cmd)
 
 
-def diff(desired: list[str], current: list[str]):
+def diff(desired: list[str], current: list[str]) -> tuple[set[str], set[str]]:
     """Returns diff needed to turn current list into desired list"""
     desired_labels = set(desired)
     current_labels = set(current)

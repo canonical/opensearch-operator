@@ -377,8 +377,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
     def track_secret(self, secret_id: str, scope: Scope, key: str) -> Optional[Secret]:
         """Track a granted secret and add it to the cache"""
         label = self.label(scope, key)
-        cached_secret_meta = self.cached_secrets.get_meta(scope, label)
-        if cached_secret_meta:
+        if cached_secret_meta := self.cached_secrets.get_meta(scope, label):
             # already tracking
             return cached_secret_meta
         try:

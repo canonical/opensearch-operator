@@ -635,7 +635,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             ),
         )
 
-    def _plugin_config_info(self):
+    def _plugin_config_info(self) -> dict[str, str]:
         """Grants plugin secrets to subcluster relations and returns secret ids"""
         plugin_config_info = self.charm.state.app.plugin_config_info
         # grant secrets to subsclusters
@@ -990,8 +990,11 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # fetch the success data
         data = self.peer_cm.rel_data_from_str(data["data"])
 
+        # we need to differentiate between plugins being None and {}
+        # when an empty dict, plugins have been removed from the main orchestrator
+        # and we need to also remove them in subclusters
         if (plugin_configs := data.plugins) is not None:
-            self._track_plugin_secrets(plugin_configs)
+            self._update_plugin_configs(plugin_configs)
 
         # check errors that can only be figured out from the requirer side
         if self._error_set_from_requirer(orchestrators, deployment_desc, data, event.relation.id):
@@ -1041,18 +1044,19 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # recompute the deployment desc
         self.charm.opensearch_peer_cm.run_with_relation_data(data)
 
-    def _track_plugin_secrets(self, configs_from_relation):
-        """Track plugin secrets from relation data"""
+    def _update_plugin_configs(self, configs_from_relation) -> None:
+        """Add or remove plugin configuration info from relation data"""
         current_app_plugin_info = self.charm.state.app.plugin_config_info
         add, remove = diff(configs_from_relation.keys(), current_app_plugin_info.keys())
 
         for label in remove:
-            self.charm.state.app.remove_plugin_config_info(label)
+            self.charm.plugin_manager.remove_plugin_config_info(label)
 
         for label in add:
             plugin = configs_from_relation[label]
-            self.charm.secrets.track_secret(plugin.secret_id, Scope.APP, label)
-            self.charm.state.app.put_plugin_config_info(
+            if plugin.secret_id:
+                self.charm.secrets.track_secret(plugin.secret_id, Scope.APP, label)
+            self.charm.plugin_manager.put_plugin_config_info(
                 label,
                 secret_id=plugin.secret_id,
                 relation_name=plugin.relation_name,

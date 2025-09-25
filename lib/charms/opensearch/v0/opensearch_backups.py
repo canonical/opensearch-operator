@@ -108,13 +108,10 @@ from charms.opensearch.v0.models import AzureRelData, DeploymentType, Model, S3R
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
-    OpenSearchNotFullyReadyError,
 )
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchAzurePlugin,
-    OpenSearchPluginMissingConfigError,
-    OpenSearchPluginMissingDepsError,
     OpenSearchS3Plugin,
 )
 from ops import (
@@ -693,7 +690,8 @@ class OpenSearchBackupBase(Object):
             # other units and the keystore is clean.
             # Any other exception should result in actual errors.
             keys_to_remove = plug.disable().secret_entries.keys()
-            self.charm.plugin_manager.remove_from_keystore(keys_to_remove)
+            self.charm.keystore.remove_entries(keys_to_remove)
+            self.charm.keystore.reload()
 
     def _on_backup_disable(self, event: _DisableBackupRelationEvent) -> None:  # noqa C901
         """Disables the backup relation."""
@@ -767,15 +765,9 @@ class OpenSearchBackupBase(Object):
             else OpenSearchS3Plugin(self.charm, None)
         )
 
-        try:
-            keys_to_remove = plug.disable().secret_entries.keys()
-            self.charm.plugin_manager.remove_from_keystore(keys_to_remove)
-        except OpenSearchError as e:
-            self.charm.status.set(BlockedStatus(PluginConfigError))
-            # There was an unexpected error, log it and block the unit
-            logger.error(e)
-            event.defer()
-            return
+        keys_to_remove = plug.disable().secret_entries.keys()
+        self.charm.keystore.remove_entries(keys_to_remove)
+        self.charm.keystore.reload()
 
         # Now, as this is related strictly to the MAIN orchestrator,
         # we must update any peer relation.
@@ -889,13 +881,9 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
             # Early check to avoid trying to configure both with empty credentials
             if not plugin.data:
                 continue
-            try:
-                entries_to_add = plugin.config().secret_entries
-                self.charm.plugin_manager.add_to_keystore(entries_to_add)
-            except OpenSearchNotFullyReadyError:
-                logger.info(f"{plugin.name}: not ready, we wait for another peer cluster.")
-            except OpenSearchPluginMissingConfigError as e:
-                logger.info(f"Missing configs for {plugin.name}: {e}")
+            entries_to_add = plugin.config().secret_entries
+            self.charm.keystore.add_entries(entries_to_add)
+            self.charm.keystore.reload()
 
         event.secret.get_content(refresh=True)
 
@@ -1082,19 +1070,9 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
 
         self.charm.status.set(MaintenanceStatus(BackupSetupStart))
 
-        try:
-            entries_to_add = self.plugin.config().secret_entries
-            self.charm.plugin_manager.add_to_keystore(entries_to_add)
-        except (OpenSearchPluginMissingConfigError, OpenSearchPluginMissingDepsError) as e:
-            self.charm.status.set(BlockedStatus(BackupRelDataIncomplete))
-            logger.error(e)
-            return
-        except OpenSearchError as e:
-            self.charm.status.set(BlockedStatus(PluginConfigError))
-            # There was an unexpected error, log it and block the unit
-            logger.error(e)
-            event.defer()
-            return
+        entries_to_add = self.plugin.config().secret_entries
+        self.charm.keystore.add_entries(entries_to_add)
+        self.charm.keystore.reload()
 
         if not self.charm.unit.is_leader():
             # Plugin is configured locally for this unit. Now the leader proceed.
