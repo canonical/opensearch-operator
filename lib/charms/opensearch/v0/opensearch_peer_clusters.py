@@ -290,7 +290,7 @@ class OpenSearchPeerClustersManager:
         # we block if the peer relation is not set.
         # An example is a demoted main orchestrator being scaled up
         if (
-            prev_deployment.typ == DeploymentType.FAILOVER_ORCHESTRATOR
+            prev_deployment.typ != DeploymentType.MAIN_ORCHESTRATOR
             and not self._charm.model.relations[PeerClusterRelationName]
         ):
             deployment_state = DeploymentState(
@@ -299,7 +299,7 @@ class OpenSearchPeerClustersManager:
             directives.append(Directive.SHOW_STATUS)
             directives.append(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
 
-        deployment_type = prev_deployment.typ
+        deployment_type = self._deployment_type(config, start_mode, prev_deployment.typ)
         return DeploymentDescription(
             app=prev_deployment.app,
             config=PeerClusterConfig(
@@ -629,7 +629,11 @@ class OpenSearchPeerClustersManager:
                 raise OpenSearchProvidedRolesException(DataRoleRemovalForbidden)
 
     @staticmethod
-    def _deployment_type(config: PeerClusterConfig, start_mode: StartMode) -> DeploymentType:
+    def _deployment_type(
+        config: PeerClusterConfig,
+        start_mode: StartMode,
+        prev_deployment_type: Optional[DeploymentType] = None,
+    ) -> DeploymentType:
         """Check if the current cluster is an independent cluster."""
         has_cm_roles = (
             start_mode == StartMode.WITH_GENERATED_ROLES or "cluster_manager" in config.roles
@@ -637,7 +641,7 @@ class OpenSearchPeerClustersManager:
         if not has_cm_roles:
             return DeploymentType.OTHER
 
-        return (
+        return prev_deployment_type or (
             DeploymentType.MAIN_ORCHESTRATOR
             if not config.init_hold
             else DeploymentType.FAILOVER_ORCHESTRATOR

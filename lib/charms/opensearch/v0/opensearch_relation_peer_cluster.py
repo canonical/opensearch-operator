@@ -190,16 +190,16 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         # Do not defer the event if we are waiting for a peer cluster relation
         # Once the relation is established and the cluster starts we will re-process the event
-        is_failover_waiting_for_peer_relation = (
+        is_waiting_for_peer_relation = (
             Directive.WAIT_FOR_PEER_CLUSTER_RELATION in deployment_desc.pending_directives
         )
         self.refresh_relation_data(
             event,
             event_rel_id=event.relation.id,
-            can_defer=not is_failover_waiting_for_peer_relation,
+            can_defer=not is_waiting_for_peer_relation,
         )
 
-        if is_failover_waiting_for_peer_relation:
+        if is_waiting_for_peer_relation:
             return
 
         # only the main-orchestrator is able to designate a failover
