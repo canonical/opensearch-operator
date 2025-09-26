@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+import re
 import subprocess
 from typing import Optional
 
@@ -10,7 +11,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
-from ..helpers import CONFIG_OPTS, run_action
+from ..helpers import CONFIG_OPTS, http_request, run_action
 from ..helpers_deployments import get_application_units, wait_until
 
 OPENSEARCH_CHARM = "opensearch"
@@ -21,8 +22,9 @@ TIMEOUT = 2400
 IDLE_PERIOD = 30
 FAST_INTERVAL = "60s"
 
-VERSION_N_MINUS_2 = "2.17.0"
+VERSION_N = "2.19.0"
 VERSION_N_MINUS_1 = "2.18.0"
+VERSION_N_MINUS_2 = "2.17.0"
 
 VERSION_TO_REVISION = {
     VERSION_N_MINUS_2: {"jammy": 168, "noble": 206},
@@ -50,7 +52,7 @@ def testing_config_if_supported(revision: int) -> dict[str, str]:
     return CONFIG_OPTS if revision >= PROFILES_REVISION else {}
 
 
-async def refresh(
+def refresh(
     ops_test: OpsTest,
     app_name: str,
     *,
@@ -89,6 +91,52 @@ async def refresh(
             subprocess.check_output(cmd)
 
 
+def get_version_on_unit(unit: str, model: str):
+    """Returns version of OpenSearch running on given unit"""
+    # opensearch.opensearch-bin not exposed in older snap revisions
+    cmd = [
+        "juju",
+        "exec",
+        "--model",
+        model,
+        "--unit",
+        unit,
+        "--",
+        "sudo",
+        "snap",
+        "run",
+        "--shell",
+        "opensearch.daemon",
+        "-c",
+        "$OPENSEARCH_BIN/opensearch --version",
+    ]
+    output = subprocess.check_output(cmd, text=True)
+    match = re.search(r"Version:\s*([0-9]+\.[0-9]+\.[0-9]+)", output)
+    return match.group(1) if match else None
+
+
+async def assert_version_cluster(ops_test: OpsTest, app: str, expected_version: str):
+    """Ensures cluster reports running expected OpenSearch version"""
+    logger.info(f"Ensuring cluster reports version {expected_version}")
+    units = await get_application_units(ops_test, app)
+    leader_ip = [u.ip for u in units if u.is_leader][0]
+    response = await http_request(ops_test, "GET", f"https://{leader_ip}:9200")
+    version = response["version"]["number"]
+    assert version == expected_version, f"Cluster reported unexpected version {version}. Expected {expected_version}"
+    logger.info(f"Cluster reported expected version")
+
+async def assert_version_units(ops_test: OpsTest, app: str, expected_version: str):
+    """Ensures all units in given app are running expected OpenSearch version"""
+    logger.info(f"Ensuring units in '{app}' running version {expected_version}")
+
+    units = [f"{app}/{unit.id}" for unit in await get_application_units(ops_test, app)]
+    versions = [get_version_on_unit(unit, ops_test.model.info.name) for unit in units]
+    assert all(
+        version == expected_version for version in versions
+    ), f"Expected {expected_version} on all units, found versions: {list(zip(units, versions))}"
+    logger.info(f"All units in '{app}' running version {expected_version}")
+
+
 async def assert_upgrade_to_revision(
     ops_test: OpsTest,
     app: str,
@@ -106,7 +154,7 @@ async def assert_upgrade_to_revision(
 
     async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
         logger.info(f"Refreshing '{app}' to revision {revision}")
-        await refresh(
+        refresh(
             ops_test,
             app,
             revision=revision,
@@ -155,7 +203,7 @@ async def assert_upgrade_to_local(
 
     async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
         logger.info(f"Refreshing '{app}' local charm")
-        await refresh(ops_test, app, path=charm, config=CONFIG_OPTS | config)
+        refresh(ops_test, app, path=charm, config=CONFIG_OPTS | config)
 
         await wait_until(
             ops_test,
@@ -186,7 +234,7 @@ async def assert_upgrade_to_local(
 
 
 async def assert_rollback_to_revision(
-    ops_test: OpsTest, app: str, charm: str, revision: int, config: dict[str, str] = {}
+    ops_test: OpsTest, app: str, charm: str, revision: int, version: str, config: dict[str, str] = {}
 ):
     """Upgrades to local charm and rolls back to revision mid-upgrade"""
     units = await get_application_units(ops_test, app)
@@ -200,7 +248,7 @@ async def assert_rollback_to_revision(
     n_units = len(units)
     async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
         logger.info(f"Refreshing '{app}' to local charm")
-        await refresh(ops_test, app, path=charm, config=CONFIG_OPTS | config)
+        refresh(ops_test, app, path=charm, config=CONFIG_OPTS | config)
 
         await wait_until(
             ops_test,
@@ -215,7 +263,7 @@ async def assert_rollback_to_revision(
         )
 
         # switch to store charm
-        await refresh(
+        refresh(
             ops_test,
             app,
             switch=OPENSEARCH_CHARM,
@@ -238,8 +286,11 @@ async def assert_rollback_to_revision(
             idle_period=IDLE_PERIOD,
         )
 
+        logger.info(f"Ensure cluster reports previous version")
+        assert assert_version_cluster(ops_test, app, version)
+
         logger.info(f"Rolling back '{app}' to revision: {revision}")
-        await refresh(
+        refresh(
             ops_test,
             app,
             revision=revision,

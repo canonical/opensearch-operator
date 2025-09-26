@@ -22,12 +22,15 @@ from .helpers import (
     OPENSEARCH_CHANNEL,
     OPENSEARCH_CHARM,
     UPGRADE_PARAMS,
+    VERSION_N,
     VERSION_N_MINUS_1,
     VERSION_N_MINUS_2,
     VERSION_TO_REVISION,
     assert_rollback_to_revision,
     assert_upgrade_to_local,
     assert_upgrade_to_revision,
+    assert_version_cluster,
+    assert_version_units,
     testing_config_if_supported,
 )
 
@@ -156,7 +159,10 @@ async def test_upgrade_between_versions(ops_test: OpsTest, series: str) -> None:
 
     revision = VERSION_TO_REVISION[VERSION_N_MINUS_1][series]
     for app in list(APPS.keys()):
+        await assert_version_units(ops_test, app, VERSION_N_MINUS_2)
         await assert_upgrade_to_revision(ops_test, app, revision)
+        await assert_version_units(ops_test, app, VERSION_N_MINUS_1)
+        await assert_version_cluster(ops_test, app, VERSION_N_MINUS_1 if app == MAIN_APP else VERSION_N_MINUS_2)
 
 
 @pytest.mark.group(id="happy_path_upgrade")
@@ -167,6 +173,8 @@ async def test_upgrade_to_local(
     """Test upgrade to local charm."""
     for app in [APP_NAME, FAILOVER_APP, MAIN_APP]:
         await assert_upgrade_to_local(ops_test, app=app, charm=charm)
+        await assert_version_units(ops_test, app, VERSION_N)
+        await assert_version_cluster(ops_test, app, VERSION_N if app == MAIN_APP else VERSION_N_MINUS_1)
 
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
@@ -192,7 +200,10 @@ async def test_upgrade_rollback_from_local(
     """Test upgrade to local and rollback to given version."""
     revision = VERSION_TO_REVISION[version][series]
     for app in [APP_NAME, FAILOVER_APP, MAIN_APP]:
-        await assert_rollback_to_revision(ops_test, app, charm, revision)
+        await assert_version_units(ops_test, app, version)
+        await assert_rollback_to_revision(ops_test, app, charm, revision, version=version)
+        await assert_version_units(ops_test, app, version)
+        await assert_version_cluster(ops_test, app, version)
 
 
 @pytest.mark.parametrize("version", UPGRADE_PARAMS)
@@ -203,6 +214,8 @@ async def test_upgrade_from_version_to_local(
     """Test upgrade from usptream to local charm."""
     for app in [APP_NAME, FAILOVER_APP, MAIN_APP]:
         await assert_upgrade_to_local(ops_test, app=app, charm=charm)
+        await assert_version_units(ops_test, app, VERSION_N)
+        await assert_version_cluster(ops_test, app, VERSION_N if app == MAIN_APP else version)
 
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)

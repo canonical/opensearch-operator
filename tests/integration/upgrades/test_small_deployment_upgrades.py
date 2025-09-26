@@ -18,12 +18,15 @@ from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import (
     PROFILES_REVISION,
     UPGRADE_PARAMS,
+    VERSION_N,
     VERSION_N_MINUS_1,
     VERSION_N_MINUS_2,
     VERSION_TO_REVISION,
     assert_rollback_to_revision,
     assert_upgrade_to_local,
     assert_upgrade_to_revision,
+    assert_version_cluster,
+    assert_version_units,
 )
 
 logger = logging.getLogger(__name__)
@@ -69,7 +72,7 @@ async def _build_env(ops_test: OpsTest, version: str, series) -> None:
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
         status="active",
         timeout=1400,
-        idle_period=50,
+        idle_period=30,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
@@ -99,7 +102,10 @@ async def test_upgrade_between_versions(
     """Test upgrade from upstream to currently locally built version."""
     app = (await app_name(ops_test)) or APP_NAME
     revision = VERSION_TO_REVISION[VERSION_N_MINUS_1][series]
+    await assert_version_units(ops_test, app, VERSION_N_MINUS_2)
     await assert_upgrade_to_revision(ops_test, app=app, revision=revision)
+    await assert_version_units(ops_test, app, VERSION_N_MINUS_1)
+    await assert_version_cluster(ops_test, app, VERSION_N_MINUS_1)
 
 
 @pytest.mark.group(id="happy_path_upgrade")
@@ -108,11 +114,14 @@ async def test_upgrade_to_local(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, charm
 ) -> None:
     """Test upgrade from usptream to currently locally built version."""
-    await assert_upgrade_to_local(ops_test, app=APP_NAME, charm=charm)
+    app = (await app_name(ops_test)) or APP_NAME
+    await assert_upgrade_to_local(ops_test, app=app, charm=charm)
+    await assert_version_units(ops_test, app, VERSION_N)
+    await assert_version_cluster(ops_test, app, VERSION_N)
 
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
-    await assert_continuous_writes_consistency(ops_test, c_writes, [APP_NAME])
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
 
 
 ##################################################################################
@@ -141,7 +150,10 @@ async def test_upgrade_rollback_from_local(
     """Test upgrade and rollback to each version available."""
     app = (await app_name(ops_test)) or APP_NAME
     revision = VERSION_TO_REVISION[version][series]
-    await assert_rollback_to_revision(ops_test, app=app, charm=charm, revision=revision)
+    await assert_version_units(ops_test, app, version)
+    await assert_rollback_to_revision(ops_test, app=app, charm=charm, revision=revision, version=version)
+    await assert_version_units(ops_test, app, version)
+    await assert_version_cluster(ops_test, app, version)
 
 
 @pytest.mark.parametrize("version", UPGRADE_PARAMS)
@@ -150,8 +162,11 @@ async def test_upgrade_from_version_to_local(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, version, charm
 ) -> None:
     """Test upgrade from usptream to currently locally built version."""
-    await assert_upgrade_to_local(ops_test, app=APP_NAME, charm=charm)
+    app = (await app_name(ops_test)) or APP_NAME
+    await assert_upgrade_to_local(ops_test, app=app, charm=charm)
+    await assert_version_units(ops_test, app, VERSION_N)
+    await assert_version_cluster(ops_test, app, VERSION_N)
 
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
-    await assert_continuous_writes_consistency(ops_test, c_writes, [APP_NAME])
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
