@@ -124,9 +124,7 @@ class OpenSearchPeerClustersManager:
         if Directive.WAIT_FOR_PEER_CLUSTER_RELATION in pending_directives:
             logger.debug("clearing WAIT_FOR_PEER_CLUSTER_RELATION directive")
             pending_directives.remove(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
-            if deployment_state.value == State.BLOCKED_WAITING_FOR_RELATION:
-                logger.debug("clearing deployment_state")
-                deployment_state = DeploymentState(value=State.ACTIVE)
+            deployment_state = DeploymentState(value=State.ACTIVE)
 
         if Directive.VALIDATE_CLUSTER_NAME in pending_directives:
             if config.cluster_name != data.cluster_name:
@@ -288,8 +286,9 @@ class OpenSearchPeerClustersManager:
             directives.append(Directive.SHOW_STATUS)
             directives.remove(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
 
-        # When scaling back up from 0 with the main orchestrator demoted to failover.
-        # We won't have the BLOCKED_WAITING_FOR_RELATION so we need to set it.
+        # While starting up an existing failover orchestrator
+        # we block if the peer relation is not set.
+        # An example is a demoted main orchestrator being scaled up
         if (
             prev_deployment.typ == DeploymentType.FAILOVER_ORCHESTRATOR
             and not self._charm.model.relations[PeerClusterRelationName]

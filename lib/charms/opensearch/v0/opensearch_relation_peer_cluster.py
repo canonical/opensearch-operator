@@ -1308,8 +1308,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             self.charm.peers_data.get_object(Scope.APP, "orchestrators")
         )
 
-        # a non registered cluster is departing (wrong relation), or, the current is a main
-        # orchestrator and a failover is departing, we can safely ignore.
+        # a non elected orchestrator is departing (wrong relation), or the current is a
+        # main orchestrator and a failover is departing, we can safely ignore.
         if event.relation.id not in [
             orchestrators.main_rel_id,
             orchestrators.failover_rel_id,
@@ -1610,11 +1610,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             return None
 
         return self.peer_cm.rel_data_from_str(peer_cluster_data).first_data_node
-
-    def clean_is_candidate_failover(self) -> None:
-        """Remove is_candidate_failover_orchestrator key from all relations"""
-        for rel in self.model.relations[self.relation_name]:
-            self.delete_from_rel(key="is_candidate_failover_orchestrator", rel_id=rel.id)
 
     def _clean_main_orchestrator_is_requirer_status(self, departing_relation: Relation) -> None:
         """Block the charm if main orchestrator is a requirer"""
