@@ -188,6 +188,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             self.refresh_relation_data(event)
             return
 
+        # Do not defer the event if we are waiting for a peer cluster relation
+        # Once the relation is established and the cluster starts we will re-process the event
         is_failover_waiting_for_peer_relation = (
             Directive.WAIT_FOR_PEER_CLUSTER_RELATION in deployment_desc.pending_directives
         )
