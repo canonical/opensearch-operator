@@ -34,6 +34,7 @@ from charms.opensearch.v0.models import (
     PeerClusterRelData,
     PeerClusterRelDataCredentials,
     PeerClusterRelErrorData,
+    PluginConfigInfo,
     S3RelDataCredentials,
     StartMode,
 )
@@ -635,16 +636,22 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             ),
         )
 
-    def _plugin_config_info(self) -> dict[str, str]:
-        """Grants plugin secrets to subcluster relations and returns secret ids"""
-        plugin_config_info = self.charm.state.app.plugin_config_info
+    def _plugin_config_info(self) -> dict[str, PluginConfigInfo]:
+        """Returns managed plugin configurations and grants related secrets to subclusters"""
+        plugins = self.charm.state.app.plugin_config_info
+        granted = dict(plugins)
         # grant secrets to subsclusters
-        granted = {}
-        for relation in self.charm.model.relations[self.relation_name]:
-            for label, plugin in plugin_config_info.items():
-                if self.secrets.grant_secret_to_relation(plugin.secret_id, relation):
-                    granted[label] = plugin
+        for label, plugin in plugins.items():
+            if plugin.secret_id and not self._grant_secret_to_subclusters(plugin.secret_id):
+                del granted[label]
         return granted
+
+    def _grant_secret_to_subclusters(self, secret_id: str) -> bool:
+        """Returns True if secret is successfully granted to all subclusters"""
+        for relation in self.charm.model.relations[self.relation_name]:
+            if not self.secrets.grant_secret_to_relation(secret_id, relation):
+                return False
+        return True
 
     def _rel_data_credentials(
         self, deployment_desc: DeploymentDescription
@@ -1045,7 +1052,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         self.charm.opensearch_peer_cm.run_with_relation_data(data)
 
     def _update_plugin_configs(self, configs_from_relation) -> None:
-        """Add or remove plugin configuration info from relation data"""
+        """Add or Remove plugin config information transferred from main orchestrator"""
         current_app_plugin_info = self.charm.state.app.plugin_config_info
         add, remove = diff(configs_from_relation.keys(), current_app_plugin_info.keys())
 
@@ -1063,12 +1070,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 relation_name=plugin.relation_name,
                 typ=plugin.typ,
             )
-            # self.charm.plugin_manager.put_plugin_config_info(
-            #     label,
-            #     secret_id=plugin.secret_id,
-            #     relation_name=plugin.relation_name,
-            #     typ=plugin.typ,
-            # )
 
     def apply_orchestrator_status(self) -> None:
         """Sets or clears status based on presence of local orchestrators."""

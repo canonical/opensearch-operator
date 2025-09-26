@@ -248,4 +248,7 @@ class OpenSearchPluginManager:
         plugins = state.plugin_config_info
         if label in plugins:
             del plugins[label]
+            if not plugins:
+                state.relation_data.delete(scope, "plugin_config_info")
+                return
             state.relation_data.put_object(scope, "plugin_config_info", plugins)

@@ -31,7 +31,7 @@ class OpenSearchApp:
 
     @property
     def plugin_config_info(self) -> Dict[str, PluginConfigInfo]:
-        """Returns plugin secrets this app is tracking"""
+        """Returns configuration information for plugins this app is managing"""
         plugin_config_info = self.relation_data.get_object(self.scope, "plugin_config_info") or {}
         return {
             label: PluginConfigInfo.from_dict(plugin)
@@ -51,7 +51,7 @@ class OpenSearchUnit:
 
     @property
     def plugin_config_info(self) -> Dict[str, PluginConfigInfo]:
-        """Returns plugin secret labels this unit is tracking"""
+        """Returns configuration information for plugins this unit is managing"""
         plugin_configs = self.relation_data.get_object(self.scope, "plugin_config_info") or {}
         return {label: PluginConfigInfo.from_dict(info) for label, info in plugin_configs.items()}
 

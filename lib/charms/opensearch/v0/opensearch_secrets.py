@@ -283,7 +283,9 @@ class OpenSearchSecrets(Object, RelationDataStore):
             return None
 
         secret.remove_all_revisions()
-        self.cached_secrets.delete(scope, self.label(scope, key))
+        label = self.label(scope, key)
+        self.cached_secrets.delete(scope, label)
+        self._charm.peers_data.delete(scope, label)
 
     @override
     def has(self, scope: Scope, key: str):
