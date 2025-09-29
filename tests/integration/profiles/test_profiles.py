@@ -128,8 +128,8 @@ async def test_wait_blocked_cluster_topology(ops_test: OpsTest) -> None:
 @pytest.mark.abort_on_fail
 async def test_scale_to_active(ops_test: OpsTest) -> None:
     """Scale the OpenSearch cluster to the active state."""
-    # os_app = ops_test.model.applications[APP_NAME]
-    # await os_app.add_units(count=2)
+    os_app = ops_test.model.applications[APP_NAME]
+    await os_app.add_units(count=2)
     await wait_until(
         ops_test,
         apps=[APP_NAME],
