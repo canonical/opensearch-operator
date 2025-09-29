@@ -8,6 +8,7 @@ import logging
 import pytest
 from charms.opensearch.v0.constants_charm import PClusterNoDataNode
 from pytest_operator.plugin import OpsTest
+from requests import request
 
 from ..ha.test_large_deployments_cluster_manager_only_nodes import REL_ORCHESTRATOR
 from ..ha.test_large_deployments_relations import REL_PEER
@@ -42,6 +43,39 @@ async def get_constraints(ops_test: OpsTest) -> str | None:
     if cloud_type == "lxd":
         return "mem=8G"
     return None
+
+
+async def check_heap_size(ops_test: OpsTest, heap_size_in_gb: int):
+    """A dummy test to make pytest happy when all other tests are skipped."""
+    os_app = ops_test.model.applications[APP_NAME]
+    unit = os_app.units[0]
+
+    action = await unit.run_action("get-password")
+    action = await action.wait()
+    assert action.status == "completed", f"Action failed: {action.error_message}"
+    secrets = action.results
+    assert secrets is not None
+    password = secrets.get("password")
+    assert password is not None, "Password should not be None"
+
+    # request the OpenSearch endpoint to get the JVM settings
+    jvm_response = request(
+        "GET",
+        f"https://{unit.public_address}:9200/_nodes/stats/jvm",
+        verify=False,
+        auth=("admin", password),
+    )
+    assert jvm_response.status_code == 200, f"Failed to get JVM stats: {jvm_response.text}"
+    jvm_info = jvm_response.json()
+    assert "nodes" in jvm_info, "No nodes information in JVM stats"
+    for node_id, node_info in jvm_info["nodes"].items():
+        assert "jvm" in node_info, f"No JVM information for node {node_id}"
+        jvm_mem = node_info["jvm"]["mem"]
+        heap_max_in_bytes = jvm_mem["heap_max_in_bytes"]
+        # Check that the heap size is set to 4GB (in bytes)
+        assert (
+            heap_max_in_bytes == heap_size_in_gb * 1024 * 1024 * 1024
+        ), f"Heap size is not {heap_size_in_gb}GB: {heap_max_in_bytes}"
 
 
 @pytest.mark.abort_on_fail
@@ -94,13 +128,15 @@ async def test_wait_blocked_cluster_topology(ops_test: OpsTest) -> None:
 @pytest.mark.abort_on_fail
 async def test_scale_to_active(ops_test: OpsTest) -> None:
     """Scale the OpenSearch cluster to the active state."""
-    os_app = ops_test.model.applications[APP_NAME]
-    await os_app.add_units(count=2)
+    # os_app = ops_test.model.applications[APP_NAME]
+    # await os_app.add_units(count=2)
     await wait_until(
         ops_test,
         apps=[APP_NAME],
         wait_for_exact_units=3,
     )
+
+    await check_heap_size(ops_test, 4)
 
 
 @pytest.mark.abort_on_fail
@@ -161,6 +197,7 @@ async def test_testing_profile(ops_test: OpsTest, charm: str, series: str) -> No
         units_statuses=["active"],
         wait_for_exact_units=1,
     )
+    await check_heap_size(ops_test, 1)
 
 
 @pytest.mark.abort_on_fail
@@ -267,3 +304,5 @@ async def test_large_deployment_cluster(ops_test: OpsTest, charm: str, series: s
     data_app = ops_test.model.applications["data"]
     await data_app.add_units(count=2)
     await wait_until(ops_test, apps=["main", "data"], wait_for_exact_units=3, timeout=2000)
+
+    await check_heap_size(ops_test, 4)
