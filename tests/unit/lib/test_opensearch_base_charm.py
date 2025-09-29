@@ -416,9 +416,18 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             start.assert_called_once()
             _post_start_init.assert_called_once()
 
+    @patch(f"{BASE_LIB_PATH}.opensearch_health.OpenSearchHealth.apply", return_value="green")
     @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size")
     @patch(
-        f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_all_requirements",
+        f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_memory_requirements",
+        return_value=[],
+    )
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_cluster_topology",
+        return_value=[],
+    )
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_missing_system_requirements",
         return_value=[],
     )
     @patch(f"{BASE_LIB_PATH}.opensearch_backups.BackupManager.is_backup_in_progress")
@@ -429,11 +438,21 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         f"{BASE_LIB_PATH}.opensearch_relation_provider.OpenSearchProvider.remove_lingering_relation_users_and_roles"
     )
     def test_on_update_status(
-        self, _, cert_expiration_remaining_hours, _stop_opensearch, __, ___, ____, _____
+        self,
+        _,
+        cert_expiration_remaining_hours,
+        _stop_opensearch,
+        __,
+        ___,
+        ____,
+        _____,
+        ______,
+        _______,
+        ________,
     ):
         """Test on update status."""
         with patch(
-            f"{self.BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_all_requirements"
+            f"{self.BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_missing_system_requirements"
         ) as check_all_requirements:
             # test missing sys requirements
             check_all_requirements.return_value = ["ulimit -n not set"]

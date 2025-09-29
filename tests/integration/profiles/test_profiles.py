@@ -21,6 +21,10 @@ from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 
 logger = logging.getLogger(__name__)
 
+_3CM_AND_3DATA_MISSING_STATUS = (
+    "Missing requirements: At least 3 cluster manager nodes and 3 data nodes are required."
+)
+
 
 async def get_cloud_type(ops_test: OpsTest) -> str:
     """Return current cloud type of the selected controller.
@@ -109,18 +113,8 @@ async def test_wait_blocked_cluster_topology(ops_test: OpsTest) -> None:
     await wait_until(
         ops_test,
         apps=[APP_NAME],
-        apps_full_statuses={
-            APP_NAME: {
-                "blocked": ["At least 3 cluster manager nodes and 3 data nodes are required."]
-            }
-        },
-        units_full_statuses={
-            APP_NAME: {
-                "units": {
-                    "blocked": ["At least 3 cluster manager nodes and 3 data nodes are required."]
-                }
-            }
-        },
+        apps_full_statuses={APP_NAME: {"blocked": [_3CM_AND_3DATA_MISSING_STATUS]}},
+        units_full_statuses={APP_NAME: {"units": {"blocked": [_3CM_AND_3DATA_MISSING_STATUS]}}},
         wait_for_exact_units=1,
     )
 
@@ -163,12 +157,16 @@ async def test_insufficient_memory(ops_test: OpsTest, charm: str, series: str) -
     await wait_until(
         ops_test,
         apps=[APP_NAME],
-        apps_full_statuses={APP_NAME: {"blocked": ["Insufficient memory: 3145728.0 < 8388608"]}},
+        apps_full_statuses={
+            APP_NAME: {
+                "blocked": ["Missing requirements: Insufficient memory: 3145728.0 < 8388608"]
+            }
+        },
         units_full_statuses={
             APP_NAME: {
                 "units": {
                     "blocked": [
-                        "Insufficient memory: 3145728.0 < 8388608",
+                        "Missing requirements: Insufficient memory: 3145728.0 < 8388608",
                     ],
                     "waiting": [
                         "Requesting lock on operation: start",
@@ -207,18 +205,8 @@ async def test_config_changed_to_production(ops_test: OpsTest) -> None:
     await wait_until(
         ops_test,
         apps=[APP_NAME],
-        apps_full_statuses={
-            APP_NAME: {
-                "blocked": ["At least 3 cluster manager nodes and 3 data nodes are required."]
-            }
-        },
-        units_full_statuses={
-            APP_NAME: {
-                "units": {
-                    "blocked": ["At least 3 cluster manager nodes and 3 data nodes are required."]
-                }
-            }
-        },
+        apps_full_statuses={APP_NAME: {"blocked": [_3CM_AND_3DATA_MISSING_STATUS]}},
+        units_full_statuses={APP_NAME: {"units": {"blocked": [_3CM_AND_3DATA_MISSING_STATUS]}}},
         wait_for_exact_units=1,
     )
 
@@ -262,16 +250,8 @@ async def test_large_deployment_cluster(ops_test: OpsTest, charm: str, series: s
         ops_test,
         apps=["main", "data"],
         units_full_statuses={
-            "main": {
-                "units": {
-                    "blocked": ["At least 3 cluster manager nodes and 3 data nodes are required."]
-                }
-            },
-            "data": {
-                "units": {
-                    "blocked": ["At least 3 cluster manager nodes and 3 data nodes are required."]
-                }
-            },
+            "main": {"units": {"blocked": [_3CM_AND_3DATA_MISSING_STATUS]}},
+            "data": {"units": {"blocked": [_3CM_AND_3DATA_MISSING_STATUS]}},
         },
         wait_for_exact_units={"main": 1, "data": 1},
     )
@@ -286,7 +266,7 @@ async def test_large_deployment_cluster(ops_test: OpsTest, charm: str, series: s
             "main": {
                 "units": {
                     "blocked": [
-                        "At least 3 data nodes are required.",
+                        "Missing requirements: At least 3 data nodes are required.",
                         PClusterNoDataNode,
                     ]
                 }
@@ -294,7 +274,7 @@ async def test_large_deployment_cluster(ops_test: OpsTest, charm: str, series: s
             "data": {
                 "units": {
                     "blocked": [
-                        "At least 3 data nodes are required.",
+                        "Missing requirements: At least 3 data nodes are required.",
                     ]
                 }
             },

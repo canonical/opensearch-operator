@@ -586,6 +586,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # if app_data + app_data["nodes_config"]: Reconfigure + restart node on the unit
             self._reconfigure_and_restart_unit_if_needed()
 
+        # check requirements
+        if self.state.app.deployment_description:
+            self.profiles_manager.check_all_requirements()
+
         if not (unit_data := event.relation.data.get(event.unit)):
             return
 
@@ -594,13 +598,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.unit.is_leader() and unit_data.get("bootstrap_contributor"):
             contributor_count = self.peers_data.get(Scope.APP, "bootstrap_contributors_count", 0)
             self.peers_data.put(Scope.APP, "bootstrap_contributors_count", contributor_count + 1)
-
-        # check requirements
-        if self.state.app.deployment_description and (
-            missing_requirements := self.profiles_manager.check_all_requirements()
-        ):
-            logger.error("Missing profile requirements: %s", missing_requirements)
-            self.status.set(BlockedStatus(" - ".join(missing_requirements)))
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
@@ -722,9 +719,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             without the user noticing in case the cert of the unit transport layer expires.
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
-        if missing_requirements := self.profiles_manager.check_all_requirements():
-            logger.error("Missing profile requirements: %s", missing_requirements)
-            self.status.set(BlockedStatus(" - ".join(missing_requirements)))
+        if self.profiles_manager.check_all_requirements():
             return
 
         # if node already shutdown - leave
@@ -824,11 +819,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             )
             self.status.set(BlockedStatus(InvalidProfileConfigOption))
             return
-        missing_requirements = self.profiles_manager.check_all_requirements(config_profile)
 
-        if missing_requirements:
-            logger.error(f"Missing profile requirements: {missing_requirements}")
-            self.status.set(BlockedStatus(" - ".join(missing_requirements)))
+        if self.profiles_manager.check_all_requirements(config_profile):
             event.defer()
             return
 
@@ -1502,8 +1494,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _can_service_start(self, is_first_data_node: bool = False) -> bool:  # noqa: C901
         """Return if the opensearch service can start."""
         # if there are any missing system requirements block
-        if missing_sys_reqs := self.profiles_manager.check_all_requirements():
-            self.status.set(BlockedStatus(" - ".join(missing_sys_reqs)))
+        if self.profiles_manager.check_all_requirements():
             return False
 
         if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):

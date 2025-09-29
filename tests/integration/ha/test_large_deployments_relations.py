@@ -32,7 +32,7 @@ INVALID_CLUSTER_NAME = "timeseries"
 
 APP_UNITS = {MAIN_APP: 3, FAILOVER_APP: 3, DATA_APP: 2, INVALID_APP: 1}
 
-NO_CM_STATUS_MESSAGE = "At least 1 cluster manager nodes are required."
+NO_CM_STATUS_MESSAGE = "Missing requirements: At least 1 cluster manager nodes are required."
 
 
 @pytest.mark.abort_on_fail

@@ -101,8 +101,16 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
                     "blocked": ["Cannot run cluster with current roles. Waiting for data node..."]
                 }
             },
-            FAILOVER_APP: {"units": {"blocked": ["At least 1 data nodes are required."]}},
-            DATA_APP: {"units": {"blocked": ["At least 1 cluster manager nodes are required."]}},
+            FAILOVER_APP: {
+                "units": {"blocked": ["Missing requirements: At least 1 data nodes are required."]}
+            },
+            DATA_APP: {
+                "units": {
+                    "blocked": [
+                        "Missing requirements: At least 1 cluster manager nodes are required."
+                    ]
+                }
+            },
         },
         wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
         idle_period=IDLE_PERIOD,

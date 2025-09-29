@@ -19,12 +19,13 @@ from typing import TYPE_CHECKING, List, Optional
 
 from charms.opensearch.v0.constants_charm import InvalidProfileConfigOption
 from charms.opensearch.v0.helper_cluster import ClusterTopology
+from ops import BlockedStatus
 
 if TYPE_CHECKING:
     from charms.opensearch.v0.state import OpenSearchClusterState
     from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 
-from charms.opensearch.v0.helper_charm import all_units, format_unit_name
+from charms.opensearch.v0.helper_charm import Status, all_units, format_unit_name
 from charms.opensearch.v0.models import (
     Model,
     PeerClusterApp,
@@ -220,7 +221,9 @@ class ProfilesManager:
         logger.error("Missing cluster topology requirements: %s", error_message)
         return [error_message]
 
-    def check_all_requirements(self, profile: Optional[OpenSearchProfile] = None) -> List[str]:
+    def check_all_requirements(
+        self, profile: Optional[OpenSearchProfile] = None, set_status: bool = True
+    ) -> List[str]:
         """Check all requirements of profile
 
         Requirements include:
@@ -236,11 +239,23 @@ class ProfilesManager:
                 logger.error(
                     "Invalid profile configuration. Value: %s", self.state.config.get("profile")
                 )
+                self.state.charm.status.set(BlockedStatus(InvalidProfileConfigOption))
                 return [InvalidProfileConfigOption]
 
         missing_requirements.extend(self.check_missing_system_requirements())
         missing_requirements.extend(self.check_memory_requirements(profile))
         missing_requirements.extend(self.check_cluster_topology(profile))
+
+        if set_status:
+            if missing_requirements:
+                logger.error("Missing profile requirements: %s", missing_requirements)
+                self.state.charm.status.set(
+                    BlockedStatus(f"Missing requirements: {' - '.join(missing_requirements)}")
+                )
+            else:
+                self.state.charm.status.clear(
+                    status_message="Missing requirements:", pattern=Status.CheckPattern.Start
+                )
 
         return missing_requirements
 
