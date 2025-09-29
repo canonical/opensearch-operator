@@ -99,7 +99,10 @@ class SmtpEvents(Object):
         }
 
         self.charm.keystore.add_entries(entries)
-        self.charm.keystore.reload()
+        if not self.charm.keystore.reload():
+            logger.debug("Could not reload secure settings. Deferring event.")
+            event.defer()
+            return
 
         self.charm.plugin_manager.put_plugin_config(
             scope=Scope.UNIT,
@@ -130,7 +133,12 @@ class SmtpEvents(Object):
         keys = plugin_config.cleanup
 
         self.charm.keystore.remove_entries(keys)
-        self.charm.keystore.reload()
+
+        if not self.charm.keystore.reload():
+            logger.debug("Could not reload secure settings. Deferring event.")
+            event.defer()
+            return
+
         self.charm.plugin_manager.remove_plugin_config(scope=Scope.UNIT, label=self.secret_label)
 
         if not self.charm.unit.is_leader():
@@ -167,7 +175,10 @@ class SmtpEvents(Object):
         )
 
         self.charm.keystore.add_entries(keys)
-        self.charm.keystore.reload()
+        if not self.charm.keystore.reload():
+            logger.debug("Could not reload secure settings. Deferring event.")
+            event.defer()
+            return
 
 
 class OpenSearchPluginEvents(Object):
@@ -180,7 +191,7 @@ class OpenSearchPluginEvents(Object):
             self.charm.on[PeerRelationName].relation_changed, self._on_peer_relation_changed
         )
 
-    def _on_peer_relation_changed(self, _):
+    def _on_peer_relation_changed(self, event):
         """Handle plugin secret-related peer relation changes."""
         # if this is a subcluster, all units must add plugin keys from secrets to their keystores
         if not self.charm.opensearch_peer_cm.is_consumer(of="main"):
@@ -211,10 +222,15 @@ class OpenSearchPluginEvents(Object):
             # this unit should delete the keys it wrote as the app secret has been removed
             plugin = unit_plugins[label]
             self.charm.keystore.remove_entries(plugin.cleanup)
-            self.charm.plugin_manager.remove_plugin_config(scope=Scope.UNIT, label=label)
 
         # reload keystore
-        self.charm.keystore.reload()
+        if not self.charm.keystore.reload():
+            logger.debug("Could not reload secure settings. Deferring event.")
+            event.defer()
+            return
+
+        for label in removed:
+            self.charm.plugin_manager.remove_plugin_config(scope=Scope.UNIT, label=label)
 
 
 class OpenSearchPluginManager:

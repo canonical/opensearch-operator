@@ -691,7 +691,11 @@ class OpenSearchBackupBase(Object):
             # Any other exception should result in actual errors.
             keys_to_remove = plug.disable().secret_entries.keys()
             self.charm.keystore.remove_entries(keys_to_remove)
-            self.charm.keystore.reload()
+
+        if not self.charm.keystore.reload():
+            logger.debug("Could not reload secure settings. Deferring event.")
+            event.defer()
+            return
 
     def _on_backup_disable(self, event: _DisableBackupRelationEvent) -> None:  # noqa C901
         """Disables the backup relation."""
@@ -767,7 +771,10 @@ class OpenSearchBackupBase(Object):
 
         keys_to_remove = plug.disable().secret_entries.keys()
         self.charm.keystore.remove_entries(keys_to_remove)
-        self.charm.keystore.reload()
+        if not self.charm.keystore.reload():
+            logger.debug("Could not reload secure settings. Deferring event.")
+            event.defer()
+            return
 
         # Now, as this is related strictly to the MAIN orchestrator,
         # we must update any peer relation.
@@ -883,7 +890,11 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
                 continue
             entries_to_add = plugin.config().secret_entries
             self.charm.keystore.add_entries(entries_to_add)
-            self.charm.keystore.reload()
+
+        if not self.charm.keystore.reload():
+            logger.debug("Could not reload secure settings. Deferring event.")
+            event.defer()
+            return
 
         event.secret.get_content(refresh=True)
 
@@ -1072,7 +1083,10 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
 
         entries_to_add = self.plugin.config().secret_entries
         self.charm.keystore.add_entries(entries_to_add)
-        self.charm.keystore.reload()
+        if not self.charm.keystore.reload():
+            logger.debug("Could not reload secure settings. Deferring event.")
+            event.defer()
+            return
 
         if not self.charm.unit.is_leader():
             # Plugin is configured locally for this unit. Now the leader proceed.
