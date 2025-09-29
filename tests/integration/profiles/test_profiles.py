@@ -45,9 +45,9 @@ async def get_constraints(ops_test: OpsTest) -> str | None:
     return None
 
 
-async def check_heap_size(ops_test: OpsTest, heap_size_in_gb: int):
+async def check_heap_size(ops_test: OpsTest, heap_size_in_gb: int, app_name: str = APP_NAME):
     """A dummy test to make pytest happy when all other tests are skipped."""
-    os_app = ops_test.model.applications[APP_NAME]
+    os_app = ops_test.model.applications[app_name]
     unit = os_app.units[0]
 
     action = await unit.run_action("get-password")
@@ -305,4 +305,4 @@ async def test_large_deployment_cluster(ops_test: OpsTest, charm: str, series: s
     await data_app.add_units(count=2)
     await wait_until(ops_test, apps=["main", "data"], wait_for_exact_units=3, timeout=2000)
 
-    await check_heap_size(ops_test, 4)
+    await check_heap_size(ops_test, 4, app_name="main")
