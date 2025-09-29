@@ -188,7 +188,7 @@ async def get_application_subordinate_units(
     for principal_unit in get_raw_application(ops_test, principal_app)["units"].values():
         u_name, raw_unit = None, None
         for u_name, raw_unit in principal_unit["subordinates"].items():
-            if u_name.startswith(f"${app}/"):
+            if u_name.startswith(f"{app}/"):
                 break
         else:
             raise ValueError(f"Subordinate unit for {app} not found in {principal_app}")
