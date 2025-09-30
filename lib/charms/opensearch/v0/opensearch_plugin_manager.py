@@ -43,9 +43,7 @@ if TYPE_CHECKING:
 SMTP_SECRET_LABEL = "plugin-notifications"
 
 SmtpNoRelationData = "No relation data found. Please check the relation with smtp-integrator."
-SmtpMissingRequiredParameters = (
-    "Parameters missing: {}. Please check the relation with smtp-integrator."
-)
+SmtpMissingRequiredParameters = "Parameters missing from smtp-integrator: {}."
 
 
 class SmtpEvents(Object):
@@ -81,10 +79,9 @@ class SmtpEvents(Object):
         # validate data
         required_params = ["user", "password"]
         if missing_parameters := [p for p in required_params if not getattr(parameters, p)]:
-            logger.error("Parameters missing from smtp-intgrator: %s" % missing_parameters)
-            self.charm.status.set(
-                BlockedStatus(SmtpMissingRequiredParameters.format(missing_parameters))
-            )
+            msg = SmtpMissingRequiredParameters.format(", ".join(missing_parameters))
+            logger.error(msg)
+            self.charm.status.set(BlockedStatus(msg))
             return
 
         self.charm.status.clear(
@@ -161,10 +158,18 @@ class SmtpEvents(Object):
         if label != event.secret.label:
             return
 
-        secret = event.secret.get_content(refresh=True)
-        raw = secret.get(self.secret_label)
-        config = json.loads(raw)
-        if not (keys := config.get("keys")):
+        content = event.secret.get_content(refresh=True)
+        if not (raw := content.get(self.secret_label)):
+            logger.warning("Secret %s has no %s payload", event.secret.label, self.secret_label)
+            return
+
+        try:
+            plugin_config = json.loads(raw)
+        except json.JSONDecodeError:
+            logger.error("Malformed JSON in secret %s", event.secret.label)
+            return
+
+        if not (keys := plugin_config.get("keys")):
             return
 
         # the keys to remove (user) may be changed here, add them to removal info for cleanup later
@@ -191,7 +196,7 @@ class OpenSearchPluginEvents(Object):
             self.charm.on[PeerRelationName].relation_changed, self._on_peer_relation_changed
         )
 
-    def _on_peer_relation_changed(self, event):
+    def _on_peer_relation_changed(self, event):  # noqa: C901
         """Handle plugin secret-related peer relation changes."""
         # if this is a subcluster, all units must add plugin keys from secrets to their keystores
         if not self.charm.opensearch_peer_cm.is_consumer(of="main"):
@@ -206,13 +211,20 @@ class OpenSearchPluginEvents(Object):
                 continue
 
             # start locally tracking secret and write transferred keys to keystore
-            plugin_config = json.loads(
-                self.charm.secrets.track_secret(plugin.secret_id, Scope.APP, label)
-                .get_content()
-                .get(label)
-            )
+            content = self.charm.secrets.track_secret(
+                plugin.secret_id, Scope.APP, label
+            ).get_content()
+            if not (raw := content.get(label)):
+                continue
+
+            try:
+                plugin_config = json.loads(raw)
+            except json.JSONDecodeError:
+                logger.error("Invalid JSON in secret for label %s", label)
+                continue
 
             keys_to_add = plugin_config.get("keys")
+
             # store on unit for later removal (only keys needed and not values)
             self.charm.plugin_manager.put_plugin_config(
                 scope=Scope.UNIT, label=label, cleanup={"keys": list(keys_to_add.keys())}
