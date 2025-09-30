@@ -12,7 +12,7 @@ config-changed, upgrade, s3-credentials-changed, etc.
 
 import json
 import logging
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_charm import Status, diff
@@ -104,23 +104,22 @@ class SmtpEvents(Object):
             event.defer()
             return
 
+        # store keys to remove later
         self.charm.plugin_manager.put_plugin_config(
             scope=Scope.UNIT,
             label=self.secret_label,
-            typ="keys",
-            cleanup=list(entries.keys()),
+            cleanup={"keys": list(entries.keys())},
         )
         if not self.charm.unit.is_leader():
             return
 
-        self.charm.secrets.put(Scope.APP, self.secret_label, json.dumps(entries))
+        self.charm.secrets.put(Scope.APP, self.secret_label, json.dumps({"keys": entries}))
         secret_id = self.charm.secrets.get_secret_id(Scope.APP, self.secret_label)
         self.charm.plugin_manager.put_plugin_config(
             scope=Scope.APP,
             label=self.secret_label,
             secret_id=secret_id,
             relation_name=self.relation_name,
-            typ="keys",
         )
 
         # if unit is main orchestrator leader, transfer keys to subclusters
@@ -130,7 +129,7 @@ class SmtpEvents(Object):
     def _on_smtp_credentials_gone(self, event) -> None:
         """Removes secret when credentials are gone"""
         plugin_config = self.charm.state.unit.plugin_config_info.get(self.secret_label)
-        keys = plugin_config.cleanup
+        keys = plugin_config.cleanup.get("keys")
 
         self.charm.keystore.remove_entries(keys)
 
@@ -164,14 +163,15 @@ class SmtpEvents(Object):
 
         secret = event.secret.get_content(refresh=True)
         raw = secret.get(self.secret_label)
-        keys = json.loads(raw)
+        config = json.loads(raw)
+        if not (keys := config.get("keys")):
+            return
 
         # the keys to remove (user) may be changed here, add them to removal info for cleanup later
         self.charm.plugin_manager.put_plugin_config(
             scope=Scope.UNIT,
             label=self.secret_label,
-            typ="keys",
-            cleanup=list(keys.keys()),
+            cleanup={"keys": list(keys.keys())},
         )
 
         self.charm.keystore.add_entries(keys)
@@ -206,22 +206,25 @@ class OpenSearchPluginEvents(Object):
                 continue
 
             # start locally tracking secret and write transferred keys to keystore
-            keys_to_add = json.loads(
+            plugin_config = json.loads(
                 self.charm.secrets.track_secret(plugin.secret_id, Scope.APP, label)
                 .get_content()
                 .get(label)
             )
 
+            keys_to_add = plugin_config.get("keys")
             # store on unit for later removal (only keys needed and not values)
             self.charm.plugin_manager.put_plugin_config(
-                scope=Scope.UNIT, label=label, typ=plugin.typ, cleanup=list(keys_to_add.keys())
+                scope=Scope.UNIT, label=label, cleanup={"keys": list(keys_to_add.keys())}
             )
             self.charm.keystore.add_entries(keys_to_add)
 
         for label in removed:
             # this unit should delete the keys it wrote as the app secret has been removed
-            plugin = unit_plugins[label]
-            self.charm.keystore.remove_entries(plugin.cleanup)
+            cleanup = unit_plugins[label].cleanup
+            for key, items in cleanup.items():
+                if key == "keys":
+                    self.charm.keystore.remove_entries(items)
 
         # reload keystore
         if not self.charm.keystore.reload():
@@ -243,18 +246,19 @@ class OpenSearchPluginManager:
         self,
         scope: Scope,
         label: str,
-        typ: str,
         secret_id: Optional[str] = None,
         relation_name: Optional[str] = None,
-        cleanup: Optional[List[str]] = [],
+        cleanup: Optional[Dict[str, List[str]]] = None,
     ) -> None:
         """Adds plugin configuration information to peer relation data"""
         state = self._state.app if scope == Scope.APP else self._state.unit
         plugins = state.plugin_config_info
         plugin_config = plugins.get(label) or PluginConfigInfo(
-            relation_name=relation_name, secret_id=secret_id, typ=typ
+            relation_name=relation_name,
+            secret_id=secret_id,
         )
-        plugin_config.add_cleanup_items(cleanup)
+        if cleanup:
+            plugin_config.add_cleanup_items(cleanup)
         plugins[label] = plugin_config
         state.relation_data.put_object(scope, "plugin_config_info", plugins)
 

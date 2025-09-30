@@ -506,16 +506,15 @@ class PluginConfigInfo(Model):
 
     relation_name: Optional[str] = None
     secret_id: Optional[str] = None
-    cleanup: list[str] = Field(default_factory=list)
-    typ: Literal["keys"]
+    cleanup: dict[str, list[str]] = Field(default_factory=dict)
 
-    def add_cleanup_items(self, items: List[str]) -> None:
-        """Append items to cleanup list avoiding duplicates."""
-        current = set(self.cleanup)
-        for item in items:
-            if item not in current:
-                self.cleanup.append(item)
-                current.add(item)
+    def add_cleanup_items(self, cleanup: dict[str, list[str]]) -> None:
+        """Merge items into cleanup dictionary avoiding duplicates."""
+        for key, items in cleanup.items():
+            current = self.cleanup.setdefault(key, [])
+            for item in items:
+                if item not in current:
+                    current.append(item)
 
 
 class PeerClusterRelData(Model):

@@ -1068,7 +1068,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 label=label,
                 secret_id=plugin.secret_id,
                 relation_name=plugin.relation_name,
-                typ=plugin.typ,
             )
 
     def apply_orchestrator_status(self) -> None:
