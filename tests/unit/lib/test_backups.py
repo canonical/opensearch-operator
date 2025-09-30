@@ -391,6 +391,7 @@ def test_on_s3_broken_steps(
     event.relation_name = "s3-credentials"
     harness.charm.backup._execute_s3_broken_calls = MagicMock()
     harness.charm.keystore.remove_entries = MagicMock()
+    harness.charm.keystore.reload = MagicMock(return_value=True)
     check_snapshot_status.return_value = snapshot_status
     harness.charm.unit.is_leader = MagicMock(return_value=is_leader)
     harness.charm.status.set = MagicMock()
