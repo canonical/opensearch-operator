@@ -188,7 +188,7 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
             MAIN_APP: {"units": {"active": []}},
             FAILOVER_APP: {"units": {"active": []}},
             DATA_APP: {"units": {"blocked": [NO_CM_STATUS_MESSAGE]}},
-            INVALID_APP: {"units": {"blocked": [NO_CM_STATUS_MESSAGE]}},
+            INVALID_APP: {"units": {"active": []}},
         },
         wait_for_exact_units={MAIN_APP: APP_UNITS[MAIN_APP], INVALID_APP: APP_UNITS[INVALID_APP]},
         idle_period=IDLE_PERIOD,
