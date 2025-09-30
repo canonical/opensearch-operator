@@ -719,11 +719,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             without the user noticing in case the cert of the unit transport layer expires.
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
-        if self.profiles_manager.check_all_requirements():
-            return
-
         # if node already shutdown - leave
         if not self.opensearch.is_node_up():
+            return
+
+        if self.profiles_manager.check_all_requirements():
             return
 
         # review available CMs
@@ -1939,6 +1939,21 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.peers_data.get(Scope.UNIT, "started", False):
             self.status.clear(PClusterNoDataNode)
         else:
+            try:
+                config_profile = self.profiles_manager.get_config_profile()
+            except ValueError:
+                return
+
+            if self.profiles_manager.check_all_requirements(config_profile):
+                return
+
+            self.opensearch_config.set_jvm_heap_size(
+                config_profile.get_jvm_heap_size(self.opensearch.meminfo()["MemTotal"])
+            )
+            # store profile in unit state
+            self.state.unit.relation_data.put(
+                Scope.UNIT, PERFORMANCE_PROFILE, config_profile.type.value
+            )
             self._start_opensearch_event.emit(ignore_lock=True)
 
     def put_security_index_initialized(self, event: EventBase) -> None:
