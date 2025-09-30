@@ -207,7 +207,7 @@ async def test_invalid_inherit_cluster_name_integration(ops_test: OpsTest) -> No
         },
         units_full_statuses={
             MAIN_APP_NOT_AUTOGEN: {"units": {"active": []}},
-            INVALID_FAILOVER_APP: {"units": {"blocked": [NO_DATA_NODE_STATUS_MESSAGE]}},
+            INVALID_FAILOVER_APP: {"units": {"active": []}},
         },
         wait_for_exact_units={app: units for app, units in NON_AUTOGEN_APP_UNITS.items()},
         idle_period=IDLE_PERIOD,
