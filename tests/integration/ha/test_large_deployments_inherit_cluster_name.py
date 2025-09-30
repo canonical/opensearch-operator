@@ -173,12 +173,24 @@ async def test_build_and_deploy_autogen(ops_test: OpsTest, charm, series) -> Non
         ops_test,
         apps=list(AUTOGEN_APP_UNITS.keys()),
         apps_full_statuses={
-            MAIN_APP_AUTOGEN: {"blocked": [NO_DATA_NODE_STATUS_MESSAGE]},
+            MAIN_APP_AUTOGEN: {
+                "blocked": [
+                    NO_DATA_NODE_STATUS_MESSAGE,
+                    "Cannot run cluster with current roles. Waiting for data node...",
+                ]
+            },
             FAILOVER_APP_AUTOGEN: {"blocked": [PClusterNoRelation]},
             DATA_APP_AUTOGEN: {"blocked": [PClusterNoRelation]},
         },
         units_full_statuses={
-            MAIN_APP_AUTOGEN: {"units": {"blocked": [NO_DATA_NODE_STATUS_MESSAGE]}},
+            MAIN_APP_AUTOGEN: {
+                "units": {
+                    "blocked": [
+                        NO_DATA_NODE_STATUS_MESSAGE,
+                        "Cannot run cluster with current roles. Waiting for data node...",
+                    ]
+                }
+            },
             FAILOVER_APP_AUTOGEN: {"units": {"blocked": [NO_DATA_NODE_STATUS_MESSAGE]}},
             DATA_APP_AUTOGEN: {"units": {"blocked": [NO_CM_STATUS_MESSAGE]}},
         },
