@@ -211,7 +211,7 @@ class OpenSearchPluginEvents(Object):
                 continue
 
             # start locally tracking secret and write transferred keys to keystore
-            content = self.charm.secrets.track_secret(
+            content = self.charm.secrets.get_tracked_secret(
                 plugin.secret_id, Scope.APP, label
             ).get_content()
             if not (raw := content.get(label)):

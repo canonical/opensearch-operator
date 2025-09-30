@@ -376,7 +376,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
         logging.debug(f"Deleted secret {scope}:{key}")
 
-    def track_secret(self, secret_id: str, scope: Scope, key: str) -> Optional[Secret]:
+    def get_tracked_secret(self, secret_id: str, scope: Scope, key: str) -> Optional[Secret]:
         """Track a granted secret and add it to the cache"""
         label = self.label(scope, key)
         if cached_secret_meta := self.cached_secrets.get_meta(scope, label):

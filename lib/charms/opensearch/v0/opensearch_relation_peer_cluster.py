@@ -1062,7 +1062,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         for label in add:
             plugin = configs_from_relation[label]
             if plugin.secret_id:
-                self.charm.secrets.track_secret(plugin.secret_id, Scope.APP, label)
+                self.charm.secrets.get_tracked_secret(plugin.secret_id, Scope.APP, label)
             self.charm.plugin_manager.put_plugin_config(
                 scope=Scope.APP,
                 label=label,
