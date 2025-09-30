@@ -101,7 +101,10 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
         units_full_statuses={
             MAIN_APP: {
                 "units": {
-                    "blocked": ["Cannot run cluster with current roles. Waiting for data node..."]
+                    "blocked": [
+                        "Cannot run cluster with current roles. Waiting for data node...",
+                        "Missing requirements: At least 1 data nodes are required.",
+                    ]
                 }
             },
             FAILOVER_APP: {
