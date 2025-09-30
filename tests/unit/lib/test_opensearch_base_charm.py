@@ -451,11 +451,15 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         ________,
     ):
         """Test on update status."""
-        with patch(
-            f"{self.BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_missing_system_requirements"
-        ) as check_all_requirements:
+        with (
+            patch(
+                f"{self.BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_missing_system_requirements"
+            ) as check_all_requirements,
+            patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up,
+        ):
             # test missing sys requirements
             check_all_requirements.return_value = ["ulimit -n not set"]
+            is_node_up.return_value = True
             self.charm.on.update_status.emit()
             self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
