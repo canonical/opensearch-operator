@@ -206,10 +206,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR:
             return
 
-        # if the main orchestrator is a requirer return
-        if self.model.relations[PeerClusterRelationName]:
-            return
-
         if not (data := event.relation.data.get(event.app)):
             return
 
