@@ -95,15 +95,10 @@ juju run grafana/leader get-admin-password --model <k8s_cos_controller>:<cos_mod
 
 ### Dashboard details
 
-After accessing Grafana web interface, select the “Charmed OpenSearch” dashboard:
-
-![|624x249](https://lh7-us.googleusercontent.com/docsz/AD_4nXe4o8wsL34B2pxkwT3xSbWFVOzW8u7mnE1hWcrPhlyVwykM9Orr7VjX3GCuK1amj9gI3DXbXc2ktkABPUqwDY88ctOY4TlCbhOSEhjEflxThWuVrv1dw-hvMT509dh8pmjsVtx9gphzxsflhPV3ejcS1QGl?key=Vg-Dy5s3l8MJTtpFjpDLtQ)
+After accessing Grafana web interface, select the “Charmed OpenSearch” dashboard.
 
 The dashboard filters for juju-specific elements, e.g. application name, unit, model; and also OpenSearch’s cluster and roles. The cluster dropdown allows to select which cluster we want to see the statistics from:
 
-![|624x88](https://lh7-us.googleusercontent.com/docsz/AD_4nXffMwk0RgsG8yKgnxoftbEsu8yUJu22_OMZMF0W_VmWbvO7sNZKlOJhuKBz1Mu-w9HG6gwI4bLEPO8gpPJ5lVSS1JG53n0oqgZ4NF3M6x80I-6VA6uYGf7vHtL7jd2I5CD4GeSb9yoAQECd3xemptgxEK8?key=Vg-Dy5s3l8MJTtpFjpDLtQ)
-
 It is also possible to select a subset of nodes following roles. That can select nodes across models or applications as well.
-
 
 ![Screenshot from 2024-06-28 18-53-33|690x124](upload://6VrppOeXntY5zUga6LzBIo8umbB.png)

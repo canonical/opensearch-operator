@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_security import normalized_tls_subject
-from charms.opensearch.v0.models import App, OpenSearchPerfProfile
+from charms.opensearch.v0.models import App, JWTAuthConfiguration, OpenSearchPerfProfile
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 
 # The unique Charmhub library identifier, never change it
@@ -106,6 +106,86 @@ class OpenSearchConfig:
         """Removes the OIDC auth scheme from security config."""
         self._opensearch.config.delete(
             self.SECURITY_CONFIG_YML, "config/dynamic/authc/openid_auth_domain"
+        )
+
+    def set_jwt_auth(self, jwt_config: JWTAuthConfiguration) -> None:
+        """Set JSON Web Token authentication parameters in security config."""
+        prefix = "config/dynamic/authc/jwt_auth_domain/http_authenticator/config"
+
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML,
+            "config/dynamic/authc/jwt_auth_domain/http_enabled",
+            True,
+        )
+
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML,
+            "config/dynamic/authc/jwt_auth_domain/transport_enabled",
+            True,
+        )
+
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML, f"{prefix}/signing_key", jwt_config.signing_key
+        )
+
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML, f"{prefix}/jwt_header", jwt_config.jwt_header
+        )
+
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML, f"{prefix}/jwt_url_parameter", jwt_config.jwt_url_parameter
+        )
+
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML, f"{prefix}/roles_key", jwt_config.roles_key
+        )
+
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML, f"{prefix}/subject_key", jwt_config.subject_key
+        )
+
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML, f"{prefix}/required_audience", jwt_config.required_audience
+        )
+
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML, f"{prefix}/required_issuer", jwt_config.required_issuer
+        )
+
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML,
+            f"{prefix}/jwt_clock_skew_tolerance_seconds",
+            jwt_config.jwt_clock_skew_tolerance_seconds,
+        )
+
+    def unset_jwt_auth(self) -> None:
+        """Unset JSON Web Token authentication parameters in security config."""
+        prefix = "config/dynamic/authc/jwt_auth_domain/http_authenticator/config"
+
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML,
+            "config/dynamic/authc/jwt_auth_domain/http_enabled",
+            False,
+        )
+
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML,
+            "config/dynamic/authc/jwt_auth_domain/transport_enabled",
+            False,
+        )
+
+        self._opensearch.config.put(self.SECURITY_CONFIG_YML, f"{prefix}/signing_key", "")
+        self._opensearch.config.put(self.SECURITY_CONFIG_YML, f"{prefix}/jwt_header", "")
+        self._opensearch.config.put(self.SECURITY_CONFIG_YML, f"{prefix}/jwt_url_parameter", "")
+        self._opensearch.config.put(self.SECURITY_CONFIG_YML, f"{prefix}/roles_key", "")
+        self._opensearch.config.put(self.SECURITY_CONFIG_YML, f"{prefix}/subject_key", "")
+        self._opensearch.config.put(self.SECURITY_CONFIG_YML, f"{prefix}/required_audience", "")
+        self._opensearch.config.put(self.SECURITY_CONFIG_YML, f"{prefix}/required_issuer", "")
+
+        self._opensearch.config.put(
+            self.SECURITY_CONFIG_YML,
+            f"{prefix}/jwt_clock_skew_tolerance_seconds",
+            "",
         )
 
     def apply_performance_profile(self, profile: OpenSearchPerfProfile):
