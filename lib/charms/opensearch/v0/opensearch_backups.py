@@ -108,19 +108,11 @@ from charms.opensearch.v0.models import AzureRelData, DeploymentType, Model, S3R
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
-    OpenSearchNotFullyReadyError,
-)
-from charms.opensearch.v0.opensearch_keystore import (
-    OpenSearchKeystoreError,
-    OpenSearchKeystoreNotReadyError,
 )
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchAzurePlugin,
-    OpenSearchPluginMissingConfigError,
-    OpenSearchPluginMissingDepsError,
     OpenSearchS3Plugin,
-    PluginState,
 )
 from ops import (
     ActionEvent,
@@ -697,16 +689,13 @@ class OpenSearchBackupBase(Object):
             # In this case, we can ignore the exception and continue, as it will be called for
             # other units and the keystore is clean.
             # Any other exception should result in actual errors.
-            try:
-                self.charm.plugin_manager.apply_config(plug.disable())
-            except OpenSearchKeystoreNotReadyError:
-                if self.charm.opensearch.is_service_started():
-                    # We have an application up and running but not responding
-                    # We cannot defer either, so we will fail and retry later
-                    raise
-                logger.debug("Backup broken relation: keystore not ready yet")
-                # No need to defer, we already cleaned the keystore.
-                return
+            keys_to_remove = plug.disable().secret_entries.keys()
+            self.charm.keystore.remove_entries(keys_to_remove)
+
+        if not self.charm.keystore.reload():
+            logger.debug("Could not reload secure settings. Deferring event.")
+            event.defer()
+            return
 
     def _on_backup_disable(self, event: _DisableBackupRelationEvent) -> None:  # noqa C901
         """Disables the backup relation."""
@@ -780,17 +769,10 @@ class OpenSearchBackupBase(Object):
             else OpenSearchS3Plugin(self.charm, None)
         )
 
-        try:
-            self.charm.plugin_manager.apply_config(plug.disable())
-        except OpenSearchKeystoreError:
-            # The plugin is not present, we can ignore it
-            logger.info(f"Error while removing {plug.name}")
-            event.defer()
-            return
-        except OpenSearchError as e:
-            self.charm.status.set(BlockedStatus(PluginConfigError))
-            # There was an unexpected error, log it and block the unit
-            logger.error(e)
+        keys_to_remove = plug.disable().secret_entries.keys()
+        self.charm.keystore.remove_entries(keys_to_remove)
+        if not self.charm.keystore.reload():
+            logger.debug("Could not reload secure settings. Deferring event.")
             event.defer()
             return
 
@@ -906,14 +888,13 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
             # Early check to avoid trying to configure both with empty credentials
             if not plugin.data:
                 continue
-            try:
-                if not self.charm.plugin_manager.is_ready_for_api():
-                    raise OpenSearchNotFullyReadyError()
-                self.charm.plugin_manager.apply_config(plugin.config())
-            except (OpenSearchKeystoreNotReadyError, OpenSearchNotFullyReadyError):
-                logger.info(f"{plugin.name}: not ready, we wait for another peer cluster.")
-            except OpenSearchPluginMissingConfigError as e:
-                logger.info(f"Missing configs for {plugin.name}: {e}")
+            entries_to_add = plugin.config().secret_entries
+            self.charm.keystore.add_entries(entries_to_add)
+
+        if not self.charm.keystore.reload():
+            logger.debug("Could not reload secure settings. Deferring event.")
+            event.defer()
+            return
 
         event.secret.get_content(refresh=True)
 
@@ -957,10 +938,6 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
     def data(self) -> Model | None:
         """Returns the data for the backup backend."""
         ...
-
-    @property
-    def _plugin_status(self):
-        return self.charm.plugin_manager.status(self.plugin)
 
     @override
     def _on_backup_relation_event(self, event: RelationEvent) -> None:
@@ -1104,30 +1081,10 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
 
         self.charm.status.set(MaintenanceStatus(BackupSetupStart))
 
-        try:
-            if not self.charm.plugin_manager.is_ready_for_api():
-                raise OpenSearchNotFullyReadyError()
-            self.charm.plugin_manager.apply_config(self.plugin.config())
-        except (OpenSearchKeystoreNotReadyError, OpenSearchNotFullyReadyError):
-            logger.warning("s3-changed: cluster not ready yet")
-            event.defer()
-            return
-        except (OpenSearchPluginMissingConfigError, OpenSearchPluginMissingDepsError) as e:
-            self.charm.status.set(BlockedStatus(BackupRelDataIncomplete))
-            logger.error(e)
-            return
-        except OpenSearchError as e:
-            self.charm.status.set(BlockedStatus(PluginConfigError))
-            # There was an unexpected error, log it and block the unit
-            logger.error(e)
-            event.defer()
-            return
-
-        if self._plugin_status not in [
-            PluginState.ENABLED,
-            PluginState.WAITING_FOR_UPGRADE,
-        ]:
-            logger.warning("_on_s3_credentials_changed: plugin is not enabled.")
+        entries_to_add = self.plugin.config().secret_entries
+        self.charm.keystore.add_entries(entries_to_add)
+        if not self.charm.keystore.reload():
+            logger.debug("Could not reload secure settings. Deferring event.")
             event.defer()
             return
 

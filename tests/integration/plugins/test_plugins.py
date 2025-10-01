@@ -5,11 +5,9 @@
 import asyncio
 import json
 import logging
-import subprocess
 
 import pytest
 from pytest_operator.plugin import OpsTest
-from tenacity import RetryError
 
 from ..ha.helpers import app_name
 from ..ha.helpers_data import bulk_insert, create_index, search
@@ -18,15 +16,11 @@ from ..helpers import (
     APP_NAME,
     CONFIG_OPTS,
     MODEL_CONFIG,
-    check_cluster_formation_successful,
     get_application_unit_ids_ips,
-    get_application_unit_ids_start_time,
-    get_application_unit_names,
     get_leader_unit_id,
     get_leader_unit_ip,
     get_secret_by_label,
     http_request,
-    is_each_unit_restarted,
     run_action,
     set_watermark,
 )
@@ -64,37 +58,6 @@ ALL_GROUPS = {
 ALL_DEPLOYMENTS = list(ALL_GROUPS.values())
 SMALL_DEPLOYMENTS = [ALL_GROUPS["small_deployment"]]
 LARGE_DEPLOYMENTS = [ALL_GROUPS["large_deployment"]]
-
-
-async def assert_knn_config_updated(
-    ops_test: OpsTest, knn_enabled: bool, check_api: bool = True
-) -> None:
-    """Check if the KNN plugin is enabled or disabled."""
-    leader_unit_ip = await get_leader_unit_ip(ops_test, app=APP_NAME)
-    cmd = (
-        f"juju ssh -m {ops_test.model.name} opensearch/0 -- "
-        "sudo grep -r 'knn.plugin.enabled' "
-        "/var/snap/opensearch/current/etc/opensearch/opensearch.yml"
-    ).split()
-    assert (knn_enabled and "true" in subprocess.check_output(cmd).decode()) or (
-        not knn_enabled and "false" in subprocess.check_output(cmd).decode()
-    )
-    if not check_api:
-        # We're finished
-        return
-
-    endpoint = f"https://{leader_unit_ip}:9200/_cluster/settings?flat_settings=true"
-    settings = await http_request(ops_test, "GET", endpoint, app=APP_NAME, json_resp=True)
-    assert settings.get("persistent").get("knn.plugin.enabled") == str(knn_enabled).lower()
-
-
-async def _set_config(ops_test: OpsTest, deploy_type: str, conf: dict[str, str]) -> None:
-    if deploy_type == "small_deployment":
-        await ops_test.model.applications[APP_NAME].set_config(conf)
-        return
-    await ops_test.model.applications[MAIN_ORCHESTRATOR_NAME].set_config(conf | CONFIG_OPTS)
-    await ops_test.model.applications[FAILOVER_ORCHESTRATOR_NAME].set_config(conf | CONFIG_OPTS)
-    await ops_test.model.applications[APP_NAME].set_config(conf | CONFIG_OPTS)
 
 
 async def _wait_for_units(
@@ -179,51 +142,17 @@ async def test_build_and_deploy_small_deployment(
             charm,
             num_units=3,
             series=series,
-            config={"plugin_opensearch_knn": False} | CONFIG_OPTS,
+            config=CONFIG_OPTS,
         ),
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
     )
 
-    await wait_until(
-        ops_test,
-        apps=[APP_NAME],
-        units_statuses=["blocked"],
-        wait_for_exact_units={APP_NAME: 3},
-        timeout=3400,
-        idle_period=IDLE_PERIOD,
-    )
-    assert len(ops_test.model.applications[APP_NAME].units) == 3
-
-
-@pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
-@pytest.mark.abort_on_fail
-async def test_config_switch_before_cluster_ready(ops_test: OpsTest, deploy_type) -> None:
-    """Configuration change before cluster is ready.
-
-    We hold the cluster without starting its unit services by not relating to tls-operator.
-    """
-    await ops_test.model.applications[APP_NAME].set_config({"plugin_opensearch_knn": "true"})
-    await wait_until(
-        ops_test,
-        apps=[APP_NAME],
-        units_statuses=["blocked"],
-        wait_for_exact_units={APP_NAME: 3},
-        timeout=3400,
-        idle_period=IDLE_PERIOD,
-    )
-    # disabled as plugins can currently only be activated after Opensearch has started
-    # see https://github.com/canonical/opensearch-operator/pull/633
-    # await assert_knn_config_updated(ops_test, True, check_api=False)
-
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await _wait_for_units(ops_test, deploy_type)
     assert len(ops_test.model.applications[APP_NAME].units) == 3
-
-    # to be removed here once enabling plugins before startup is possible again
-    await assert_knn_config_updated(ops_test, True, check_api=False)
 
 
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
@@ -435,29 +364,6 @@ async def test_prometheus_monitor_user_password_change(ops_test, deploy_type: st
 
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
-async def test_knn_enabled_disabled(ops_test, deploy_type: str):
-    config = await ops_test.model.applications[APP_NAME].get_config()
-    assert config["plugin_opensearch_knn"]["default"] is True
-    assert config["plugin_opensearch_knn"]["value"] is True
-
-    async with ops_test.fast_forward():
-        await _set_config(ops_test, deploy_type, {"plugin_opensearch_knn": "False"})
-        await _wait_for_units(ops_test, deploy_type)
-
-        config = await ops_test.model.applications[APP_NAME].get_config()
-        assert config["plugin_opensearch_knn"]["value"] is False
-
-        await _set_config(ops_test, deploy_type, {"plugin_opensearch_knn": "True"})
-        await _wait_for_units(ops_test, deploy_type)
-
-        config = await ops_test.model.applications[APP_NAME].get_config()
-        assert config["plugin_opensearch_knn"]["value"] is True
-
-        await _wait_for_units(ops_test, deploy_type)
-
-
-@pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
-@pytest.mark.abort_on_fail
 async def test_knn_search_with_hnsw_faiss(ops_test: OpsTest, deploy_type: str) -> None:
     """Uploads data and runs a query search against the FAISS KNNEngine."""
     app = (await app_name(ops_test)) or APP_NAME
@@ -601,41 +507,17 @@ async def test_knn_training_search(ops_test: OpsTest, deploy_type: str) -> None:
         model_name=model_name,
     )
 
-    # Set the config to false, then to true
-    for knn_enabled in [False, True]:
-        logger.info(f"KNN test starting with {knn_enabled}")
+    query = {
+        "size": 2,
+        "query": {"knn": {"target-field": {"vector": payload_list[0], "k": 2}}},
+    }
 
-        # get current timestamp, to compare with restarts later
-        ts = await get_application_unit_ids_start_time(ops_test, APP_NAME)
-        await _set_config(ops_test, deploy_type, {"plugin_opensearch_knn": str(knn_enabled)})
-
-        await _wait_for_units(ops_test, deploy_type)
-
-        # Now use it to compare with the restart
-        assert not await is_each_unit_restarted(ops_test, APP_NAME, ts)
-        await assert_knn_config_updated(ops_test, knn_enabled, check_api=True)
-        assert await check_cluster_formation_successful(
-            ops_test, leader_unit_ip, get_application_unit_names(ops_test, app=APP_NAME)
-        ), "Restart happened but cluster did not start correctly"
-        logger.info("Config updated and was successful")
-
-        query = {
-            "size": 2,
-            "query": {"knn": {"target-field": {"vector": payload_list[0], "k": 2}}},
-        }
-        # If search eventually fails, then an exception is raised and the test fails as well
-        try:
-            docs = await search(
-                ops_test,
-                app,
-                leader_unit_ip,
-                "test_end_to_end_with_ivf_faiss_target",
-                query,
-                retries=3,
-            )
-            assert (
-                knn_enabled and len(docs) == 2
-            ), f"KNN enabled: {knn_enabled} and search results: {len(docs)}."
-        except RetryError:
-            # The search should fail if knn_enabled is false
-            assert not knn_enabled
+    docs = await search(
+        ops_test,
+        app,
+        leader_unit_ip,
+        "test_end_to_end_with_ivf_faiss_target",
+        query,
+        retries=3,
+    )
+    assert len(docs) == 2, f"Unexpected search results count: {len(docs)}."

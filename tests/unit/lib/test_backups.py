@@ -29,12 +29,6 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
 )
 from charms.opensearch.v0.opensearch_health import HealthColors
-from charms.opensearch.v0.opensearch_plugins import (
-    OpenSearchPluginConfig,
-    OpenSearchPluginError,
-    OpenSearchS3Plugin,
-    PluginState,
-)
 from ops.model import MaintenanceStatus, WaitingStatus
 from ops.testing import Harness
 
@@ -102,15 +96,6 @@ def harness(active_relation):
         charm = harness_obj.charm
         # Override the config to simulate the TestPlugin
         # As config.yml does not exist, the setup below simulates it
-        charm.plugin_manager._charm_config = harness_obj.model._config
-        # Override the ConfigExposedPlugins
-        charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
-            "repository-s3": {
-                "class": OpenSearchS3Plugin,
-                "config": None,
-                "relation": "s3-credentials",
-            },
-        }
         charm.opensearch.is_started = MagicMock(return_value=True)
         charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
         # Mock retrials to speed up tests
@@ -368,44 +353,25 @@ def test_close_indices_if_needed(
 
 
 @pytest.mark.parametrize(
-    "test_type,s3_units,snapshot_status,is_leader,apply_config_exc",
+    "test_type,s3_units,snapshot_status,is_leader",
     [
         (
             "s3-still-units-present",
             ["some_unit"],  # This is a dummy value, so we trigger the .units check
             None,
             True,
-            None,
         ),
         (
             "snapshot-in-progress",
             None,
             BackupServiceState.SNAPSHOT_IN_PROGRESS,
             True,
-            None,
-        ),
-        (
-            "apply-config-error",
-            None,
-            BackupServiceState.SUCCESS,
-            True,
-            OpenSearchPluginError("Error"),
-        ),
-        # Using this test case so we validate that a non-leader unit goes through
-        # and eventually calls apply_config
-        (
-            "apply-config-error-not-leader",
-            None,
-            BackupServiceState.SUCCESS,
-            True,
-            OpenSearchPluginError("Error"),
         ),
         (
             "success",
             None,
             BackupServiceState.SUCCESS,
             True,
-            None,
         ),
     ],
 )
@@ -417,7 +383,6 @@ def test_on_s3_broken_steps(
     s3_units,
     snapshot_status,
     is_leader,
-    apply_config_exc,
 ):
     relation = MagicMock()
     relation.units = s3_units
@@ -425,13 +390,10 @@ def test_on_s3_broken_steps(
     event = MagicMock()
     event.relation_name = "s3-credentials"
     harness.charm.backup._execute_s3_broken_calls = MagicMock()
-    harness.charm.plugin_manager.apply_config = (
-        MagicMock(side_effect=apply_config_exc) if apply_config_exc else MagicMock()
-    )
+    harness.charm.keystore.remove_entries = MagicMock()
+    harness.charm.keystore.reload = MagicMock(return_value=True)
     check_snapshot_status.return_value = snapshot_status
     harness.charm.unit.is_leader = MagicMock(return_value=is_leader)
-    harness.charm.plugin_manager.get_plugin = MagicMock()
-    harness.charm.plugin_manager.status = MagicMock(return_value=PluginState.ENABLED)
     harness.charm.status.set = MagicMock()
     harness.charm.backup.backup_manager.clean = MagicMock()
 
@@ -446,10 +408,6 @@ def test_on_s3_broken_steps(
         harness.charm.status.set.assert_any_call(MaintenanceStatus(BackupInDisabling))
         harness.charm.status.set.assert_any_call(WaitingStatus(BackupDeferRelBrokenAsInProgress))
         harness.charm.backup.backup_manager.clean.assert_not_called()
-    elif test_type == "apply-config-error" or test_type == "apply-config-error-not-leader":
-        event.defer.assert_called()
-        harness.charm.status.set.assert_any_call(MaintenanceStatus(BackupInDisabling))
-        harness.charm.backup.backup_manager.clean.assert_called_once()
     elif test_type == "success":
         event.defer.assert_not_called()
         harness.charm.status.set.assert_any_call(MaintenanceStatus(BackupInDisabling))
@@ -481,16 +439,7 @@ class TestBackups(unittest.TestCase):
             self.charm = self.harness.charm
             # Override the config to simulate the TestPlugin
             # As config.yml does not exist, the setup below simulates it
-            self.charm.plugin_manager._charm_config = self.harness.model._config
             self.plugin_manager = self.charm.plugin_manager
-            # Override the ConfigExposedPlugins
-            charms.opensearch.v0.opensearch_plugin_manager.ConfigExposedPlugins = {
-                "repository-s3": {
-                    "class": OpenSearchS3Plugin,
-                    "config": None,
-                    "relation": "s3-credentials",
-                },
-            }
             self.charm.opensearch.is_started = MagicMock(return_value=True)
             self.charm.health.apply = MagicMock(return_value=HealthColors.GREEN)
             # Mock retrials to speed up tests
@@ -508,7 +457,7 @@ class TestBackups(unittest.TestCase):
 
         # Relate and run first check
         with patch(
-            "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.run"
+            "charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.remove_entries"
         ) as mock_pm_run:
             self.s3_rel_id = self.harness.add_relation(S3_RELATION, "s3-integrator")
             self.harness.add_relation_unit(self.s3_rel_id, "s3-integrator/0")
@@ -550,16 +499,14 @@ class TestBackups(unittest.TestCase):
         self.assertFalse(result)
 
     @patch("charms.opensearch.v0.opensearch_backups.OpenSearchS3Backup.apply_api_config_if_needed")
-    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.apply_config")
+    @patch("charms.opensearch.v0.opensearch_keystore.OpenSearchKeystore.remove_entries")
     @patch("charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.request")
     @patch("charms.opensearch.v0.opensearch_backups.BackupManager.clean")
-    @patch("charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.status")
     def test_relation_broken(
         self,
-        mock_status,
         mock_execute_s3_broken_calls,
         mock_request,
-        mock_apply_config,
+        mock_remove_keystore,
         _,
         __,
     ) -> None:
@@ -570,20 +517,13 @@ class TestBackups(unittest.TestCase):
             # Return a response with SUCCESS in:
             {"SUCCESS"},
         ]
-        mock_status.return_value = PluginState.ENABLED
         self.harness.remove_relation_unit(self.s3_rel_id, "s3-integrator/0")
         self.harness.remove_relation(self.s3_rel_id)
         mock_execute_s3_broken_calls.assert_called_once()
-        assert (
-            mock_apply_config.call_args[0][0].__dict__
-            == OpenSearchPluginConfig(
-                config_entries={},
-                secret_entries={
-                    "s3.client.default.access_key": None,
-                    "s3.client.default.secret_key": None,
-                },
-            ).__dict__
-        )
+        assert list(mock_remove_keystore.call_args[0][0]) == [
+            "s3.client.default.access_key",
+            "s3.client.default.secret_key",
+        ]
 
     def test_format_backup_list(self, _):
         """Tests the format of the backup list."""
