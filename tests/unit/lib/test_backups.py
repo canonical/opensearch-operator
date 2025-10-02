@@ -392,6 +392,7 @@ def test_on_s3_broken_steps(
     harness.charm.backup._execute_s3_broken_calls = MagicMock()
     harness.charm.keystore.remove_entries = MagicMock()
     harness.charm.keystore.reload = MagicMock(return_value=True)
+    harness.charm.plugin_manager.remove_plugin_config = MagicMock()
     check_snapshot_status.return_value = snapshot_status
     harness.charm.unit.is_leader = MagicMock(return_value=is_leader)
     harness.charm.status.set = MagicMock()
@@ -546,6 +547,7 @@ class TestBackups(unittest.TestCase):
     def test_on_create_backup_action_success(self, mock_request, mock_time, _):
         event = MagicMock()
         mock_time.now().strftime.return_value = "2023-01-01T00:00:00Z"
+        self.charm.backup.apply_api_config_if_needed = MagicMock()
         self.charm.backup.backup_manager.is_set = MagicMock(return_value=True)
         self.charm.backup.is_backup_in_progress = MagicMock(return_value=False)
         self.charm.backup.get_service_status = MagicMock(return_value="Backup completed.")
@@ -561,6 +563,7 @@ class TestBackups(unittest.TestCase):
 
     def test_on_create_backup_action_failure(self, _):
         event = MagicMock()
+        self.charm.backup.apply_api_config_if_needed = MagicMock()
         self.charm.backup.backup_manager.is_set = MagicMock(return_value=False)
         self.charm.backup._on_create_backup_action(event)
         event.fail.assert_called_with("Failed: backup service is not configured")
@@ -569,6 +572,7 @@ class TestBackups(unittest.TestCase):
     def test_on_create_backup_action_exception(self, mock_request, _):
         event = MagicMock()
         self.charm.backup.backup_manager.is_set = MagicMock(return_value=True)
+        self.charm.backup.apply_api_config_if_needed = MagicMock()
         self.charm.backup.backup_manager.is_backup_in_progress = MagicMock(return_value=False)
         mock_request.side_effect = OpenSearchHttpError(
             response_text="Internal Server Error", response_code=500
