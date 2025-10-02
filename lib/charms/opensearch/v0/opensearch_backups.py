@@ -1129,19 +1129,7 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
 
         if self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event)
-        # Leader configures this plugin
-        # try:
-        #     self.apply_api_config_if_needed()
-        # except OpenSearchBackupError as e:
-        #     # Finish here and wait for the user to reconfigure it and retrigger a new event
-        #     logger.error(e)
-        #     event.defer()
-        #     return
-        # except pydantic.error_wrappers.ValidationError as e:
-        #     logger.error(f"Failed to parse S3 relation data: {e}")
-        #     # It means we are missing some data in the relation
-        #     self.charm.status.set(BlockedStatus(BackupRelDataIncomplete))
-        #     return
+
         self.charm.status.clear(PluginConfigError)
         self.charm.status.clear(BackupSetupStart)
         self.charm.status.clear(BackupRelDataIncomplete)
