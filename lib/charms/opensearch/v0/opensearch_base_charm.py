@@ -1176,7 +1176,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
         except OpenSearchNotFullyReadyError as e:
             self.node_lock.release()
-            logger.debug(f"Node started but not fully ready: {e}")
+            logger.debug("Node started but not fully ready: %s", e)
             event.defer()
         finally:
             # In large deployments with cluster-manager-only-nodes, the startup might fail
