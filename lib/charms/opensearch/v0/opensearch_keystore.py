@@ -66,6 +66,10 @@ class OpenSearchKeystore:
         Raises:
             OpenSearchHttpError: If the reload fails.
         """
+        if not self._opensearch.is_started():
+            # service not running, settings will be picked up at startup
+            return True
+
         try:
             response = self._opensearch.request("POST", "_nodes/_local/reload_secure_settings")
         except OpenSearchHttpError as e:
