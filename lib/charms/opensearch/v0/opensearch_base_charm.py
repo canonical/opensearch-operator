@@ -70,8 +70,8 @@ from charms.opensearch.v0.opensearch_exceptions import (
 from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
-from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
 from charms.opensearch.v0.opensearch_jwt import JwtHandler
+from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
 from charms.opensearch.v0.opensearch_oauth import OAuthHandler

@@ -109,6 +109,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
     OpenSearchHttpError,
 )
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_plugins import (
     OpenSearchAzurePlugin,
@@ -776,10 +777,18 @@ class OpenSearchBackupBase(Object):
             event.defer()
             return
 
-        # Now, as this is related strictly to the MAIN orchestrator,
-        # we must update any peer relation.
-        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
-            self.charm.peer_cluster_provider.refresh_relation_data(event)
+        if not self.charm.unit.is_leader():
+            return
+
+        try:
+            self.charm.secrets.delete(Scope.APP, "backup-credentials")
+            self.charm.plugin_manager.remove_plugin_config(Scope.APP, "backup-credentials")
+            # Now, as this is related strictly to the MAIN orchestrator,
+            # we must update any peer relation.
+            if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+                self.charm.peer_cluster_provider.refresh_relation_data(event)
+        except SecretNotFoundError:
+            logger.debug("Can't find secret with 'backup-credentials' label")
 
         self.charm.status.clear(BackupInDisabling)
         self.charm.status.clear(PluginConfigError)
@@ -1042,6 +1051,20 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
         if self.charm.upgrade_in_progress:
             event.fail("Backup not supported while upgrade in-progress")
             return
+
+        try:
+            self.apply_api_config_if_needed()
+        except OpenSearchBackupError as e:
+            # Finish here and wait for the user to reconfigure it and retrigger a new event
+            logger.error(e)
+            event.defer()
+            return
+        except pydantic.error_wrappers.ValidationError as e:
+            logger.error(f"Failed to parse S3 relation data: {e}")
+            # It means we are missing some data in the relation
+            self.charm.status.set(BlockedStatus(BackupRelDataIncomplete))
+            return
+
         if not self.backup_manager.is_set():
             event.fail("Failed: backup service is not configured")
             return
@@ -1081,8 +1104,8 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
 
         self.charm.status.set(MaintenanceStatus(BackupSetupStart))
 
-        entries_to_add = self.plugin.config().secret_entries
-        self.charm.keystore.add_entries(entries_to_add)
+        key_entries = self.plugin.config().secret_entries
+        self.charm.keystore.add_entries(key_entries)
         if not self.charm.keystore.reload():
             logger.debug("Could not reload secure settings. Deferring event.")
             event.defer()
@@ -1095,19 +1118,30 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
             self.charm.status.clear(BackupRelDataIncomplete)
             return
 
+        self.charm.secrets.put(Scope.APP, "backup-credentials", json.dumps({"keys": key_entries}))
+        secret_id = self.charm.secrets.get_secret_id(Scope.APP, "backup-credentials")
+        self.charm.plugin_manager.put_plugin_config(
+            Scope.APP,
+            label="backup-credentials",
+            secret_id=secret_id,
+            relation_name=self.relation_name,
+        )
+
+        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+            self.charm.peer_cluster_provider.refresh_relation_data(event)
         # Leader configures this plugin
-        try:
-            self.apply_api_config_if_needed()
-        except OpenSearchBackupError as e:
-            # Finish here and wait for the user to reconfigure it and retrigger a new event
-            logger.error(e)
-            event.defer()
-            return
-        except pydantic.error_wrappers.ValidationError as e:
-            logger.error(f"Failed to parse S3 relation data: {e}")
-            # It means we are missing some data in the relation
-            self.charm.status.set(BlockedStatus(BackupRelDataIncomplete))
-            return
+        # try:
+        #     self.apply_api_config_if_needed()
+        # except OpenSearchBackupError as e:
+        #     # Finish here and wait for the user to reconfigure it and retrigger a new event
+        #     logger.error(e)
+        #     event.defer()
+        #     return
+        # except pydantic.error_wrappers.ValidationError as e:
+        #     logger.error(f"Failed to parse S3 relation data: {e}")
+        #     # It means we are missing some data in the relation
+        #     self.charm.status.set(BlockedStatus(BackupRelDataIncomplete))
+        #     return
         self.charm.status.clear(PluginConfigError)
         self.charm.status.clear(BackupSetupStart)
         self.charm.status.clear(BackupRelDataIncomplete)
