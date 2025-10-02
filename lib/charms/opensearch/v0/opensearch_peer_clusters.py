@@ -289,8 +289,9 @@ class OpenSearchPeerClustersManager:
         # While starting up an existing failover orchestrator
         # we block if the peer relation is not set.
         # An example is a demoted main orchestrator being scaled up
+        deployment_type = self._deployment_type(config, start_mode, prev_deployment.typ)
         if (
-            prev_deployment.typ != DeploymentType.MAIN_ORCHESTRATOR
+            deployment_type != DeploymentType.MAIN_ORCHESTRATOR
             and not self._charm.model.relations[PeerClusterRelationName]
         ):
             deployment_state = DeploymentState(
@@ -299,7 +300,6 @@ class OpenSearchPeerClustersManager:
             directives.append(Directive.SHOW_STATUS)
             directives.append(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
 
-        deployment_type = self._deployment_type(config, start_mode, prev_deployment.typ)
         return DeploymentDescription(
             app=prev_deployment.app,
             config=PeerClusterConfig(
