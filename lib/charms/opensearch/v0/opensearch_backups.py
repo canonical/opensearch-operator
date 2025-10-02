@@ -1052,19 +1052,6 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
             event.fail("Backup not supported while upgrade in-progress")
             return
 
-        try:
-            self.apply_api_config_if_needed()
-        except OpenSearchBackupError as e:
-            # Finish here and wait for the user to reconfigure it and retrigger a new event
-            logger.error(e)
-            event.defer()
-            return
-        except pydantic.error_wrappers.ValidationError as e:
-            logger.error(f"Failed to parse S3 relation data: {e}")
-            # It means we are missing some data in the relation
-            self.charm.status.set(BlockedStatus(BackupRelDataIncomplete))
-            return
-
         if not self.backup_manager.is_set():
             event.fail("Failed: backup service is not configured")
             return
@@ -1129,6 +1116,19 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
 
         if self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event)
+
+        try:
+            self.apply_api_config_if_needed()
+        except OpenSearchBackupError as e:
+            # Finish here and wait for the user to reconfigure it and retrigger a new event
+            logger.error(e)
+            event.defer()
+            return
+        except pydantic.error_wrappers.ValidationError as e:
+            logger.error(f"Failed to parse S3 relation data: {e}")
+            # It means we are missing some data in the relation
+            self.charm.status.set(BlockedStatus(BackupRelDataIncomplete))
+            return
 
         self.charm.status.clear(PluginConfigError)
         self.charm.status.clear(BackupSetupStart)
