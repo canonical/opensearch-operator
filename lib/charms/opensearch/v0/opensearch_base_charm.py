@@ -1173,17 +1173,17 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.node_lock.release()
             logger.warning(e)
             self.status.set(BlockedStatus(ServiceStartError))
-
-            # In large deployments with cluster-manager-only-nodes, the startup might fail
-            # for the cluster-manager if a joining data node did not yet initialize the
-            # security index. We still want to update and broadcast the latest relation data.
-            if self.opensearch_peer_cm.is_provider(typ="main"):
-                self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
             event.defer()
         except OpenSearchNotFullyReadyError as e:
             self.node_lock.release()
             logger.debug(f"Node started but not fully ready: {e}")
             event.defer()
+        finally:
+            # In large deployments with cluster-manager-only-nodes, the startup might fail
+            # for the cluster-manager if a joining data node did not yet initialize the
+            # security index. We still want to update and broadcast the latest relation data.
+            if self.opensearch_peer_cm.is_provider(typ="main"):
+                self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
     def _post_start_init(self, event: _StartOpenSearch):  # noqa: C901
         """Initialization post OpenSearch start."""
