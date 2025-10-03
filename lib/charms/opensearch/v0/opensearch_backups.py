@@ -98,10 +98,6 @@ from charms.opensearch.v0.constants_charm import (
     PluginConfigError,
     RestoreInProgress,
 )
-from charms.opensearch.v0.constants_secrets import (
-    AZURE_PEER_SECRET_KEYS,
-    S3_PEER_SECRET_KEYS,
-)
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import AzureRelData, DeploymentType, Model, S3RelData
@@ -863,49 +859,29 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
     @override
     def _on_secret_changed(self, event: SecretEvent) -> None:  # noqa: C901
         """Processes the secret changes."""
+        label = self.charm.secrets.label(Scope.APP, "backup-credentials")
+        if label != event.secret.label:
+            return
+
+        content = event.secret.get_content(refresh=True)
+        if not (raw := content.get("backup-credentials")):
+            logger.warning("Secret %s has no %s payload", event.secret.label, "backup-credentials")
+            return
+
         try:
-            if not any(
-                [
-                    k in S3_PEER_SECRET_KEYS + AZURE_PEER_SECRET_KEYS
-                    for k in event.secret.get_content().keys()
-                ]
-            ):
-                logger.info(
-                    f"Secret not relevant for backups, abandoning secret id {event.secret.id}"
-                )
-                return
-        except SecretNotFoundError:
-            logger.warning("Secret not found, abandoning secret event")
+            plugin_config = json.loads(raw)
+        except json.JSONDecodeError:
+            logger.error("Malformed JSON in secret %s", event.secret.label)
             return
 
-        if not (data := self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)):
-            event.defer()
+        if not (keys := plugin_config.get("keys")):
             return
 
-        plugins = [
-            OpenSearchS3Plugin(
-                charm=self.charm,
-                relation_data=data.credentials.s3,
-            ),
-            OpenSearchAzurePlugin(
-                charm=self.charm,
-                relation_data=data.credentials.azure,
-            ),
-        ]
-
-        for plugin in plugins:
-            # Early check to avoid trying to configure both with empty credentials
-            if not plugin.data:
-                continue
-            entries_to_add = plugin.config().secret_entries
-            self.charm.keystore.add_entries(entries_to_add)
-
+        self.charm.keystore.add_entries(keys)
         if not self.charm.keystore.reload():
             logger.debug("Could not reload secure settings. Deferring event.")
             event.defer()
             return
-
-        event.secret.get_content(refresh=True)
 
     @override
     def _on_backup_relation_event(self, event: RelationEvent) -> None:
