@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_charm import Status, diff
-from charms.opensearch.v0.models import DeploymentType, PluginConfigInfo
+from charms.opensearch.v0.models import PluginConfigInfo
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.smtp_integrator.v0.smtp import DEFAULT_RELATION_NAME as SMTP_RELATION
 from charms.smtp_integrator.v0.smtp import SmtpRequires
@@ -192,37 +192,9 @@ class OpenSearchPluginEvents(Object):
     def __init__(self, charm: "OpenSearchBaseCharm"):
         super().__init__(charm, "plugins")
         self.charm = charm
-        self.framework.observe(self.charm.on.config_changed, self._on_config_changed)
         self.framework.observe(
             self.charm.on[PeerRelationName].relation_changed, self._on_peer_relation_changed
         )
-
-    def _on_config_changed(self, _):
-        """On config changed event handler."""
-        # if this charm was upgraded and already had a backup relation,
-        # the credentials will not exist yet in self.charm.state.plugin_config_info
-        if not self.charm.unit.is_leader():
-            return
-
-        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
-            return
-
-        if deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR:
-            return
-
-        if (backup_plugin := self.charm.backup.plugin) and not self.charm.secrets.has(
-            Scope.APP, "backup-credentials"
-        ):
-            entries = backup_plugin.config().secret_entries
-            self.charm.secrets.put(Scope.APP, "backup-credentials", json.dumps({"keys": entries}))
-            secret_id = self.charm.secrets.get_secret_id(Scope.APP, "backup-credentials")
-            self.charm.plugin_manager.put_plugin_config(
-                Scope.APP,
-                label="backup-credentials",
-                secret_id=secret_id,
-                relation_name=self.charm.backup.relation_name,
-            )
-            # todo: clean up old secrets
 
     def _on_peer_relation_changed(self, event):  # noqa: C901
         """Handle plugin secret-related peer relation changes."""

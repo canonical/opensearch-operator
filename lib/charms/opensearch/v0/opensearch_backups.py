@@ -619,6 +619,7 @@ class OpenSearchBackupBase(Object):
         super().__init__(charm, relation_name)
         self.charm = charm
         self.relation_name = relation_name
+        self.secret_label = "backup-credentials"
         self.backup_manager = BackupManager(charm, repository=self.repository)
 
         self.framework.observe(self._disable_backup_event, self._on_backup_disable)
@@ -780,8 +781,8 @@ class OpenSearchBackupBase(Object):
             return
 
         try:
-            self.charm.secrets.delete(Scope.APP, "backup-credentials")
-            self.charm.plugin_manager.remove_plugin_config(Scope.APP, "backup-credentials")
+            self.charm.secrets.delete(Scope.APP, self.secret_label)
+            self.charm.plugin_manager.remove_plugin_config(Scope.APP, self.secret_label)
             # Now, as this is related strictly to the MAIN orchestrator,
             # we must update any peer relation.
             if self.charm.opensearch_peer_cm.is_provider(typ="main"):
@@ -859,13 +860,13 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
     @override
     def _on_secret_changed(self, event: SecretEvent) -> None:  # noqa: C901
         """Processes the secret changes."""
-        label = self.charm.secrets.label(Scope.APP, "backup-credentials")
+        label = self.charm.secrets.label(Scope.APP, self.secret_label)
         if label != event.secret.label:
             return
 
         content = event.secret.get_content(refresh=True)
-        if not (raw := content.get("backup-credentials")):
-            logger.warning("Secret %s has no %s payload", event.secret.label, "backup-credentials")
+        if not (raw := content.get(self.secret_label)):
+            logger.warning("Secret %s has no %s payload", event.secret.label, self.secret_label)
             return
 
         try:
@@ -903,6 +904,7 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
         super().__init__(charm, relation_name)
         self.client = None
 
+        self.framework.observe(self.charm.on.config_changed, self._on_config_changed)
         self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_backup_action)
@@ -937,6 +939,25 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
     def _on_backup_action(self, event: ActionEvent) -> None:
         """Just overloads the base method, as we process each action in this class."""
         pass
+
+    def _on_config_changed(self, _):
+        """On config changed event handler."""
+        # if this charm was upgraded and already had a backup relation,
+        # the credentials will not exist yet in self.charm.state.plugin_config_info
+        if not self.charm.unit.is_leader():
+            return
+
+        if self.plugin.data and not self.charm.secrets.has(Scope.APP, self.secret_label):
+            entries = self.plugin.config().secret_entries
+            self.charm.secrets.put(Scope.APP, self.secret_label, json.dumps({"keys": entries}))
+            secret_id = self.charm.secrets.get_secret_id(Scope.APP, self.secret_label)
+            self.charm.plugin_manager.put_plugin_config(
+                Scope.APP,
+                label=self.secret_label,
+                secret_id=secret_id,
+                relation_name=self.relation_name,
+            )
+            # todo: clean up old secrets
 
     def _on_list_backups_action(self, event: ActionEvent) -> None:
         """Returns the list of available backups to the user."""
@@ -1081,11 +1102,11 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
             self.charm.status.clear(BackupRelDataIncomplete)
             return
 
-        self.charm.secrets.put(Scope.APP, "backup-credentials", json.dumps({"keys": key_entries}))
-        secret_id = self.charm.secrets.get_secret_id(Scope.APP, "backup-credentials")
+        self.charm.secrets.put(Scope.APP, self.secret_label, json.dumps({"keys": key_entries}))
+        secret_id = self.charm.secrets.get_secret_id(Scope.APP, self.secret_label)
         self.charm.plugin_manager.put_plugin_config(
             Scope.APP,
-            label="backup-credentials",
+            label=self.secret_label,
             secret_id=secret_id,
             relation_name=self.relation_name,
         )
