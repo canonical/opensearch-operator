@@ -777,6 +777,9 @@ class OpenSearchBackupBase(Object):
             event.defer()
             return
 
+        self.charm.status.clear(BackupInDisabling)
+        self.charm.status.clear(PluginConfigError)
+
         if not self.charm.unit.is_leader():
             return
 
@@ -789,9 +792,6 @@ class OpenSearchBackupBase(Object):
                 self.charm.peer_cluster_provider.refresh_relation_data(event)
         except SecretNotFoundError:
             logger.debug("Can't find secret with 'backup-credentials' label")
-
-        self.charm.status.clear(BackupInDisabling)
-        self.charm.status.clear(PluginConfigError)
 
     def _on_backup_action(self, event: ActionEvent) -> None:
         """No deployment description yet, fail any actions."""
