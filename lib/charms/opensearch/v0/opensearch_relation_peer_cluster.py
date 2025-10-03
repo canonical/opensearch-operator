@@ -9,8 +9,6 @@ from hashlib import sha1
 from typing import TYPE_CHECKING, Any, Dict, List, MutableMapping, Optional
 
 from charms.opensearch.v0.constants_charm import (
-    AZURE_RELATION,
-    S3_RELATION,
     AdminUser,
     COSUser,
     KibanaserverUser,
@@ -19,12 +17,10 @@ from charms.opensearch.v0.constants_charm import (
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
 )
-from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import all_units, diff, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.models import (
-    AzureRelDataCredentials,
     DeploymentDescription,
     DeploymentType,
     Directive,
@@ -35,7 +31,6 @@ from charms.opensearch.v0.models import (
     PeerClusterRelDataCredentials,
     PeerClusterRelErrorData,
     PluginConfigInfo,
-    S3RelDataCredentials,
     StartMode,
 )
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
@@ -350,17 +345,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             for s in self.charm.state.app.plugin_config_info.values()
             if s.relation_name
         ]
-        backup_relations = [
-            rel_name
-            for rel_name, label in [
-                (S3_RELATION, S3_CREDENTIALS),
-                (AZURE_RELATION, AZURE_CREDENTIALS),
-            ]
-            if self.charm.secrets.has(Scope.APP, label)
-        ]
         if missing := [
             relation
-            for relation in plugin_relation_names + backup_relations
+            for relation in plugin_relation_names
             if not self.charm.model.get_relation(relation)
         ]:
             message = f"Found credentials with missing relations. Add relation for {', '.join(missing)} endpoints and any client applications."
@@ -536,69 +523,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             self.charm.peers_data.put_object(
                 Scope.APP, "cluster_fleet_apps_rels", cluster_fleet_apps_rels
             )
-
-    def _azure_credentials(
-        self, deployment_desc: DeploymentDescription
-    ) -> Optional[AzureRelDataCredentials]:
-        """Retrieve Azure storage credentials."""
-        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
-            if not self.charm.model.get_relation(AZURE_RELATION):
-                return None
-
-            azure_storage_conn_info = self.charm.backup.client.get_azure_storage_connection_info()
-            if not azure_storage_conn_info.get("storage-account"):
-                return None
-
-            # As the main orchestrator, this application must set the azure information.
-            storage_account = azure_storage_conn_info.get("storage-account")
-            secret_key = azure_storage_conn_info.get("secret-key")
-
-            # set the secrets in the charm
-            # TODO Move this to azure relation and include both in one secret
-            self.charm.secrets.put(Scope.APP, "azure-storage-account", storage_account)
-            self.charm.secrets.put(Scope.APP, "azure-secret-key", secret_key)
-
-            return AzureRelDataCredentials(storage_account=storage_account, secret_key=secret_key)
-
-        if not self.charm.secrets.get(Scope.APP, "azure-storage-account"):
-            return None
-
-        # Return what we have received from the peer relation
-        return AzureRelDataCredentials(
-            storage_account=self.charm.secrets.get(Scope.APP, "azure-access-key"),
-            secret_key=self.charm.secrets.get(Scope.APP, "azure-secret-key"),
-        )
-
-    def _s3_credentials(
-        self, deployment_desc: DeploymentDescription
-    ) -> Optional[S3RelDataCredentials]:
-        """Retrieve S3 storage credentials."""
-        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
-            if not self.charm.model.get_relation(S3_RELATION):
-                return None
-
-            if not self.charm.backup.client.get_s3_connection_info().get("access-key"):
-                return None
-
-            # As the main orchestrator, this application must set the S3 information.
-            access_key = self.charm.backup.client.get_s3_connection_info().get("access-key")
-            secret_key = self.charm.backup.client.get_s3_connection_info().get("secret-key")
-
-            # set the secrets in the charm
-            # TODO Move this to s3 relation and include both in one secret
-            self.charm.secrets.put(Scope.APP, "s3-access-key", access_key)
-            self.charm.secrets.put(Scope.APP, "s3-secret-key", secret_key)
-
-            return S3RelDataCredentials(access_key=access_key, secret_key=secret_key)
-
-        if not self.charm.secrets.get(Scope.APP, "s3-access-key"):
-            return None
-
-        # Return what we have received from the peer relation
-        return S3RelDataCredentials(
-            access_key=self.charm.secrets.get(Scope.APP, "s3-access-key"),
-            secret_key=self.charm.secrets.get(Scope.APP, "s3-secret-key"),
-        )
 
     def _rel_data(
         self,
@@ -831,26 +755,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
             for rel_id in all_rel_ids:
                 if relation := self.get_rel(rel_id=rel_id):
-                    if key == "s3":
-                        if secret_id["access-key"]:
-                            self.secrets.grant_secret_to_relation(
-                                secret_id["access-key"], relation
-                            )
-                        if secret_id["secret-key"]:
-                            self.secrets.grant_secret_to_relation(
-                                secret_id["secret-key"], relation
-                            )
-                    elif key == "azure":
-                        if secret_id["storage-account"]:
-                            self.secrets.grant_secret_to_relation(
-                                secret_id["storage-account"], relation
-                            )
-                        if secret_id["secret-key"]:
-                            self.secrets.grant_secret_to_relation(
-                                secret_id["secret-key"], relation
-                            )
-                    else:
-                        self.secrets.grant_secret_to_relation(secret_id, relation)
+                    self.secrets.grant_secret_to_relation(secret_id, relation)
 
     def _get_security_index_initialised(self) -> bool:
         """Check if the security index is initialised."""

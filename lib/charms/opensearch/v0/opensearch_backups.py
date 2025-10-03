@@ -100,6 +100,11 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.helper_cluster import ClusterState, IndexStateEnum
 from charms.opensearch.v0.helper_enums import BaseStrEnum
+from charms.opensearch.v0.helper_plugins import (
+    decode_plugin_secret_content,
+    remove_plugin_secret,
+    store_plugin_secret,
+)
 from charms.opensearch.v0.models import AzureRelData, DeploymentType, Model, S3RelData
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
@@ -118,7 +123,6 @@ from ops import (
     Object,
     RelationEvent,
     SecretEvent,
-    SecretNotFoundError,
     WaitingStatus,
 )
 from ops.framework import EventBase, EventSource, Handle
@@ -780,15 +784,11 @@ class OpenSearchBackupBase(Object):
         if not self.charm.unit.is_leader():
             return
 
-        try:
-            self.charm.secrets.delete(Scope.APP, self.secret_label)
-            self.charm.plugin_manager.remove_plugin_config(Scope.APP, self.secret_label)
-            # Now, as this is related strictly to the MAIN orchestrator,
-            # we must update any peer relation.
-            if self.charm.opensearch_peer_cm.is_provider(typ="main"):
-                self.charm.peer_cluster_provider.refresh_relation_data(event)
-        except SecretNotFoundError:
-            logger.debug("Can't find secret with 'backup-credentials' label")
+        remove_plugin_secret(self.charm, self.secret_label)
+        # Now, as this is related strictly to the MAIN orchestrator,
+        # we must update any peer relation.
+        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+            self.charm.peer_cluster_provider.refresh_relation_data(event)
 
     def _on_backup_action(self, event: ActionEvent) -> None:
         """No deployment description yet, fail any actions."""
@@ -865,14 +865,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
             return
 
         content = event.secret.get_content(refresh=True)
-        if not (raw := content.get(self.secret_label)):
-            logger.warning("Secret %s has no %s payload", event.secret.label, self.secret_label)
-            return
-
-        try:
-            plugin_config = json.loads(raw)
-        except json.JSONDecodeError:
-            logger.error("Malformed JSON in secret %s", event.secret.label)
+        if not (plugin_config := decode_plugin_secret_content(content, self.secret_label)):
             return
 
         if not (keys := plugin_config.get("keys")):
@@ -940,7 +933,7 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
         """Just overloads the base method, as we process each action in this class."""
         pass
 
-    def _on_config_changed(self, _):
+    def _on_config_changed(self, event):
         """On config changed event handler."""
         # if this charm was upgraded and already had a backup relation,
         # the credentials will not exist yet in self.charm.state.plugin_config_info
@@ -949,15 +942,14 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
 
         if self.plugin.data and not self.charm.secrets.has(Scope.APP, self.secret_label):
             entries = self.plugin.config().secret_entries
-            self.charm.secrets.put(Scope.APP, self.secret_label, json.dumps({"keys": entries}))
-            secret_id = self.charm.secrets.get_secret_id(Scope.APP, self.secret_label)
-            self.charm.plugin_manager.put_plugin_config(
-                Scope.APP,
+            store_plugin_secret(
+                self.charm,
+                content={"keys": entries},
                 label=self.secret_label,
-                secret_id=secret_id,
                 relation_name=self.relation_name,
             )
-            # todo: clean up old secrets
+            if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+                self.charm.peer_cluster_provider.refresh_relation_data(event)
 
     def _on_list_backups_action(self, event: ActionEvent) -> None:
         """Returns the list of available backups to the user."""
@@ -1048,7 +1040,6 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
         if self.charm.upgrade_in_progress:
             event.fail("Backup not supported while upgrade in-progress")
             return
-
         if not self.backup_manager.is_set():
             event.fail("Failed: backup service is not configured")
             return
@@ -1102,15 +1093,12 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
             self.charm.status.clear(BackupRelDataIncomplete)
             return
 
-        self.charm.secrets.put(Scope.APP, self.secret_label, json.dumps({"keys": key_entries}))
-        secret_id = self.charm.secrets.get_secret_id(Scope.APP, self.secret_label)
-        self.charm.plugin_manager.put_plugin_config(
-            Scope.APP,
+        store_plugin_secret(
+            self.charm,
+            content={"keys": key_entries},
             label=self.secret_label,
-            secret_id=secret_id,
             relation_name=self.relation_name,
         )
-
         if self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event)
 
