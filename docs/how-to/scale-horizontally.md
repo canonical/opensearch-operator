@@ -69,6 +69,7 @@ juju run opensearch/leader get-password
         password: admin_password
 ```
 
+(scale-cluster-health-status)=
 ### Cluster health statuses
 
 A cluster health may return `green`, `yellow`, or `red`.
@@ -166,4 +167,4 @@ You can monitor this with `juju status --watch 1s`.
 Make sure you wait for the whole application to stabilize before you consider removing further units.
 
 Once the application is stable, check the health of the cluster as detailed in the section
-[Understand the meaning of the cluster status](#cluster-health-statuses) and react accordingly.
+[Understand the meaning of the cluster status](scale-cluster-health-status) and react accordingly.

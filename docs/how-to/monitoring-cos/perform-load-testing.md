@@ -18,7 +18,7 @@ For more information, [check Juju's supported clouds documentation](https://juju
 
 ## Installation and configuration
 
-In this section, we will set up [Juju](#set-up-juju) and [COS](#set-up-cos).
+In this section, we will set up [Juju](perf-juju) and [COS](perf-cos).
 
 In the case of AWS, the first step is to select or setup a VPC for this test. We recommend to use one VPC with:
 
@@ -26,6 +26,7 @@ In the case of AWS, the first step is to select or setup a VPC for this test. We
   * One tools for this is [`sshuttle`](https://manpages.ubuntu.com/manpages/jammy/man1/sshuttle.1.html)
 * 1x private network (contains all the testing assets, such as OpenSearch nodes): it is not externally accessible and ensures deployments are isolated from internet access
 
+(perf-juju)=
 ### Set up Juju
 
 To use AWS with a VPC, set up the Juju controller as follows.
@@ -87,6 +88,7 @@ juju bootstrap aws $JUJU_CONTROLLER_NAME \
     --to subnet=$VPC_PRIVATE_CIDR
 ```
 
+(perf-cos)=
 ### Set up COS
 
 #### Deploy Kubernetes

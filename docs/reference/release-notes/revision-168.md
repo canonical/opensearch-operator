@@ -9,7 +9,7 @@ To upgrade from a previous revision of the OpenSearch charm, see [how to perform
 ## Highlights
 
 This section goes over the features included in this release, starting with a description
-of major highlights, and finishing with a comprehensive list of [all other features](#other-features).
+of major highlights, and finishing with a comprehensive list of [all other features](rev-168-other-features).
 
 ### Large scale deployments
 
@@ -42,6 +42,7 @@ Backup and restore with an Amazon S3-compatible storage backend.
 * [How to configure S3 storage](how-to-back-up-configure-s3)
 * [How to create a backup](how-to-create-a-backup)
 
+(rev-168-other-features)=
 ### Other features
 
 * **Automated rolling restart**
