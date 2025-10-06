@@ -527,7 +527,7 @@ class OpenSearchPeerClustersManager:
             is not None
         )
 
-    def rel_data(self, peek_secrets: bool = False) -> Optional[PeerClusterRelData]:
+    def rel_data(self) -> Optional[PeerClusterRelData]:
         """Return the peer cluster rel data if any."""
         if not self.is_consumer(of="main"):
             return None
@@ -542,8 +542,6 @@ class OpenSearchPeerClustersManager:
         if not (data := rel.data[rel.app].get("data")):
             return None
 
-        if peek_secrets:
-            return self.rel_data_from_str_and_peek_secrets(data)
         return self.rel_data_from_str(data)
 
     def _pre_validate_roles_change(self, new_roles: List[str], prev_roles: List[str]):
@@ -606,49 +604,6 @@ class OpenSearchPeerClustersManager:
             if not config.init_hold
             else DeploymentType.FAILOVER_ORCHESTRATOR
         )
-
-    def rel_data_from_str_and_peek_secrets(self, redacted_dict_str: str) -> PeerClusterRelData:
-        """Construct the peer cluster rel data from the secret data."""
-        content = json.loads(redacted_dict_str)
-        credentials = content["credentials"]
-
-        credentials["admin_password"] = (
-            self._charm.model.get_secret(id=credentials["admin_password"])
-            .peek_content()
-            .get(self._charm.secrets.password_key(AdminUser))
-        )
-
-        credentials["admin_password_hash"] = (
-            self._charm.model.get_secret(id=credentials["admin_password_hash"])
-            .peek_content()
-            .get(self._charm.secrets.hash_key(AdminUser))
-        )
-
-        credentials["kibana_password"] = (
-            self._charm.model.get_secret(id=credentials["kibana_password"])
-            .peek_content()
-            .get(self._charm.secrets.password_key(KibanaserverUser))
-        )
-
-        credentials["kibana_password_hash"] = (
-            self._charm.model.get_secret(id=credentials["kibana_password_hash"])
-            .peek_content()
-            .get(self._charm.secrets.hash_key(KibanaserverUser))
-        )
-
-        if "monitor_password" in credentials:
-            credentials["monitor_password"] = (
-                self._charm.model.get_secret(id=credentials["monitor_password"])
-                .peek_content()
-                .get(self._charm.secrets.password_key(COSUser))
-            )
-
-        if "admin_tls" in credentials:
-            credentials["admin_tls"] = self._charm.model.get_secret(
-                id=credentials["admin_tls"]
-            ).peek_content()
-
-        return PeerClusterRelData.from_dict(content)
 
     def _resolve_credential(
         self,
