@@ -93,7 +93,6 @@ from charms.opensearch.v0.constants_charm import (
     BackupRelDataIncomplete,
     BackupRelShouldNotExist,
     BackupSetupFailed,
-    BackupSetupStart,
     PeerClusterRelationName,
     PluginConfigError,
     RestoreInProgress,
@@ -1057,11 +1056,8 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
             # abandon this restart event, as it will be called later once s3 configuration
             # is correctly set
             self.charm.status.clear(PluginConfigError)
-            self.charm.status.clear(BackupSetupStart)
             self.charm.status.clear(BackupRelDataIncomplete)
             return
-
-        self.charm.status.set(MaintenanceStatus(BackupSetupStart))
 
         key_entries = self.plugin.config().secret_entries
         self.charm.keystore.add_entries(key_entries)
@@ -1073,7 +1069,6 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
         if not self.charm.unit.is_leader():
             # Plugin is configured locally for this unit. Now the leader proceed.
             self.charm.status.clear(PluginConfigError)
-            self.charm.status.clear(BackupSetupStart)
             self.charm.status.clear(BackupRelDataIncomplete)
             return
 
@@ -1100,7 +1095,6 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
             return
 
         self.charm.status.clear(PluginConfigError)
-        self.charm.status.clear(BackupSetupStart)
         self.charm.status.clear(BackupRelDataIncomplete)
 
     def apply_api_config_if_needed(self) -> None:  # noqa: C901
