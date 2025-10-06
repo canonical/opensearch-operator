@@ -292,7 +292,52 @@ async def _configure_azure(
     )
 
 
-async def _build_large_deployment_env(ops_test: OpsTest, charm, series, cloud_name) -> None:
+@pytest.mark.parametrize("cloud_name,deploy_type", SMALL_DEPLOYMENTS_ALL_CLOUDS)
+@pytest.mark.abort_on_fail
+@pytest.mark.skip_if_deployed
+async def test_small_deployment_build_and_deploy(
+    ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
+) -> None:
+    """Build and deploy an HA cluster of OpenSearch and corresponding backup integration."""
+    if await app_name(ops_test):
+        return
+
+    await ops_test.model.set_config(MODEL_CONFIG)
+    # Deploy TLS Certificates operator.
+    config = {"ca-common-name": "CN_CA"}
+
+    backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
+    backup_integrator_channel = (
+        AZURE_INTEGRATOR_CHANNEL if cloud_name == "azure" else S3_INTEGRATOR_CHANNEL
+    )
+
+    await asyncio.gather(
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+        ),
+        ops_test.model.deploy(backup_integrator, channel=backup_integrator_channel),
+        ops_test.model.deploy(charm, num_units=3, series=series, config=CONFIG_OPTS),
+    )
+
+    # Relate it to OpenSearch to set up TLS.
+    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.wait_for_idle(
+        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
+        status="active",
+        timeout=1400,
+        idle_period=IDLE_PERIOD,
+    )
+    # Credentials not set yet, this will move the opensearch to blocked state
+    # Credentials are set per test scenario
+    await ops_test.model.integrate(APP_NAME, backup_integrator)
+
+
+@pytest.mark.parametrize("cloud_name,deploy_type", LARGE_DEPLOYMENTS_ALL_CLOUDS)
+@pytest.mark.abort_on_fail
+@pytest.mark.skip_if_deployed
+async def test_large_deployment_build_and_deploy(
+    ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
+) -> None:
     """Build and deploy a large deployment for OpenSearch.
 
     The following apps will be deployed:
@@ -386,60 +431,6 @@ async def _build_large_deployment_env(ops_test: OpsTest, charm, series, cloud_na
     # Credentials not set yet, this will move the opensearch to blocked state
     # Credentials are set per test scenario
     await ops_test.model.integrate("main", backup_integrator)
-
-
-async def _build_small_deployment_env(ops_test: OpsTest, charm, series, cloud_name) -> None:
-    """Build and deploy a small deployment for OpenSearch."""
-    if await app_name(ops_test):
-        return
-
-    await ops_test.model.set_config(MODEL_CONFIG)
-    # Deploy TLS Certificates operator.
-    config = {"ca-common-name": "CN_CA"}
-
-    backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
-    backup_integrator_channel = (
-        AZURE_INTEGRATOR_CHANNEL if cloud_name == "azure" else S3_INTEGRATOR_CHANNEL
-    )
-
-    await asyncio.gather(
-        ops_test.model.deploy(
-            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
-        ),
-        ops_test.model.deploy(backup_integrator, channel=backup_integrator_channel),
-        ops_test.model.deploy(charm, num_units=3, series=series, config=CONFIG_OPTS),
-    )
-
-    # Relate it to OpenSearch to set up TLS.
-    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.wait_for_idle(
-        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
-        status="active",
-        timeout=1400,
-        idle_period=IDLE_PERIOD,
-    )
-    # Credentials not set yet, this will move the opensearch to blocked state
-    # Credentials are set per test scenario
-    await ops_test.model.integrate(APP_NAME, backup_integrator)
-
-
-@pytest.mark.parametrize("cloud_name,deploy_type", SMALL_DEPLOYMENTS_ALL_CLOUDS)
-@pytest.mark.abort_on_fail
-@pytest.mark.skip_if_deployed
-async def test_small_deployment_build_and_deploy(
-    ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
-) -> None:
-    """Build and deploy an HA cluster of OpenSearch and corresponding backup integration."""
-    await _build_small_deployment_env(ops_test, charm, series, cloud_name)
-
-
-@pytest.mark.parametrize("cloud_name,deploy_type", LARGE_DEPLOYMENTS_ALL_CLOUDS)
-@pytest.mark.abort_on_fail
-@pytest.mark.skip_if_deployed
-async def test_large_deployment_build_and_deploy(
-    ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
-) -> None:
-    await _build_large_deployment_env(ops_test, charm, series, cloud_name)
 
 
 @pytest.mark.parametrize("cloud_name,deploy_type", ALL_DEPLOYMENTS_ALL_CLOUDS)
