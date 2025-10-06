@@ -1,12 +1,12 @@
 (how-to-guides-back-up-and-restore-index)=
-# Back-Up-And-Restore
+# Back up and restore
 
 ```{toctree}
 :titlesonly:
-:maxdepth: 2
-:glob:
-:hidden:
 
-*
-*/index
+Configure Azure Storage <configure-azure-storage>
+Configure S3 <configure-s3>
+Create a backup <create-a-backup>
+Restore a local backup <restore-a-local-backup>
+Migrate a cluster <migrate-a-cluster>
 ```

@@ -1,13 +1,14 @@
 (how-to-guides-back-up-and-restore-configure-azure-storage)=
-# Configure Azure Storage
+# How to configure Azure storage
 
-```{note}All commands are written for `juju v.3.1.7 +````
+```{note}
+All commands are written for `juju v.3.1.7`.
+```
 
-# How to configure Azure storage 
-
-This guide will teach you how to deploy and configure the [Azure Integrator charm](https://charmhub.io/azure-storage-integrator) for [Azure](https://azure.com/), send the configurations to the Charmed OpenSearch application, and update it.
-
----
+This guide will teach you how to deploy and configure the
+[Azure Integrator charm](https://charmhub.io/azure-storage-integrator) for
+[Azure](https://azure.com/), send the configurations to the Charmed OpenSearch application,
+and update it.
 
 ## Configure Azure integrator
 
@@ -26,7 +27,11 @@ juju grant-secret mysecret azure-storage-integrator
 juju config azure-storage-integrator credentials=<secret-id>
 ```
 
->See all other configuration parameters in the [Configuration section](https://charmhub.io/azure-storage-integrator/configuration)  of the azure-integrator documentation.
+```{note}
+See all other configuration parameters in the
+[Configuration section](https://charmhub.io/azure-storage-integrator/configuration)
+of the azure-integrator documentation.
+```
 
 ## Integrate with Charmed OpenSearch
 
@@ -35,4 +40,3 @@ To pass these configurations to Charmed OpenSearch, integrate the two applicatio
 ```shell
 juju integrate azure-storage-integrator opensearch
 ```
-
