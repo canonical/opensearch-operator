@@ -1,6 +1,4 @@
 (reference-release-notes-revision-168)=
-# Revision 168
-
 # Revision 168 release notes
 <sub>24 September 2024</sub>
 
@@ -9,12 +7,19 @@ Charmed OpenSearch Revision 168 has been deployed to the [`2/stable` channel](ht
 To upgrade from a previous revision of the OpenSearch charm, see [how to perform a minor upgrade](https://charmhub.io/opensearch/docs/h-minor-upgrade).
 
 ## Summary
-* [Highlights and features](#highlights)
-* [Requirements and compatibility](#requirements-and-compatibility)
-* [Integrations](#integrations)
-* [Software contents](#software-contents)
-* [Known issues and limitations](#known-issues-and-limitations)
-* [Join the community](#join-the-community)
+- [Revision 168 release notes](#revision-168-release-notes)
+  - [Summary](#summary)
+  - [Highlights](#highlights)
+    - [Large scale deployments](#large-scale-deployments)
+    - [Security automations](#security-automations)
+    - [Monitoring](#monitoring)
+    - [Backups](#backups)
+    - [Other features](#other-features)
+  - [Requirements and compatibility](#requirements-and-compatibility)
+  - [Integrations](#integrations)
+  - [Software contents](#software-contents)
+  - [Known issues and limitations](#known-issues-and-limitations)
+  - [Join the community](#join-the-community)
 
 ---
 

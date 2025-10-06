@@ -1,15 +1,15 @@
 (reference-index)=
 # Reference
 
-# Reference
-
-The Reference section contains pages for technical specifications, APIs, release notes, and other reference material for fast lookup.
+The Reference section contains pages for technical specifications, APIs, release notes,
+and other reference material for fast lookup.
 
 * [Release notes]
 * [System requirements]
 * [Software testing]
 
 Additionally, you can find automatically generated metadata in the following tabs on Charmhub:
+
 * [Integrations]
 * [Configurations]
 * [Actions]
@@ -23,13 +23,11 @@ Additionally, you can find automatically generated metadata in the following tab
 [Configurations]: https://charmhub.io/opensearch/configurations
 [Actions]: https://charmhub.io/opensearch/actions
 
-
 ```{toctree}
 :titlesonly:
-:maxdepth: 2
-:glob:
 :hidden:
 
-*
-*/index
+release-notes/index
+Software testing <software-testing>
+system-requirements
 ```
