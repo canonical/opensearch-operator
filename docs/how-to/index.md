@@ -5,62 +5,39 @@ The following guides cover key processes and common tasks for managing and using
 
 ## Deployment and setup
 
-* [Deploy on LXD]
-* [Launch a large deployment]
+* [Deploy on LXD](how-to-deploy-lxd)
+* [Launch a large deployment](how-to-deploy-large)
 
 ## TLS encryption
 
-* [Enable TLS encryption]
-* [Rotate TLS/CA certificates]
+* [Enable TLS encryption](how-to-enable-tls-encryption)
+* [Rotate TLS/CA certificates](how-to-rotate-tls-ca-certificates)
 
 ## Usage and maintenance
 
-* [Scale horizontally]
-* [Integrate with an application]
-* [Perform load testing]
-* [Recover from attached storage]
-* [Access using Oauth](https://discourse.charmhub.io/t/how-to-access-opensearch-using-oauth/18870/1)
+* [Scale horizontally](how-to-scale-horizontally)
+* [Integrate with an application](how-to-integrate-with-an-application)
+* [Perform load testing](how-to-perform-load-testing)
+* [Recover from attached storage](how-to-recover-from-attached-storage)
+* [Access using Oauth](how-to-access-using-oauth)
 
 ## Backup and restore
 
-* [Configure S3]
-* [Create a backup]
-* [Restore a local backup]
-* [Migrate a cluster]
+* [Configure Azure Storage](how-to-back-up-configure-azure-storage)
+* [Configure S3](how-to-back-up-configure-s3)
+* [Create a backup](how-to-create-a-backup)
+* [Restore a local backup](how-to-restore-a-local-backup)
+* [Migrate a cluster](how-to-migrate-a-cluster)
 
 ## Minor upgrades
 
-* [Perform a minor upgrade]
-* [Perform a minor rollback]
+* [Perform a minor upgrade](how-to-minor-upgrade)
+* [Perform a minor rollback](how-to-minor-rollback)
 
 ## Monitoring (COS)
 
-* [Monitoring (COS)]
-  * [Enable COS]
-
-<!-- Links -->
-
-[Deploy on LXD]: /t/14575
-[Launch a large deployment]: /t/15573
-
-[Enable TLS encryption]: /t/14783
-[Rotate TLS/CA certificates]: /t/15422
-[Scale horizontally]: /t/10994
-[Integrate with an application]: /t/15333
-
-[Configure S3]: /t/14097
-[Create a backup]: /t/14098
-[Restore a local backup]: /t/14099
-[Migrate a cluster]: /t/14100
-
-[Perform a minor upgrade]: /t/14141
-[Perform a minor rollback]: /t/14142
-
-[Perform load testing]: /t/13987
-[Recover from attached storage]: /t/15616
-
-[Monitoring (COS)]: /t/16563
-[Enable COS]: /t/14560
+* [Monitoring (COS)](how-to-monitoring-cos-index)
+  * [Enable COS](how-to-monitoring-enable-cos)
 
 ```{toctree}
 :titlesonly:

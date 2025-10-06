@@ -181,5 +181,5 @@ juju model-config --file=./cloudinit-userdata.yaml
 ```
 
 ```{note}
-**Next step:** [2. Deploy OpenSearch](/tutorial/2-deploy-opensearch).
+**Next step:** [2. Deploy OpenSearch](tutorial-2-deploy-opensearch).
 ```

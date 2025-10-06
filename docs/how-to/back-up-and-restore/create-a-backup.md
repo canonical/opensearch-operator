@@ -1,4 +1,4 @@
-(how-to-guides-back-up-and-restore-create-a-backup)=
+(how-to-create-a-backup)=
 # How to create a backup
 
 ```{note}

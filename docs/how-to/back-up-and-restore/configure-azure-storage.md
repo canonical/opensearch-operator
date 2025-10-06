@@ -1,4 +1,4 @@
-(how-to-guides-back-up-and-restore-configure-azure-storage)=
+(how-to-back-up-configure-azure-storage)=
 # How to configure Azure storage
 
 ```{note}

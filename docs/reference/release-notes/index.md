@@ -4,13 +4,13 @@
 Release notes for Charmed OpenSearch, summarising new features, bug fixes
 and backwards-incompatible changes in each version.
 
-See also the [guide on how to perform minor upgrades](/how-to-guides/upgrade/perform-a-minor-upgrade).
+See also the [guide on how to perform minor upgrades](how-to-minor-upgrade).
 
 ## Releases
 
 Stable releases are published in the `2/stable` channel of CharmHub, where `2` indicates the major version of OpenSearch.
 
-* [Revision 168](/reference/release-notes/revision-168) - September 2024
+* [Revision 168](reference-release-notes-revision-168) - September 2024
 
 ## Release policy and schedule
 

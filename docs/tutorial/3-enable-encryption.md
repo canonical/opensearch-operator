@@ -60,7 +60,7 @@ Machine  State    Address       Inst id        Base          AZ  Message
 
 To enable TLS on Charmed OpenSearch, you must integrate (also known as "relate") the two applications.
 We will go over integrations in more detail in the
-[next page](/tutorial/4-integrate-with-a-client-application) of this tutorial.
+[next page](tutorial-4-integrate-with-a-client-application) of this tutorial.
 
 To integrate `self-signed-certificates` with `opensearch`, run the following command:
 
@@ -102,5 +102,5 @@ Notice the last relation:
 `self-signed-certificates:certificates  opensearch:certificates        tls-certificates    regular`.
 
 ```{note}
-**Next step:** [4. Integrate with a client application](/tutorial/4-integrate-with-a-client-application)
+**Next step:** [4. Integrate with a client application](tutorial-4-integrate-with-a-client-application)
 ```

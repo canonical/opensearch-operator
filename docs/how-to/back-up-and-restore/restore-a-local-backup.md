@@ -1,4 +1,4 @@
-(how-to-guides-back-up-and-restore-restore-a-local-backup)=
+(how-to-restore-a-local-backup)=
 # How to restore a local backup
 
 ```{note}

@@ -6,14 +6,17 @@ This guide will show how to enable TLS using the
 as an example.
 
 ```{caution}
-**[Self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate) are not recommended for a production environment.**
+**[Self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate)
+are not recommended for a production environment.**
 
-Check [this guide](https://discourse.charmhub.io/t/11664) for an overview of the signed and self-signed certificate charms available.
+Check the [X.509 certificates topic](https://charmhub.io/topics/security-with-x-509-certificates)
+for an overview of the signed and self-signed certificate charms available.
 ```
 
 ## Enable TLS
 
 First, deploy the TLS charm and configure the name of the Certificate Authority:
+
 ```shell
 juju deploy self-signed-certificates --config ca-common-name="My CA"
 ```

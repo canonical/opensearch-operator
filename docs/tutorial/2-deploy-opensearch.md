@@ -68,8 +68,8 @@ If you see the following status message:
 vm.swappiness should be 0 - net.ipv4.tcp_retries2 should be 5
 ```
 
-you need to [set the correct kernel parameters](/tutorial/1-set-up-the-environment) to continue.
+you need to [set the correct kernel parameters](tutorial-1-set-up-the-environment) to continue.
 
 ```{note}
-**Next step:** [3. Enable TLS](/tutorial/3-enable-encryption)
+**Next step:** [3. Enable TLS](tutorial-3-enable-encryption)
 ```

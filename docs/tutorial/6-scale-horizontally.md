@@ -169,5 +169,5 @@ Machine  State    Address       Inst id        Base          AZ  Message
 ```
 
 ```{note}
-**Next step**: [7. Clean up the environment](/tutorial/7-clean-up-the-environment).
+**Next step**: [7. Clean up the environment](tutorial-7-clean-up-the-environment).
 ```

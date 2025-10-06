@@ -148,5 +148,5 @@ Waiting for task 18...
 ```
 
 ```{note}
-**Next step**: [6. Scale horizontally](/tutorial/6-scale-horizontally)
+**Next step**: [6. Scale horizontally](tutorial-6-scale-horizontally)
 ```

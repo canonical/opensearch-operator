@@ -30,7 +30,7 @@ or limited throughput.
 ```
 
 ```{note}
-See also: [How to perform load testing](/how-to-guides/monitoring-cos/perform-load-testing)
+See also: [How to perform load testing](/how-to-guides/monitoring-cos/perform-load-testing).
 ```
 
 ## Networking

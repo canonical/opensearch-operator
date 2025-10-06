@@ -15,7 +15,8 @@ You could be a team of system administrators maintaining large data infrastructu
 a software developer who wants to connect their application with a powerful search engine,
 or even someone curious to learn more about Charmed OpenSearch through our guided tutorial.
 
-To see the Charmed OpenSearch features and releases, visit our [GitHub Releases page](https://github.com/canonical/opensearch-operator/releases).
+To see the Charmed OpenSearch features and releases, visit our
+[GitHub Releases page](https://github.com/canonical/opensearch-operator/releases).
 
 <!--
 The Charmed OpenSearch (VM Operator) release aligns with the [OpenSearch upstream major version naming](https://opensearch.org/docs/latest/version-history/). OpenSearch releases major versions such as 1.0, 2.0, and so on.
@@ -31,8 +32,8 @@ The upper portion of this page describes the Operating System (OS) where the cha
 
 | | |
 |--|--|
-|  [**Tutorials**](/tutorial/index)</br>  [Get started](/tutorial/index) - a hands-on introduction to using the Charmed OpenSearch operator for new users </br> |  [**How-to guides**](/how-to-guides/scale-horizontally) </br> Step-by-step guides covering key operations such as [scaling](/how-to-guides/scale-horizontally), [TLS encryption](/how-to-guides/tls-encryption/enable-tls-encryption), or [monitoring](/how-to-guides/monitoring-cos/enable-cos) |
-| [**Reference**](/reference/software-testing) </br> Technical information such as [system requirements](/reference/system-requirements) | <!--[Explanation]() </br> Concepts - discussion and clarification of key topics-->  |
+|  [**Tutorials**](tutorial-index)</br>  [Get started](tutorial-index) - a hands-on introduction to using the Charmed OpenSearch operator for new users </br> |  [**How-to guides**](how-to-guides-index) </br> Step-by-step guides covering key operations such as [scaling](how-to-scale-horizontally), [TLS encryption](how-to-enable-tls-encryption), or [monitoring](how-to-monitoring-enable-cos) |
+| [**Reference**](reference-index) </br> Technical information such as [system requirements](reference-system-requirements) | [Explanation](explanation-index) </br> Concepts - discussion and clarification of key topics  |
 
 ## Project & community
 

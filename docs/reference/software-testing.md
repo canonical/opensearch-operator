@@ -35,5 +35,5 @@ After each test completes, the index gets deleted.
 
 ## Performance test
 
-Refer to the [OpenSearch VM benchmark](https://discourse.charmhub.io/t/load-testing-for-charmed-opensearch/13987)
+Refer to the [OpenSearch VM benchmark](how-to-perform-load-testing)
 guide for charmed OpenSearch.

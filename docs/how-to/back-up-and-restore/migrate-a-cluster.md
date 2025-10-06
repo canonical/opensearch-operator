@@ -1,4 +1,4 @@
-(how-to-guides-back-up-and-restore-migrate-a-cluster)=
+(how-to-migrate-a-cluster)=
 # How to migrate to a new cluster via restore
 
 ```{note}

@@ -1,4 +1,4 @@
-(how-to-guides-back-up-and-restore-configure-s3)=
+(how-to-back-up-configure-s3)=
 # How to configure S3 storage 
 
 ```{note}

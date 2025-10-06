@@ -429,5 +429,5 @@ data-integrator charm again to get the new credentials,
 and test them again with the above search request.
 
 ```{note}
-**Next step**: [5. Manage passwords](/tutorial/5-manage-passwords)
+**Next step**: [5. Manage passwords](tutorial-5-manage-passwords)
 ```

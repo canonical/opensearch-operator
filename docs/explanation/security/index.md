@@ -83,7 +83,7 @@ New versions of Charmed OpenSearch and Charmed OpenSearch Dashboards may be rele
 to provide patching of vulnerabilities (CVEs).
 It is important to refresh the charm regularly to make sure the workload is as secure as possible.
 For more information on how to refresh the charm, see the
-[how-to upgrade](https://charmhub.io/opensearch/docs/h-minor-upgrade) guide.
+[how-to upgrade](how-to-minor-upgrade) guide.
 
 ### Encryption
 
@@ -94,13 +94,13 @@ Please refer to the [Charming Security page](https://charmhub.io/topics/security
 for more information on how to select the right certificate provider for your use case.
 
 For more information on encryption, see the
-[Cryptography](https://discourse.charmhub.io/t/charmed-opensearch-explanation-cryptography/17243)
+[Cryptography](explanation-security-cryptography)
 explanation page and the
-[How to enable encryption](https://charmhub.io/opensearch/docs/h-enable-tls) guide.
+[How to enable encryption](how-to-enable-tls-encryption) guide.
 
 ### Authentication
 
-Charmed OpenSearch supports the password [authentication](https://charmhub.io/opensearch/docs/t-passwords).
+Charmed OpenSearch supports the password [authentication](tutorial-5-manage-passwords).
 
 ### Monitoring
 
@@ -113,12 +113,12 @@ Refer to the
 for more information.
 
 For instructions, see the
-[How to integrate the Charmed OpenSearch deployment with COS](https://charmhub.io/opensearch/docs/h-monitoring) guide.
+[How to integrate the Charmed OpenSearch deployment with COS](how-to-monitoring-enable-cos) guide.
 
 ## Additional resources
 
 For details on the cryptography used by Charmed OpenSearch, see the
-[Cryptography](https://discourse.charmhub.io/t/charmed-opensearch-explanation-cryptography/17243)
+[Cryptography](explanation-security-cryptography)
 explanation page.
 
 ```{toctree}

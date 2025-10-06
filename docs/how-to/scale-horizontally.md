@@ -5,7 +5,7 @@ This page outlines the general steps to follow when scaling down Charmed OpenSea
 to prevent data loss and ensure the deployment remains highly available.
 
 To see an example of scaling down a real deployment scenario, check the following page from the
-Charmed OpenSearch Tutorial: [6. Scale horizontally](/tutorial/6-scale-horizontally).
+Charmed OpenSearch Tutorial: [6. Scale horizontally](tutorial-6-scale-horizontally).
 
 ```{warning}
 * The following steps are for removing one single Juju unit (node). This may be repeated as many times as necessary, but **never remove multiple units in the same command.** 
@@ -54,7 +54,7 @@ To monitor the health more precisely, you can use the
 [OpenSearch health API](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-health/).
 
 In order to authenticate your requests to the REST API, you need to
-[retrieve the admin user's credentials](/tutorial/5-manage-passwords).
+[retrieve the admin user's credentials](tutorial-5-manage-passwords).
 
 To get the admin user credentials, run the following command:
 
