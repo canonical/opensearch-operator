@@ -1,0 +1,290 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'opensearch-data': {'charm': 'local:noble/opensearch-2', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 2, 'exposed': False, 'application-status': {'current': 'blocked', 'message': 'Cannot start. Waiting for peer cluster relation...', 'since': '06 Oct 2025 02:34:32Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch-data', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch-data', 'interface': 'opensearch_peers', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch-data', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch-data/0': {'workload-status': {'current': 'active', 'since': '06 Oct 2025 02:34:28Z'}, 'juju-status': {'current': 'idle', 'since': '06 Oct 2025 02:45:10Z', 'version': '3.6.9'}, 'leader': True, 'machine': '5', 'public-address': '10.9.41.14'}, 'opensearch-data/1': {'workload-status': {'current': 'active', 'since': '06 Oct 2025 02:33:32Z'}, 'juju-status': {'current': 'idle', 'since': '06 Oct 2025 02:45:10Z', 'version': '3.6.9'}, 'machine': '6', 'public-address': '10.9.41.119'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 'opensearch-failover': {'charm': 'local:noble/opensearch-3', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 3, 'exposed': False, 'application-status': {'current': 'active', 'since': '06 Oct 2025 02:46:12Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch-failover', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch-failover', 'interface': 'opensearch_peers', 'scope': 'global'}], 'peer-cluster': [{'related-application': 'opensearch-main', 'interface': 'peer_cluster', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch-failover', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch-failover/0': {'workload-status': {'current': 'active', 'since': '06 Oct 2025 02:47:16Z'}, 'juju-status': {'current': 'idle', 'since': '06 Oct 2025 02:52:10Z', 'version': '3.6.9'}, 'machine': '7', 'open-ports': ['9200/tcp'], 'public-address': '10.9.41.243'}, 'opensearch-failover/1': {'workload-status': {'current': 'active', 'since': '06 Oct 2025 02:47:41Z'}, 'juju-status': {'current': 'idle', 'since': '06 Oct 2025 02:52:14Z', 'version': '3.6.9'}, 'leader': True, 'machine': '8', 'open-ports': ['9200/tcp'], 'public-address': '10.9.41.62'}, 'opensearch-failover/2': {'workload-status': {'current': 'active', 'since': '06 Oct 2025 02:47:10Z'}, 'juju-status': {'current': 'idle', 'since': '06 Oct 2025 02:52:10Z', 'version': '3.6.9'}, 'machine': '9', 'open-ports': ['9200/tcp'], 'public-address': '10.9.41.164'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 'opensearch-main': {'charm': 'local:noble/opensearch-1', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 1, 'exposed': False, 'application-status': {'current': 'active', 'since': '06 Oct 2025 02:46:10Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch-main', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch-main', 'interface': 'opensearch_peers', 'scope': 'global'}], 'peer-cluster-orchestrator': [{'related-application': 'opensearch-failover', 'interface': 'peer_cluster', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch-main', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch-main/0': {'workload-status': {'current': 'active', 'since': '06 Oct 2025 02:46:36Z'}, 'juju-status': {'current': 'executing', 'message': 'running peer-cluster-orchestrator-relation-departed hook for opensearch-invalid/0', 'since': '06 Oct 2025 02:53:29Z', 'version': '3.6.9'}, 'machine': '2', 'open-ports': ['9200/tcp'], 'public-address': '10.9.41.248'}, 'opensearch-main/1': {'workload-status': {'current': 'active', 'since': '06 Oct 2025 02:46:10Z'}, 'juju-status': {'current': 'executing', 'message': 'running peer-cluster-orchestrator-relation-departed hook for opensearch-invalid/0', 'since': '06 Oct 2025 02:53:29Z', 'version': '3.6.9'}, 'leader': True, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.9.41.204'}, 'opensearch-main/2': {'workload-status': {'current': 'active', 'since': '06 Oct 2025 02:46:17Z'}, 'juju-status': {'current': 'executing', 'message': 'running peer-cluster-orchestrator-relation-departed hook for opensearch-invalid/0', 'since': '06 Oct 2025 02:53:29Z', 'version': '3.6.9'}, 'machine': '4', 'open-ports': ['9200/tcp'], 'public-address': '10.9.41.252'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '22.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 264, 'charm-channel': 'latest/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '06 Oct 2025 02:28:36Z'}, 'relations': {'certificates': [{'related-application': 'opensearch-data', 'interface': 'tls-certificates', 'scope': 'global'}, {'related-application': 'opensearch-failover', 'interface': 'tls-certificates', 'scope': 'global'}, {'related-application': 'opensearch-main', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '06 Oct 2025 02:28:36Z'}, 'juju-status': {'current': 'executing', 'message': 'running certificates-relation-departed hook for opensearch-invalid/0', 'since': '06 Oct 2025 02:53:29Z', 'version': '3.6.9'}, 'leader': True, 'machine': '0', 'public-address': '10.9.41.116'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  02:53:34Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch-data                    blocked      2  opensearch                                 2  no       Cannot start. Waiting for peer cluster relation...
+opensearch-failover                active       3  opensearch                                 3  no       
+opensearch-main                    active       3  opensearch                                 1  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch-data/0*           active    executing  5        10.9.41.14                
+opensearch-data/1            active    executing  6        10.9.41.119               
+opensearch-failover/0        active    executing  7        10.9.41.243     9200/tcp  
+opensearch-failover/1*       active    executing  8        10.9.41.62      9200/tcp  
+opensearch-failover/2        active    executing  9        10.9.41.164     9200/tcp  
+opensearch-main/0            active    executing  2        10.9.41.248     9200/tcp  
+opensearch-main/1*           active    executing  3        10.9.41.204     9200/tcp  
+opensearch-main/2            active    executing  4        10.9.41.252     9200/tcp  
+self-signed-certificates/0*  active    idle       0        10.9.41.116               
+
+Machine  State    Address      Inst id        Base          AZ             Message
+0        started  10.9.41.116  juju-fec80b-0  ubuntu@22.04  github-runner  Running
+2        started  10.9.41.248  juju-fec80b-2  ubuntu@24.04  github-runner  Running
+3        started  10.9.41.204  juju-fec80b-3  ubuntu@24.04  github-runner  Running
+4        started  10.9.41.252  juju-fec80b-4  ubuntu@24.04  github-runner  Running
+5        started  10.9.41.14   juju-fec80b-5  ubuntu@24.04  github-runner  Running
+6        started  10.9.41.119  juju-fec80b-6  ubuntu@24.04  github-runner  Running
+7        started  10.9.41.243  juju-fec80b-7  ubuntu@24.04  github-runner  Running
+8        started  10.9.41.62   juju-fec80b-8  ubuntu@24.04  github-runner  Running
+9        started  10.9.41.164  juju-fec80b-9  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:53:34 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.8f8  -- (10.9.41.248) -- [executing (since: 02:53:34)] active: 
+		opensearch-main-1.8f8* -- (10.9.41.204) -- [executing (since: 02:53:34)] active: 
+		opensearch-main-2.8f8  -- (10.9.41.252) -- [executing (since: 02:53:34)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:53:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.8f8  -- (10.9.41.248) -- [idle (since: 02:53:45)] active: 
+		opensearch-main-1.8f8* -- (10.9.41.204) -- [idle (since: 02:53:44)] active: 
+		opensearch-main-2.8f8  -- (10.9.41.252) -- [idle (since: 02:53:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:53:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.8f8  -- (10.9.41.248) -- [idle (since: 02:53:45)] active: 
+		opensearch-main-1.8f8* -- (10.9.41.204) -- [idle (since: 02:53:44)] active: 
+		opensearch-main-2.8f8  -- (10.9.41.252) -- [idle (since: 02:53:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:54:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.8f8  -- (10.9.41.248) -- [idle (since: 02:53:45)] active: 
+		opensearch-main-1.8f8* -- (10.9.41.204) -- [idle (since: 02:53:44)] active: 
+		opensearch-main-2.8f8  -- (10.9.41.252) -- [idle (since: 02:53:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:54:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.8f8  -- (10.9.41.248) -- [idle (since: 02:53:45)] active: 
+		opensearch-main-1.8f8* -- (10.9.41.204) -- [idle (since: 02:53:44)] active: 
+		opensearch-main-2.8f8  -- (10.9.41.252) -- [idle (since: 02:53:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:54:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.8f8  -- (10.9.41.248) -- [idle (since: 02:53:45)] active: 
+		opensearch-main-1.8f8* -- (10.9.41.204) -- [idle (since: 02:53:44)] active: 
+		opensearch-main-2.8f8  -- (10.9.41.252) -- [idle (since: 02:53:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:54:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.8f8  -- (10.9.41.248) -- [idle (since: 02:53:45)] active: 
+		opensearch-main-1.8f8* -- (10.9.41.204) -- [idle (since: 02:53:44)] active: 
+		opensearch-main-2.8f8  -- (10.9.41.252) -- [idle (since: 02:53:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:54:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.8f8  -- (10.9.41.248) -- [idle (since: 02:53:45)] active: 
+		opensearch-main-1.8f8* -- (10.9.41.204) -- [idle (since: 02:53:44)] active: 
+		opensearch-main-2.8f8  -- (10.9.41.252) -- [idle (since: 02:53:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:55:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-failover-0.271  -- (10.9.41.243) -- [idle (since: 02:54:45)] active: 
+		opensearch-failover-1.271* -- (10.9.41.62) -- [idle (since: 02:54:45)] active: 
+		opensearch-failover-2.271  -- (10.9.41.164) -- [idle (since: 02:54:45)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:55:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-failover-0.271  -- (10.9.41.243) -- [idle (since: 02:54:45)] active: 
+		opensearch-failover-1.271* -- (10.9.41.62) -- [idle (since: 02:54:45)] active: 
+		opensearch-failover-2.271  -- (10.9.41.164) -- [idle (since: 02:54:45)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:55:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-failover-0.271  -- (10.9.41.243) -- [idle (since: 02:54:45)] active: 
+		opensearch-failover-1.271* -- (10.9.41.62) -- [idle (since: 02:54:45)] active: 
+		opensearch-failover-2.271  -- (10.9.41.164) -- [idle (since: 02:54:45)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:55:38 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-failover-0.271  -- (10.9.41.243) -- [idle (since: 02:54:45)] active: 
+		opensearch-failover-1.271* -- (10.9.41.62) -- [idle (since: 02:54:45)] active: 
+		opensearch-failover-2.271  -- (10.9.41.164) -- [idle (since: 02:54:45)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:55:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-failover-0.271  -- (10.9.41.243) -- [idle (since: 02:54:45)] active: 
+		opensearch-failover-1.271* -- (10.9.41.62) -- [idle (since: 02:54:45)] active: 
+		opensearch-failover-2.271  -- (10.9.41.164) -- [idle (since: 02:54:45)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:56:01 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-data - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-data-0.0a3* -- (10.9.41.14) -- [idle (since: 02:55:01)] active: 
+		opensearch-data-1.0a3  -- (10.9.41.119) -- [idle (since: 02:54:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:56:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 02:56:17 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.9.41.204:9200/_nodes
+[32mINFO    [0m integration.ha.conftest:conftest.py:40 
+
+
+
+The writes have been cleared.
+
+
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  02:56:26Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch-data                    active      2  opensearch                                 2  no       
+opensearch-failover                active      3  opensearch                                 3  no       
+opensearch-main                    active      3  opensearch                                 1  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch-data/0*           active    idle   5        10.9.41.14      9200/tcp  
+opensearch-data/1            active    idle   6        10.9.41.119     9200/tcp  
+opensearch-failover/0        active    idle   7        10.9.41.243     9200/tcp  
+opensearch-failover/1*       active    idle   8        10.9.41.62      9200/tcp  
+opensearch-failover/2        active    idle   9        10.9.41.164     9200/tcp  
+opensearch-main/0            active    idle   2        10.9.41.248     9200/tcp  
+opensearch-main/1*           active    idle   3        10.9.41.204     9200/tcp  
+opensearch-main/2            active    idle   4        10.9.41.252     9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.9.41.116               
+
+Machine  State    Address      Inst id        Base          AZ             Message
+0        started  10.9.41.116  juju-fec80b-0  ubuntu@22.04  github-runner  Running
+2        started  10.9.41.248  juju-fec80b-2  ubuntu@24.04  github-runner  Running
+3        started  10.9.41.204  juju-fec80b-3  ubuntu@24.04  github-runner  Running
+4        started  10.9.41.252  juju-fec80b-4  ubuntu@24.04  github-runner  Running
+5        started  10.9.41.14   juju-fec80b-5  ubuntu@24.04  github-runner  Running
+6        started  10.9.41.119  juju-fec80b-6  ubuntu@24.04  github-runner  Running
+7        started  10.9.41.243  juju-fec80b-7  ubuntu@24.04  github-runner  Running
+8        started  10.9.41.62   juju-fec80b-8  ubuntu@24.04  github-runner  Running
+9        started  10.9.41.164  juju-fec80b-9  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-1: 02:28:04 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:28:04 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-invalid-0: 02:28:05 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-8: 02:28:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 02:28:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-failover-1: 02:28:10 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 02:28:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:28:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-main-1: 02:28:17 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 02:28:17 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:28:17 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-main-0: 02:28:17 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 02:28:19 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:28:19 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:28:19 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-5: 02:28:19 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:28:19 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-data-0: 02:28:19 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-7: 02:28:21 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 02:28:21 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-failover-0: 02:28:21 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-6: 02:28:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 02:28:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-data-1: 02:28:27 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-9: 02:28:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-9: 02:28:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-failover-2: 02:28:28 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 02:28:36 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:28:36 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-main-2: 02:28:36 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+controller-0: 02:53:32 ERROR juju.worker.provisioner failed to remove dead machine "1"
+unit-opensearch-failover-1: 02:53:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-data-0: 02:53:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-main-1: 02:53:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-failover-2: 02:53:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-failover-0: 02:53:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-main-2: 02:53:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-main-0: 02:53:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-data-1: 02:53:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 02:53:41 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-data-1: 02:53:47 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-data-0: 02:53:47 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-failover-1: 02:53:47 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-failover-0: 02:53:47 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-failover-2: 02:53:47 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-main-2: 02:56:19 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
