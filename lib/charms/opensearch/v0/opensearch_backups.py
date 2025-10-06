@@ -157,7 +157,8 @@ INDICES_TO_EXCLUDE_AT_RESTORE = {
 
 
 REPO_NOT_CREATED_ERR = "repository type does not exist"
-REPO_NOT_ACCESS_ERR = "is not accessible"
+REPO_NOT_ACCESS_ERR = "is not accessible on cluster-manager node"
+NODES_MISSING_CREDS_ERR = "is not accessible on the node"
 REPO_CREATING_ERR = "Could not determine repository generation from root blobs"
 RESTORE_OPEN_INDEX_WITH_SAME_NAME = "because an open index with same name already exists"
 
@@ -186,6 +187,8 @@ class BackupServiceState(BaseStrEnum):
     """Enum for the states possible once plugin is enabled."""
 
     SUCCESS = "success"
+    NODES_MISSING_CREDENTIALS = "some nodes missing credentials"
+    INCORRECT_CREDENTIALS = "incorrect credentials"
     RESTORE_IN_PROGRESS = "restore in progress"
     RESPONSE_FAILED_NETWORK = "response failed: network error"
     REPO_NOT_CREATED = "repository not created"
@@ -633,13 +636,6 @@ class OpenSearchBackupBase(Object):
         self.framework.observe(self.charm.on.secret_remove, self._on_secret_changed)
 
         for relation in (S3_RELATION, AZURE_RELATION):
-            for event in [
-                self.charm.on[relation].relation_joined,
-                self.charm.on[relation].relation_changed,
-                self.charm.on[relation].relation_departed,
-                self.charm.on[relation].relation_broken,
-            ]:
-                self.framework.observe(event, self._on_backup_relation_event)
             self.framework.observe(
                 self.charm.on[relation].relation_created, self._on_backup_relation_created
             )
@@ -656,11 +652,6 @@ class OpenSearchBackupBase(Object):
 
     def _on_secret_changed(self, event: SecretEvent) -> None:
         pass
-
-    def _on_backup_relation_event(self, event: RelationEvent) -> None:
-        """Defers the backup relation events."""
-        logger.info("Deployment description not yet available, deferring backup relation event")
-        event.defer()
 
     def _on_backup_relation_created(self, _: RelationEvent) -> None:
         if self.charm.upgrade_in_progress:
@@ -856,6 +847,14 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
     def __init__(self, charm: "OpenSearchBaseCharm", relation_name: str = PeerClusterRelationName):
         """Manager of OpenSearch backup relations."""
         super().__init__(charm, relation_name)
+        for relation in (S3_RELATION, AZURE_RELATION):
+            for event in [
+                self.charm.on[relation].relation_joined,
+                self.charm.on[relation].relation_changed,
+                self.charm.on[relation].relation_departed,
+                self.charm.on[relation].relation_broken,
+            ]:
+                self.framework.observe(event, self._on_backup_relation_event)
 
     @override
     def _on_secret_changed(self, event: SecretEvent) -> None:  # noqa: C901
@@ -877,7 +876,6 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
             event.defer()
             return
 
-    @override
     def _on_backup_relation_event(self, event: RelationEvent) -> None:
         """Processes the non-orchestrator cluster events."""
         self.charm.status.set(BlockedStatus(BackupRelShouldNotExist))
@@ -918,15 +916,6 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
     def data(self) -> Model | None:
         """Returns the data for the backup backend."""
         ...
-
-    @override
-    def _on_backup_relation_event(self, event: RelationEvent) -> None:
-        """Overrides the parent method to process the s3 relation events, as we use s3_client.
-
-        We run the peer cluster orchestrator's refresh on every new s3 information.
-        """
-        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
-            self.charm.peer_cluster_provider.refresh_relation_data(event)
 
     @override
     def _on_backup_action(self, event: ActionEvent) -> None:
@@ -1119,7 +1108,7 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
         self.charm.status.clear(BackupSetupStart)
         self.charm.status.clear(BackupRelDataIncomplete)
 
-    def apply_api_config_if_needed(self) -> None:
+    def apply_api_config_if_needed(self) -> None:  # noqa: C901
         """Runs the post restart routine and API calls needed to setup/disable backup.
 
         This method should be called by the charm in its restart callback resolution.
@@ -1136,9 +1125,20 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
         try:
             snapshot_repo_resp = self.backup_manager.register(self.data)
             state = self.get_service_status(snapshot_repo_resp)
-        except (ValueError, OpenSearchHttpError) as e:
+        except ValueError as e:
             logger.error(f"Failed to setup backup service with exception: {e}")
             state = BackupServiceState.REPO_ERR_UNKNOWN
+        except OpenSearchHttpError as e:
+            logger.error(f"Failed to setup backup service with exception: {e.response_text}")
+            state = BackupServiceState.REPO_ERR_UNKNOWN
+            if NODES_MISSING_CREDS_ERR in e.response_text:
+                state = BackupServiceState.NODES_MISSING_CREDENTIALS
+            elif REPO_NOT_ACCESS_ERR in e.response_text:
+                state = BackupServiceState.INCORRECT_CREDENTIALS
+
+        if state == BackupServiceState.NODES_MISSING_CREDENTIALS:
+            # credentials are correct but not all nodes have them yet
+            raise OpenSearchBackupError()
 
         #     (3) based on the response, set the message status
         if state != BackupServiceState.SUCCESS:

@@ -45,6 +45,9 @@ ClusterHealthYellow = (
 ClusterHealthRedUpgrade = (
     "1 or more 'primary' shards are not assigned in the cluster. Fix unhealthy units"
 )
+CredsMissingRelations = (
+    "Found credentials with missing relations. Add relation for {} and any client applications."
+)
 IndexCreationFailed = "failed to create {index} index - deferring index-requested event..."
 UserCreationFailed = "failed to create users for {rel_name} relation {id}"
 PluginConfigChangeError = "Failed to apply config changes on the plugin."

@@ -247,10 +247,9 @@ class OpenSearchPluginManager:
         """Adds plugin configuration information to peer relation data"""
         state = self._state.app if scope == Scope.APP else self._state.unit
         plugins = state.plugin_config_info
-        plugin_config = plugins.get(label) or PluginConfigInfo(
-            relation_name=relation_name,
-            secret_id=secret_id,
-        )
+        plugin_config = plugins.get(label) or PluginConfigInfo()
+        plugin_config.relation_name = relation_name
+        plugin_config.secret_id = secret_id
         if cleanup:
             plugin_config.add_cleanup_items(cleanup)
         plugins[label] = plugin_config

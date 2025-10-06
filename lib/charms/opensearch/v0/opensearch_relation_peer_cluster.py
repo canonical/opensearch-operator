@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, MutableMapping, Optional
 from charms.opensearch.v0.constants_charm import (
     AdminUser,
     COSUser,
+    CredsMissingRelations,
     KibanaserverUser,
     PClusterOrchestratorsRemoved,
     PClusterWaitingForFailoverPromotion,
@@ -18,8 +19,9 @@ from charms.opensearch.v0.constants_charm import (
     PeerClusterRelationName,
 )
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.helper_charm import all_units, diff, format_unit_name
+from charms.opensearch.v0.helper_charm import Status, all_units, diff, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology
+from charms.opensearch.v0.helper_plugins import remove_plugin_secret
 from charms.opensearch.v0.models import (
     DeploymentDescription,
     DeploymentType,
@@ -329,9 +331,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         self.charm.opensearch_peer_cm.validate_recommended_cm_unit_count(cms)
 
         # check if any credentials exist without relations
-        self._block_if_has_credentials_with_missing_relations()
+        self.check_credentials_with_missing_relations()
 
-    def _block_if_has_credentials_with_missing_relations(self) -> None:
+    def check_credentials_with_missing_relations(self) -> None:
         """Checks if the relation data has credentials for non-related apps"""
         # For failover promotions: new main orchestrator may have secrets transferred
         # by the previous main orchestrator for credentials from applications
@@ -350,8 +352,16 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             for relation in plugin_relation_names
             if not self.charm.model.get_relation(relation)
         ]:
-            message = f"Found credentials with missing relations. Add relation for {', '.join(missing)} endpoints and any client applications."
-            self.charm.status.set(BlockedStatus(message), app=True)
+            self.charm.status.set(
+                BlockedStatus(CredsMissingRelations.format(", ".join(missing))), app=True
+            )
+            self.charm.state.app.relation_data.put(Scope.APP, "missing_relations", True)
+            return
+
+        self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
+        self.charm.status.clear(
+            CredsMissingRelations, pattern=Status.CheckPattern.Interpolated, app=True
+        )
 
     def refresh_relation_data(  # noqa: C901
         self, event: EventBase, event_rel_id: int | None = None, can_defer: bool = True
@@ -937,18 +947,18 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         add, remove = diff(configs_from_relation.keys(), current_app_plugin_info.keys())
 
         for label in remove:
-            self.charm.plugin_manager.remove_plugin_config(scope=Scope.APP, label=label)
+            remove_plugin_secret(self.charm, label)
 
         for label in add:
             plugin = configs_from_relation[label]
             if plugin.secret_id:
                 self.charm.secrets.get_tracked_secret(plugin.secret_id, Scope.APP, label)
-            self.charm.plugin_manager.put_plugin_config(
-                scope=Scope.APP,
-                label=label,
-                secret_id=plugin.secret_id,
-                relation_name=plugin.relation_name,
-            )
+                self.charm.plugin_manager.put_plugin_config(
+                    scope=Scope.APP,
+                    label=label,
+                    secret_id=plugin.secret_id,
+                    relation_name=plugin.relation_name,
+                )
 
     def apply_orchestrator_status(self) -> None:
         """Sets or clears status based on presence of local orchestrators."""
