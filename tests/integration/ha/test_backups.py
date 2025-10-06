@@ -497,19 +497,6 @@ async def test_create_backup_and_restore_with_correct_credentials(
         ContinuousWrites.INDEX_NAME,
     )
 
-    backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
-    backup_relation = AZURE_RELATION if cloud_name == "azure" else S3_RELATION
-    await ops_test.model.applications[app].destroy_relation(
-        f"{app}:{backup_relation}", backup_integrator
-    )
-
-    await wait_until(
-        ops_test,
-        apps=[app],
-        apps_statuses=["active"],
-        idle_period=IDLE_PERIOD,
-    )
-
 
 @pytest.mark.parametrize("cloud_name,deploy_type", LARGE_DEPLOYMENTS_ALL_CLOUDS)
 @pytest.mark.abort_on_fail
@@ -543,6 +530,10 @@ async def test_large_setups_relations_with_misconfiguration(
         }
         await _configure_s3(ops_test=ops_test, config=config, credentials=credentials)
 
+    backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
+    backup_relation = AZURE_RELATION if cloud_name == "azure" else S3_RELATION
+    await ops_test.model.integrate(f"failover:{backup_relation}", backup_integrator)
+
     await wait_until(
         ops_test,
         apps=["main"],
@@ -550,9 +541,6 @@ async def test_large_setups_relations_with_misconfiguration(
         apps_full_statuses={"main": {"blocked": [BackupSetupFailed]}},
         idle_period=IDLE_PERIOD,
     )
-
-    backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
-    backup_relation = AZURE_RELATION if cloud_name == "azure" else S3_RELATION
 
     # Now, relate failover cluster to backup-integrator and review the status
     await ops_test.model.integrate(f"failover:{backup_relation}", backup_integrator)

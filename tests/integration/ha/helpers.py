@@ -490,8 +490,8 @@ async def wait_for_backup_system_to_settle(
             )
             # Expected format:
             # namespace(status='completed', response={'return-code': 0, 'backups': '{"1": ...}'})
-            logger.debug(f"action.response: {action.response}")
             backups = json.loads(action.response["backups"])
+            logger.debug(f"Backups recovered: {backups}")
             if action.status != "completed" or len(backups) == 0:
                 raise Exception("Failed to retrieve backup list or list is empty")
 
@@ -574,7 +574,6 @@ async def list_backups(ops_test: OpsTest, leader_id: int, app: str = APP_NAME) -
         ops_test, leader_id, "list-backups", params={"output": "json"}, app=app
     )
     assert action.status == "completed"
-    logger.debug(f"action.response: {action.response}")
     return json.loads(action.response["backups"])
 
 
