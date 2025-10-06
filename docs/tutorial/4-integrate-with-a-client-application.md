@@ -428,4 +428,6 @@ and then recreate the relation. Run the `get-credentials` action on the
 data-integrator charm again to get the new credentials,
 and test them again with the above search request.
 
->**Next step**: [5. Manage passwords](/tutorial/5-manage-passwords)
+```{note}
+**Next step**: [5. Manage passwords](/tutorial/5-manage-passwords)
+```

@@ -19,10 +19,11 @@ like providing, requesting, and renewing TLS certificates.
 
 In this section, you will learn how to enable security in your OpenSearch deployment using TLS encryption.
 
-> **[Self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate) are not recommended for a production environment.**  
+```{note}
+**[Self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate)
+are not recommended for a production environment.**  
 Check [this guide](/) for an overview of the TLS certificates charms available.
-
----
+```
 
 ## Configure TLS
 
@@ -100,4 +101,6 @@ self-signed-certificates:certificates  opensearch:certificates        tls-certif
 Notice the last relation:
 `self-signed-certificates:certificates  opensearch:certificates        tls-certificates    regular`.
 
-> **Next step:** [4. Integrate with a client application](/tutorial/4-integrate-with-a-client-application)
+```{note}
+**Next step:** [4. Integrate with a client application](/tutorial/4-integrate-with-a-client-application)
+```

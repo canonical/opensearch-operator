@@ -5,15 +5,9 @@
 
 In this step, we will set up a development environment with the required components for deploying Charmed OpenSearch.
 
->Before you start, make sure your machine meets the [minimum system requirements](/reference/system-requirements).
-
-## Summary
-
-* [Set up LXD](#set-up-lxd)
-* [Set up Juju](#set-up-juju)
-* [Set kernel parameters](#set-kernel-parameters)
-
----
+```{note}
+Before you start, make sure your machine meets the [minimum system requirements](/reference/system-requirements).
+```
 
 ## Set up LXD
 
@@ -186,4 +180,6 @@ EOF
 juju model-config --file=./cloudinit-userdata.yaml
 ```
 
->**Next step:** [2. Deploy OpenSearch](/tutorial/2-deploy-opensearch).
+```{note}
+**Next step:** [2. Deploy OpenSearch](/tutorial/2-deploy-opensearch).
+```

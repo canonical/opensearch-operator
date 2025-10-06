@@ -13,9 +13,11 @@ To deploy Charmed OpenSearch, run the following command:
 juju deploy opensearch -n 3
 ```
 
-> The `-n` flag is optional and specifies the number of units to deploy.
-> In this case, we are deploying three units of Charmed OpenSearch.
-> We recommend deploying at least three units for high availability.
+```{note}
+The `-n` flag is optional and specifies the number of units to deploy.
+In this case, we are deploying three units of Charmed OpenSearch.
+We recommend deploying at least three units for high availability.
+```
 
 This command will fetch the charm from
 [Charmhub](https://charmhub.io/opensearch?channel=beta) and deploy 3 units to the LXD cloud.
@@ -27,10 +29,12 @@ You can track the progress by running:
 juju status --watch 1s
 ```
 
-> This command is useful for checking the status of your Juju model,
-> including the applications and machines it hosts.
-> Helpful information it displays includes IP addresses, ports, state, etc.
-> The output of this command updates once every other second.
+```{note}
+This command is useful for checking the status of your Juju model,
+including the applications and machines it hosts.
+Helpful information it displays includes IP addresses, ports, state, etc.
+The output of this command updates once every other second.
+```
 
 When the application is ready, `juju status` will show something similar to the sample output below:
 
@@ -66,4 +70,6 @@ vm.swappiness should be 0 - net.ipv4.tcp_retries2 should be 5
 
 you need to [set the correct kernel parameters](/tutorial/1-set-up-the-environment) to continue.
 
->**Next step:** [3. Enable TLS](/tutorial/3-enable-encryption)
+```{note}
+**Next step:** [3. Enable TLS](/tutorial/3-enable-encryption)
+```

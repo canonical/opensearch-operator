@@ -4,9 +4,11 @@
 This guide describes how to roll back a minor version of OpenSearch.
 This is useful when an upgrade fails and you need to roll back to the previous version.
 
-> OpenSearch does not support downgrading to a previous major version.
-> For more information, please refer to the upstream
-> [OpenSearch documentation about rolling upgrades](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/#preparing-to-upgrade).
+```{note}
+OpenSearch does not support downgrading to a previous major version.
+For more information, please refer to the upstream
+[OpenSearch documentation about rolling upgrades](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/#preparing-to-upgrade).
+```
 
 After a `juju refresh`, if there are any version incompatibilities in charm revisions,
 its dependencies, or any other unexpected failure in the upgrade process,

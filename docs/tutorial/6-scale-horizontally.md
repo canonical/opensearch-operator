@@ -122,12 +122,16 @@ Notice that the shards are distributed across all nodes.
 
 ## Remove nodes
 
-> **Note:** Refer to [safe-horizontal-scaling guide](/how-to-guides/scale-horizontally)
-> to understand how to safely remove units in a production environment.
+```{note}
+Refer to [safe-horizontal-scaling guide](/how-to-guides/scale-horizontally)
+to understand how to safely remove units in a production environment.
+```
 
-> **Warning:** In highly available deployment, only scaling down to 3 nodes is safe.
-> If only 2 nodes are online, neither can be unavailable nor removed.
-> The service will become **unavailable** and **data may be lost**  if scaling below 2 nodes.
+```{warning}
+In highly available deployment, only scaling down to 3 nodes is safe.
+If only 2 nodes are online, neither can be unavailable nor removed.
+The service will become **unavailable** and **data may be lost**  if scaling below 2 nodes.
+```
 
 Removing a unit from the Juju application scales down your OpenSearch cluster by one node.
 Before we scale down the nodes we no longer need, list all the units with `juju status`.
@@ -164,4 +168,6 @@ Machine  State    Address       Inst id        Base          AZ  Message
 4        started  10.95.38.22   juju-be3883-4  ubuntu@22.04      Running
 ```
 
->**Next step**: [7. Clean up the environment](/tutorial/7-clean-up-the-environment).
+```{note}
+**Next step**: [7. Clean up the environment](/tutorial/7-clean-up-the-environment).
+```

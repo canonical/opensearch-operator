@@ -134,6 +134,7 @@ i.e:
 curl --cacert cert.pem -XGET https://admin:admin_password@10.180.162.96:9200/_cluster/health
 ``` 
 -->
+
 ## 2. Scale down one unit
 
 Once you made sure that removing a unit is safe to do, you can proceed to removing **a single unit**. It is unsafe to remove more than one unit at a time.

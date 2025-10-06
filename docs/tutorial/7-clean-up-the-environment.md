@@ -16,8 +16,9 @@ to free up resources on your machine.
 
 ## Remove Charmed OpenSearch
 
-> **Warning:** When you remove Charmed OpenSearch as shown below,
-> you will lose all the data in your cluster.
+```{warning}
+When you remove Charmed OpenSearch as shown below, you will lose all the data in your cluster.
+```
 
 To remove Charmed OpenSearch and the model it is hosted on, run this command:
 
@@ -42,8 +43,10 @@ rm cloudinit-userdata.yaml
 
 ## Remove Juju
 
-> **Warning:** When you remove Juju as shown below you will lose access to any other applications
-> you have hosted on Juju.
+```{warning}
+**Warning:** When you remove Juju as shown below you will lose access to any other applications
+you have hosted on Juju.
+```
 
 To remove Juju altogether, enter:
 
@@ -53,8 +56,10 @@ sudo snap remove juju --purge
 
 ## Remove LXD
 
-> **Warning:** When you remove LXD as shown below you will lose access to any other applications
-> you have hosted on LXD.
+```{warning}
+When you remove LXD as shown below you will lose access to any other applications
+you have hosted on LXD.
+```
 
 You can list all your currently running LXD container with `lxc list`.
 
@@ -66,7 +71,9 @@ sudo snap remove lxd --purge
 
 ## Reset the Kernel parameters
 
->**Warning:** In the following command, use the values you saved during step 1 -> Get default values.
+```{warning}
+In the following command, use the values you saved during step 1 -> Get default values.
+```
 
 If you did not save those values, use the second reset option.
 

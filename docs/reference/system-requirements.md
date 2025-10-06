@@ -29,7 +29,9 @@ where possible in order to avoid performance issues in your cluster because of l
 or limited throughput.
 ```
 
-> See also: [How to perform load testing](/how-to-guides/monitoring-cos/perform-load-testing)
+```{note}
+See also: [How to perform load testing](/how-to-guides/monitoring-cos/perform-load-testing)
+```
 
 ## Networking
 
