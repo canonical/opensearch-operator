@@ -86,24 +86,6 @@ ALL_DEPLOYMENTS_ALL_CLOUDS = list(ALL_GROUPS.items())
 SMALL_DEPLOYMENTS_ALL_CLOUDS = [ALL_GROUPS[(cloud, "small")] for cloud in ALL_CLOUDS]
 LARGE_DEPLOYMENTS_ALL_CLOUDS = [ALL_GROUPS[(cloud, "large")] for cloud in ALL_CLOUDS]
 
-HAPPY_GROUPS = {
-    (cloud_name, deploy_type): pytest.param(
-        cloud_name,
-        deploy_type,
-        id=f"{cloud_name}-{deploy_type}-happy-path",
-        marks=[
-            pytest.mark.group(id=f"{cloud_name}-{deploy_type}-happy-path"),
-        ],
-    )
-    for cloud_name in ALL_CLOUDS
-    for deploy_type in ALL_DEPLOY_TYPES
-}
-HAPPY_PATH = [
-    HAPPY_GROUPS[(cloud, deploy_type)]
-    for cloud in ALL_CLOUDS
-    for deploy_type in ALL_DEPLOY_TYPES
-]
-
 S3_INTEGRATOR = "s3-integrator"
 S3_INTEGRATOR_CHANNEL = "1/stable"
 S3_RELATION = "s3-credentials"
@@ -441,12 +423,29 @@ async def _build_small_deployment_env(ops_test: OpsTest, charm, series, cloud_na
     await ops_test.model.integrate(APP_NAME, backup_integrator)
 
 
-@pytest.mark.parametrize("cloud_name,deploy_type", HAPPY_PATH)
+@pytest.mark.parametrize("cloud_name,deploy_type", SMALL_DEPLOYMENTS_ALL_CLOUDS)
+@pytest.mark.abort_on_fail
+@pytest.mark.skip_if_deployed
+async def test_small_deployment_build_and_deploy(
+    ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
+) -> None:
+    """Build and deploy an HA cluster of OpenSearch and corresponding backup integration."""
+    await _build_small_deployment_env(ops_test, charm, series, cloud_name)
+
+
+@pytest.mark.parametrize("cloud_name,deploy_type", LARGE_DEPLOYMENTS_ALL_CLOUDS)
+@pytest.mark.abort_on_fail
+@pytest.mark.skip_if_deployed
+async def test_large_deployment_build_and_deploy(
+    ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
+) -> None:
+    await _build_large_deployment_env(ops_test, charm, series, cloud_name)
+
+
+@pytest.mark.parametrize("cloud_name,deploy_type", ALL_DEPLOYMENTS_ALL_CLOUDS)
 @pytest.mark.abort_on_fail
 async def test_create_backup_and_restore_with_correct_credentials(
     ops_test: OpsTest,
-    charm,
-    series,
     c_writes: ContinuousWrites,
     c_writes_runner,
     cloud_configs: Dict[str, Dict[str, str]],
@@ -455,11 +454,6 @@ async def test_create_backup_and_restore_with_correct_credentials(
     deploy_type: str,
 ) -> None:
     """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
-    if deploy_type == "large":
-        await _build_large_deployment_env(ops_test, charm, series, cloud_name)
-    else:
-        await _build_small_deployment_env(ops_test, charm, series, cloud_name)
-
     app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
     apps = [app] if deploy_type == "small" else [app, APP_NAME]
     leader_id = await get_leader_unit_id(ops_test, app=app)
@@ -503,24 +497,18 @@ async def test_create_backup_and_restore_with_correct_credentials(
         ContinuousWrites.INDEX_NAME,
     )
 
+    backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
+    backup_relation = AZURE_RELATION if cloud_name == "azure" else S3_RELATION
+    await ops_test.model.applications[app].destroy_relation(
+        f"{app}:{backup_relation}", backup_integrator
+    )
 
-@pytest.mark.parametrize("cloud_name,deploy_type", SMALL_DEPLOYMENTS_ALL_CLOUDS)
-@pytest.mark.abort_on_fail
-@pytest.mark.skip_if_deployed
-async def test_small_deployment_build_and_deploy(
-    ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
-) -> None:
-    """Build and deploy an HA cluster of OpenSearch and corresponding backup integration."""
-    await _build_small_deployment_env(ops_test, charm, series, cloud_name)
-
-
-@pytest.mark.parametrize("cloud_name,deploy_type", LARGE_DEPLOYMENTS_ALL_CLOUDS)
-@pytest.mark.abort_on_fail
-@pytest.mark.skip_if_deployed
-async def test_large_deployment_build_and_deploy(
-    ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
-) -> None:
-    await _build_large_deployment_env(ops_test, charm, series, cloud_name)
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["active"],
+        idle_period=IDLE_PERIOD,
+    )
 
 
 @pytest.mark.parametrize("cloud_name,deploy_type", LARGE_DEPLOYMENTS_ALL_CLOUDS)
