@@ -776,9 +776,9 @@ async def test_restore_to_new_cluster(
     backups = await list_backups(ops_test, leader_id, app=app)
 
     global cwrites_backup_doc_count
-    # We are expecting 2x backups available
-    assert len(backups) == 2
-    assert len(cwrites_backup_doc_count) == 2
+    # We are expecting 3x backups available
+    assert len(backups) == 3
+    assert len(cwrites_backup_doc_count) == 3
     count = 0
     for backup_id in backups.keys():
         assert await restore(ops_test, backup_id, unit_ip, leader_id, app=app)
