@@ -1,12 +1,13 @@
 (tutorial-index)=
 # Tutorial
 
-# Tutorial
-
-This tutorial is designed to help you learn how to deploy Charmed OpenSearch and become familiar with its available operations.
+This tutorial is designed to help you learn how to deploy Charmed OpenSearch and become familiar
+with its available operations.
 
 ## What you'll need
-While this tutorial intends to guide you as you deploy Charmed OpenSearch for the first time, it will be most beneficial if:
+
+While this tutorial intends to guide you as you deploy Charmed OpenSearch for the first time,
+it will be most beneficial if:
 
 * You have some experience using a Linux-based CLI
 * You are familiar with OpenSearch concepts such as indices and users.
@@ -14,7 +15,6 @@ While this tutorial intends to guide you as you deploy Charmed OpenSearch for th
 * Your computer fulfils the [minimum system requirements](/reference/system-requirements)
 
 ## What you'll do
-
 
 | Step | Details |
 | ------- | ---------- |
@@ -26,13 +26,15 @@ While this tutorial intends to guide you as you deploy Charmed OpenSearch for th
 | 6. [**Scale horizontally**](/tutorial/6-scale-horizontally) | Scale your application by adding or removing juju units
 | 7. [**Clean up the environment**](/tutorial/7-clean-up-the-environment) | Remove your OpenSearch deployment and juju to free your machine's resources
 
-
 ```{toctree}
 :titlesonly:
-:maxdepth: 2
-:glob:
 :hidden:
 
-*
-*/index
+1-set-up-the-environment.md
+2-deploy-opensearch.md
+3-enable-encryption.md
+4-integrate-with-a-client-application.md
+5-manage-passwords.md
+6-scale-horizontally.md
+7-clean-up-the-environment.md
 ```

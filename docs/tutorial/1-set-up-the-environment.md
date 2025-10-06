@@ -3,13 +3,12 @@
 
 > [Charmed OpenSearch Tutorial](/tutorial/index) >  1. Set up the environment
 
-# Set up the environment
-
 In this step, we will set up a development environment with the required components for deploying Charmed OpenSearch.
 
 >Before you start, make sure your machine meets the [minimum system requirements](/reference/system-requirements).
 
 ## Summary
+
 * [Set up LXD](#set-up-lxd)
 * [Set up Juju](#set-up-juju)
 * [Set kernel parameters](#set-kernel-parameters)
@@ -43,7 +42,8 @@ You can list all LXD containers by executing the command `lxc list`. At this poi
 
 ## Set up Juju
 
-[Juju](https://juju.is/docs/juju) is an Operator Lifecycle Manager (OLM) for clouds, bare metal, LXD or Kubernetes. We will be using it to deploy and manage Charmed OpenSearch. 
+[Juju](https://juju.is/docs/juju) is an Operator Lifecycle Manager (OLM) for clouds, bare metal,
+LXD or Kubernetes. We will be using it to deploy and manage Charmed OpenSearch.
 
 As with LXD, Juju is installed using a snap package:
 
@@ -51,7 +51,10 @@ As with LXD, Juju is installed using a snap package:
 sudo snap install juju --channel 3.5/stable --classic
 ```
 
-Juju already has a built-in knowledge of LXD and how it works, so there is no additional setup or configuration needed, however,  because Juju 3.x is a [strictly confined snap](https://snapcraft.io/docs/classic-confinement), and is not allowed to create a `~/.local/share` directory, we need to create it manually.
+Juju already has a built-in knowledge of LXD and how it works, so there is no additional setup
+or configuration needed, however,  because Juju 3.x is a
+[strictly confined snap](https://snapcraft.io/docs/classic-confinement), and is not allowed
+to create a `~/.local/share` directory, we need to create it manually.
 
 ```shell
 mkdir -p ~/.local/share
@@ -71,7 +74,8 @@ Cloud      Regions  Default    Type  Credentials  Source    Description
 localhost  1        localhost  lxd   1            built-in  LXD Container Hypervisor
 ```
 
-Notice that Juju already has a built-in knowledge of LXD and how it works, so there is no need for additional setup. A controller will be used to deploy and control Charmed OpenSearch. 
+Notice that Juju already has a built-in knowledge of LXD and how it works, so there is no need
+for additional setup. A controller will be used to deploy and control Charmed OpenSearch.
 
 Run the following command to bootstrap a Juju controller named `opensearch-demo` on LXD:
 
@@ -81,7 +85,8 @@ juju bootstrap localhost opensearch-demo
 
 This bootstrapping process can take several minutes depending on your system resources.
 
-The Juju controller exists within an LXD container. You can verify this by entering the command `lxc list`.
+The Juju controller exists within an LXD container. You can verify this by entering the command
+`lxc list`.
 
 This will output the following:
 
@@ -101,7 +106,8 @@ Set up a unique model for this tutorial named `tutorial`:
 juju add-model tutorial
 ```
 
-You can now view the model you created above by entering the command `juju status` into the command line. You should see the following:
+You can now view the model you created above by entering the command `juju status` into
+the command line. You should see the following:
 
 ```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
@@ -110,13 +116,19 @@ tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  11:26:13Z
 
 ## Set kernel parameters
 
-Before deploying Charmed OpenSearch, we need to set some [kernel parameters](https://www.kernel.org/doc/Documentation/sysctl/vm.txt). These are requirements for OpenSearch to function correctly. 
+Before deploying Charmed OpenSearch, we need to set some
+[kernel parameters](https://www.kernel.org/doc/Documentation/sysctl/vm.txt).
+These are requirements for OpenSearch to function correctly.
 
-Since we are using LXD containers to deploy our charm, and containers share a kernel with their host, we need to set these kernel parameters on the host machine. We will save the default values, change them to the optimal values for OpenSearch, and add the parameters to the Juju model's configuration.
+Since we are using LXD containers to deploy our charm, and containers share a kernel
+with their host, we need to set these kernel parameters on the host machine.
+We will save the default values, change them to the optimal values for OpenSearch,
+and add the parameters to the Juju model's configuration.
 
 ### Get default values
 
-First, we need to make note of the current parameters of the kernel because we will need to reset them after the tutorial (although rebooting your machine will also do the trick). 
+First, we need to make note of the current parameters of the kernel because we will need to reset
+them after the tutorial (although rebooting your machine will also do the trick).
 
 Let's run `sysctl` and filter the output for the three specific parameters that we will be changing:
 
@@ -132,7 +144,9 @@ vm.max_map_count = 262144
 vm.swappiness = 60
 ```
 
-Make note of the above variables so that you can reset them later to their original values. Using the host machine outside of this tutorial without resetting these kernel parameters manually or rebooting may have an impact on the host machine's performance.
+Make note of the above variables so that you can reset them later to their original values.
+Using the host machine outside of this tutorial without resetting these kernel parameters
+manually or rebooting may have an impact on the host machine's performance.
 
 ### Set parameters on the host machine
 
@@ -149,11 +163,12 @@ EOT
 sudo sysctl -p
 ```
 
-Please note that these values reset on system reboot, so if you complete this tutorial in multiple stages, you'll need to set these values again each time you restart your host machine.
+Please note that these values reset on system reboot, so if you complete this tutorial
+in multiple stages, you'll need to set these values again each time you restart your host machine.
 
 ### Add parameters to Juju model config
 
-You also need to set the Juju model configuration to include these parameters. 
+You also need to set the Juju model configuration to include these parameters.
 
 To do so, run the following commands:
 
@@ -172,4 +187,3 @@ juju model-config --file=./cloudinit-userdata.yaml
 ```
 
 >**Next step:** [2. Deploy OpenSearch](/tutorial/2-deploy-opensearch).
-

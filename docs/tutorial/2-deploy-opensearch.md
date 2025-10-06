@@ -3,9 +3,9 @@
 
 > [Charmed OpenSearch Tutorial](/tutorial/index) >  2. Deploy OpenSearch
 
-# Deploy OpenSearch
-
-Charmed OpenSearch supports performance profile. It is recommended in a single host deployment with LXD to use the `testing` profile, which will only consume 1G RAM per container.
+Charmed OpenSearch supports performance profile.
+It is recommended in a single host deployment with LXD to use the `testing` profile,
+which will only consume 1G RAM per container.
 
 To deploy Charmed OpenSearch, run the following command:
 
@@ -13,9 +13,13 @@ To deploy Charmed OpenSearch, run the following command:
 juju deploy opensearch -n 3
 ```
 
-> The `-n` flag is optional and specifies the number of units to deploy. In this case, we are deploying three units of Charmed OpenSearch. We recommend deploying at least three units for high availability.
+> The `-n` flag is optional and specifies the number of units to deploy.
+> In this case, we are deploying three units of Charmed OpenSearch.
+> We recommend deploying at least three units for high availability.
 
-This command will fetch the charm from [Charmhub](https://charmhub.io/opensearch?channel=beta) and deploy 3 units to the LXD cloud. This process can take several minutes depending on your machine. 
+This command will fetch the charm from
+[Charmhub](https://charmhub.io/opensearch?channel=beta) and deploy 3 units to the LXD cloud.
+This process can take several minutes depending on your machine.
 
 You can track the progress by running:
 
@@ -23,9 +27,12 @@ You can track the progress by running:
 juju status --watch 1s
 ```
 
-> This command is useful for checking the status of your Juju model, including the applications and machines it hosts. Helpful information it displays includes IP addresses, ports, state, etc. The output of this command updates once every other second. 
+> This command is useful for checking the status of your Juju model,
+> including the applications and machines it hosts.
+> Helpful information it displays includes IP addresses, ports, state, etc.
+> The output of this command updates once every other second.
 
-When the application is ready, `juju status` will show something similar to the sample output below: 
+When the application is ready, `juju status` will show something similar to the sample output below:
 
 ```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
@@ -47,14 +54,16 @@ Machine  State    Address       Inst id        Base          AZ  Message
 
 To exit the `juju status` screen, enter `Ctrl + C`.
 
-The status message `Waiting for TLS to be fully configured...` is displayed because Charmed OpenSearch requires TLS to be configured before use, to ensure data is encrypted in transit for the HTTP and Transport layers. We will do this in the next step.
+The status message `Waiting for TLS to be fully configured...` is displayed because
+Charmed OpenSearch requires TLS to be configured before use, to ensure data is encrypted in transit
+for the HTTP and Transport layers. We will do this in the next step.
 
 If you see the following status message:
+
 ```shell
 vm.swappiness should be 0 - net.ipv4.tcp_retries2 should be 5
 ```
+
 you need to [set the correct kernel parameters](/tutorial/1-set-up-the-environment) to continue.
 
-
 >**Next step:** [3. Enable TLS](/tutorial/3-enable-encryption)
-
