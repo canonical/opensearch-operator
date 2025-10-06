@@ -1,12 +1,9 @@
 (how-to-guides-tls-encryption-index)=
-# Tls-Encryption
+# TLS encryption
 
 ```{toctree}
 :titlesonly:
-:maxdepth: 2
-:glob:
-:hidden:
 
-*
-*/index
+Enable TLS encryption <enable-tls-encryption>
+Rotate TLS/CA certificates <rotate-tls-ca-certificates>
 ```

@@ -1,11 +1,11 @@
-(how-to-guides-deploy-launch-a-large-deployment)=
-# Launch a large deployment
-
+(how-to-deploy-large)=
 # How to launch a large deployment
 
 The Charmed OpenSearch operator can be deployed at scale to support large deployments. This guide explains how to launch a large deployment of OpenSearch using Juju.
 
 ## Summary
+- [How to launch a large deployment](#how-to-launch-a-large-deployment)
+  - [Summary](#summary)
   - [OpenSearch node roles](#opensearch-node-roles)
     - [Set roles](#set-roles)
       - [Auto-generated roles](#auto-generated-roles)
@@ -14,8 +14,7 @@ The Charmed OpenSearch operator can be deployed at scale to support large deploy
     - [Deploy the clusters](#deploy-the-clusters)
     - [Add the required relations](#add-the-required-relations)
       - [Configure TLS encryption](#configure-tls-encryption)
-      - [Form the large cluster]()
-    - [Form the OpenSearch cluster](#form-the-opensearch-cluster-11)
+    - [Form the OpenSearch cluster](#form-the-opensearch-cluster)
 
 ---
 

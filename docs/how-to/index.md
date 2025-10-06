@@ -1,20 +1,20 @@
 (how-to-guides-index)=
-# How-To-Guides
-
 # How-to guides
 
 The following guides cover key processes and common tasks for managing and using Charmed OpenSearch on machines.
 
-
 ## Deployment and setup
+
 * [Deploy on LXD]
 * [Launch a large deployment]
 
 ## TLS encryption
+
 * [Enable TLS encryption]
 * [Rotate TLS/CA certificates]
 
 ## Usage and maintenance
+
 * [Scale horizontally]
 * [Integrate with an application]
 * [Perform load testing]
@@ -22,19 +22,21 @@ The following guides cover key processes and common tasks for managing and using
 * [Access using Oauth](https://discourse.charmhub.io/t/how-to-access-opensearch-using-oauth/18870/1)
 
 ## Backup and restore
+
 * [Configure S3]
 * [Create a backup]
 * [Restore a local backup]
 * [Migrate a cluster]
 
 ## Minor upgrades
+
 * [Perform a minor upgrade]
 * [Perform a minor rollback]
 
 ## Monitoring (COS)
 
 * [Monitoring (COS)]
-    * [Enable COS]
+  * [Enable COS]
 
 <!-- Links -->
 
@@ -60,13 +62,18 @@ The following guides cover key processes and common tasks for managing and using
 [Monitoring (COS)]: /t/16563
 [Enable COS]: /t/14560
 
-
 ```{toctree}
 :titlesonly:
-:maxdepth: 2
-:glob:
 :hidden:
 
-*
-*/index
+deploy/index
+tls-encryption/index
+Scale horizontally <scale-horizontally>
+Integrate with an application <integrate-with-an-application>
+back-up-and-restore/index
+recover-from-attached-storage
+upgrade/index
+Access using Oauth <access-using-oauth>
+Enable JWT Authentication <enable-jwt-authentication>
+monitoring-cos/index
 ```

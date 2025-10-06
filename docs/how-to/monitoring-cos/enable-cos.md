@@ -1,26 +1,19 @@
 (how-to-guides-monitoring-cos-enable-cos)=
-# Enable COS
-
 # How to enable monitoring (COS)
 
-```{note}All commands are written for juju >= v.3.1.7 ```
+```{note}
+All commands are written for juju >= v.`3.1.7`.
+```
 
 ## Prerequisites
 
 * A deployed [Charmed OpenSearch operator](/tutorial/2-deploy-opensearch)
 * A deployed [`cos-lite` bundle in a Kubernetes environment](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s)
 
-## Summary
-
-* [Offer interfaces via the COS controller](#offer-interfaces-via-the-cos-controller)
-* [Consume offers via the OpenSearch model](#consume-offers-via-the-opensearch-model)
-* [Deploy and integrate Grafana](#deploy-and-integrate-grafana)
-* [Connect to the Grafana web interface](#connect-to-the-grafana-web-interface)
----
-
 ## Offer interfaces via the COS controller
 
-First, we will switch to the COS K8s environment and offer COS interfaces to be cross-model integrated with the Charmed OpenSearch model.
+First, we will switch to the COS K8s environment and offer COS interfaces to be cross-model
+integrated with the Charmed OpenSearch model.
 
 To switch to the Kubernetes controller for the COS model, run
 
@@ -40,7 +33,8 @@ juju offer prometheus:receive-remote-write
 
 Next, we will switch to the Charmed OpenSearch model, find offers, and consume them.
 
-We are currently on the Kubernetes controller for the COS model. To switch to the OpenSearch model, run
+We are currently on the Kubernetes controller for the COS model.
+To switch to the OpenSearch model, run
 
 ```shell
 juju switch <db_controller>:<opensearch_model_name>
@@ -62,7 +56,8 @@ First, deploy [grafana-agent](https://charmhub.io/grafana-agent):
 juju deploy grafana-agent
 ```
 
-Then, integrate (previously known as "[relate](https://juju.is/docs/juju/integration)") it with Charmed OpenSearch:
+Then, integrate (previously known as "[relate](https://juju.is/docs/juju/integration)")
+it with Charmed OpenSearch:
 
 ```shell
 juju integrate grafana-agent grafana
@@ -78,19 +73,25 @@ juju integrate grafana-agent-k8s opensearch:logging
 juju integrate grafana-agent-k8s opensearch:metrics-endpoint
 ```
 
-After this is complete, Grafana will show the new dashboard `Charmed OpenSearch` and will allow access to Charmed OpenSearch logs on Loki.
+After this is complete, Grafana will show the new dashboard `Charmed OpenSearch`
+and will allow access to Charmed OpenSearch logs on Loki.
 
 ### Extend to Large Deployments
 
-Large deployments run across multiple juju applications. Connect all the units of each application to grafana-agent, as explained above, and the dashboard will be able to summarize the entire cluster.
+Large deployments run across multiple Juju applications.
+Connect all the units of each application to grafana-agent, as explained above,
+and the dashboard will be able to summarize the entire cluster.
 
 ### Connect Multiple Clusters
 
-It is possible to have the same COS and dashboard for multiple deployments. The dashboard provides selectors to filter which cluster to watch at the time.
+It is possible to have the same COS and dashboard for multiple deployments.
+The dashboard provides selectors to filter which cluster to watch at the time.
 
 ## Connect to the Grafana web interface
 
-To connect to the Grafana web interface, follow the [Browse dashboards](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s?_ga=2.201254254.1948444620.1704703837-757109492.1701777558#browse-dashboards) section of the MicroK8s "Getting started" guide.
+To connect to the Grafana web interface, follow the
+[Browse dashboards](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s?_ga=2.201254254.1948444620.1704703837-757109492.1701777558#browse-dashboards)
+section of the MicroK8s "Getting started" guide.
 
 ```shell
 juju run grafana/leader get-admin-password --model <k8s_cos_controller>:<cos_model_name>
@@ -100,12 +101,13 @@ juju run grafana/leader get-admin-password --model <k8s_cos_controller>:<cos_mod
 
 After accessing Grafana web interface, select the “Charmed OpenSearch” dashboard.
 
-The dashboard filters for juju-specific elements, e.g. application name, unit, model; and also OpenSearch’s cluster and roles. The cluster dropdown allows to select which cluster we want to see the statistics from:
+The dashboard filters for juju-specific elements, e.g. application name, unit, model;
+and also OpenSearch’s cluster and roles.
+The cluster dropdown allows to select which cluster we want to see the statistics from:
 
-It is also possible to select a subset of nodes following roles. That can select nodes across models or applications as well.
+It is also possible to select a subset of nodes following roles.
+That can select nodes across models or applications as well.
 
-![Charmed-Opensearch Dashboard 1|690x342](upload://qFpwVcHJAk1M1ymQWxMqxxiwPm9.png)
+![Charmed-Opensearch Dashboard 1|690x342](img/dash1.png)
 
-
-![Charmed-Opensearch Dashboard 2|690x324](upload://oxIdiHPhMSd1eBu606bkJH8Oiur.png)
-
+![Charmed-Opensearch Dashboard 2|690x324](img/dash2.png)

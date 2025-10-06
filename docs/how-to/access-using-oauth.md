@@ -1,39 +1,23 @@
-(how-to-guides-access-using-oauth)=
-# Access using Oauth
+(how-to-access-using-oauth)=
+# How to access OpenSearch using OAuth
 
-# How to access OpenSearch using OAuth 
-
-This guide shows how to secure an OpenSearch deployment with OAuth tokens issued by Canonical’s Identity Platform (Hydra) and then query OpenSearch using generated tokens.
-
-## Summary
-
-  - [Introduction](#p-39202-introduction-3)
-    - [Prerequisites](#p-39202-prerequisites-4)
-    - [Deploy OpenSearch on LXD](#p-39202-deploy-opensearch-on-lxd-5)
-    - [Deploy the Identity Platform on MicroK8s](#p-39202-deploy-the-identity-platform-on-microk8s-6)
-       - [Deploy Identity Platform](p-39202-deploy-identity-platform-8) 
-    - [Offer/consume relations for certificates and OAuth](#p-39202-offerconsume-relations-for-certificates-and-oauth-9)
-       - [Integrate self-signed-certificates with OpenSearch](#p-39202-integrate-self-signed-certificates-with-opensearch-10)
-       - [Integrate OAuth (Hydra) with OpenSearch](#p-39202-integrate-oauth-hydra-with-opensearch-11)
-    - [Access Opensearch Using OAuth Client](#p-39202-access-opensearch-using-oauth-client-12)
-       - [Create an OAuth client in Hydra](#p-39202-create-an-oauth-client-in-hydra-13)
-       - [Get the Hydra public URL](#p-39202-get-the-hydra-public-url-14)
-       - [Fetch an access token from Hydra](#p-39202-fetch-an-access-token-from-hydra-15)
-       - [Call OpenSearch with the token (expect 403 before mapping)](#p-39202-call-opensearch-with-the-token-expect-403-before-mapping-16)
-       - [Retrieve a user from Data Integrator](#p-39202-retrieve-a-user-from-the-data-integrator-17)
-    - [Configure OpenSearch roles mapping](#p-39202-configure-opensearch-roles-mapping-18)
-      - [Retrigger the API (should work)](#p-39202-retrigger-the-api-should-work-19)
+This guide shows how to secure an OpenSearch deployment with OAuth tokens issued by
+Canonical’s Identity Platform (Hydra) and then query OpenSearch using generated tokens.
 
 ## Introduction
 
-This document guides you to integrate an OpenSearch deployment on LXD with the Identity Platform running on MicroK8s. Hydra will act as the OAuth2 Authorization Server and issue access tokens. You will then configure OpenSearch to trust these tokens by mapping OAuth client IDs to OpenSearch roles provided by the Data Integrator charm. Finally, you will query the OpenSearch API with a bearer token and validate that access control is enforced correctly.
+This document guides you to integrate an OpenSearch deployment on LXD with the Identity Platform
+running on MicroK8s. Hydra will act as the OAuth2 Authorization Server and issue access tokens.
+You will then configure OpenSearch to trust these tokens by mapping OAuth client IDs to OpenSearch
+roles provided by the Data Integrator charm. Finally, you will query the OpenSearch API
+with a bearer token and validate that access control is enforced correctly.
 
 At the end of this guide, you will have:
 
-- An OpenSearch cluster on LXD with TLS certificates and role mappings configured.
-- An Identity Platform (Hydra, Kratos, Traefik, etc.) running on MicroK8s.
-- OAuth client created in Hydra that can obtain tokens for OpenSearch.
-- Verified access to the _cat/indices API with OAuth2 bearer tokens.
+* An OpenSearch cluster on LXD with TLS certificates and role mappings configured.
+* An Identity Platform (Hydra, Kratos, Traefik, etc.) running on MicroK8s.
+* OAuth client created in Hydra that can obtain tokens for OpenSearch.
+* Verified access to the _cat/indices API with OAuth2 bearer tokens.
 
 ## Prerequisites
 
@@ -47,7 +31,7 @@ At the end of this guide, you will have:
 
 Add an LXD model and deploy the OpenSearch and Data Integrator charms:
 
-```
+```shell
 juju add-model opensearch-model localhost/localhost
 juju deploy opensearch -n 3 --channel 2/edge
 juju deploy data-integrator --channel=stable \
@@ -59,7 +43,7 @@ juju deploy data-integrator --channel=stable \
 
 Wait until all the units become active:
 
-```
+```shell
 juju status --watch 5s
 ```
 
@@ -69,7 +53,7 @@ juju status --watch 5s
 
 Install microk8s and enable hostpath-storage, dns and metallb plugins:
 
-```
+```shell
 sudo snap install microk8s --classic
 sudo microk8s enable hostpath-storage dns
 sudo microk8s enable metallb:10.0.0.2-10.0.0.3
@@ -77,15 +61,16 @@ sudo microk8s enable metallb:10.0.0.2-10.0.0.3
 
 Add Microk8s cloud to your existing Juju Controller using kubeconfig file:
 
-```
+```shell
 sudo microk8s config > microk8s-cluster.yaml
 export KUBECONFIG="$PWD/microk8s-cluster.yaml"
 juju controllers    # note your controller name
 juju add-k8s microk8s-cluster -c <controller-name>
 ```
+
 Confirm clouds:
 
-```
+```text
 $ juju clouds
 Clouds available on the controller:
 Cloud             Regions  Default    Type
@@ -102,14 +87,14 @@ microk8s   0                   k8s   0            built-in  A local Kubernetes c
 
 Create a dedicated model on the MicroK8s cloud and deploy the bundle (trusted).
 
-```
+```shell
 juju add-model -c <controller-name> oauth microk8s-cluster/localhost
 juju deploy identity-platform --channel edge --trust true
 ```
 
 Wait until all the units become active except kratos-external-idp-integrator. It will be in blocked status as below:
 
-```
+```text
 $ juju status --watch 10s
 Model  Controller  Cloud/Region                Version  SLA          Timestamp
 oauth  demo        microk8s-cluster/localhost  3.5.7    unsupported  23:37:14+03:00
@@ -139,7 +124,6 @@ hydra                     hydra                     hydra                     33
 self-signed-certificates  self-signed-certificates  self-signed-certificates  155  1/1        certificates  tls-certificates  provider
 ```
 
-
 ## Offer/consume relations for certificates and OAuth
 
 ### Integrate self-signed-certificates with OpenSearch
@@ -148,13 +132,14 @@ Offer the certificates interface from the oauth model and relate it to OpenSearc
 
 Switch to the oauth model and create an offer for certificates:
 
-```
+```shell
 juju switch oauth
 juju offer self-signed-certificates:certificates
 ```
 
 Switch back to the opensearch model and consume the created offer in the previous step:
-```
+
+```shell
 juju switch opensearch-model
 juju consume admin/oauth.self-signed-certificates
 juju integrate opensearch admin/oauth.self-signed-certificates
@@ -164,14 +149,14 @@ juju integrate opensearch admin/oauth.self-signed-certificates
 
 Create an offer for Hydra’s oauth endpoint:
 
-```
+```shell
 juju switch oauth
 juju offer hydra:oauth
 ```
 
 Switch to opensearch model and consume the offer from Hydra:
 
-```
+```shell
 juju switch opensearch-model
 juju consume admin/oauth.hydra
 juju integrate opensearch admin/oauth.hydra
@@ -183,7 +168,7 @@ juju integrate opensearch admin/oauth.hydra
 
 To allow OpenSearch to authenticate requests with OAuth2, you must create a new client in Hydra. The client will use the client_credentials grant type and request the Opensearch audience. Run the following action on the Hydra leader unit:
 
-```
+```shell
 juju switch oauth
 juju run hydra/leader create-oauth-client \
   grant-types='["client_credentials"]' \
@@ -195,7 +180,7 @@ Record the client-id and client-secret from the output.
 
 The output will be similar to the following output:
 
-```
+```text
 juju run hydra/leader create-oauth-client \
   grant-types='["client_credentials"]' \
   audience='["opensearch"]', \
@@ -219,7 +204,7 @@ token-endpoint-auth-method: client_secret_basic
 
 Hydra is fronted by Traefik. Ask Traefik for proxied endpoints:
 
-```
+```shell
 juju run traefik-public/0 show-proxied-endpoints
 ```
 
@@ -227,7 +212,7 @@ Copy the hydra.url (for example: https://10.0.0.3/oauth-hydra).
 
 Export convenient variables:
 
-```
+```shell
 export OAUTH_CLIENT_ID="<client-id>"
 export OAUTH_CLIENT_SECRET="<client-secret>"
 export HYDRA_URL="https://10.0.0.3/oauth-hydra"
@@ -235,7 +220,7 @@ export HYDRA_URL="https://10.0.0.3/oauth-hydra"
 
 ### Fetch an access token from Hydra
 
-```
+```shell
 curl -k -u "${OAUTH_CLIENT_ID}:${OAUTH_CLIENT_SECRET}" \
   -X POST "${HYDRA_URL}/oauth2/token" \
   -d "scope=openid" \
@@ -245,7 +230,7 @@ curl -k -u "${OAUTH_CLIENT_ID}:${OAUTH_CLIENT_SECRET}" \
 
 Save access_token from the JSON output:
 
-```
+```shell
 export OAUTH_ACCESS_TOKEN="<access_token>"
 ```
 
@@ -253,7 +238,7 @@ export OAUTH_ACCESS_TOKEN="<access_token>"
 
 Get the OpenSearch leader’s address:
 
-```
+```shell
 juju switch opensearch-model
 export OPENSEARCH_ADDRESS="$(juju status | grep opensearch/0 | awk -F' ' '{print $5}')"
 
@@ -263,14 +248,14 @@ curl -k -H "Authorization: Bearer ${OAUTH_ACCESS_TOKEN}" \
 
 Test the API:
 
-```
+```shell
 curl -k -H "Authorization: Bearer ${OAUTH_ACCESS_TOKEN}" \
   "https://${OPENSEARCH_ADDRESS}:9200/_cat/indices"
 ```
 
-Expected 403 security_exception  as the client has no mapped roles yet as below:
+Expected 403 security_exception as the client has no mapped roles yet as below:
 
-```
+```text
   {"error":{"root_cause":[{"type":"security_exception","reason":"no permissions for [indices:monitor/settings/get] and User [name=e9c3b483-90be-4843-b821-1152e40aaa0a, backend_roles=[], requestedTenant=null]"}],"type":"security_exception","reason":"no permissions for [indices:monitor/settings/get] and User [name=e9c3b483-90be-4843-b821-1152e40aaa0a, backend_roles=[], requestedTenant=null]"},"status":403}
 ```
 
@@ -278,13 +263,13 @@ Expected 403 security_exception  as the client has no mapped roles yet as below:
 
 The Data Integrator provides a username you can map the OAuth client to:
 
-```
+```shell
 juju run data-integrator/0 get-credentials
 ```
 
 Expect an output in the following format:
 
-```
+```shell
 $ juju run data-integrator/0 get-credentials
 Running operation 1 with 1 task
   - task 2 on unit-data-integrator-0
@@ -311,7 +296,7 @@ opensearch:
 
 Copy the username (e.g. opensearch-client_4) and export it:
 
-```
+```shell
 export DATA_INTEGRATOR_USER="opensearch-client_4"
 ```
 
@@ -321,26 +306,26 @@ Set the charm’s roles_mapping with your OAuth client ID -> user mapping.
 
 Juju config values are strings hence pass JSON as a quoted string.
 
-```
+```shell
 juju config opensearch roles_mapping="{\"$OAUTH_CLIENT_ID\":\"$DATA_INTEGRATOR_USER\"}"
 ```
 
 Wait for the charm to apply the change:
 
-```
+```shell
 juju status --watch 5s
 ```
 
 ### Retrigger the API (should work)
 
-```
+```shell
 curl -k -H "Authorization: Bearer ${OAUTH_ACCESS_TOKEN}" \
   "https://${OPENSEARCH_ADDRESS}:9200/_cat/indices"
 ```
 
 Expected a list of indices (green/yellow),  200 OK as following:
 
-```
+```text
 curl -k \
   -H "Authorization: Bearer ${OAUTH_ACCESS_TOKEN}" \
   "https://${OPENSEARCH_ADDRESS}:9200/_cat/indices"
@@ -351,4 +336,3 @@ green  open .opendistro_security         RPVY1SdfT_KzAPAX-aUCuw 1 0 10 1  71kb  
 yellow open admin-index                  1BQKqmjTQVa6_CeBTi53Gw 1 1  0 0  208b  208b
 green  open .charm_node_lock             8KbPHHy3QneIW8uWbTuBhQ 1 0  1 0 4.1kb 4.1kb
 ```
-

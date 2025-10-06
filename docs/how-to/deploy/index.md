@@ -3,10 +3,7 @@
 
 ```{toctree}
 :titlesonly:
-:maxdepth: 2
-:glob:
-:hidden:
 
-*
-*/index
+Deploy on LXD <deploy-on-lxd>
+Large deployment <launch-a-large-deployment>
 ```

@@ -1,36 +1,35 @@
-(how-to-guides-upgrade-perform-a-minor-rollback)=
-# Perform a minor rollback
-
+(how-to-minor-rollback)=
 # How to perform a minor rollback
 
-This guide describes how to roll back a minor version of OpenSearch. This is useful when an upgrade fails and you need to roll back to the previous version.
+This guide describes how to roll back a minor version of OpenSearch.
+This is useful when an upgrade fails and you need to roll back to the previous version.
 
->OpenSearch does not support downgrading to a previous major version. For more information, please refer to the upstream [OpenSearch documentation about rolling upgrades](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/#preparing-to-upgrade).
+> OpenSearch does not support downgrading to a previous major version.
+> For more information, please refer to the upstream
+> [OpenSearch documentation about rolling upgrades](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/#preparing-to-upgrade).
 
-After a `juju refresh`, if there are any version incompatibilities in charm revisions, its dependencies, or any other unexpected failure in the upgrade process, the process will be halted and enter a failure state.
+After a `juju refresh`, if there are any version incompatibilities in charm revisions,
+its dependencies, or any other unexpected failure in the upgrade process,
+the process will be halted and enter a failure state.
 
-Even if the underlying OpenSearch cluster continues to work, it’s important to roll back the charm to 
+Even if the underlying OpenSearch cluster continues to work, it’s important to roll back the charm to
 a previous revision so that an update can be attempted after further inspection of the failure.
-
-## Summary
-  - [Summary](#summary)
-  - [Pre-rollback checks](#pre-rollback-checks)
-  - [Rollback the charm](#rollback-the-charm)
-  - [Check the cluster's health](#check-the-clusters-health)
-
----
 
 ## Pre-rollback checks
 
-To execute a rollback we take the same procedure as the upgrade, the difference being the charm revision to upgrade to. As an example follow up [the minor upgrades guide](/how-to-guides/upgrade/perform-a-minor-upgrade).
+To execute a rollback we take the same procedure as the upgrade, the difference being
+the charm revision to upgrade to. As an example follow up
+[the minor upgrades guide](/how-to-guides/upgrade/perform-a-minor-upgrade).
 
-It is important to run the `pre-upgrade-checks` action to ensure the cluster is in a healthy state before the rollback. This action will check the cluster health and the status of the upgrade.
+It is important to run the `pre-upgrade-checks` action to ensure the cluster is in a healthy state
+before the rollback. This action will check the cluster health and the status of the upgrade.
 
 ```shell
 juju run opensearch/leader pre-upgrade-check
 ```
 
-Once the pre-upgrade checks are complete, and you get the `Charm is ready for upgrade` message, you can proceed with the rollback.
+Once the pre-upgrade checks are complete, and you get the `Charm is ready for upgrade` message,
+you can proceed with the rollback.
 
 For example, here is the status of the OpenSearch cluster after upgrading one unit to revision 145:
 
@@ -56,28 +55,31 @@ Machine  State    Address         Inst id        Base          AZ  Message
 3        started  10.214.176.93   juju-dd97d9-3  ubuntu@22.04      Running
 ```
 
-Notice that the OpenSearch charm is at revision **145**. 
+Notice that the OpenSearch charm is at revision **145**.
 
 ## Rollback the charm
 
 ```{caution}
-**Caution**:  Do not trigger rollback during the running upgrade action. It may cause an unpredictable OpenSearch state. 
+**Caution**:  Do not trigger rollback during the running upgrade action.
+It may cause an unpredictable OpenSearch state. 
 ```
 
-
-You can initiate the rollback by running the `refresh` command with the revision of the charm you want to rollback to. For example, to rollback to revision **144**, run:
+You can initiate the rollback by running the `refresh` command with the revision of
+the charm you want to rollback to. For example, to rollback to revision **144**, run:
 
 ```shell
 juju refresh opensearch --revision=144
 ```
 
-When deploying from a local charm file, you must have the previous revision’s .charm file. Then, run:
+When deploying from a local charm file, you must have the previous revision’s `.charm` file.
+Then, run:
 
 ```shell
 juju refresh opensearch --path=<path_to_charm_file>
 ```
 
-After the refresh command, the juju controller revision for the application will be back in sync with the running OpenSearch revision.
+After the refresh command, the Juju controller revision for the application will be
+back in sync with the running OpenSearch revision.
 
 ```shell
 Model  Controller   Cloud/Region         Version  SLA          Timestamp
@@ -104,7 +106,9 @@ Notice that the OpenSearch charm is now at revision **144**.
 
 ## Check the cluster's health
 
-Once the charm is rolled back, it is important to check the cluster’s health to ensure it is healthy. OpenSearch’s upstream documentation [suggests the following check](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/):
+Once the charm is rolled back, it is important to check the cluster’s health to ensure it is healthy.
+OpenSearch’s upstream documentation
+[suggests the following check](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/):
 
 ```shell
 GET "/_cluster/health?pretty"
@@ -133,4 +137,3 @@ The response should look similar to the following example:
   "active_shards_percent_as_number" : 100.0
 }
 ```
-

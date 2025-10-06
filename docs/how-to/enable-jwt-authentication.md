@@ -1,11 +1,10 @@
 (how-to-guides-enable-jwt-authentication)=
-# Enable JWT Authentication
-
 # How to enable JWT Authentication
 
 This document shows how to enable authentication with JSON Web Tokens (JWT) in OpenSearch.
 
-## Prerequisites:
+## Prerequisites
+
 * A running deployment of Opensearch on VM with minimum charm revision 275 (22.04) or 276 (24.04)
 * A valid JSON Web Token for testing, issued by the JWT provider of your choice
 * The signing-key with which the JWT was signed
@@ -22,7 +21,9 @@ Deploy the charm:
 juju deploy jwt-integrator --channel 1/edge
 ```
 
-After the deployment has settled, the charm will be in blocked status because of missing configuration. You can check this with `juju status`:
+After the deployment has settled,
+the charm will be in blocked status because of missing configuration.
+You can check this with `juju status`:
 
 ```shell
 opensearch  dev-controller  localhost/localhost  3.6.8    unsupported  12:02:14Z
@@ -40,7 +41,8 @@ opensearch/2                 active    idle   2        10.65.50.37     9200/tcp
 self-signed-certificates/0*  active    idle   4        10.65.50.79               
 ```
 
-Now, configure the JWT parameters to JWT integrator. First, create a secret containing the signing-key:
+Now, configure the JWT parameters to JWT integrator.
+First, create a secret containing the signing-key:
 
 ```shell
 juju add-secret jwt-key signing-key="<your-signing-key>"
@@ -68,13 +70,15 @@ juju config jwt-integrator roles-key=role subject-key=user jwt-url-parameter=jwt
 
 ## Enable JWT in OpenSearch
 
-Now it's time to enable JWT authentication in OpenSearch. This is done by integrating the JWT integrator with OpenSearch:
+Now it's time to enable JWT authentication in OpenSearch.
+This is done by integrating the JWT integrator with OpenSearch:
 
 ```shell
 juju integrate jwt-integrator opensearch
 ```
 
-After a few moments, OpenSearch has applied the provided configuration and updated its security plugin. Now you can query Opensearch with your JWT:
+After a few moments, OpenSearch has applied the provided configuration
+and updated its security plugin. Now you can query Opensearch with your JWT:
 
 ```shell
 curl --header "Authorization: Bearer <your-jwt-here>" -XGET "https://<ip-address>:9200/_cat/nodes" -k
@@ -82,9 +86,11 @@ curl --header "Authorization: Bearer <your-jwt-here>" -XGET "https://<ip-address
 
 ## Large Deployments
 
-If you have an OpenSearch large deployments cluster, it is required to integrate the JWT integrator with the main-orchestrator of your large deployment.
+If you have an OpenSearch large deployments cluster, it is required to integrate
+the JWT integrator with the main-orchestrator of your large deployment.
 
-Check which of your deployed OpenSearch applications is the main-orchestrator by checking the `integrations` section of `juju status`:
+Check which of your deployed OpenSearch applications is the main-orchestrator
+by checking the `integrations` section of `juju status`:
 
 ```shell
 Integration provider                           Requirer                                Interface           Type     Message
@@ -97,7 +103,8 @@ Now integrate the JWT integrator with this application:
 juju integrate jwt-integrator opensearch-main
 ```
 
-If the wrong application of your large deployments is integrated with the JWT integrator, you will see a `blocked` status:
+If the wrong application of your large deployments is integrated with the JWT integrator,
+you will see a `blocked` status:
 
 ```shell
 App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
@@ -110,7 +117,8 @@ self-signed-certificates           active       1  self-signed-certificates  lat
 
 ## Enabling JWT authentication with OpenSearch Dashboards
 
-To use JWT authentication in the OpenSearch Dashboards UI, all you need to do is integrate the JWT integrator with Opensearch Dashboards:
+To use JWT authentication in the OpenSearch Dashboards UI, all you need to do
+is integrate the JWT integrator with Opensearch Dashboards:
 
 ```shell
 juju integrate jwt-integrator opensearch-dashboards
@@ -127,4 +135,3 @@ After a few moments, you can access it by adding your JWT as a URL parameter in 
 ```shell
 http://<ip-address>:5601?jwt=<your-jwt>
 ```
-

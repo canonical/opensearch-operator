@@ -1,25 +1,15 @@
-(how-to-guides-tls-encryption-enable-tls-encryption)=
-# Enable TLS encryption
-
+(how-to-enable-tls-encryption)=
 # How to enable TLS encryption
 
-This guide will show how to enable TLS using the [`self-signed-certificates` operator](https://github.com/canonical/self-signed-certificates-operator) as an example.
+This guide will show how to enable TLS using the
+[`self-signed-certificates` operator](https://github.com/canonical/self-signed-certificates-operator)
+as an example.
 
 ```{caution}
 **[Self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate) are not recommended for a production environment.**
 
 Check [this guide](https://discourse.charmhub.io/t/11664) for an overview of the signed and self-signed certificate charms available.
 ```
-
-## Summary
-
-* [Enable TLS](#enable-tls)
-* [Disable TLS](#disable-tls)
-* [Manage certificates](#manage-certificates)
-  * [Check certificates in use](#check-certificates-in-use)
-  * [Update keys](#update-keys)
-
----
 
 ## Enable TLS
 
@@ -29,9 +19,11 @@ juju deploy self-signed-certificates --config ca-common-name="My CA"
 ```
 
 To enable TLS on Charmed OpenSearch, integrate the two applications:
+
 ```shell
 juju integrate self-signed-certificates opensearch
 ```
+
 After the deployment has settled, you can see the relation by running `juju status --relations` .
 
 ## Disable TLS
@@ -67,6 +59,7 @@ juju run opensearch/leader set-tls-private-key category=unit-http
 ```
 
 It is also possible to use self-generated keys:
+
 ```shell
 openssl genrsa -out unit-http.pem 3072
 openssl genrsa -out unit-transport.pem 3072
@@ -74,13 +67,14 @@ openssl genrsa -out app-admin.pem 3072
 ```
 
 Apply the private key for `app-admin` to the juju leader:
+
 ```shell
 juju run opensearch/leader set-tls-private-key category=app-admin key="$(base64 -w0 app-admin.pem)"
 ```
 
 Apply the private keys for `unit-transport` and `unit-http` to all units (including the leader):
+
 ```shell
 juju run opensearch/leader set-tls-private-key category=unit-http key="$(base64 -w0 unit-http.pem)"
 juju run opensearch/leader set-tls-private-key category=unit-transport key="$(base64 -w0 unit-transport.pem)"
 ```
-

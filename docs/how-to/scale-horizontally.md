@@ -1,11 +1,11 @@
-(how-to-guides-scale-horizontally)=
-# Scale horizontally
+(how-to-scale-horizontally)=
+# How to safely scale down
 
-# How to safely scale down 
+This page outlines the general steps to follow when scaling down Charmed OpenSearch
+to prevent data loss and ensure the deployment remains highly available.
 
-This page outlines the general steps to follow when scaling down Charmed OpenSearch in order to prevent data loss and ensure the deployment remains highly available
-
-To see an example of scaling down a real deployment scenario, check the following page from the Charmed OpenSearch Tutorial: [6. Scale horizontally](/tutorial/6-scale-horizontally).
+To see an example of scaling down a real deployment scenario, check the following page from the
+Charmed OpenSearch Tutorial: [6. Scale horizontally](/tutorial/6-scale-horizontally).
 
 ```{caution}
 **Warning:**
@@ -13,26 +13,19 @@ To see an example of scaling down a real deployment scenario, check the followin
 * In highly available deployments, **it is not safe to scale below 3 nodes**. 
 ```
 
-## Summary
-* [1. Check cluster health before scaling down](#1-check-cluster-health-before-scaling-down)
-  * [Via Juju](#via-juju)
-  * [Via the OpenSearch health API](#via-the-opensearch-health-api)
-  * [Cluster health statuses](#cluster-health-statuses)
-* [2. Scale down one unit](#2-scale-down-one-unit)
-* [3. Repeat cluster health check](#3-repeat-cluster-health-check)
-
----
-
 ## 1. Check cluster health before scaling down
 
-First of all, make sure that removing nodes is a safe operation to do. For that, check the health of the cluster. This can be done via Juju or via the OpenSearch API.
+First of all, make sure that removing nodes is a safe operation to do.
+For that, check the health of the cluster. This can be done via Juju or via the OpenSearch API.
 
 ### Via Juju
 
-The charm will reflect the current health of the cluster on the application status. This will display an `active` status when the cluster is in good health, and a `blocked` status along with an informative message when the cluster is not in good health.  
+The charm will reflect the current health of the cluster on the application status.
+This will display an `active` status when the cluster is in good health,
+and a `blocked` status along with an informative message when the cluster is not in good health.  
 
-Below is a sample output of the command `juju status --watch 1s` when the cluster is not healthy enough for scaling down. 
- 
+Below is a sample output of the command `juju status --watch 1s` when the cluster is not healthy enough for scaling down.
+
 ```shell
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  14:29:04Z
@@ -52,15 +45,20 @@ Machine  State    Address       Inst id        Base          AZ  Message
 1        started  10.95.38.230  juju-4dad5c-1  ubuntu@22.04      Running
 2        started  10.95.38.174  juju-4dad5c-2  ubuntu@22.04      Running
 ```
-In this case, the cluster is not in good health because the status is `blocked`, and the message says `1 or more 'replica' shards are not assigned, please scale your application up`.
+
+In this case, the cluster is not in good health because the status is `blocked`,
+and the message says `1 or more 'replica' shards are not assigned, please scale your application up`.
 
 ### Via the OpenSearch health API
 
-To monitor the health more precisely, you can use the [OpenSearch health API](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-health/).
+To monitor the health more precisely, you can use the
+[OpenSearch health API](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-health/).
 
-In order to authenticate your requests to the REST API, you need to [retrieve the admin user's credentials](/tutorial/5-manage-passwords). 
+In order to authenticate your requests to the REST API, you need to
+[retrieve the admin user's credentials](/tutorial/5-manage-passwords).
 
 To get the admin user credentials, run the following command:
+
 ```shell
 juju run opensearch/leader get-password
 
@@ -70,7 +68,7 @@ juju run opensearch/leader get-password
              <certificate>
         username: admin
         password: admin_password
-``` 
+```
 
 ### Cluster health statuses
 
@@ -85,9 +83,10 @@ It is imperative to check whether the node targeted for removal does not hold a 
 ```shell
 curl --cacert cert.pem -k -XGET https://admin:admin_pasword@10.180.162.96:9200/_cat/shards
 ```
+
 It is generally not recommended to disable replication for indices, but if that's the case: [re-route](https://www.elastic.co/guide/en/elasticsearch/reference/7.10/cluster-reroute.html) the said shard manually to another node.
 
-#### `yellow` 
+#### `yellow`
 
 :yellow_circle: Scaling down **might not be safe** to do. This is roughly equivalent to a `blocked` juju status.
 
@@ -96,13 +95,15 @@ This means that some replica shards are `unassigned`. You can visualize that by 
 ```shell
 curl --cacert cert.pem -k -XGET https://10.180.162.96:9200/_cat/shards -u admin:admin_password
 ```
-A general good course of action here would be to scale up (add a unit) to have a `green` state where all primary and replica shards are well assigned. 
+
+A general good course of action here would be to scale up (add a unit) to have a `green` state where all primary and replica shards are well assigned.
 
 To investigate why is your cluster in a `yellow` state. You can make the following call to have an explanation:
 
 ```shell
 curl --cacert cert.pem -k -XGET "https://10.180.162.96:9200/_cluster/allocation/explain?filter_path=index,shard,primary,**.node_name,**.node_decision,**.decider,**.decision,**.*explanation,**.unassigned_info,**.*delay"  -u admin:admin_password
-``` 
+```
+
 <!-- What can we expect as an output?-->
 Depending on the output, there may be a different course of action. For example: scaling up, adding more storage to the existing nodes, or perhaps [manually re-route](https://www.elastic.co/guide/en/elasticsearch/reference/7.10/cluster-reroute.html) the relevant shard manually to another node.
 
@@ -116,6 +117,7 @@ juju add-unit -n 1
 :red_circle: Scaling down **is definitely not safe** to do, as some primary shards are not assigned. This is roughly equivalent to a `blocked` juju status.
 
 The course of action to follow here is to add units to the cluster. To scale up by one unit, run the following command:
+
 ```shell
 juju add-unit -n 1
 ```
@@ -127,6 +129,7 @@ juju add-unit -n 1
 <!-- TODO: clarify
 **Note:** You'll notice we did not use the certificates to authenticate the curl requests above, in a real world example you should always make sure you verify your requests with the TLS certificates received from the `get-password` action.
 i.e:
+
 ```
 curl --cacert cert.pem -XGET https://admin:admin_password@10.180.162.96:9200/_cluster/health
 ``` 
@@ -150,10 +153,12 @@ Make sure you monitor the status of the application using: `juju status --watch 
 
 ## 3. Repeat cluster health check
 
-After removing **one unit**, depending on the roles of the said unit, the charm may reconfigure and restart a unit to balance the node roles. You can monitor this with `juju status --watch 1s`.
+After removing **one unit**, depending on the roles of the said unit,
+the charm may reconfigure and restart a unit to balance the node roles.
+You can monitor this with `juju status --watch 1s`.
 <!-- what happens to each role?-->
 
 Make sure you wait for the whole application to stabilize before you consider removing further units.
 
-Once the application is stable, check the health of the cluster as detailed in the section [Understand the meaning of the cluster status](#cluster-health-statuses) and react accordingly.
-
+Once the application is stable, check the health of the cluster as detailed in the section
+[Understand the meaning of the cluster status](#cluster-health-statuses) and react accordingly.

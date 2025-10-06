@@ -1,6 +1,4 @@
-(how-to-guides-deploy-deploy-on-lxd)=
-# Deploy on LXD
-
+(how-to-deploy-lxd)=
 # How to deploy on LXD
 
 This guide summarizes how to set up your machine and deploy Charmed OpenSearch on [LXD](https://ubuntu.com/server/docs/lxd-containers), Canonical’s lightweight container hypervisor.
