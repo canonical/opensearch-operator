@@ -919,7 +919,8 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
     def _on_config_changed(self, event):
         """On config changed event handler."""
         # if this charm was upgraded and already had a backup relation,
-        # the credentials will not exist yet in self.charm.state.plugin_config_info
+        # the credentials will not exist yet in this charm's stored plugin_config_info.
+        # This handler creates and stores the secret containing the credentials
         if not self.charm.unit.is_leader():
             return
 
