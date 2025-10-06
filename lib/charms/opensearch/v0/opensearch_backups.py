@@ -188,7 +188,6 @@ class BackupServiceState(BaseStrEnum):
 
     SUCCESS = "success"
     NODES_MISSING_CREDENTIALS = "some nodes missing credentials"
-    INCORRECT_CREDENTIALS = "incorrect credentials"
     RESTORE_IN_PROGRESS = "restore in progress"
     RESPONSE_FAILED_NETWORK = "response failed: network error"
     REPO_NOT_CREATED = "repository not created"
@@ -848,13 +847,9 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
         """Manager of OpenSearch backup relations."""
         super().__init__(charm, relation_name)
         for relation in (S3_RELATION, AZURE_RELATION):
-            for event in [
-                self.charm.on[relation].relation_joined,
-                self.charm.on[relation].relation_changed,
-                self.charm.on[relation].relation_departed,
-                self.charm.on[relation].relation_broken,
-            ]:
-                self.framework.observe(event, self._on_backup_relation_event)
+            self.framework.observe(
+                self.charm.on[relation].relation_joined, self._on_backup_relation_event
+            )
 
     @override
     def _on_secret_changed(self, event: SecretEvent) -> None:  # noqa: C901
@@ -1133,8 +1128,6 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
             state = BackupServiceState.REPO_ERR_UNKNOWN
             if NODES_MISSING_CREDS_ERR in e.response_text:
                 state = BackupServiceState.NODES_MISSING_CREDENTIALS
-            elif REPO_NOT_ACCESS_ERR in e.response_text:
-                state = BackupServiceState.INCORRECT_CREDENTIALS
 
         if state == BackupServiceState.NODES_MISSING_CREDENTIALS:
             # credentials are correct but not all nodes have them yet
