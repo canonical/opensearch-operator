@@ -118,6 +118,7 @@ from ops.charm import (
 )
 from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+from tenacity import Retrying, stop_after_attempt, wait_exponential
 
 import lifecycle
 import upgrade
@@ -1200,25 +1201,24 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         except (
             OpenSearchHttpError,
             OpenSearchStartTimeoutError,
-            OpenSearchNotFullyReadyError,
+            OpenSearchStartError,
+            OpenSearchUserMgmtError,
         ) as e:
             logger.debug("error of type: %s", type(e).__name__)
             self.node_lock.release()
+            logger.warning(e)
             self.status.set(BlockedStatus(ServiceStartError))
-
+            event.defer()
+        except OpenSearchNotFullyReadyError as e:
+            self.node_lock.release()
+            logger.debug("Node started but not fully ready: %s", e)
+            event.defer()
+        finally:
             # In large deployments with cluster-manager-only-nodes, the startup might fail
             # for the cluster-manager if a joining data node did not yet initialize the
             # security index. We still want to update and broadcast the latest relation data.
             if self.opensearch_peer_cm.is_provider(typ="main"):
                 self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
-            event.defer()
-            logger.warning(e)
-        except (OpenSearchStartError, OpenSearchUserMgmtError) as e:
-            logger.debug("error of type: %s", type(e).__name__)
-            logger.warning(e)
-            self.node_lock.release()
-            self.status.set(BlockedStatus(ServiceStartError))
-            event.defer()
 
     def _post_start_init(self, event: _StartOpenSearch):  # noqa: C901
         """Initialization post OpenSearch start."""
@@ -1246,8 +1246,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # it sometimes takes a few seconds before the node is fully "up" otherwise a 503 error
         # may be thrown when calling a node - we want to ensure this node is perfectly ready
         # before marking it as ready
-        if not self.opensearch.is_node_up():
-            raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")
+        for attempt in Retrying(
+            stop=stop_after_attempt(5),
+            wait=wait_exponential(multiplier=2, min=2, max=10),
+            reraise=True,
+        ):
+            with attempt:
+                if not self.opensearch.is_node_up():
+                    raise OpenSearchNotFullyReadyError("Node started but not fully ready yet.")
 
         try:
             nodes = self._get_nodes(use_localhost=self.opensearch.is_node_up())
