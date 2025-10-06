@@ -5,7 +5,7 @@ This guide summarizes how to set up your machine and deploy Charmed OpenSearch o
 [LXD](https://ubuntu.com/server/docs/lxd-containers), Canonical’s lightweight container hypervisor.
 
 If you are a beginner to OpenSearch or Juju and are looking for a more comprehensive walkthrough
-of these steps, refer instead to the [Tutorial](/tutorial/index).
+of these steps, refer instead to the [Tutorial](tutorial-index).
 
 ## Prerequisites
 
@@ -22,7 +22,7 @@ See also: [First steps with LXD](https://documentation.ubuntu.com/lxd/en/latest/
 ```
 
 **System requirements**: Check that you fulfill the rest of the software and hardware requirements in the
-[system requirements page](/reference/system-requirements).
+[system requirements page](reference-system-requirements).
 
 ## Disable IPv6 on LXD
 

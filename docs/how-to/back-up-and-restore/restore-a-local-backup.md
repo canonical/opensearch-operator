@@ -8,7 +8,7 @@ All commands are written for `juju v.3.1.7+`.
 This is a guide on how to restore a locally made backup.
 
 To restore a backup that was made from a different cluster, (i.e. cluster migration via restore),
-see [How to migrate to a new cluster](/how-to-guides/back-up-and-restore/migrate-a-cluster).
+see [How to migrate to a new cluster](how-to-migrate-a-cluster).
 
 ## Prerequisites
 

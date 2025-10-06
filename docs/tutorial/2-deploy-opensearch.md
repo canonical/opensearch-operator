@@ -1,7 +1,7 @@
 (tutorial-2-deploy-opensearch)=
 # 2. Deploy OpenSearch
 
-> [Charmed OpenSearch Tutorial](/tutorial/index) >  2. Deploy OpenSearch
+> [Charmed OpenSearch Tutorial](tutorial-index) >  2. Deploy OpenSearch
 
 Charmed OpenSearch supports performance profile.
 It is recommended in a single host deployment with LXD to use the `testing` profile,

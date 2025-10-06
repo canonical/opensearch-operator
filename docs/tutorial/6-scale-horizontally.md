@@ -1,7 +1,7 @@
 (tutorial-6-scale-horizontally)=
 # 6. Scale horizontally
 
->[Charmed OpenSearch Tutorial](/tutorial/index) > 6. Scale horizontally
+>[Charmed OpenSearch Tutorial](tutorial-index) > 6. Scale horizontally
 
 After having indexed some data in our previous section, let's take a look at the status of our charm:
 
@@ -123,7 +123,7 @@ Notice that the shards are distributed across all nodes.
 ## Remove nodes
 
 ```{note}
-Refer to [safe-horizontal-scaling guide](/how-to-guides/scale-horizontally)
+Refer to [safe-horizontal-scaling guide](how-to-scale-horizontally)
 to understand how to safely remove units in a production environment.
 ```
 

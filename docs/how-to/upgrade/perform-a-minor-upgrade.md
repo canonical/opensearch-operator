@@ -25,7 +25,7 @@ In large deployments, repeat these steps for each application, following this or
 Before upgrading your OpenSearch cluster, ensure that you have completed the following steps:
 
 1. **Backup your data**: Before upgrading, back up your data to prevent data loss in case of failure.
-  For more information, see [How to create a backup](/how-to-guides/back-up-and-restore/create-a-backup).
+  For more information, see [How to create a backup](how-to-create-a-backup).
 2. **Make sure not to perform any extraordinary operations**: Avoid performing any concurrent operations
   on the cluster during the upgrade process. This can lead to an inconsistent state of the cluster.
   This includes:
@@ -46,10 +46,10 @@ To upgrade your OpenSearch cluster, follow these steps:
 3. Prepare the “Charmed OpenSearch” Juju application for the in-place upgrade.
   See the step description below for all the technical details the charm executes.
 4. Upgrade: Only one app unit will be upgraded once started.
-  In case of failure, roll back with juju refresh.
+  In case of failure, roll back with `juju refresh`.
 5. Resume upgrade: The upgrade can be resumed if the upgrade of the first unit is successful.
   All units in an app will be executed sequentially from the highest to lowest unit number.
-6. (optional) Consider [rolling back](/how-to-guides/upgrade/perform-a-minor-rollback)
+6. (optional) Consider [rolling back](how-to-minor-rollback)
   in case of disaster.
   Please [inform and include us](https://app.element.io/#/room/#charmhub-data-platform:ubuntu.com)
   in your case scenario troubleshooting to trace the source of the issue and prevent it in the future.
@@ -97,7 +97,7 @@ Optionally, it is recommended to scale the application up by one unit before upg
 
 The new unit will be the first one to be updated, and it will assert that the upgrade is possible.
 In case of failure, having the extra unit will ease the rollback procedure,
-without disrupting servicem see more in [Minor rollback how-to](/how-to-guides/upgrade/perform-a-minor-rollback).
+without disrupting servicem see more in [Minor rollback how-to](how-to-minor-rollback).
 
 ```shell
 juju add-unit opensearch
@@ -109,7 +109,7 @@ Wait for the new unit to be up and ready.
 
 1. **IMPORTANT:** Create a backup of your cluster
 
-Refer to [How to create a backup](/how-to-guides/back-up-and-restore/create-a-backup).
+Refer to [How to create a backup](how-to-create-a-backup).
 
 2. Perform the `pre-upgrade-check` action
 
@@ -277,7 +277,7 @@ The revision number should reflect the new revision of the application.
 ## Rollback (optional)
 
 In case of a failed upgrade, you can roll back to the previous revision.
-To do so, follow the guide [How to perform a minor rollback](/how-to-guides/upgrade/perform-a-minor-rollback).
+To do so, follow the guide [How to perform a minor rollback](how-to-minor-rollback).
 
 ## Scale-back (optional)
 

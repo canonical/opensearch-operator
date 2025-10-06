@@ -1,7 +1,7 @@
 (tutorial-3-enable-encryption)=
 # 3. Enable encryption
 
-> [Charmed OpenSearch Tutorial](/tutorial/index) >  3. Enable TLS encryption
+> [Charmed OpenSearch Tutorial](tutorial-index) >  3. Enable TLS encryption
 
 [Transport Layer Security (TLS)](https://en.wikipedia.org/wiki/Transport_Layer_Security)
 is a protocol used to encrypt data exchanged between two applications. Essentially,
@@ -22,7 +22,8 @@ In this section, you will learn how to enable security in your OpenSearch deploy
 ```{note}
 **[Self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate)
 are not recommended for a production environment.**  
-Check [this guide](/) for an overview of the TLS certificates charms available.
+Check the [X.509 certificates topic](https://charmhub.io/topics/security-with-x-509-certificates)
+for an overview of the TLS certificates charms available.
 ```
 
 ## Configure TLS

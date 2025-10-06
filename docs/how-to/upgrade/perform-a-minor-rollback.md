@@ -21,7 +21,7 @@ a previous revision so that an update can be attempted after further inspection 
 
 To execute a rollback we take the same procedure as the upgrade, the difference being
 the charm revision to upgrade to. As an example follow up
-[the minor upgrades guide](/how-to-guides/upgrade/perform-a-minor-upgrade).
+[the minor upgrades guide](how-to-minor-upgrade).
 
 It is important to run the `pre-upgrade-checks` action to ensure the cluster is in a healthy state
 before the rollback. This action will check the cluster health and the status of the upgrade.

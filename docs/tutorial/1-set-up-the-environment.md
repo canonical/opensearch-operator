@@ -1,12 +1,12 @@
 (tutorial-1-set-up-the-environment)=
 # 1. Set up the environment
 
-> [Charmed OpenSearch Tutorial](/tutorial/index) >  1. Set up the environment
+> [Charmed OpenSearch Tutorial](tutorial-index) >  1. Set up the environment
 
 In this step, we will set up a development environment with the required components for deploying Charmed OpenSearch.
 
 ```{note}
-Before you start, make sure your machine meets the [minimum system requirements](/reference/system-requirements).
+Before you start, make sure your machine meets the [minimum system requirements](reference-system-requirements).
 ```
 
 ## Set up LXD

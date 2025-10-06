@@ -9,7 +9,7 @@ This is a guide on how to restore a backup that was made from a different cluste
 (i.e. cluster migration via restore).
 
 To perform a basic restore (from a local backup), see
-[How to restore a local backup](/how-to-guides/back-up-and-restore/restore-a-local-backup).
+[How to restore a local backup](how-to-restore-a-local-backup).
 
 ## Prerequisites
 

@@ -1,7 +1,7 @@
 (tutorial-7-clean-up-the-environment)=
 # 7. Clean up the environment
 
-> [Charmed OpenSearch Tutorial](/tutorial/index) > 7. Clean up the environment
+> [Charmed OpenSearch Tutorial](tutorial-index) > 7. Clean up the environment
 
 In this tutorial, we’ve successfully:
 

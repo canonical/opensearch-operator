@@ -1,7 +1,7 @@
 (tutorial-4-integrate-with-a-client-application)=
 # 4. Integrate with a client application
 
-> [Charmed OpenSearch Tutorial](/tutorial/index) >  4. Integrate with a client application
+> [Charmed OpenSearch Tutorial](tutorial-index) >  4. Integrate with a client application
 
 [Integrations](https://juju.is/docs/sdk/integration) (also known as "relations")
 are the easiest way to connect to Charmed OpenSearch.
@@ -154,7 +154,7 @@ because you will need them in the next section.
 ## Create and access OpenSearch indices
 
 Before connecting to OpenSearch, it is mandatory that you
-[enable TLS on this cluster](./4-enable-tls.md), following the previous step in the tutorial.
+[enable TLS on this cluster](tutorial-3-enable-encryption), following the previous step in the tutorial.
 
 You can access the OpenSearch REST API in any way you prefer. In this tutorial, we will use `curl`.
 Get the IP of an OpenSearch node from the output of `juju status`
@@ -274,7 +274,7 @@ curl --cacert demo-ca.pem -XPOST https://username:password@opensearch_node_ip:92
 
 This should return a JSON response with the results of the bulk indexing operation:
 
-```json
+```text
 {
   "took": 17,
   "errors": false,

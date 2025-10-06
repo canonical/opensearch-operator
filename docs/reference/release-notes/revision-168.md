@@ -98,7 +98,7 @@ It packages:
 The following issues are known and scheduled to be fixed in the next maintenance release.
 
 * We currently do not support node role repurposing from cluster manager to a non cluster manager
-* Storage re-attachment from previous clusters is not currently automated. For manual instructions, see the how-to guide [How to recover from attached storage](/how-to-guides/recover-from-attached-storage).
+* Storage re-attachment from previous clusters is not currently automated. For manual instructions, see the how-to guide [How to recover from attached storage](how-to-recover-from-attached-storage).
 
 ## Join the community
 

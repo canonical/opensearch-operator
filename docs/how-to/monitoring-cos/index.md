@@ -8,7 +8,7 @@ The OpenSearch charm can use COS to connect to Grafana and Prometheus to use mon
 alert rules, and log features.
 
 ```{note}
-See: [How to enable monitoring](/how-to-guides/monitoring-cos/enable-cos) via COS and Grafana.
+See: [How to enable monitoring](how-to-monitoring-enable-cos) via COS and Grafana.
 ```
 
 ## Metrics
@@ -109,7 +109,7 @@ All the logs from the OpenSearch payload are available in the Grafana web interf
 To get OpenSearch logs, go to the `Label filters` field and set to `juju_application = opensearch`, select one operation, e.g. `Line contains` and run the query.
 
 ```{note}
-See also: [How to connect to the Grafana web interface](/how-to-guides/monitoring-cos/enable-cos).
+See also: [How to connect to the Grafana web interface](how-to-monitoring-enable-cos).
 ```
 
 ![image|690x336](img/cos-1.png)

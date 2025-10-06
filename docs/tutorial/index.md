@@ -12,7 +12,7 @@ it will be most beneficial if:
 * You have some experience using a Linux-based CLI
 * You are familiar with OpenSearch concepts such as indices and users.
   * To learn more, see the official [OpenSearch documentation](https://opensearch.org/docs/latest/about/)
-* Your computer fulfils the [minimum system requirements](/reference/system-requirements)
+* Your computer fulfils the [minimum system requirements](reference-system-requirements)
 
 ## What you'll do
 

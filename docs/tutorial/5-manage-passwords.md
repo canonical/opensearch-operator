@@ -1,7 +1,7 @@
 (tutorial-5-manage-passwords)=
 # 5. Manage passwords
 
->[Charmed OpenSearch Tutorial](/tutorial/index) > 5. Manage passwords
+>[Charmed OpenSearch Tutorial](tutorial-index) > 5. Manage passwords
 
 When we accessed OpenSearch earlier in this tutorial, we needed to include a password
 in the HTTP request. Over time it is a good practice to change the password frequently.
@@ -62,8 +62,9 @@ admin-password: aW1kMu2pO4GGdw52nfrYHAayu8rn4nn9
 The admin password is under the result: `admin-password`.
 It should be different from your previous password.
 
-You can test this password works correctly using the same HTTP requests you used during
-[Section 5: Connecting to OpenSearch](./5-connecting-to-opensearch.md).
+You can test this password works correctly using the same requests you used during
+the [integrate with a client section](tutorial-4-integrate-with-a-client-application)
+of this tutorial.
 
 ## Set the admin password
 
