@@ -66,6 +66,8 @@ from .helpers_data import index_docs_count
 logger = logging.getLogger(__name__)
 
 
+ALL_CLOUDS = ["aws", "microceph", "azure"]
+ALL_DEPLOY_TYPES = ["large", "small"]
 ALL_GROUPS = {
     (cloud_name, deploy_type): pytest.param(
         cloud_name,
@@ -75,18 +77,32 @@ ALL_GROUPS = {
             pytest.mark.group(id=f"{cloud_name}-{deploy_type}"),
         ],
     )
-    for cloud_name in ["microceph", "aws", "azure"]
-    for deploy_type in ["large", "small"]
+    for cloud_name in ALL_CLOUDS
+    for deploy_type in ALL_DEPLOY_TYPES
 }
 
-ALL_DEPLOYMENTS_ALL_CLOUDS = list(ALL_GROUPS.values())
-SMALL_DEPLOYMENTS_ALL_CLOUDS = [
-    ALL_GROUPS[(cloud, "small")] for cloud in ["aws", "microceph", "azure"]
-]
-LARGE_DEPLOYMENTS_ALL_CLOUDS = [
-    ALL_GROUPS[(cloud, "large")] for cloud in ["aws", "microceph", "azure"]
-]
 
+ALL_DEPLOYMENTS_ALL_CLOUDS = list(ALL_GROUPS.items())
+SMALL_DEPLOYMENTS_ALL_CLOUDS = [ALL_GROUPS[(cloud, "small")] for cloud in ALL_CLOUDS]
+LARGE_DEPLOYMENTS_ALL_CLOUDS = [ALL_GROUPS[(cloud, "large")] for cloud in ALL_CLOUDS]
+
+HAPPY_GROUPS = {
+    (cloud_name, deploy_type): pytest.param(
+        cloud_name,
+        deploy_type,
+        id=f"{cloud_name}-{deploy_type}-happy-path",
+        marks=[
+            pytest.mark.group(id=f"{cloud_name}-{deploy_type}-happy-path"),
+        ],
+    )
+    for cloud_name in ALL_CLOUDS
+    for deploy_type in ALL_DEPLOY_TYPES
+}
+HAPPY_PATH = [
+    HAPPY_GROUPS[(cloud, deploy_type)]
+    for cloud in ALL_CLOUDS
+    for deploy_type in ALL_DEPLOY_TYPES
+]
 
 S3_INTEGRATOR = "s3-integrator"
 S3_INTEGRATOR_CHANNEL = "1/stable"
@@ -294,52 +310,7 @@ async def _configure_azure(
     )
 
 
-@pytest.mark.parametrize("cloud_name,deploy_type", SMALL_DEPLOYMENTS_ALL_CLOUDS)
-@pytest.mark.abort_on_fail
-@pytest.mark.skip_if_deployed
-async def test_small_deployment_build_and_deploy(
-    ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
-) -> None:
-    """Build and deploy an HA cluster of OpenSearch and corresponding S3 integration."""
-    if await app_name(ops_test):
-        return
-
-    await ops_test.model.set_config(MODEL_CONFIG)
-    # Deploy TLS Certificates operator.
-    config = {"ca-common-name": "CN_CA"}
-
-    backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
-    backup_integrator_channel = (
-        AZURE_INTEGRATOR_CHANNEL if cloud_name == "azure" else S3_INTEGRATOR_CHANNEL
-    )
-
-    await asyncio.gather(
-        ops_test.model.deploy(
-            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
-        ),
-        ops_test.model.deploy(backup_integrator, channel=backup_integrator_channel),
-        ops_test.model.deploy(charm, num_units=3, series=series, config=CONFIG_OPTS),
-    )
-
-    # Relate it to OpenSearch to set up TLS.
-    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.wait_for_idle(
-        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
-        status="active",
-        timeout=1400,
-        idle_period=IDLE_PERIOD,
-    )
-    # Credentials not set yet, this will move the opensearch to blocked state
-    # Credentials are set per test scenario
-    await ops_test.model.integrate(APP_NAME, backup_integrator)
-
-
-@pytest.mark.parametrize("cloud_name,deploy_type", LARGE_DEPLOYMENTS_ALL_CLOUDS)
-@pytest.mark.abort_on_fail
-@pytest.mark.skip_if_deployed
-async def test_large_deployment_build_and_deploy(
-    ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
-) -> None:
+async def _build_large_deployment_env(ops_test: OpsTest, charm, series, cloud_name) -> None:
     """Build and deploy a large deployment for OpenSearch.
 
     The following apps will be deployed:
@@ -433,6 +404,123 @@ async def test_large_deployment_build_and_deploy(
     # Credentials not set yet, this will move the opensearch to blocked state
     # Credentials are set per test scenario
     await ops_test.model.integrate("main", backup_integrator)
+
+
+async def _build_small_deployment_env(ops_test: OpsTest, charm, series, cloud_name) -> None:
+    """Build and deploy a small deployment for OpenSearch."""
+    if await app_name(ops_test):
+        return
+
+    await ops_test.model.set_config(MODEL_CONFIG)
+    # Deploy TLS Certificates operator.
+    config = {"ca-common-name": "CN_CA"}
+
+    backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
+    backup_integrator_channel = (
+        AZURE_INTEGRATOR_CHANNEL if cloud_name == "azure" else S3_INTEGRATOR_CHANNEL
+    )
+
+    await asyncio.gather(
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+        ),
+        ops_test.model.deploy(backup_integrator, channel=backup_integrator_channel),
+        ops_test.model.deploy(charm, num_units=3, series=series, config=CONFIG_OPTS),
+    )
+
+    # Relate it to OpenSearch to set up TLS.
+    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.wait_for_idle(
+        apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
+        status="active",
+        timeout=1400,
+        idle_period=IDLE_PERIOD,
+    )
+    # Credentials not set yet, this will move the opensearch to blocked state
+    # Credentials are set per test scenario
+    await ops_test.model.integrate(APP_NAME, backup_integrator)
+
+
+@pytest.mark.parametrize("cloud_name,deploy_type", HAPPY_PATH)
+@pytest.mark.abort_on_fail
+async def test_create_backup_and_restore_with_correct_credentials(
+    ops_test: OpsTest,
+    charm,
+    series,
+    c_writes: ContinuousWrites,
+    c_writes_runner,
+    cloud_configs: Dict[str, Dict[str, str]],
+    cloud_credentials: Dict[str, Dict[str, str]],
+    cloud_name: str,
+    deploy_type: str,
+) -> None:
+    """Runs the backup process whilst writing to the cluster into 'noisy-index'."""
+    if deploy_type == "large":
+        await _build_large_deployment_env(ops_test, charm, series, cloud_name)
+    else:
+        await _build_small_deployment_env(ops_test, charm, series, cloud_name)
+
+    app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
+    apps = [app] if deploy_type == "small" else [app, APP_NAME]
+    leader_id = await get_leader_unit_id(ops_test, app=app)
+    unit_ip = await get_leader_unit_ip(ops_test, app=app)
+    config = cloud_configs[cloud_name]
+
+    logger.info(f"Syncing credentials for {cloud_name}")
+    if cloud_name == "azure":
+        await _configure_azure(ops_test, config, cloud_credentials[cloud_name], app)
+    else:
+        await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
+
+    date_before_backup = datetime.utcnow()
+
+    # Wait, we want to make sure the timestamps are different
+    await asyncio.sleep(5)
+
+    assert (
+        datetime.strptime(
+            backup_id := await create_backup(
+                ops_test,
+                leader_id,
+                unit_ip=unit_ip,
+                app=app,
+            ),
+            OPENSEARCH_BACKUP_ID_FORMAT,
+        )
+        > date_before_backup
+    )
+    # continuous writes checks
+    await assert_continuous_writes_increasing(c_writes)
+    await assert_continuous_writes_consistency(ops_test, c_writes, apps)
+    await assert_restore_indices_and_compare_consistency(
+        ops_test, app, leader_id, unit_ip, backup_id
+    )
+    global cwrites_backup_doc_count
+    cwrites_backup_doc_count[backup_id] = await index_docs_count(
+        ops_test,
+        app,
+        unit_ip,
+        ContinuousWrites.INDEX_NAME,
+    )
+
+
+@pytest.mark.parametrize("cloud_name,deploy_type", SMALL_DEPLOYMENTS_ALL_CLOUDS)
+@pytest.mark.abort_on_fail
+@pytest.mark.skip_if_deployed
+async def test_small_deployment_build_and_deploy(
+    ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
+) -> None:
+    """Build and deploy an HA cluster of OpenSearch and corresponding backup integration."""
+    await _build_small_deployment_env(ops_test, charm, series, cloud_name)
+
+
+@pytest.mark.parametrize("cloud_name,deploy_type", LARGE_DEPLOYMENTS_ALL_CLOUDS)
+@pytest.mark.abort_on_fail
+@pytest.mark.skip_if_deployed
+async def test_large_deployment_build_and_deploy(
+    ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
+) -> None:
+    await _build_large_deployment_env(ops_test, charm, series, cloud_name)
 
 
 @pytest.mark.parametrize("cloud_name,deploy_type", LARGE_DEPLOYMENTS_ALL_CLOUDS)
