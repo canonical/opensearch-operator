@@ -39,7 +39,9 @@ juju deploy data-integrator --channel=stable \
   --config extra-user-roles=admin
 ```
 
-**Note:** Opensearch is deployed with 3 units to support high availability as a production recommendation.
+```{note}
+Opensearch is deployed with 3 units to support high availability as a production recommendation.
+```
 
 Wait until all the units become active:
 

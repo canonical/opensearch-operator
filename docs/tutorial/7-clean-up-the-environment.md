@@ -44,7 +44,7 @@ rm cloudinit-userdata.yaml
 ## Remove Juju
 
 ```{warning}
-**Warning:** When you remove Juju as shown below you will lose access to any other applications
+When you remove Juju as shown below you will lose access to any other applications
 you have hosted on Juju.
 ```
 

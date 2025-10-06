@@ -45,7 +45,10 @@ You can change the admin password to a new random and generated password by runn
 juju run opensearch/leader set-password 
 ```
 
-**Note:** this action can only be run from the leader unit.  
+```{note}
+This action can only be run from the leader unit.
+```
+
 Running the command should output:
 
 ```yaml

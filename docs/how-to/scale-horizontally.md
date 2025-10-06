@@ -7,8 +7,7 @@ to prevent data loss and ensure the deployment remains highly available.
 To see an example of scaling down a real deployment scenario, check the following page from the
 Charmed OpenSearch Tutorial: [6. Scale horizontally](/tutorial/6-scale-horizontally).
 
-```{caution}
-**Warning:**
+```{warning}
 * The following steps are for removing one single Juju unit (node). This may be repeated as many times as necessary, but **never remove multiple units in the same command.** 
 * In highly available deployments, **it is not safe to scale below 3 nodes**. 
 ```
@@ -123,7 +122,7 @@ juju add-unit -n 1
 ```
 
 ```{note}
-**Note**: If the health color is `red` after removing a unit, the charm will attempt to block the removal of the node, giving the administrator the opportunity to scale up (add units).
+If the health color is `red` after removing a unit, the charm will attempt to block the removal of the node, giving the administrator the opportunity to scale up (add units).
 ```
 
 <!-- TODO: clarify
@@ -140,12 +139,17 @@ curl --cacert cert.pem -XGET https://admin:admin_password@10.180.162.96:9200/_cl
 Once you made sure that removing a unit is safe to do, you can proceed to removing **a single unit**. It is unsafe to remove more than one unit at a time.
 
 ```{note}
-**Note:** Although we implement a rolling units removal, the internal state of OpenSearch is only reflected reactively. This means the charm **does not know in advance** whether a certain removal will put the cluster in a `red` (some primary shards are unassigned) or `yellow` (some replica shards are unassigned).
+Although we implement a rolling units removal,
+the internal state of OpenSearch is only reflected reactively.
+This means the charm **does not know in advance** whether a certain removal will put the cluster
+in a `red` (some primary shards are unassigned) or `yellow` (some replica shards are unassigned).
 
-Read more about cluster health in the official [OpenSearch documentation](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-health/).
+Read more about cluster health in the official
+[OpenSearch documentation](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-health/).
 ```
 
 To remove one unit of the `opensearch` application, run the following command:
+
 ```shell
 juju remove-unit opensearch/<unit-id>
 ```
