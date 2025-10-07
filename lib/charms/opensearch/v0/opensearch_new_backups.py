@@ -237,10 +237,16 @@ class OpenSearchBackupsEvents(Object):
             event.set_results({"backups": json.dumps(snapshots)})
             return
 
-        table_output = ["{:<20s} | {:s}".format("backup-id", "backup-status")]
-        table_output.append("-" * len(table_output[0]))
+        # Format table output
+        table_output = []
+
+        header = "{:<20s} | {:s}".format("backup-id", "backup-status")
+        table_output.append(header)
+        table_output.append("-" * len(header))
+
         for _id, _snapshot in snapshots.items():
-            table_output.append("{:<20s} | {:s}".format(_id, _snapshot["state"]))
+            line = "{:<20s} | {:s}".format(_id, _snapshot["state"])
+            table_output.append(line)
 
         event.set_results({"backups": "\n".join(table_output)})
 
