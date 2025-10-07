@@ -154,7 +154,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):  # noqa: C901
         """Event received by all units in sub-cluster when a new sub-cluster joins the relation."""
-        self.charm.profiles_manager.check_missing_requirements()
+        if self.charm.state.app.deployment_description:
+            self.charm.profiles_manager.check_missing_requirements()
 
         if not self.charm.unit.is_leader():
             return
@@ -909,7 +910,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):  # noqa: C901
         """Peer cluster relation change hook. Crucial to capture changes from the provider side."""
-        self.charm.profiles_manager.check_missing_requirements()
+        if self.charm.state.app.deployment_description:
+            self.charm.profiles_manager.check_missing_requirements()
 
         if not self.charm.unit.is_leader():
             return
