@@ -60,7 +60,7 @@ class OpenSearchKeystore:
                     continue
                 raise
 
-    def reload(self):
+    def reload(self) -> bool:
         """Reloads local node's secure settings
 
         Raises:

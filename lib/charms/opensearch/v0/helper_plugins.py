@@ -6,9 +6,8 @@ import json
 import logging
 from typing import TYPE_CHECKING, Optional
 
-from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from ops import SecretNotFoundError
+from ops import ModelError, SecretNotFoundError
 
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
@@ -23,14 +22,6 @@ def store_plugin_secret(
     if not charm.unit.is_leader():
         return
 
-    if (
-        charm.opensearch_peer_cm.deployment_desc().typ == DeploymentType.MAIN_ORCHESTRATOR
-        and charm.secrets.has(Scope.APP, label)
-        and not charm.secrets.is_secret_owner(Scope.APP, label)
-    ):
-        # current app is a promoted failover that does not own secret
-        charm.secrets.delete(Scope.APP, label)
-
     charm.secrets.put(Scope.APP, label, json.dumps(content))
     secret_id = charm.secrets.get_secret_id(Scope.APP, label)
     charm.plugin_manager.put_plugin_config(
@@ -44,6 +35,8 @@ def remove_plugin_secret(charm: "OpenSearchBaseCharm", label: str) -> None:
         charm.secrets.delete(Scope.APP, label)
     except SecretNotFoundError:
         logger.debug("Can't find secret '%s'", label)
+    except ModelError as e:
+        logger.debug("Cannot delete secret %s", label, e)
     charm.plugin_manager.remove_plugin_config(Scope.APP, label)
 
 

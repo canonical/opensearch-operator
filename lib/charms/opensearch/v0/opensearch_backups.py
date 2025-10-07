@@ -186,7 +186,6 @@ class BackupServiceState(BaseStrEnum):
     """Enum for the states possible once plugin is enabled."""
 
     SUCCESS = "success"
-    NODES_MISSING_CREDENTIALS = "some nodes missing credentials"
     RESTORE_IN_PROGRESS = "restore in progress"
     RESPONSE_FAILED_NETWORK = "response failed: network error"
     REPO_NOT_CREATED = "repository not created"
@@ -1098,7 +1097,7 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
         self.charm.status.clear(PluginConfigError)
         self.charm.status.clear(BackupRelDataIncomplete)
 
-    def apply_api_config_if_needed(self) -> None:  # noqa: C901
+    def apply_api_config_if_needed(self) -> None:
         """Runs the post restart routine and API calls needed to setup/disable backup.
 
         This method should be called by the charm in its restart callback resolution.
@@ -1122,11 +1121,8 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
             logger.error(f"Failed to setup backup service with exception: {e.response_text}")
             state = BackupServiceState.REPO_ERR_UNKNOWN
             if NODES_MISSING_CREDS_ERR in e.response_text:
-                state = BackupServiceState.NODES_MISSING_CREDENTIALS
-
-        if state == BackupServiceState.NODES_MISSING_CREDENTIALS:
-            # credentials are correct but not all nodes have them yet
-            raise OpenSearchBackupError()
+                # credentials are correct but not all nodes have them yet
+                raise OpenSearchBackupError()
 
         #     (3) based on the response, set the message status
         if state != BackupServiceState.SUCCESS:

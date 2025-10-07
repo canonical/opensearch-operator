@@ -414,14 +414,3 @@ class OpenSearchSecrets(Object, RelationDataStore):
             logger.error("Not owner of secret: %s. Cannot grant to relation", secret_id)
             return False
         return True
-
-    def is_secret_owner(self, scope: Scope, label: str) -> bool:
-        """Returns True if current application owns secret with given label"""
-        if not (secret := self._get_juju_secret(scope, label)):
-            return False
-
-        try:
-            secret.get_info()
-        except (SecretNotFoundError, ModelError):
-            return False
-        return True
