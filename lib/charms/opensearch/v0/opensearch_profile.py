@@ -221,9 +221,7 @@ class ProfilesManager:
         logger.error("Missing cluster topology requirements: %s", error_message)
         return [error_message]
 
-    def check_all_requirements(
-        self, profile: Optional[OpenSearchProfile] = None, set_status: bool = True
-    ) -> List[str]:
+    def check_missing_requirements(self, set_status: bool = True) -> List[str]:
         """Check all requirements of profile
 
         Requirements include:
@@ -232,15 +230,14 @@ class ProfilesManager:
         - Cluster topology requirements
         """
         missing_requirements: List[str] = []
-        if profile is None:
-            try:
-                profile = self.profile
-            except ValueError:
-                logger.error(
-                    "Invalid profile configuration. Value: %s", self.state.config.get("profile")
-                )
-                self.state.charm.status.set(BlockedStatus(InvalidProfileConfigOption))
-                return [InvalidProfileConfigOption]
+        try:
+            profile = self.config_profile
+        except ValueError:
+            logger.error(
+                "Invalid profile configuration. Value: %s", self.state.config.get("profile")
+            )
+            self.state.charm.status.set(BlockedStatus(InvalidProfileConfigOption))
+            return [InvalidProfileConfigOption]
 
         missing_requirements.extend(self.check_missing_system_requirements())
         missing_requirements.extend(self.check_memory_requirements(profile))
@@ -258,14 +255,6 @@ class ProfilesManager:
                 )
 
         return missing_requirements
-
-    def get_config_profile(self) -> OpenSearchProfile:
-        """Get the current config profile."""
-        return (
-            ProductionProfile()
-            if PerformanceType(self.state.config.get("profile")) == PerformanceType.PRODUCTION
-            else TestingProfile()
-        )
 
     def _current_peer_cluster_app(self) -> PeerClusterApp:
         deployment_desc = self.state.app.deployment_description
@@ -285,4 +274,13 @@ class ProfilesManager:
     @property
     def profile(self) -> OpenSearchProfile:
         """Get the current profile."""
-        return self.state.unit.profile or self.get_config_profile()
+        return self.state.unit.profile or self.config_profile
+
+    @property
+    def config_profile(self) -> OpenSearchProfile:
+        """Get the current config profile."""
+        return (
+            ProductionProfile()
+            if PerformanceType(self.state.config.get("profile")) == PerformanceType.PRODUCTION
+            else TestingProfile()
+        )

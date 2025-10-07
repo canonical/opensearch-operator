@@ -589,7 +589,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # check requirements
         if self.state.app.deployment_description:
-            self.profiles_manager.check_all_requirements()
+            self.profiles_manager.check_missing_requirements()
 
         if not (unit_data := event.relation.data.get(event.unit)):
             return
@@ -724,7 +724,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if not self.opensearch.is_node_up():
             return
 
-        if self.profiles_manager.check_all_requirements():
+        if self.profiles_manager.check_missing_requirements():
             return
 
         # review available CMs
@@ -811,7 +811,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         profile_restart_needed = False
         try:
-            config_profile = self.profiles_manager.get_config_profile()
+            config_profile = self.profiles_manager.config_profile
             current_profile = self.state.unit.profile
             self.status.clear(InvalidProfileConfigOption)
         except ValueError:
@@ -821,7 +821,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.status.set(BlockedStatus(InvalidProfileConfigOption))
             return
 
-        if self.profiles_manager.check_all_requirements(config_profile):
+        if self.profiles_manager.check_missing_requirements():
             event.defer()
             return
 
@@ -1500,7 +1500,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     def _can_service_start(self, is_first_data_node: bool = False) -> bool:  # noqa: C901
         """Return if the opensearch service can start."""
         # if there are any missing system requirements block
-        if self.profiles_manager.check_all_requirements():
+        if self.profiles_manager.check_missing_requirements():
             return False
 
         if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
@@ -1944,23 +1944,24 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         """Start Opensearch on a cluster-manager node when a data-node is joining"""
         if self.peers_data.get(Scope.UNIT, "started", False):
             self.status.clear(PClusterNoDataNode)
-        else:
-            try:
-                config_profile = self.profiles_manager.get_config_profile()
-            except ValueError:
-                return
+            return
 
-            if self.profiles_manager.check_all_requirements(config_profile):
-                return
+        try:
+            config_profile = self.profiles_manager.config_profile
+        except ValueError:
+            return
 
-            self.opensearch_config.set_jvm_heap_size(
-                config_profile.get_jvm_heap_size(self.opensearch.meminfo()["MemTotal"])
-            )
-            # store profile in unit state
-            self.state.unit.relation_data.put(
-                Scope.UNIT, PERFORMANCE_PROFILE, config_profile.type.value
-            )
-            self._start_opensearch_event.emit(ignore_lock=True)
+        if self.profiles_manager.check_missing_requirements():
+            return
+
+        self.opensearch_config.set_jvm_heap_size(
+            config_profile.get_jvm_heap_size(self.opensearch.meminfo()["MemTotal"])
+        )
+        # store profile in unit state
+        self.state.unit.relation_data.put(
+            Scope.UNIT, PERFORMANCE_PROFILE, config_profile.type.value
+        )
+        self._start_opensearch_event.emit(ignore_lock=True)
 
     def put_security_index_initialized(self, event: EventBase) -> None:
         """Set the security index initialized flag."""
