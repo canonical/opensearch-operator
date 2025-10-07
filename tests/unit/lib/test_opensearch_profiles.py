@@ -71,7 +71,8 @@ class TestPerformanceProfile(unittest.TestCase):
         self.addCleanup(self.harness.cleanup)
         self.harness.set_leader(True)
         with patch(
-            "charms.opensearch.v0.opensearch_profile.ProfilesManager.get_config_profile",
+            "charms.opensearch.v0.opensearch_profile.ProfilesManager.config_profile",
+            new_callable=PropertyMock,
             return_value=ProductionProfile(),
         ):
             self.harness.begin()
@@ -167,7 +168,8 @@ class TestPerformanceProfile(unittest.TestCase):
                 ),
             ),
             patch(
-                "charms.opensearch.v0.opensearch_profile.ProfilesManager.get_config_profile",
+                "charms.opensearch.v0.opensearch_profile.ProfilesManager.config_profile",
+                new_callable=PropertyMock,
                 return_value=ProductionProfile(),
             ),
             patch(
@@ -236,7 +238,8 @@ class TestPerformanceProfile(unittest.TestCase):
                 ),
             ),
             patch(
-                "charms.opensearch.v0.opensearch_profile.ProfilesManager.get_config_profile",
+                "charms.opensearch.v0.opensearch_profile.ProfilesManager.config_profile",
+                new_callable=PropertyMock,
                 return_value=ProductionProfile(),
             ),
         ):
@@ -310,7 +313,8 @@ class TestPerformanceProfile(unittest.TestCase):
                 "charms.opensearch.v0.opensearch_config.OpenSearchConfig.set_jvm_heap_size",
             ) as set_jvm_heap_size,
             patch(
-                "charms.opensearch.v0.opensearch_profile.ProfilesManager.get_config_profile",
+                "charms.opensearch.v0.opensearch_profile.ProfilesManager.config_profile",
+                new_callable=PropertyMock,
                 return_value=ProductionProfile(),
             ),
         ):
@@ -384,7 +388,8 @@ class TestPerformanceProfile(unittest.TestCase):
                 return_value=False,
             ),
             patch(
-                "charms.opensearch.v0.opensearch_profile.ProfilesManager.get_config_profile",
+                "charms.opensearch.v0.opensearch_profile.ProfilesManager.config_profile",
+                new_callable=PropertyMock,
                 return_value=ProductionProfile(),
             ),
         ):

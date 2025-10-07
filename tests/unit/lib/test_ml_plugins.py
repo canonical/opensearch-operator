@@ -85,7 +85,7 @@ class TestOpenSearchKNN(unittest.TestCase):
     )
     @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size")
     @patch(
-        f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_all_requirements",
+        f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_missing_requirements",
         return_value=[],
     )
     @patch(f"{BASE_LIB_PATH}.opensearch_plugin_manager.OpenSearchPluginManager.is_ready_for_api")
@@ -186,7 +186,7 @@ class TestOpenSearchKNN(unittest.TestCase):
     )
     @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size")
     @patch(
-        f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_all_requirements",
+        f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_missing_requirements",
         return_value=[],
     )
     @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.request")

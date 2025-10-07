@@ -56,7 +56,7 @@ class TestHelperNetworking(unittest.TestCase):
         self.charm.opensearch_exclusions._removed_units_to_cleanup = MagicMock(return_value=[])
         self.charm.opensearch_config = MagicMock()
         with patch(
-            "charms.opensearch.v0.opensearch_profile.ProfilesManager.check_all_requirements",
+            "charms.opensearch.v0.opensearch_profile.ProfilesManager.check_missing_requirements",
             return_value=[],
         ):
             self.harness.update_relation_data(

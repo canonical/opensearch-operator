@@ -175,7 +175,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         ),
     )
     @patch(
-        "charms.opensearch.v0.opensearch_profile.ProfilesManager.check_all_requirements",
+        "charms.opensearch.v0.opensearch_profile.ProfilesManager.check_missing_requirements",
         return_value=[],
     )
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.set_jvm_heap_size")
@@ -213,7 +213,7 @@ class TestOpenSearchPlugin(unittest.TestCase):
         self.plugin_manager.run.assert_called()
 
     @patch(
-        "charms.opensearch.v0.opensearch_profile.ProfilesManager.check_all_requirements",
+        "charms.opensearch.v0.opensearch_profile.ProfilesManager.check_missing_requirements",
         return_value=[],
     )
     @patch("charms.opensearch.v0.opensearch_config.OpenSearchConfig.set_jvm_heap_size")
