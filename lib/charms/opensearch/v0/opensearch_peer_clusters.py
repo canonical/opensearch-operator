@@ -287,20 +287,7 @@ class OpenSearchPeerClustersManager:
             directives.append(Directive.SHOW_STATUS)
             directives.remove(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
 
-        # While starting up an existing failover orchestrator
-        # we block if the peer relation is not set.
-        # An example is a demoted main orchestrator being scaled up
         deployment_type = self._deployment_type(config, start_mode, prev_deployment.typ)
-        if (
-            deployment_type != DeploymentType.MAIN_ORCHESTRATOR
-            and not self._charm.model.relations[PeerClusterRelationName]
-        ):
-            deployment_state = DeploymentState(
-                value=State.BLOCKED_WAITING_FOR_RELATION, message=PClusterNoRelation
-            )
-            directives.append(Directive.SHOW_STATUS)
-            directives.append(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
-
         return DeploymentDescription(
             app=prev_deployment.app,
             config=PeerClusterConfig(
@@ -410,6 +397,9 @@ class OpenSearchPeerClustersManager:
         logger.debug("New deployment description: %s", deployment_desc)
         if Directive.WAIT_FOR_PEER_CLUSTER_RELATION in deployment_desc.pending_directives:
             deployment_desc.pending_directives.remove(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
+            if deployment_desc.state.value == State.BLOCKED_WAITING_FOR_RELATION:
+                deployment_desc.state = DeploymentState(value=State.ACTIVE)
+        deployment_desc.pending_directives.append(Directive.SHOW_STATUS)
         self._charm.peers_data.put_object(
             Scope.APP, "deployment-description", deployment_desc.to_dict()
         )
@@ -425,6 +415,11 @@ class OpenSearchPeerClustersManager:
         deployment_desc.typ = DeploymentType.FAILOVER_ORCHESTRATOR
         deployment_desc.promotion_time = None
         logger.debug("Demoting deployment type to FAILOVER_ORCHESTRATOR: %s", deployment_desc)
+        deployment_desc.state = DeploymentState(
+            value=State.BLOCKED_WAITING_FOR_RELATION, message=PClusterNoRelation
+        )
+        deployment_desc.pending_directives.append(Directive.SHOW_STATUS)
+        deployment_desc.pending_directives.append(Directive.WAIT_FOR_PEER_CLUSTER_RELATION)
         self._charm.peers_data.put_object(
             Scope.APP, "deployment-description", deployment_desc.to_dict()
         )
