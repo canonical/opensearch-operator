@@ -686,7 +686,9 @@ async def test_remove_and_readd_backup_relation(
 
 @pytest.mark.parametrize("cloud_name,deploy_type", LARGE_DEPLOYMENTS_ALL_CLOUDS)
 @pytest.mark.abort_on_fail
-async def test_blocked_status_after_failover_promotion(ops_test: OpsTest, cloud_name) -> None:
+async def test_blocked_status_after_failover_promotion(
+    ops_test: OpsTest, cloud_name: str, deploy_type: str
+) -> None:
     """Test new main orchestrator blocked until backup relation established"""
     app = "failover"
     # remove main orchestrator
@@ -723,6 +725,8 @@ async def test_create_and_restore_after_failover_promotion(
     ops_test: OpsTest,
     c_writes: ContinuousWrites,
     c_writes_runner,
+    cloud_name: str,
+    deploy_type: str,
 ) -> None:
     """Test backups after failover promotion"""
     app = "failover"
