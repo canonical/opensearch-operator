@@ -18,7 +18,7 @@ See also: [How to install Juju](https://documentation.ubuntu.com/juju/3.6/howto/
 **LXD `v6.1+`**: Install and initialize LXD.
 
 ```{note}
-See also: [First steps with LXD](https://documentation.ubuntu.com/lxd/en/latest/tutorial/first_steps/#install-and-initialize-lxd).
+See also: [First steps with LXD](https://documentation.ubuntu.com/lxd/latest/tutorial/first_steps/#install-lxd-using-snap).
 ```
 
 **System requirements**: Check that you fulfill the rest of the software and hardware requirements in the

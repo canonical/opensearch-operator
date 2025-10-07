@@ -7,7 +7,7 @@ This is useful when an upgrade fails and you need to roll back to the previous v
 ```{note}
 OpenSearch does not support downgrading to a previous major version.
 For more information, please refer to the upstream
-[OpenSearch documentation about rolling upgrades](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/#preparing-to-upgrade).
+[OpenSearch documentation about rolling upgrades](https://docs.opensearch.org/latest/migrate-or-upgrade/rolling-upgrade/#preparing-to-upgrade).
 ```
 
 After a `juju refresh`, if there are any version incompatibilities in charm revisions,

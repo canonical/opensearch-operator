@@ -210,7 +210,7 @@ Hydra is fronted by Traefik. Ask Traefik for proxied endpoints:
 juju run traefik-public/0 show-proxied-endpoints
 ```
 
-Copy the hydra.url (for example: https://10.0.0.3/oauth-hydra).
+Copy the `hydra.url` value, for example, `https://10.0.0.3/oauth-hydra`.
 
 Export convenient variables:
 
@@ -296,7 +296,7 @@ opensearch:
   version: 2.19.2
 ```
 
-Copy the username (e.g. opensearch-client_4) and export it:
+Copy the username (e.g. `opensearch-client_4`) and export it:
 
 ```shell
 export DATA_INTEGRATOR_USER="opensearch-client_4"

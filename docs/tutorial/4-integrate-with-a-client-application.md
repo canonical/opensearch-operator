@@ -3,7 +3,7 @@
 
 > [Charmed OpenSearch Tutorial](tutorial-index) >  4. Integrate with a client application
 
-[Integrations](https://juju.is/docs/sdk/integration) (also known as "relations")
+[Integrations](https://documentation.ubuntu.com/juju/3.6/reference/relation/) (also known as "relations")
 are the easiest way to connect to Charmed OpenSearch.
 Integrations automatically create a username, password, and database for the desired
 user/application, and define access permissions.

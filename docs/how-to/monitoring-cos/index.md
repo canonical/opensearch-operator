@@ -18,9 +18,9 @@ Prometheus metrics are automatically installed as an OpenSearch plugin:
 
 The meaning of the metrics collected can be found in the upstream documentation:
 
-* [indices stats metrics](https://opensearch.org/docs/latest/api-reference/index-apis/stats/)
-* [nodes_stats_metrics](https://opensearch.org/docs/latest/api-reference/nodes-apis/nodes-stats/)
-* [cluster_stats_metrics](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-stats/)
+* [{spellexception}`indices stats metrics`](https://opensearch.org/docs/latest/api-reference/index-apis/stats/)
+* [{spellexception}`nodes_stats_metrics`](https://opensearch.org/docs/latest/api-reference/nodes-apis/nodes-stats/)
+* [{spellexception}`cluster_stats_metrics`](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-stats/)
 
 ## Alert rules
 

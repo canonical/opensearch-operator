@@ -19,7 +19,7 @@ Charmed OpenSearch can be deployed on top of several clouds and virtualization l
 |Cloud|Security guides|
 | --- | --- |
 |OpenStack|[OpenStack Security Guide](https://docs.openstack.org/security-guide/)|
-|AWS|[Best Practices for Security, Identity and Compliance](https://aws.amazon.com/architecture/security-identity-compliance), [AWS security credentials](https://docs.aws.amazon.com/IAM/latest/UserGuide/security-creds.html#access-keys-and-secret-access-keys)|
+|AWS|[Best Practices for Security, Identity and Compliance](https://aws.amazon.com/architecture/security-identity-compliance), [AWS security credentials](https://docs.aws.amazon.com/IAM/latest/UserGuide/security-creds.html)|
 |Azure|[Azure security best practices and patterns](https://learn.microsoft.com/en-us/azure/security/fundamentals/best-practices-and-patterns), [Managed identities for Azure resource](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/)|
 
 ### Juju
@@ -27,8 +27,8 @@ Charmed OpenSearch can be deployed on top of several clouds and virtualization l
 Juju is the component responsible for orchestrating the entire lifecycle,
 from deployment to Day 2 operations.
 For more information on Juju security hardening, see the
-[Juju security](https://discourse.charmhub.io/t/juju-security/15684) page and the
-[How to harden your deployment](https://juju.is/docs/juju/harden-your-deployment) guide.
+[Juju security](https://documentation.ubuntu.com/juju/latest/explanation/juju-security/) page and the
+[How to harden your deployment](https://documentation.ubuntu.com/juju/3.6/howto/manage-your-juju-deployment/harden-your-juju-deployment) guide.
 
 #### Cloud credentials
 

@@ -97,7 +97,7 @@ Deploy a K8s cluster.
 
 ```{note}
 This document uses MicroK8s. Installation instructions can be found
-[in COS documentation](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s#configure-microk8s).
+[in COS documentation](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s#heading--configure-microk8s).
 ```
 
 Optionally, configure `kubectl` with `microk8s`’s access:

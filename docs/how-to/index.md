@@ -19,7 +19,7 @@ The following guides cover key processes and common tasks for managing and using
 * [Integrate with an application](how-to-integrate-with-an-application)
 * [Perform load testing](how-to-perform-load-testing)
 * [Recover from attached storage](how-to-recover-from-attached-storage)
-* [Access using Oauth](how-to-access-using-oauth)
+* [Access using OAuth](how-to-access-using-oauth)
 
 ## Backup and restore
 

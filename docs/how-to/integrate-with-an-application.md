@@ -50,7 +50,7 @@ The class takes the following parameters:
 - `charm`: The charm instance
 - `relation_name`: The name of the relation to which to connect. This should match the name of the relation defined in the `metadata.yaml` file (`opensearch` in the example above).
 - `index`: The name of the index the client application will connect to.
-- `extra_user_roles`: A string containing the additional roles to assign to the user. This is optional and defualts to `None`.
+- `extra_user_roles`: A string containing the additional roles to assign to the user. This is optional and defaults to `None`.
 - `addional_secret_fields`: A list of additional secret fields to be shared with the client application. This is optional and defaults to an empty list.
 
 ```python

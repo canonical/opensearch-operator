@@ -101,5 +101,5 @@ sudo sysctl -p
 * Check out other charms on [charmhub.io](https://charmhub.io/)
 * Read about [High Availability Best Practices](https://canonical.com/blog/database-high-availability)
 * [Report](https://github.com/canonical/opensearch-operator/issues) any problems you encountered
-* [Give us your feedback](https://chat.charmhub.io/charmhub/channels/data-platform).
+* [Give us your feedback](https://matrix.to/#/#charmhub-data-platform:ubuntu.com)
 * [Contribute to the code base](https://github.com/canonical/opensearch-operator)

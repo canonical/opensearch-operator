@@ -56,7 +56,7 @@ First, deploy [grafana-agent](https://charmhub.io/grafana-agent):
 juju deploy grafana-agent
 ```
 
-Then, integrate (previously known as "[relate](https://juju.is/docs/juju/integration)")
+Then, integrate (previously known as "[relate](https://documentation.ubuntu.com/juju/3.6/reference/relation/)")
 it with Charmed OpenSearch:
 
 ```shell
@@ -90,7 +90,7 @@ The dashboard provides selectors to filter which cluster to watch at the time.
 ## Connect to the Grafana web interface
 
 To connect to the Grafana web interface, follow the
-[Browse dashboards](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s?_ga=2.201254254.1948444620.1704703837-757109492.1701777558#browse-dashboards)
+[Browse dashboards](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s#heading--browse-dashboards)
 section of the MicroK8s "Getting started" guide.
 
 ```shell

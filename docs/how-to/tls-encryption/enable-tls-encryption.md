@@ -35,6 +35,7 @@ TLS is a requirement for Charmed OpenSearch, therefore TLS should not be disable
 
 ## Manage certificates
 
+(how-to-check-tls-keys)=
 ### Check certificates in use
 
 To check the certificates in use by OpenSearch, you can run:
@@ -43,6 +44,7 @@ To check the certificates in use by OpenSearch, you can run:
 openssl s_client -showcerts -connect leader_unit_IP:port < /dev/null | grep issuer
 ```
 
+(how-to-update-tls-keys)=
 ### Update keys
 
 Updates to private keys for certificate signing requests (CSR) can be made via the `set-tls-private-key` action. Charmed OpenSearch uses three types of certificates:

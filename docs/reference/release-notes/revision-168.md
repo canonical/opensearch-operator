@@ -76,7 +76,7 @@ Like all Juju charms, OpenSearch can easily integrate with other charms by imple
 
 OpenSearch can be seamlessly integrated out of the box with:
 
-* [TLS certificates charms](https://charmhub.io/topics/security-with-x-509-certificates#understanding-your-x-509-certificates-requirements)
+* [TLS certificates charms](https://charmhub.io/topics/security-with-x-509-certificates)
   * **Note**: Charmed OpenSearch supports integration with [tls-certificates library](https://charmhub.io/tls-certificates-interface/libraries/tls_certificates) `v2` or higher.
   * See also: [How to enable TLS](how-to-enable-tls-encryption)
 * [COS Lite](https://charmhub.io/cos-lite)
