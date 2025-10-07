@@ -720,11 +720,15 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             without the user noticing in case the cert of the unit transport layer expires.
             So we want to stop opensearch in that case, since it cannot be recovered from.
         """
-        # if node already shutdown - leave
-        if not self.opensearch.is_node_up():
+        if not self.state.app.deployment_description:
+            logger.debug("Deployment description not yet computed")
             return
 
         if self.profiles_manager.check_missing_requirements():
+            return
+
+        # if node already shutdown - leave
+        if not self.opensearch.is_node_up():
             return
 
         # review available CMs
@@ -1152,6 +1156,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 self.node_lock.release()
                 self.status.set(BlockedStatus(ServiceStartError))
                 event.defer()
+            finally:
+                if self.opensearch_peer_cm.is_provider(typ="main"):
+                    self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
             return
 
         self.peers_data.delete(Scope.UNIT, "started")
@@ -1290,10 +1297,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 event.defer()
                 return
 
-        # Add a timestamp instead of just a boolean to be able to trigger
-        # a relation changed event in case of restarts
-        # if you remove the flag and add it again in the same hook the
-        # relation changed event won't be triggered
+        # Add a timestamp to always trigger relation changed
         self.peers_data.put(Scope.UNIT, "started", time.time())
 
         # apply post_start fixes to resolve start related upstream bugs
