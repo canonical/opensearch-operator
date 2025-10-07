@@ -8,10 +8,8 @@ This module manages OpenSearch keystore access and lifecycle.
 import functools
 import logging
 import os
-from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 
-from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
@@ -56,14 +54,17 @@ class OpenSearchKeystore:
         self._opensearch.run_bin("keystore", "create")
 
     def put_entries(self, entries: dict[str, str]) -> None:
+        """Add new key/val entries on the keystore."""
         for key, val in entries.items():
             # adding the '--force' flag will create the keystore if not present
             self._opensearch.run_bin("keystore", f"add {key} --force", stdin=val)
 
     def put_file_entry(self, key: str, filename: str) -> None:
+        """Add a new file entry in the keystore."""
         self._opensearch.run_bin("keystore", f"add-file {key} {filename} --force")
 
     def remove_entries(self, keys: list[str]) -> None:
+        """Remove entries from the keystore."""
         self._create_if_needed()
 
         for key in keys:
@@ -78,17 +79,18 @@ class OpenSearchKeystore:
                 raise
 
     def list_keys(self) -> list[str]:
+        """List all keys in the keystore."""
         self._create_if_needed()
         return self._opensearch.run_bin("keystore", "list").splitlines()
 
     def reload(self) -> None:
+        """Reload the keystore."""
         self._create_if_needed()
         self._opensearch.run_bin("keystore", "upgrade")
 
         if self._opensearch.is_node_up():
             self._opensearch.request("POST", "_nodes/reload_secure_settings")
             logger.debug("keystore reloaded.")
-
 
     def update(self, entries: Dict[str, Any]) -> None:
         """Updates the keystore value (adding or removing) and reload.

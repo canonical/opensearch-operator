@@ -24,14 +24,11 @@ from charms.opensearch.v0.constants_charm import (
     S3_RELATION,
     GCS_RELATION, RestoreInProgress, BackupInProgress,
 )
-from charms.opensearch.v0.helper_charm import run_cmd
 from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.helper_security import store_ca, list_cas, remove_ca
 from charms.opensearch.v0.models import AzureRelData, DeploymentType, S3RelData, ObjectStorageConfig, GcsRelData
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
-from charms.opensearch.v0.opensearch_exceptions import (
-    OpenSearchHttpError, OpenSearchError,
-)
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 
@@ -51,10 +48,6 @@ if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 
-class OpenSearchRestoreSnapshotMissingError(OpenSearchError):
-    """Exception raised when we're attempting """
-
-
 # Object storage types
 ObjectStorageType = Literal["s3", "azure", "gcs", "s3-pcluster", "azure-pcluster", "gcs-pcluster", "conflict"]
 
@@ -70,9 +63,8 @@ SYSTEM_INDICES = {
 }
 
 
-
-
 class OpenSearchBackupsEvents(Object):
+    """Events class for Backups (snapshots)."""
 
     def __init__(self, charm: "OpenSearchBaseCharm"):
         super().__init__(charm, key="backups")
@@ -113,7 +105,7 @@ class OpenSearchBackupsEvents(Object):
             event.defer()
             return
 
-        # handle case where this was deferred in the previous case, then the s3 relation was severed
+        # handle case where this was deferred in the above case, then the s3 relation was severed
         if (
             object_storage_type != "s3"
             or not self.object_storage_config.s3
@@ -201,23 +193,28 @@ class OpenSearchBackupsEvents(Object):
             event.fail(error_message)
             return
 
+        # Create new snapshot
         try:
-            snapshot_id = self.charm.backups_manager.create_backup(
+            snapshot_id = self.charm.backups_manager.create_snapshot(
                 object_storage_type=self.object_storage_type
             )
         except OpenSearchHttpError as e:
+            logger.error("Could not create a new snapshot: %s", e)
             event.fail(f"Backup request failed with: {str(e)}")
             return
 
+        # Fetch the new snapshot for sanity check
+        self.charm.status.set(MaintenanceStatus(BackupInProgress))
         try:
             snapshot = self.charm.backups_manager.get_snapshot(
                 object_storage_type=self.object_storage_type, snapshot_id=snapshot_id
             )
-            self.charm.status.set(MaintenanceStatus(BackupInProgress))
             event.set_results({"backup-id": snapshot_id, "status": snapshot["state"]})
         except OpenSearchHttpError as e:
-            logger.error(e)
+            logger.error("Unknown state for snapshot %s: %s", snapshot_id, e)
             event.fail(f"Unknown state for backup {snapshot_id}: {str(e)}")
+        finally:
+            self.charm.status.clear(BackupInProgress)
 
     def _on_list_backups_action(self, event: ActionEvent) -> None:
         """Handler for list backups  changes."""
@@ -232,6 +229,7 @@ class OpenSearchBackupsEvents(Object):
         try:
             snapshots = self.charm.backups_manager.list_snapshots()
         except OpenSearchHttpError as e:
+            logger.error("Could not fetch the list of snapshots: %s", e)
             event.fail(f"Backup request failed with: {str(e)}")
             return
 
@@ -247,21 +245,25 @@ class OpenSearchBackupsEvents(Object):
         event.set_results({"backups": "\n".join(table_output)})
 
     def _on_restore_action(self, event: ActionEvent) -> None:
+        """Handler for the restore action."""
         snapshot_id = event.params.get("backup-id")
         if error_message := self._action_missing_pre_requisites():
             event.fail(error_message)
             return
 
+        # Fetch the snapshot with the corresponding ID
         try:
             if not (snapshot := self.charm.backups_manager.get_snapshot(snapshot_id)):
+                logger.error("Backup %s not found", snapshot_id)
                 event.fail(f"Backup {snapshot_id} not found.")
                 return
         except OpenSearchHttpError as e:
-            event.fail(f"Backup {snapshot_id} not found. Error: {str(e)}.")
+            logger.error("Backup %s could not be fetched. Error: \n%s", snapshot_id, e)
+            event.fail(f"Backup {snapshot_id} could not be fetched. Error: {str(e)}.")
             return
 
+        # close indices that were snapshotted if they still exist, so they can be restored
         try:
-            # close indices that were snapshotted if they still exist, so they can be restored
             closed_indices, indices_failed_to_close = self.charm.backups_manager.close_snapshot_indices_open_in_cluster(snapshot)
             if indices_failed_to_close:
                 event.fail(f"Failed to close {len(indices_failed_to_close)} open indices. Check logs for details.")
@@ -270,15 +272,32 @@ class OpenSearchBackupsEvents(Object):
             event.fail(f"Failed to close open indices. Error: {str(e)}.")
             return
 
+        # start the restore
+        self.charm.status.set(MaintenanceStatus(RestoreInProgress))
+        logger.info("Starting restore of snapshot %s.", snapshot_id)
         try:
-            self.charm.backups_manager.restore(object_storage_type=self.object_storage_type, snapshot=snapshot)
-            self.charm.status.set(MaintenanceStatus(RestoreInProgress))
+            non_restored_indices = self.charm.backups_manager.restore_snapshot(
+                object_storage_type=self.object_storage_type, snapshot=snapshot
+            )
+            if not non_restored_indices:
+                self.charm.health.apply(wait_for_green_first=True, app=self.charm.unit.is_leader())
+                return
+
+            logger.error(
+                "Failed to restore the following indices in snapshot %s: %s.",
+                snapshot_id,
+                non_restored_indices,
+            )
+            event.fail(f"Failed to restore {len(non_restored_indices)} indices. Check logs for details.")
         except OpenSearchHttpError as e:
+            logger.error("Failed to restore snapshot %s. Error: %s.", snapshot_id, str(e))
             event.fail(f"Failed to restore snapshot {snapshot_id}. Error: {str(e)}.")
-            return
+        finally:
+            self.charm.status.clear(RestoreInProgress)
 
     @property
     def object_storage_type(self) -> ObjectStorageType | None:
+        """Get the current object storage type."""
         if self.charm.opensearch_peer_cm.deployment_desc() == DeploymentType.MAIN_ORCHESTRATOR:
             active_rels = [
                 rel for rel
@@ -352,6 +371,7 @@ class OpenSearchBackupsEvents(Object):
         return ObjectStorageConfig(gcs=data)
 
     def _action_missing_pre_requisites(self, report_running_operations: bool = True) -> str | None:
+        """Compute the missing prerequisites for running a snapshot/restore action."""
         if not self.charm.unit.is_leader():
             return "Backup/Restore related actions must be run on the juju leader unit."
 
@@ -394,25 +414,11 @@ class OpenSearchBackupsEvents(Object):
 
 
 class OpenSearchBackupsManager:
+    """Manager class for Backups (snapshots)."""
 
     def __init__(self, charm: "OpenSearchBaseCharm", opensearch: "OpenSearchDistribution"):
         self.charm = charm  # todo this will need to be replaced by the clusterState
         self.opensearch = opensearch
-
-    def create_snapshot_monitor_user(self) -> None:
-        permissions = {
-            "cluster_permissions": [
-                "cluster:monitor/tasks/list",
-                "cluster:monitor/tasks/get",
-                "cluster:admin/snapshot/get",
-                "cluster:admin/repository/get",
-                "monitor_snapshot",
-            ],
-            "index_permissions": [
-                { "index_patterns": ["*"], "allowed_actions": ["indices:monitor/recovery"] }
-            ],
-        }
-
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def create_repo(
@@ -446,7 +452,8 @@ class OpenSearchBackupsManager:
         return repo_name
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
-    def create_backup(self, object_storage_type: ObjectStorageType) -> str:
+    def create_snapshot(self, object_storage_type: ObjectStorageType) -> str:
+        """Create an OpenSearch snapshot."""
         repo_name = self.repository_name(object_storage_type)
         snapshot_id = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT).lower()
 
@@ -472,7 +479,8 @@ class OpenSearchBackupsManager:
         retry=retry_if_exception_type(OpenSearchHttpError),
         reraise=True,
     )
-    def restore(self, object_storage_type: ObjectStorageType, snapshot: dict[str, Any]) -> None:
+    def restore_snapshot(self, object_storage_type: ObjectStorageType, snapshot: dict[str, Any]) -> set[str]:
+        """Restore an OpenSearch snapshot."""
         repo_name = self.repository_name(object_storage_type)
         snapshot_id = snapshot.get("snapshot")
 
@@ -483,58 +491,46 @@ class OpenSearchBackupsManager:
         restore_id = f"restore:{datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT).lower()}-snapshot:{snapshot_id}"
 
         # restore
-        response = self.opensearch.request(
+        restore_resp = self.opensearch.request(
             "POST",
             f"_snapshot/{repo_name}/{snapshot_id}/_restore?wait_for_completion=true",
             headers={"X-Opaque-Id": restore_id},
             payload={"indices": f"*,-{indices_to_ignore}"},
             alt_hosts=self.charm.alt_hosts,
         )
+        logger.info("Restore of snapshot '%s' response: %s", snapshot_id, restore_resp)
 
         # this only serves as documentation and should always be true if no previous HTTP error
-        assert response["accepted"] is True
+        assert restore_resp["snapshot"] == snapshot_id
 
-        # in the background:
-        resp: dict[str, Any] = self.opensearch.request(
-            "GET", "/_tasks?actions=*recovery*&detailed=true&group_by=parents"
+        # sanity check on the restore success
+        recovery_resp: list[dict[str, str]] = self.opensearch.request(
+            "GET", "_cat/recovery?format=json"
         )
-        for task_id, task in resp["tasks"].items():
-            if task["headers"].get("X-Opaque-Id") == restore_id:
-                return # todo retry in 30sec or so
-
-        # now sanity check
-        resp: list[dict[str, str]] = self.opensearch.request("GET", "_cat/recovery")
         snapshot_recoveries = [
             recovery
-            for recovery in resp
+            for recovery in recovery_resp
             if (
                 recovery["type"] == "snapshot"
                 and recovery["repository"] == repo_name
                 and recovery["snapshot"] == snapshot_id
             )
         ]
-        recovered_indices = set(
+        restored_indices = set(
             [recovery["index"] for recovery in snapshot_recoveries if recovery["stage"] == "done"]
         )
-
-        if len(recovered_indices) < len(snapshot_recoveries):
-            return # todo retry this bit, as restore not complete
-
-        self.charm.status.clear(RestoreInProgress)
-        if recovered_indices - set(snapshot.get("indices", [])):
-            return # todo, mark restore as failed
-
-        self.charm.health.apply(wait_for_green_first=True)
-
+        expected_indices = set(snapshot.get("indices", []))
+        return expected_indices - restored_indices
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def close_snapshot_indices_open_in_cluster(self, snapshot: dict[str, Any]) -> (list[str] | None, dict[str, Any] | None):
+        """Close the non-system indices included in a given snapshot."""
         if not (indices_to_close := self._get_snapshot_indices_open_in_cluster(snapshot)):
             logger.info("No indices to close.")
             return None, None
 
         logger.info("Attempting closing the indices: %s", indices_to_close)
-        response = self.opensearch.request("POST",f"{','.join(indices_to_close)}/_close")
+        response = self.opensearch.request("POST", f"{','.join(indices_to_close)}/_close")
 
         # verify that the relevant indices are closed
         if response["acknowledged"] and response["shards_acknowledged"]:
@@ -553,16 +549,18 @@ class OpenSearchBackupsManager:
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def _get_snapshot_indices_open_in_cluster(self, snapshot: dict[str, Any]) -> list[str]:
+        """Fetch the current open indices in the current cluster."""
         current_indices = ClusterState.indices(self.opensearch)
         return sorted([
             index for index in snapshot.get("indices", [])
             if index in current_indices
-               and index not in SYSTEM_INDICES
-               and current_indices[index]["state"] == "open"
+            and index not in SYSTEM_INDICES
+            and current_indices[index]["state"] == "open"
         ])
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def get_snapshot(self, object_storage_type: ObjectStorageType, snapshot_id: str) -> dict[str, Any] | None:
+        """Fetch a snapshot by id."""
         repo_name = self.repository_name(object_storage_type)
         try:
             response = self.opensearch.request(
@@ -570,17 +568,13 @@ class OpenSearchBackupsManager:
             )
             return response["snapshots"][0]
         except OpenSearchHttpError as e:
-            if e.response_body.get("error", {}).get("type") == "snapshot_missing_exception": # todo, really needed?
+            if e.response_body.get("error", {}).get("type") == "snapshot_missing_exception":
                 return None
             raise
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
-    def get_restore_state(self, object_storage_type: ObjectStorageType, snapshot_id: str) -> dict[str, Any] | None:
-        # todo
-        pass
-
-    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def list_snapshots(self, object_storage_type: ObjectStorageType) -> dict[Any, dict[str, Any]]:
+        """List all snapshots in the current repository."""
         repo_name = self.repository_name(object_storage_type)
         response = self.opensearch.request(
             "GET", f"_snapshot/{repo_name}/_all", alt_hosts=self.charm.alt_hosts
@@ -596,6 +590,7 @@ class OpenSearchBackupsManager:
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def cleanup(self, object_storage_type: ObjectStorageType) -> None:
+        """Remove the current repository."""
         repo_name = self.repository_name(object_storage_type)
         try:
             response = self.opensearch.request(
@@ -613,6 +608,7 @@ class OpenSearchBackupsManager:
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def is_repository_created(self, object_storage_type: ObjectStorageType, repository: str = None) -> bool:
+        """Check if a repository is created."""
         repo_name = repository or self.repository_name(object_storage_type)
         try:
             response = self.opensearch.request(
@@ -622,17 +618,19 @@ class OpenSearchBackupsManager:
         except OpenSearchHttpError as e:
             if e.response_body.get("error", {}).get("type") == "repository_missing_exception":
                 return False
-            raise # TODO
+            raise
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def is_snapshot_running(self) -> bool:
+        """Check if a snapshot is running."""
         response = self.opensearch.request(
-            "GET", f"_snapshot/_status", alt_hosts=self.charm.alt_hosts
+            "GET", "_snapshot/_status", alt_hosts=self.charm.alt_hosts
         )
         return len(response.get("snapshots", [])) > 0
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def is_restore_running(self) -> bool:
+        """Check if a restore operation is running."""
         response: list[dict[str, str]] = self.opensearch.request(
             "GET", "/_cat/recovery?format=json&h=type,stage", alt_hosts=self.charm.alt_hosts
         )
@@ -642,6 +640,7 @@ class OpenSearchBackupsManager:
         return False
 
     def repository_name(self, object_storage_type: ObjectStorageType) -> str | None:
+        """Get the repository name for a given storage type."""
         if object_storage_type in {"s3", "s3-pcluster"}:
             return "s3-repository"
 
@@ -653,6 +652,7 @@ class OpenSearchBackupsManager:
     def requires_custom_s3_ca(
         self, object_storage_type: ObjectStorageType, object_storage_config: ObjectStorageConfig
     ) -> bool:
+        """Check if the current object storage setup requires the use of a custom CA."""
         if object_storage_type != "s3":
             return False
 
@@ -669,6 +669,7 @@ class OpenSearchBackupsManager:
         return False
 
     def is_custom_s3_ca_stored(self, s3_ca_chain: str | None = None) -> bool:
+        """Check if a custom CA for the object storage is stored in the local trust store."""
         stored_cacerts = list_cas(
             store_pwd="changeit", store_path=f"{self.opensearch.paths.certs}/cacerts.p12"
         )
@@ -678,6 +679,7 @@ class OpenSearchBackupsManager:
         return stored_cacerts.get("s3-gateway") == s3_ca_chain
 
     def store_s3_ca(self, s3_tls_ca_chain: str | None) -> None:
+        """Store or remove an s3 TLS CA chain on the local trust store."""
         if s3_tls_ca_chain:
             store_ca(
                 store_pwd="changeit",
@@ -695,6 +697,7 @@ class OpenSearchBackupsManager:
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def should_restart_for_full_setup(self) -> bool:
+        """Check if a restart is needed for full setup."""
         if not self.opensearch.is_started():
             return False
 
@@ -706,7 +709,3 @@ class OpenSearchBackupsManager:
             if e.response_body.get("error", {}).get("type") == "repository_verification_exception":
                 return True
             raise
-
-    def create_snapshot_watchdog_user(self) -> (str, str):
-        self.opensearch.request("PUT", "")
-        pass

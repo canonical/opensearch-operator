@@ -491,6 +491,8 @@ class GcsRelData(Model):
 
 
 class ObjectStorageConfig(Model):
+    """Model class for the object storage config - for all clouds."""
+
     s3: S3RelData | None = None
     azure: AzureRelData | None = None
     gcs: GcsRelData | None = None

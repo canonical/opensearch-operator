@@ -9,6 +9,25 @@ import typing
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Type
 
+from ops.charm import (
+    ActionEvent,
+    CharmBase,
+    ConfigChangedEvent,
+    LeaderElectedEvent,
+    RelationBrokenEvent,
+    RelationChangedEvent,
+    RelationCreatedEvent,
+    RelationDepartedEvent,
+    RelationJoinedEvent,
+    StartEvent,
+    StorageDetachingEvent,
+    UpdateStatusEvent,
+)
+from ops.framework import EventBase, EventSource
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+
+import lifecycle
+import upgrade
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
     PERFORMANCE_PROFILE,
@@ -55,7 +74,6 @@ from charms.opensearch.v0.models import (
     DeploymentType,
     PerformanceType,
 )
-from charms.opensearch.v0.opensearch_backups import backup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -98,25 +116,6 @@ from charms.opensearch.v0.opensearch_users import (
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
 )
-from ops.charm import (
-    ActionEvent,
-    CharmBase,
-    ConfigChangedEvent,
-    LeaderElectedEvent,
-    RelationBrokenEvent,
-    RelationChangedEvent,
-    RelationCreatedEvent,
-    RelationDepartedEvent,
-    RelationJoinedEvent,
-    StartEvent,
-    StorageDetachingEvent,
-    UpdateStatusEvent,
-)
-from ops.framework import EventBase, EventSource
-from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
-
-import lifecycle
-import upgrade
 
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"

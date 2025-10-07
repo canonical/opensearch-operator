@@ -116,8 +116,6 @@ OpenSearchRoles = set()
 AdminUser = "admin"
 KibanaserverUser = "kibanaserver"
 KibanaserverRole = "kibana_server"
-ClusterMonitorUser = "cluster_monitor"
-ClusterMonitorRole = "cluster_monitor"
 ClientUsersDict = "client_relation_users"
 
 

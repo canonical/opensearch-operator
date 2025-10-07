@@ -14,7 +14,7 @@ from charms.opensearch.v0.constants_charm import (
     COSRole,
     COSUser,
     KibanaserverUser,
-    OpenSearchUsers, ClusterMonitorUser,
+    OpenSearchUsers,
 )
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchError,
@@ -353,6 +353,3 @@ class OpenSearchUserManager:
                 COSUser,
                 [{"op": "replace", "path": "/opendistro_security_roles", "value": roles}],
             )
-        elif user == ClusterMonitorUser:
-            # TODO
-            roles = [ClusterMonitorRole]
