@@ -416,6 +416,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             start.assert_called_once()
             _post_start_init.assert_called_once()
 
+    @patch(f"{BASE_LIB_PATH}.state.OpenSearchApp.deployment_description")
     @patch(f"{BASE_LIB_PATH}.opensearch_health.OpenSearchHealth.apply", return_value="green")
     @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size")
     @patch(
@@ -449,17 +450,14 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         ______,
         _______,
         ________,
+        _________,
     ):
         """Test on update status."""
-        with (
-            patch(
-                f"{self.BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_missing_system_requirements"
-            ) as check_missing_requirements,
-            patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up,
-        ):
+        with patch(
+            f"{self.BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_missing_system_requirements"
+        ) as check_missing_requirements:
             # test missing sys requirements
             check_missing_requirements.return_value = ["ulimit -n not set"]
-            is_node_up.return_value = True
             self.charm.on.update_status.emit()
             self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
