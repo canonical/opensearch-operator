@@ -168,12 +168,10 @@ async def test_insufficient_memory(ops_test: OpsTest, charm: str, series: str) -
                     "blocked": [
                         "Missing requirements: Insufficient memory: 3145728.0 < 8388608",
                     ],
-                    "waiting": [
-                        "Requesting lock on operation: start",
-                    ],
                 }
             }
         },
+        wait_for_exact_units=3,
     )
 
 
