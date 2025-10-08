@@ -558,14 +558,50 @@ class OpenSearchTLS(Object):
             logging.error("CA cert  or truststore-password not found, quitting.")
             return False
 
-        if not store_ca(
-            alias=CA_ALIAS,
-            store_pwd=admin_secrets.get("truststore-password"),
-            store_path=f"{self.certs_path}/{CA_ALIAS}.p12",
-            ca=secrets.get("ca-cert"),
-            keep_previous=True,
-        ):
-            return False
+        store_path = f"{self.certs_path}/{CA_ALIAS}.p12"
+
+        try:
+            run_cmd(
+                f"""{self.keytool} -changealias \
+                -alias {CA_ALIAS} \
+                -destalias {OLD_CA_ALIAS} \
+                -keystore {store_path} \
+                -storetype PKCS12
+            """,
+                f"-storepass {admin_secrets.get('truststore-password')}",
+            )
+            logger.info(f"Current CA {CA_ALIAS} was renamed to old-{CA_ALIAS}.")
+        except OpenSearchCmdError as e:
+            # This message means there was no "ca" alias or store before, if it happens ignore
+            if not (
+                f"Alias <{CA_ALIAS}> does not exist" in e.out
+                or "Keystore file does not exist" in e.out
+            ):
+                raise
+
+        with tempfile.NamedTemporaryFile(
+            mode="w+t", dir=self.charm.opensearch.paths.conf
+        ) as ca_tmp_file:
+            ca_tmp_file.write(secrets.get("ca-cert"))
+            ca_tmp_file.flush()
+
+            try:
+                run_cmd(
+                    f"""{self.keytool} -importcert \
+                    -trustcacerts \
+                    -noprompt \
+                    -alias {CA_ALIAS} \
+                    -keystore {store_path} \
+                    -file {ca_tmp_file.name} \
+                    -storetype PKCS12
+                """,
+                    f"-storepass {admin_secrets.get('truststore-password')}",
+                )
+                run_cmd(f"sudo chmod +r {store_path}")
+                logger.info("New CA was added to truststore.")
+            except OpenSearchCmdError as e:
+                logging.error(f"Error storing the ca-cert: {e}")
+                return False
 
         self._add_ca_to_request_bundle(secrets.get("chain"))
 
@@ -574,9 +610,6 @@ class OpenSearchTLS(Object):
     def read_stored_ca(self, alias: str = CA_ALIAS) -> Optional[str]:
         """Load stored CA cert."""
         secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val, peek=True)
-        ca_trust_store = f"{self.certs_path}/ca.p12"
-        if not (exists(ca_trust_store) and secrets):
-            return None
 
         return read_ca(
             alias=alias,
@@ -590,7 +623,11 @@ class OpenSearchTLS(Object):
         trust_store_pwd = secrets.get("truststore-password")
         trust_store_path = f"{self.certs_path}/{CA_ALIAS}.p12"
 
-        old_ca = self.read_stored_ca(alias=OLD_CA_ALIAS)
+        old_ca = read_ca(
+            alias=OLD_CA_ALIAS,
+            store_pwd=trust_store_pwd,
+            store_path=trust_store_path,
+        )
         remove_ca(
             alias=OLD_CA_ALIAS,
             store_pwd=trust_store_pwd,
