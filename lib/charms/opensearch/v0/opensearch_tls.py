@@ -43,6 +43,7 @@ from charms.opensearch.v0.helper_security import (
 )
 from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchCmdError,
     OpenSearchError,
     OpenSearchHttpError,
 )
