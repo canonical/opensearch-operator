@@ -16,6 +16,7 @@ The following guides cover key processes and common tasks for managing and using
 * [Integrate with an application]
 * [Perform load testing]
 * [Recover from attached storage]
+* [Access using Oauth](https://discourse.charmhub.io/t/how-to-access-opensearch-using-oauth/18870/1)
 
 ## Backup and restore
 * [Configure S3]

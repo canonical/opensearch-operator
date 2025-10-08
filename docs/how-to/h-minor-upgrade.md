@@ -28,7 +28,7 @@ The steps below describe upgrading a single application. In large deployments, r
 ## Pre-upgrade checks
 Before upgrading your OpenSearch cluster, ensure that you have completed the following steps:
 
-1. **Backup your data**: Before upgrading, back up your data to prevent data loss in case of failure. For more information, see [Hot to create a backup](/t/14098).
+1. **Backup your data**: Before upgrading, back up your data to prevent data loss in case of failure. For more information, see [How to create a backup](/t/14098).
 2. **Make sure not to perform any extraordinary operations**: Avoid performing any concurrent operations on the cluster during the upgrade process. This can lead to an inconsistent state of the cluster. This includes:
     - Adding or removing units
     - Creating or destroying new relations

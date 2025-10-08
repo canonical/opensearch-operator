@@ -14,7 +14,10 @@ information for the Opensearch charm.
 import logging
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
-from charms.opensearch.v0.constants_charm import KibanaserverUser, OpenSearchSystemUsers
+from charms.opensearch.v0.constants_charm import (
+    KibanaserverUser,
+    OpenSearchSystemUsers,
+)
 from charms.opensearch.v0.constants_secrets import (
     AZURE_CREDENTIALS,
     HASH_POSTFIX,
@@ -88,10 +91,12 @@ class OpenSearchSecrets(Object, RelationDataStore):
         # 3. System user hash secret update
         #     - Action: Every unit needs to update local internal_users.yml
         #     - Note: Leader is updated already
-        # 4.  S3 credentials (secret / access keys) in large relations
+        # 4. S3 credentials (secret / access keys) in large relations
         #     - Action: write them into the opensearch.yml by running backup module
+        # 5. Azure credentials (storage account / secret key)
         #
-        # 5.  Azure credentials (storage account / secret key)
+        # On a separate note: Handling for JWT-config related secrets (e.g. signing-key) happens
+        # in the `JwtHandler` class, as it is a secret that is provided from another application
 
         system_user_hash_keys = [
             self._charm.secrets.hash_key(user) for user in OpenSearchSystemUsers

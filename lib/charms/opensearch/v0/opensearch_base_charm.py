@@ -71,6 +71,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
 from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
+from charms.opensearch.v0.opensearch_jwt import JwtHandler
 from charms.opensearch.v0.opensearch_keystore import (
     OpenSearchKeystore,
     OpenSearchKeystoreNotReadyError,
@@ -119,6 +120,7 @@ from ops.charm import (
 )
 from ops.framework import EventBase, EventSource
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+from tenacity import Retrying, stop_after_attempt, wait_exponential
 
 import lifecycle
 import upgrade
@@ -214,6 +216,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self, PeerRelationName, self.opensearch.paths.jdk, self.opensearch.paths.certs
         )
         self.oauth = OAuthHandler(self)
+        self.jwt = JwtHandler(self)
         self.status = Status(self)
         self.health = OpenSearchHealth(self)
         self.node_lock = OpenSearchNodeLock(self)
@@ -1172,23 +1175,23 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         except (
             OpenSearchHttpError,
             OpenSearchStartTimeoutError,
-            OpenSearchNotFullyReadyError,
+            OpenSearchStartError,
+            OpenSearchUserMgmtError,
         ) as e:
             self.node_lock.release()
+            logger.warning(e)
             self.status.set(BlockedStatus(ServiceStartError))
-
+            event.defer()
+        except OpenSearchNotFullyReadyError as e:
+            self.node_lock.release()
+            logger.debug("Node started but not fully ready: %s", e)
+            event.defer()
+        finally:
             # In large deployments with cluster-manager-only-nodes, the startup might fail
             # for the cluster-manager if a joining data node did not yet initialize the
             # security index. We still want to update and broadcast the latest relation data.
             if self.opensearch_peer_cm.is_provider(typ="main"):
                 self.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
-            event.defer()
-            logger.warning(e)
-        except (OpenSearchStartError, OpenSearchUserMgmtError) as e:
-            logger.warning(e)
-            self.node_lock.release()
-            self.status.set(BlockedStatus(ServiceStartError))
-            event.defer()
 
     def _post_start_init(self, event: _StartOpenSearch):  # noqa: C901
         """Initialization post OpenSearch start."""
@@ -1216,8 +1219,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # it sometimes takes a few seconds before the node is fully "up" otherwise a 503 error
         # may be thrown when calling a node - we want to ensure this node is perfectly ready
         # before marking it as ready
-        if not self.opensearch.is_node_up():
-            raise OpenSearchNotFullyReadyError("Node started but not full ready yet.")
+        for attempt in Retrying(
+            stop=stop_after_attempt(5),
+            wait=wait_exponential(multiplier=2, min=2, max=10),
+            reraise=True,
+        ):
+            with attempt:
+                if not self.opensearch.is_node_up():
+                    raise OpenSearchNotFullyReadyError("Node started but not fully ready yet.")
 
         try:
             nodes = self._get_nodes(use_localhost=self.opensearch.is_node_up())

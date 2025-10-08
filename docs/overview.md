@@ -69,6 +69,7 @@ This documentation follows the [Diataxis framework](https://canonical.com/blog/d
 | 3 | h-migrate-cluster | [Migrate a cluster](/t/14100) |
 | 2 | h-attached-storage| [Recover from attached storage](/t/15616) |
 | 2 | h-upgrade | [Upgrade]() |
+| 2 | h-oauth | [Access using Oauth](/t/18870) |
 | 3 | h-minor-upgrade | [Perform a minor upgrade](/t/14141) |
 | 3 | h-minor-rollback | [Perform a minor rollback](/t/14142) |
 | 2 | h-monitoring | [Monitoring (COS)](/t/16563) |

@@ -63,16 +63,16 @@ juju deploy opensearch --channel=2/edge
 
 The relevant provided [relations](https://juju.is/docs/olm/relations) of Charmed OpenSearch are:
 
-### Client interface:
+### Client interface
 
 To connect to the Charmed OpenSearch Operator and exchange data, relate to the `opensearch-client` endpoint:
 
 ```shell
-juju deploy data-integrator --channel=2/edge
+juju deploy data-integrator --channel=latest/stable
 juju integrate opensearch data-integrator
 ```
 
-### Large deployments:
+### Large deployments
 Charmed OpenSearch also allows to form large clusters or join an existing deployment, through the relations:
 - `peer-cluster`
 - `peer-cluster-orchestrator`
@@ -80,14 +80,14 @@ Charmed OpenSearch also allows to form large clusters or join an existing deploy
 juju integrate main:peer-cluster-orchestrator data-hot:peer-cluster
 ```
 
-## TLS:
+## TLS
 
 The Charmed OpenSearch Operator also supports TLS encryption as a first class citizen, on both the HTTP and Transport layers. 
 TLS is enabled by default and is a requirement for the charm to start.
 
 The charm relies on the `tls-certificates` interface.
 
-#### 1. Self-signed certificates:
+#### Example with Self-signed certificates
 ```shell
 # Deploy the self-signed TLS Certificates Operator.
 juju deploy self-signed-certificates --channel=latest/stable
