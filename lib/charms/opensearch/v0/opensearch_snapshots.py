@@ -88,6 +88,7 @@ class OpenSearchSnapshotsEvents(Object):
         super().__init__(charm, key="backups")
         self.charm = charm
 
+        # requirers
         self.s3_requirer = S3Requirer(charm, S3_RELATION)
         self.azure_requirer = AzureStorageRequires(charm, AZURE_REPOSITORY)
 
