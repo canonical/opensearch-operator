@@ -9,25 +9,6 @@ import typing
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Type
 
-from ops.charm import (
-    ActionEvent,
-    CharmBase,
-    ConfigChangedEvent,
-    LeaderElectedEvent,
-    RelationBrokenEvent,
-    RelationChangedEvent,
-    RelationCreatedEvent,
-    RelationDepartedEvent,
-    RelationJoinedEvent,
-    StartEvent,
-    StorageDetachingEvent,
-    UpdateStatusEvent,
-)
-from ops.framework import EventBase, EventSource
-from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
-
-import lifecycle
-import upgrade
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.opensearch.v0.constants_charm import (
     PERFORMANCE_PROFILE,
@@ -90,9 +71,11 @@ from charms.opensearch.v0.opensearch_exceptions import (
 from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
-from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyError, OpenSearchKeystore
+from charms.opensearch.v0.opensearch_keystore import (
+    OpenSearchKeystore,
+    OpenSearchKeystoreNotReadyError,
+)
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
-from charms.opensearch.v0.opensearch_new_backups import OpenSearchBackupsManager, OpenSearchBackupsEvents
 from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
 from charms.opensearch.v0.opensearch_oauth import OAuthHandler
 from charms.opensearch.v0.opensearch_peer_clusters import (
@@ -108,6 +91,10 @@ from charms.opensearch.v0.opensearch_relation_peer_cluster import (
 )
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
+from charms.opensearch.v0.opensearch_snapshots import (
+    OpenSearchSnapshotsEvents,
+    OpenSearchSnapshotsManager,
+)
 from charms.opensearch.v0.opensearch_tls import OLD_CA_ALIAS, OpenSearchTLS
 from charms.opensearch.v0.opensearch_users import (
     OpenSearchUserManager,
@@ -116,6 +103,25 @@ from charms.opensearch.v0.opensearch_users import (
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
 )
+from ops.charm import (
+    ActionEvent,
+    CharmBase,
+    ConfigChangedEvent,
+    LeaderElectedEvent,
+    RelationBrokenEvent,
+    RelationChangedEvent,
+    RelationCreatedEvent,
+    RelationDepartedEvent,
+    RelationJoinedEvent,
+    StartEvent,
+    StorageDetachingEvent,
+    UpdateStatusEvent,
+)
+from ops.framework import EventBase, EventSource
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+
+import lifecycle
+import upgrade
 
 # The unique Charmhub library identifier, never change it
 LIBID = "cba015bae34642baa1b6bb27bb35a2f7"
@@ -200,7 +206,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.opensearch_config = OpenSearchConfig(self.opensearch)
         self.opensearch_exclusions = OpenSearchExclusions(self)
         self.opensearch_fixes = OpenSearchFixes(self)
-        self.keystore_manager = OpenSearchKeystore(self)
+        self.keystore_manager = OpenSearchKeystore(self.opensearch)
 
         self.peers_data = RelationDataStore(self, PeerRelationName)
         self.secrets = OpenSearchSecrets(self, PeerRelationName)
@@ -213,7 +219,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.node_lock = OpenSearchNodeLock(self)
 
         self.plugin_manager = OpenSearchPluginManager(self)
-        self.backups_manager = OpenSearchBackupsManager(self)
+        self.snapshots_manager = OpenSearchSnapshotsManager(self, self.opensearch)
 
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
@@ -269,7 +275,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # in the deferred event queue
         self._is_peer_rel_changed_deferred = False
 
-        self.backups_events = OpenSearchBackupsEvents(self)
+        self.snapshots_events = OpenSearchSnapshotsEvents(self)
 
     @property
     @abc.abstractmethod

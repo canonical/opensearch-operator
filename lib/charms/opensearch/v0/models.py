@@ -10,7 +10,11 @@ from datetime import datetime
 from hashlib import md5
 from typing import Any, Dict, List, Literal, Optional
 
-from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS, GCS_CREDENTIALS
+from charms.opensearch.v0.constants_secrets import (
+    AZURE_CREDENTIALS,
+    GCS_CREDENTIALS,
+    S3_CREDENTIALS,
+)
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from pydantic import BaseModel, Field, root_validator, validator
 from pydantic.utils import ROOT_KEY
@@ -466,6 +470,7 @@ class AzureRelData(Model):
 
 class GcsRelDataCredentials(Model):
     """Model class for credentials passed on the gcs relation."""
+
     type: str
     project_id: str
     private_key_id: str
@@ -484,6 +489,7 @@ class GcsRelData(Model):
 
     This model should receive the data directly from the relation and map it to a model.
     """
+
     bucket: str = Field(default="")
     base_path: Optional[str] = Field(alias="path", default=None)
     storage_class: Optional[str] = Field(alias="storage-class", default=None)

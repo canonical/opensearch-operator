@@ -14,10 +14,9 @@ from os.path import exists
 from typing import Optional, Tuple
 
 import bcrypt
-from cryptography import x509
-
 from charms.opensearch.v0.helper_charm import run_cmd
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
+from cryptography import x509
 
 # The unique Charmhub library identifier, never change it
 LIBID = "224ce9884b0d47b997357fec522f11c7"
@@ -126,7 +125,9 @@ def to_pkcs8(private_key: str, password: Optional[str] = None) -> str:
         os.unlink(tmp_pkcs8_key.name)
 
 
-def store_ca(alias: str, store_pwd: str, store_path: str, ca: str, keep_previous: bool = True) -> bool:
+def store_ca(
+    alias: str, store_pwd: str, store_path: str, ca: str, keep_previous: bool = True
+) -> bool:
     """Add new CA cert to trust store."""
     keytool = "opensearch.keytool"
 
@@ -144,9 +145,7 @@ def store_ca(alias: str, store_pwd: str, store_path: str, ca: str, keep_previous
             ):
                 return False
 
-    with tempfile.NamedTemporaryFile(
-        mode="w+t", dir=os.path.dirname(store_path)
-    ) as ca_tmp_file:
+    with tempfile.NamedTemporaryFile(mode="w+t", dir=os.path.dirname(store_path)) as ca_tmp_file:
         ca_tmp_file.write(ca)
         ca_tmp_file.flush()
         try:
@@ -183,7 +182,11 @@ def list_aliases(store_pwd: str, store_path: str) -> Optional[list[str]]:
 
     try:
         resp = run_cmd(cmd, args).out.split()
-        return [line.split("Alias name:")[-1].strip() for line in resp if line.startswith("Alias name:")]
+        return [
+            line.split("Alias name:")[-1].strip()
+            for line in resp
+            if line.startswith("Alias name:")
+        ]
     except OpenSearchCmdError as e:
         logging.error(f"Error reading the current truststore: {e}")
         return None
@@ -244,7 +247,9 @@ def remove_ca(alias: str, store_pwd: str, store_path: str) -> None:
     logger.info(f"Removed {alias} from truststore.")
 
 
-def store_cert(name: str, store_pwd: str, store_path: str, cert: str, key: str, key_pwd: str | None) -> None:
+def store_cert(
+    name: str, store_pwd: str, store_path: str, cert: str, key: str, key_pwd: str | None
+) -> None:
     """Store cert in keystore."""
     try:
         os.remove(store_path)

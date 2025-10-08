@@ -41,7 +41,7 @@ class OpenSearchKeystoreNotReadyError(OpenSearchKeystoreError):
 class OpenSearchKeystore:
     """Manages keystore."""
 
-    def __init__(self, opensearch: 'OpenSearchDistribution'):
+    def __init__(self, opensearch: "OpenSearchDistribution"):
         """Creates the keystore manager class."""
         self._opensearch = opensearch
         self._keystore_path = f"{opensearch.paths.conf}/opensearch.keystore"
