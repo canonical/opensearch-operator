@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Helpers for security related operations, such as password generation etc."""
+import logging
 import math
 import os
 import secrets
@@ -9,9 +10,12 @@ import string
 import subprocess
 import tempfile
 from datetime import datetime
+from os.path import exists
 from typing import Optional, Tuple
 
 import bcrypt
+from charms.opensearch.v0.helper_charm import run_cmd
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from cryptography import x509
 
 # The unique Charmhub library identifier, never change it
@@ -23,6 +27,8 @@ LIBAPI = 0
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
 LIBPATCH = 1
+
+logger = logging.getLogger(__name__)
 
 
 def hash_string(string: str) -> str:
@@ -117,3 +123,213 @@ def to_pkcs8(private_key: str, password: Optional[str] = None) -> str:
     finally:
         os.unlink(tmp_key.name)
         os.unlink(tmp_pkcs8_key.name)
+
+
+def store_ca(
+    alias: str, store_pwd: str, store_path: str, ca: str, keep_previous: bool = True
+) -> bool:
+    """Add new CA cert to trust store."""
+    keytool = "opensearch.keytool"
+
+    if keep_previous:
+        cmd = f"{keytool} -changealias -alias {alias} -destalias old-{alias} -keystore {store_path} -storetype PKCS12"
+        args = f"-storepass {store_pwd}"
+        try:
+            run_cmd(cmd, args)
+            logger.info(f"Current CA {alias} was renamed to old-{alias}.")
+        except OpenSearchCmdError as e:
+            # This message means there was no "ca" alias or store before, if it happens ignore
+            if not (
+                f"Alias <{alias}> does not exist" in e.out
+                or "Keystore file does not exist" in e.out
+            ):
+                return False
+
+    with tempfile.NamedTemporaryFile(mode="w+t", dir=os.path.dirname(store_path)) as ca_tmp_file:
+        ca_tmp_file.write(ca)
+        ca_tmp_file.flush()
+        try:
+            run_cmd(
+                f"""{keytool} -importcert \
+                -trustcacerts \
+                -noprompt \
+                -alias {alias} \
+                -keystore {store_path} \
+                -file {ca_tmp_file.name} \
+                -storetype PKCS12
+                """,
+                f"-storepass {store_pwd}",
+            )
+            run_cmd(f"sudo chmod +r {store_path}")
+            logger.info("New CA was added to truststore.")
+        except OpenSearchCmdError as e:
+            logging.error(f"Error storing the ca-cert: {e}")
+            return False
+
+    return True
+
+
+def list_aliases(store_pwd: str, store_path: str) -> Optional[list[str]]:
+    """Fetch the aliases stored in a store."""
+    if not exists(store_path):
+        return None
+
+    keytool = "opensearch.keytool"
+
+    # we fetch the list of stored aliases
+    cmd = f"{keytool} -list -keystore {store_path} -storetype PKCS12"
+    args = f"-storepass {store_pwd}"
+
+    try:
+        resp = run_cmd(cmd, args).out.split()
+        return [
+            line.split("Alias name:")[-1].strip()
+            for line in resp
+            if line.startswith("Alias name:")
+        ]
+    except OpenSearchCmdError as e:
+        logging.error(f"Error reading the current truststore: {e}")
+        return None
+
+
+def list_cas(store_pwd: str, store_path: str) -> Optional[dict[str, str]]:
+    """List the CAs current stored in a trust store."""
+    if not exists(store_path):
+        return None
+
+    cmd = f"openssl pkcs12 -in {store_path}"
+    args = f"-passin pass:{store_pwd}"
+    try:
+        stored_certs = run_cmd(cmd, args).out
+    except OpenSearchCmdError as e:
+        logging.error(f"Error reading the current truststore: {e}")
+        return None
+
+    # parse output to retrieve the current CA (in case there are many)
+    start_cert_marker = "-----BEGIN CERTIFICATE-----"
+    end_cert_marker = "-----END CERTIFICATE-----"
+    certificates = stored_certs.split(end_cert_marker)
+
+    certs = {}
+    for cert in certificates:
+        alias = [line for line in cert if line.startswith("friendlyName:")][0]
+        alias = alias.split("friendlyName:")[-1]
+
+        certs[alias] = f"{start_cert_marker}{cert.split(start_cert_marker)[1]}{end_cert_marker}"
+
+    return certs
+
+
+def read_ca(alias: str, store_pwd: str, store_path: str) -> Optional[str]:
+    """Load stored CA cert."""
+    return (list_cas(store_pwd, store_path) or {}).get(alias)
+
+
+def remove_ca(alias: str, store_pwd: str, store_path: str) -> None:
+    """Remove old CA cert from trust store."""
+    if not exists(store_path):
+        return
+
+    keytool = "opensearch.keytool"
+
+    list_cmd = f"{keytool} -list -keystore {store_path} -alias {alias} -storetype PKCS12"
+    list_args = f"-storepass {store_pwd}"
+    try:
+        run_cmd(list_cmd, list_args)
+    except OpenSearchCmdError as e:
+        # This message means there was no "ca" alias or store before, if it happens ignore
+        if f"Alias <{alias}> does not exist" in e.out:
+            return
+
+    del_cmd = f"{keytool} -delete -keystore {store_path} -alias {alias} -storetype PKCS12"
+    del_args = f"-storepass {store_pwd}"
+    run_cmd(del_cmd, del_args)
+    logger.info(f"Removed {alias} from truststore.")
+
+
+def store_key_pair(
+    name: str, store_pwd: str, store_path: str, cert: str, key: str, key_pwd: str | None
+) -> None:
+    """Store cert in keystore."""
+    try:
+        os.remove(store_path)
+    except OSError:
+        pass
+
+    tmp_key = tempfile.NamedTemporaryFile(
+        mode="w+t", suffix=".pem", dir=os.path.dirname(store_path)
+    )
+    tmp_key.write(key)
+    tmp_key.flush()
+    tmp_key.seek(0)
+
+    tmp_cert = tempfile.NamedTemporaryFile(
+        mode="w+t", suffix=".cert", dir=os.path.dirname(store_path)
+    )
+    tmp_cert.write(cert)
+    tmp_cert.flush()
+    tmp_cert.seek(0)
+
+    cmd = f"openssl pkcs12 -export -in {tmp_cert.name} -inkey {tmp_key.name} -out {store_path} -name {name}"
+    args = f"-passout pass:{store_pwd}"
+    if key_pwd:
+        args = f"{args} -passin pass:{key_pwd}"
+
+    try:
+        run_cmd(cmd, args)
+        run_cmd(f"sudo chmod +r {store_path}")
+    except OpenSearchCmdError as e:
+        logging.error(f"Error storing the TLS certificates for {name}: {e}")
+    finally:
+        tmp_key.close()
+        tmp_cert.close()
+        logger.info(f"TLS certificate for {name} stored.")
+
+
+def get_cert_issuer(cert: str) -> Optional[str]:
+    """Retrieve the certificate issuer from a string certificate."""
+    # to make sure the content is processed correctly by openssl, temporary store it in a file
+    tmp_ca_file = tempfile.NamedTemporaryFile(mode="w+t", dir="/tmp")
+    tmp_ca_file.write(cert)
+    tmp_ca_file.flush()
+    tmp_ca_file.seek(0)
+
+    try:
+        return run_cmd(f"openssl x509 -in {tmp_ca_file.name} -noout -issuer").out
+    except OpenSearchCmdError as e:
+        logger.error(f"Error reading the current truststore: {e}")
+        return None
+    finally:
+        tmp_ca_file.close()
+
+
+def get_cert_issuer_from_path(store_pwd: str, store_path: str) -> Optional[str]:
+    """Retrieve the certificate issuer from a string certificate."""
+    try:
+        return run_cmd(
+            f"openssl pkcs12 -in {store_path}.p12",
+            f"""-nodes \
+            -passin pass:{store_pwd} \
+            | openssl x509 -noout -issuer
+            """,
+        ).out
+    except OpenSearchCmdError as e:
+        logger.error(f"Error reading the current certificate: {e}")
+        return None
+
+
+def get_cert_issuer_from_keystore(store_pwd: str, store_path: str) -> Optional[str]:
+    """Fetch the certificate issuer of a PKCS12 certificate."""
+    if not exists(store_path):
+        return None
+
+    cmd = f"openssl pkcs12 -in {store_path}.p12 -nodes"
+    args = f"-passin pass:{store_pwd} | openssl x509 -noout -issuer"
+    try:
+        return run_cmd(command=cmd, args=args).out
+    except OpenSearchCmdError as e:
+        logger.error(f"Error reading the current certificate: {e}")
+        return None
+    except AttributeError as e:
+        logger.error(f"Error reading secret: {e}")
+        return None
