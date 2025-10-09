@@ -1423,6 +1423,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.reload_tls_certificates")
     @patch("charms.opensearch.v0.helper_security.tempfile.NamedTemporaryFile")
     @patch("charms.opensearch.v0.helper_security.run_cmd")
+    @patch("charms.opensearch.v0.helper_security.exists")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
@@ -1443,6 +1444,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         _____,
         read_stored_ca,
         deployment_desc,
+        os_path_exists,
         run_cmd,
         named_temporary_file,
         reload_tls_certificates,
@@ -1553,6 +1555,8 @@ class TestOpenSearchTLS(unittest.TestCase):
         mock_response_put_http_cert("1.1.1.1")
         original_status = self.harness.model.unit.status
 
+        os_path_exists.return_value = True
+
         self.charm.tls._on_certificate_available(event_mock)
 
         mock_remove_ca_from_request_bundle.assert_called_once()
@@ -1561,9 +1565,9 @@ class TestOpenSearchTLS(unittest.TestCase):
         # Note: the high number of operations come from the fact that on each certificate received
         # the 'issuer' is checked on each certificate that is saved on the disk.
         if self.charm.unit.is_leader():
-            assert run_cmd.call_count == 12
-        else:
             assert run_cmd.call_count == 14
+        else:
+            assert run_cmd.call_count == 16
 
         assert re.search(
             "openssl pkcs12 -export .* -out "
@@ -1574,6 +1578,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             f"chmod +r /var/snap/opensearch/current/etc/opensearch/certificates/{cert_type}.p12"
             in run_cmd.call_args_list[1].args[0]
         )
+
         assert re.search("keytool .*-delete .*-alias old-ca", run_cmd.call_args_list[-1].args[0])
         assert (
             "/var/snap/opensearch/current/etc/opensearch"
