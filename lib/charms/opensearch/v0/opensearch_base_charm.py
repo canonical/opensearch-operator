@@ -1132,7 +1132,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.peers_data.delete(Scope.UNIT, "started")
 
         if not self._can_service_start(event.is_first_data_node):
-            logger.info("Conditions not met to start opensearch. Will retry next event.")
+            logger.info(
+                f"Conditions not met to start opensearch. Will retry next event. Should ignore lock: {event.ignore_lock}"
+            )
             event.defer()
             return
 
@@ -1475,12 +1477,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             return False
 
         if not (deployment_desc := self.opensearch_peer_cm.deployment_desc()):
+            logger.debug("Start not ready: deployment desc missing")
             return False
 
         if not self.opensearch_peer_cm.can_start(deployment_desc):
             return False
 
         if not self.is_admin_user_configured():
+            logger.debug("Start not ready: admin user not configured")
             return False
 
         # Case of the first "main" cluster to get started.
@@ -1488,7 +1492,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             not self.peers_data.get(Scope.APP, "security_index_initialised", False)
             or not self.alt_hosts
         ):
-            return self.unit.is_leader() and (
+            condition = self.unit.is_leader() and (
                 deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
                 # first data node in a cluster-manager-only deployment
                 or (
@@ -1499,6 +1503,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     and is_first_data_node
                 )
             )
+            if not condition:
+                logger.debug("Start not ready: Not main leader and not first data node")
+            return condition
 
         # When a new unit joins, replica shards are automatically added to it. In order to prevent
         # overloading the cluster, units must be started one at a time. So we defer starting
