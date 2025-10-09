@@ -307,7 +307,7 @@ def get_cert_issuer_from_path(store_pwd: str, store_path: str) -> Optional[str]:
     """Retrieve the certificate issuer from a string certificate."""
     try:
         return run_cmd(
-            f"openssl pkcs12 -in {store_path}.p12",
+            f"openssl pkcs12 -in {store_path}",
             f"""-nodes \
             -passin pass:{store_pwd} \
             | openssl x509 -noout -issuer
@@ -323,7 +323,7 @@ def get_cert_issuer_from_keystore(store_pwd: str, store_path: str) -> Optional[s
     if not exists(store_path):
         return None
 
-    cmd = f"openssl pkcs12 -in {store_path}.p12 -nodes"
+    cmd = f"openssl pkcs12 -in {store_path} -nodes"
     args = f"-passin pass:{store_pwd} | openssl x509 -noout -issuer"
     try:
         return run_cmd(command=cmd, args=args).out

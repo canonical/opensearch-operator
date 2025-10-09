@@ -594,7 +594,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         )
     )
     @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
-    @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
+    @patch("charms.opensearch.v0.helper_security.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
@@ -742,7 +742,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     )
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._add_ca_to_request_bundle")
     @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
-    @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
+    @patch("charms.opensearch.v0.helper_security.run_cmd")
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
@@ -876,7 +876,7 @@ class TestOpenSearchTLS(unittest.TestCase):
             (DeploymentType.FAILOVER_ORCHESTRATOR),
         ]
     )
-    @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
+    @patch("charms.opensearch.v0.helper_security.run_cmd")
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     def test_on_certificate_available_ca_rotation_first_stage_any_cluster_non_leader(
@@ -1281,8 +1281,8 @@ class TestOpenSearchTLS(unittest.TestCase):
             (DeploymentType.FAILOVER_ORCHESTRATOR),
         ]
     )
-    @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
-    @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
+    @patch("charms.opensearch.v0.helper_security.tempfile.NamedTemporaryFile")
+    @patch("charms.opensearch.v0.helper_security.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
@@ -1371,7 +1371,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         # Exporting new certs
         assert re.search(
             "openssl pkcs12 -export .* -out "
-            "/var/snap/opensearch/current/etc/opensearch/certificates/app-admin.p12 .* -name app-admin",
+            "/var/snap/opensearch/current/etc/opensearch/certificates/app-admin.p12 -name app-admin",
             run_cmd.call_args_list[0].args[0],
         )
         assert (
@@ -1421,8 +1421,8 @@ class TestOpenSearchTLS(unittest.TestCase):
     )
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._remove_ca_from_request_bundle")
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.reload_tls_certificates")
-    @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
-    @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
+    @patch("charms.opensearch.v0.helper_security.tempfile.NamedTemporaryFile")
+    @patch("charms.opensearch.v0.helper_security.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
@@ -1561,13 +1561,13 @@ class TestOpenSearchTLS(unittest.TestCase):
         # Note: the high number of operations come from the fact that on each certificate received
         # the 'issuer' is checked on each certificate that is saved on the disk.
         if self.charm.unit.is_leader():
-            assert run_cmd.call_count == 14
+            assert run_cmd.call_count == 12
         else:
-            assert run_cmd.call_count == 16
+            assert run_cmd.call_count == 14
 
         assert re.search(
             "openssl pkcs12 -export .* -out "
-            rf"/var/snap/opensearch/current/etc/opensearch/certificates/{cert_type}.p12 .* -name {cert_type}",
+            rf"/var/snap/opensearch/current/etc/opensearch/certificates/{cert_type}.p12 -name {cert_type}",
             run_cmd.call_args_list[0].args[0],
         )
         assert (
@@ -1603,7 +1603,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     )
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._add_ca_to_request_bundle")
     @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
-    @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
+    @patch("charms.opensearch.v0.helper_security.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mock to avoid I/O
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
@@ -1721,7 +1721,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     )
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._add_ca_to_request_bundle")
     @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
-    @patch("charms.opensearch.v0.opensearch_tls.run_cmd")
+    @patch("charms.opensearch.v0.helper_security.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mock to avoid I/O
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
