@@ -610,6 +610,9 @@ class OpenSearchTLS(Object):
     def read_stored_ca(self, alias: str = CA_ALIAS) -> Optional[str]:
         """Load stored CA cert."""
         secrets = self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val, peek=True)
+        ca_trust_store = f"{self.certs_path}/ca.p12"
+        if not (exists(ca_trust_store) and secrets):
+            return None
 
         return read_ca(
             alias=alias,
@@ -623,11 +626,7 @@ class OpenSearchTLS(Object):
         trust_store_pwd = secrets.get("truststore-password")
         trust_store_path = f"{self.certs_path}/{CA_ALIAS}.p12"
 
-        old_ca = read_ca(
-            alias=OLD_CA_ALIAS,
-            store_pwd=trust_store_pwd,
-            store_path=trust_store_path,
-        )
+        old_ca = self.read_stored_ca(alias=OLD_CA_ALIAS)
         remove_ca(
             alias=OLD_CA_ALIAS,
             store_pwd=trust_store_pwd,
