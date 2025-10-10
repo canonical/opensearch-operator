@@ -730,6 +730,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # if node already shutdown - leave
         if not self.opensearch.is_node_up():
+            logger.debug("Node not up, abandoning update-status.")
             return
 
         # review available CMs
@@ -1088,6 +1089,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def _start_opensearch(self, event: _StartOpenSearch) -> None:  # noqa: C901
         """Start OpenSearch, with a generated or passed conf, if all resources configured."""
+        logger.debug(f"StartOpenSearch: should ignore lock {event.ignore_lock}")
         if not self.opensearch_peer_cm.deployment_desc() and self.app.planned_units() == 0:
             # canonical/opensearch-operator#444
             # https://bugs.launchpad.net/juju/+bug/2076599
@@ -1132,9 +1134,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.peers_data.delete(Scope.UNIT, "started")
 
         if not self._can_service_start(event.is_first_data_node):
-            logger.info(
-                f"Conditions not met to start opensearch. Will retry next event. Should ignore lock: {event.ignore_lock}"
-            )
+            logger.info("Conditions not met to start opensearch. Will retry next event.")
             event.defer()
             return
 
