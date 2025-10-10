@@ -90,7 +90,8 @@ class OpenSearchSnapshotsEvents(Object):
 
         # requirers
         self.s3_requirer = S3Requirer(charm, S3_RELATION)
-        self.azure_requirer = AzureStorageRequires(charm, AZURE_REPOSITORY)
+        self.azure_requirer = AzureStorageRequires(charm, AZURE_RELATION)
+        self.gcs_requirer = AzureStorageRequires(charm, AZURE_RELATION)
 
         # simple deployments or to main orchestrator
         self.framework.observe(
@@ -190,11 +191,11 @@ class OpenSearchSnapshotsEvents(Object):
             return
 
         # handle the case where this was deferred in case of multiple object storage relations
-        # then s3 relation severed
+        # then azure relation severed
         if object_storage_type != "azure":
             return
 
-        azure_credentials = self.charm.snapshots_manager.object_storage_config.azure.credentials
+        azure_credentials = self.charm.object_storage_config.azure.credentials
         self.charm.keystore_manager.put_entries(
             {
                 "azure.client.default.account": azure_credentials.storage_account,
@@ -263,7 +264,7 @@ class OpenSearchSnapshotsEvents(Object):
             return
 
         try:
-            snapshots = self.charm.snapshots_manager.list_snapshots()
+            snapshots = self.charm.snapshots_manager.list_snapshots(self.object_storage_type)
         except OpenSearchHttpError as e:
             logger.error("Could not fetch the list of snapshots: %s", e)
             event.fail(f"Backup request failed with: {str(e)}")
@@ -437,7 +438,7 @@ class OpenSearchSnapshotsEvents(Object):
 
         if object_storage_type == "azure-pcluster":
             data = AzureRelData.from_dict({"credentials": pcluster_rel_data.credentials.azure})
-            return ObjectStorageConfig(azure=AzureRelData.from_dict(data))
+            return ObjectStorageConfig(azure=data)
 
         data = GcsRelData.from_dict({"credentials": pcluster_rel_data.credentials.gcs})
         return ObjectStorageConfig(gcs=data)
@@ -729,7 +730,7 @@ class OpenSearchSnapshotsManager:
             "GET", "/_cat/recovery?format=json&h=type,stage", alt_hosts=self.charm.alt_hosts
         )
         for operation in response:
-            if operation["type"] == "snapshot" and operation["state"] == "open":
+            if operation["type"] == "snapshot" and operation["stage"] == "open":
                 return True
         return False
 
