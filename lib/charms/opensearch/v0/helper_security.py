@@ -212,8 +212,8 @@ def list_cas(store_pwd: str, store_path: str) -> Optional[dict[str, str]]:
 
     certs = {}
     for cert in certificates:
-        alias = [line for line in cert if line.startswith("friendlyName:")][0]
-        alias = alias.split("friendlyName:")[-1]
+        alias = [line for line in cert.split("\n") if line.strip().startswith("friendlyName:")][0]
+        alias = alias.split("friendlyName:")[-1].strip()
 
         certs[alias] = f"{start_cert_marker}{cert.split(start_cert_marker)[1]}{end_cert_marker}"
 
