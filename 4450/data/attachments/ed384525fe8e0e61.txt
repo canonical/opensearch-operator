@@ -1,0 +1,47 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] active: 
+  opensearch/0 [idle] active: 
+  opensearch/1 [executing] active: 
+  second-data-integrator/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  02:54:47Z
+
+SAAS          Status  Store  URL
+certificates  active  local  admin/testing-uk8s.certificates
+oauth         active  local  admin/testing-uk8s.oauth
+
+App                     Version  Status  Scale  Charm            Channel        Rev  Exposed  Message
+data-integrator                  active      1  data-integrator  latest/stable  180  no       
+opensearch                       active      2  opensearch                        0  no       
+second-data-integrator           active      1  data-integrator  latest/stable  180  no       
+
+Unit                       Workload  Agent  Machine  Public address  Ports     Message
+data-integrator/0*         active    idle   0        10.158.143.209            
+opensearch/0*              active    idle   1        10.158.143.41   9200/tcp  
+opensearch/1               active    idle   2        10.158.143.2    9200/tcp  
+second-data-integrator/0*  active    idle   3        10.158.143.178            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.158.143.209  juju-c82dc7-0  ubuntu@24.04  github-runner  Running
+1        started  10.158.143.41   juju-c82dc7-1  ubuntu@24.04  github-runner  Running
+2        started  10.158.143.2    juju-c82dc7-2  ubuntu@24.04  github-runner  Running
+3        started  10.158.143.178  juju-c82dc7-3  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 02:48:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:48:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-data-integrator-0: 02:48:33 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 02:48:39 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:48:39 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 02:48:39 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 02:48:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:48:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 02:48:44 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 02:53:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:53:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-second-data-integrator-0: 02:53:18 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
