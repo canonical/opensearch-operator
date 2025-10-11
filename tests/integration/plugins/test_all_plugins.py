@@ -930,7 +930,9 @@ async def test_geospatial_plugin(ops_test: OpsTest) -> None:
         ops_test, "POST", f"{base_url}/_ingest/pipeline/{geo_pipeline}/_simulate", payload
     )
     logger.info(f"Geospatial response: {response}")
-    assert response["docs"][0]["doc"]["_source"]["ip2geo"], "Unexpected geo processor used"
+    
+    # ensure geo enriched data exists
+    assert response["docs"][0]["doc"]["_source"]["ip2geo"], "No geo-enriched data found"
 
 
 async def test_skills_plugin(ops_test: OpsTest) -> None:
