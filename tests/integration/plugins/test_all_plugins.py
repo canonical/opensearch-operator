@@ -768,7 +768,7 @@ async def test_security_analytics_plugin(ops_test: OpsTest) -> None:
     base_url = f"https://{leader_unit_ip}:9200"
     endpoint = f"{base_url}/_plugins/_security_analytics"
 
-    # add custom rule to select doc with region = eu-west
+    # add custom rule to select doc with activity = dangerous
     sigma_rule = """
 title: Critical Detector
 id: 11111111-2222-3333-4444-555555555555
@@ -780,22 +780,16 @@ logsource:
   product: linux
 detection:
   select:
-    test: "trigger"
+    activity: "suspicious"
   condition: select
 level: low"""
     response = await http_request(
         ops_test, "POST", f"{endpoint}/rules?category=linux", payload=sigma_rule
     )
     rule_id = response["_id"]
-    assert rule_id, "Sigma rule not created"
+    assert rule_id, "Rule not created"
 
-    # create index
     log_index = "log-index"
-    docs = [
-        {"name": "a", "test": "try"},
-        {"name": "b", "test": "to"},
-        {"name": "c", "test": "trigger"},
-    ]
     await create_index(
         ops_test,
         APP_NAME,
@@ -803,18 +797,28 @@ level: low"""
         log_index,
         extra_mappings={
             "properties": {
-                "region": {"type": "keyword"},
-                "name": {"type": "keyword"},
+                "activity": {"type": "keyword"},
+                "user": {"type": "keyword"},
             }
         },
     )
-    await bulk_insert(ops_test, APP_NAME, leader_unit_ip, bulk_encode(docs, log_index))
-    await http_request(ops_test, "POST", f"{base_url}/{log_index}/_refresh")
+    # create index
+    # await http_request(
+    #     ops_test,
+    #     "POST",
+    #     f"{endpoint}/mappings",
+    #     {
+    #         "index_name": log_index,
+    #         "rule_topic": "linux",
+    #         "partial": True,
+    #         "alias_mappings": {"properties": {"": {"type": "alias", "path": "EventID"}}},
+    #     },
+    # )
 
     # create detector
     payload = {
         "enabled": True,
-        "name": "s1-detector",
+        "name": "danger-detector",
         "detector_type": "linux",
         "schedule": {"period": {"interval": 1, "unit": "MINUTES"}},
         "inputs": [
@@ -827,18 +831,26 @@ level: low"""
         ],
     }
     response = await http_request(ops_test, "POST", f"{endpoint}/detectors", payload)
-    logger.info(f"\vDetectors response: {response}")
+    logger.info(f"\nDetectors response: {response}")
     detector_id = response["_id"]
     assert detector_id, "Security Analytics detector not created"
 
-    # run detector
-    await http_request(ops_test, "POST", f"{endpoint}/detectors/{detector_id}/_preview")
+    docs = [
+        {"name": "a", "activity": "not suspicious"},
+        {"name": "b", "activity": "very normal"},
+        {"name": "c", "activity": "suspicious"},
+    ]
+    await bulk_insert(ops_test, APP_NAME, leader_unit_ip, bulk_encode(docs, log_index))
+    await http_request(ops_test, "POST", f"{base_url}/{log_index}/_refresh")
+
+    logger.info("Waiting for detector schedule period to pass...")
+    await asyncio.sleep(60)
 
     # check for findings
     assert await poll_until(
         ops_test,
         f"{endpoint}/findings/_search?detector_id={detector_id}",
-        lambda findings: "total_findings" in findings,
+        lambda findings: findings.get("total_findings") == 1,
         timeout=60 * 3,
     )
     await http_request(ops_test, "DELETE", f"{endpoint}/detectors/{detector_id}")
