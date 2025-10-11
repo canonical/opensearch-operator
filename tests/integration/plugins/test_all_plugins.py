@@ -864,32 +864,33 @@ async def test_custom_codecs_plugin(ops_test: OpsTest) -> None:
     base_url = f"https://{leader_unit_ip}:9200"
 
     # create index with zstd codec
-    codecs = "zstd-index"
+    zstd = "zstd-index"
     default = "default-index"
     await create_index(
-        ops_test, APP_NAME, leader_unit_ip, codecs, extra_index_settings={"codec": "zstd"}
+        ops_test, APP_NAME, leader_unit_ip, zstd, extra_index_settings={"codec": "zstd"}
     )
     await create_index(ops_test, APP_NAME, leader_unit_ip, default)
 
     # insert same docs to indices with different codecs
     docs = [{"x": i, "blob": "A" * 100} for i in range(5000)]
-    body = bulk_encode(docs, codecs) + "\n" + bulk_encode(docs, default)
+    body = bulk_encode(docs, zstd) + "\n" + bulk_encode(docs, default)
     await bulk_insert(ops_test, APP_NAME, leader_unit_ip, body)
     # await index_doc(ops_test, APP_NAME, leader_unit_ip, codecs, 1, doc={"x": 1})
 
     response = await http_request(
-        ops_test, "GET", f"{base_url}/{codecs}/_settings?flat_settings=true"
+        ops_test, "GET", f"{base_url}/{zstd}/_settings?flat_settings=true"
     )
-    codec = response[codecs]["settings"]["index.codec"]
+    codec = response[zstd]["settings"]["index.codec"]
     assert codec == "zstd", f"Expected codec 'zstd' but found {codec}"
 
-    stats = await http_request(ops_test, "GET", f"{base_url}/{codecs},{default}/_stats/store")
-    zstd_size = stats["indices"][codecs]["total"]["store"]["size_in_bytes"]
-    def_size = stats["indices"][default]["total"]["store"]["size_in_bytes"]
+    # compare size of indices, zstd index should be smaller
+    stats = await http_request(ops_test, "GET", f"{base_url}/{zstd},{default}/_stats/store")
+    zstd_size = stats["indices"][zstd]["total"]["store"]["size_in_bytes"]
+    default_size = stats["indices"][default]["total"]["store"]["size_in_bytes"]
 
-    logger.info(f"Sizes: {zstd_size} {def_size}")
-    assert zstd_size < def_size
-    await delete_index(ops_test, APP_NAME, leader_unit_ip, codecs)
+    logger.info(f"Index sizes - zstd: {zstd_size} default: {default_size}")
+    assert zstd_size < default_size
+    await delete_index(ops_test, APP_NAME, leader_unit_ip, zstd)
     await delete_index(ops_test, APP_NAME, leader_unit_ip, default)
 
 
