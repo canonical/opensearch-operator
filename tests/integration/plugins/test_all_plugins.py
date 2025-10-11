@@ -872,7 +872,7 @@ async def test_custom_codecs_plugin(ops_test: OpsTest) -> None:
     await create_index(ops_test, APP_NAME, leader_unit_ip, default)
 
     # insert same docs to indices with different codecs
-    docs = [{"x": i, "blob": "A" * 100} for i in range(500)]
+    docs = [{"x": i, "blob": "A" * 100} for i in range(5000)]
     body = bulk_encode(docs, codecs) + "\n" + bulk_encode(docs, default)
     await bulk_insert(ops_test, APP_NAME, leader_unit_ip, body)
     # await index_doc(ops_test, APP_NAME, leader_unit_ip, codecs, 1, doc={"x": 1})
