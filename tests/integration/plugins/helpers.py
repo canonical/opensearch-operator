@@ -3,10 +3,11 @@
 # See LICENSE file for licensing details.
 
 """Helper functions related to testing the different plugins."""
+import asyncio
 import json
 import logging
 import random
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from pytest_operator.plugin import OpsTest
 from tenacity import (
@@ -129,3 +130,36 @@ async def create_index_and_bulk_insert(
     # Insert data in bulk
     await bulk_insert(ops_test, app, endpoint, payload)
     return payload_list
+
+
+def bulk_encode(docs: List[Dict[str, Any]], index_name: str) -> str:
+    """Helper method to encode docs for bulk insert"""
+    lines = []
+    for doc in docs:
+        lines.append(json.dumps({"index": {"_index": index_name}}))
+        lines.append(json.dumps(doc))
+
+    return "\n".join(lines) + "\n"
+
+
+async def poll_until(
+    ops_test: OpsTest,
+    endpoint: str,
+    condition: Callable,
+    timeout: int = 60,
+    interval: int = 5,
+) -> bool:
+    """Poll endpoint until condition is true or timeout"""
+    logger.info(f"Polling {endpoint}...")
+    try:
+        async with asyncio.timeout(timeout):
+            while True:
+                response = await http_request(ops_test, "GET", endpoint)
+                if condition(response):
+                    logger.info(f"Done. Condition met: {response}")
+                    return True
+                logger.info(f"Condition not met: {response}")
+                await asyncio.sleep(interval)
+    except asyncio.TimeoutError:
+        logger.info("Polling timed out")
+        raise
