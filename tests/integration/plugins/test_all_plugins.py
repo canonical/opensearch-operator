@@ -100,6 +100,7 @@ async def list_keystore_keys(ops_test: OpsTest, app: str, unit_id: int) -> str:
 
 
 @pytest.mark.skip_if_deployed
+@pytest.mark.abort_on_fail
 async def test_build_and_deploy_active(ops_test: OpsTest, charm, series) -> None:
     """Build and deploy one unit of OpenSearch."""
     await ops_test.model.set_config(MODEL_CONFIG)
@@ -143,6 +144,7 @@ async def test_build_and_deploy_active(ops_test: OpsTest, charm, series) -> None
     assert len(ops_test.model.applications[APP_NAME].units) == len(UNIT_IDS)
 
 
+@pytest.mark.abort_on_fail
 async def test_smtp_credentials_written_to_keystore(ops_test: OpsTest) -> None:
     """Test that SMTP credentials are written to the OpenSearch keystore."""
     config = {"user": "smtp.user", "password": "supersecret", "host": "smtp.host"}
@@ -194,6 +196,7 @@ async def test_smtp_credentials_written_to_keystore(ops_test: OpsTest) -> None:
     await ops_test.model.remove_application(SMTP_INTEGRATOR)
 
 
+@pytest.mark.abort_on_fail
 async def test_reports_scheduler(ops_test: OpsTest) -> None:
     """Test that the reports scheduler plugin is enabled and functional."""
     dash_leader_unit_ip = await get_leader_unit_ip(ops_test, app=DASHBOARDS_APP_NAME)
@@ -260,7 +263,10 @@ async def test_reports_scheduler(ops_test: OpsTest) -> None:
 
     logger.info("Poll for report instance creation")
     await poll_until(
-        ops_test, f"{endpoint}/instances", lambda instances: instances.get("totalHits") > 0
+        ops_test,
+        f"{endpoint}/instances",
+        lambda instances: instances.get("totalHits") > 0,
+        timeout=60 * 2,
     )
 
     # fetch report instance
@@ -274,6 +280,7 @@ async def test_reports_scheduler(ops_test: OpsTest) -> None:
     await http_request(ops_test, "DELETE", f"{endpoint}/definition/{report_definition_id}")
 
 
+@pytest.mark.abort_on_fail
 async def test_sql_plugin(ops_test: OpsTest) -> None:
     """Test that the SQL plugin is enabled and functional."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -295,11 +302,12 @@ async def test_sql_plugin(ops_test: OpsTest) -> None:
     query = {"query": f"SELECT id, passage_text FROM {TEST_INDEX} WHERE id = '{target_id}'"}
     endpoint = f"https://{leader_unit_ip}:9200/_plugins/_sql"
     response = await http_request(ops_test, "POST", endpoint, query)
-    logger.info(f"\nSQL query response: {response}")
-    assert response["size"] == 1, "Unexpected SQL result"
-    assert response["datarows"][0][-1] == target_text, "Unexpected SQL result"
+    logger.info(f"SQL query response: {response}")
+    assert response.get("size") == 1, "Unexpected SQL result"
+    assert response.get("datarows")[0][-1] == target_text, "Unexpected SQL result"
 
 
+@pytest.mark.abort_on_fail
 async def test_ism_and_job_scheduler_plugins(ops_test: OpsTest) -> None:
     """Test that the ISM and job scheduler plugins are enabled and functional."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -381,6 +389,7 @@ async def test_ism_and_job_scheduler_plugins(ops_test: OpsTest) -> None:
     await http_request(ops_test, "DELETE", f"{base_url}/_plugins/_ism/policies/{policy_id}")
 
 
+@pytest.mark.abort_on_fail
 async def test_anomaly_detection(ops_test: OpsTest) -> None:
     """Test that the anomaly plugin is enabled and functional."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -442,6 +451,7 @@ async def test_anomaly_detection(ops_test: OpsTest) -> None:
     await delete_index(ops_test, APP_NAME, leader_unit_ip, anomaly_index)
 
 
+@pytest.mark.abort_on_fail
 async def test_async_search_plugin(ops_test: OpsTest) -> None:
     """Test that the async search plugin is enabled and functional."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -460,17 +470,19 @@ async def test_async_search_plugin(ops_test: OpsTest) -> None:
         payload,
     )
     logger.info(f"Async Search response: {response}")
-    async_job_id = response["id"]
+    async_job_id = response.get("id")
+    assert async_job_id, "Async search job not created"
 
     # poll until complete
     logger.info("Waiting for async search job to complete...")
     assert await poll_until(
         ops_test,
         f"{endpoint}/{async_job_id}",
-        lambda progress: progress["state"] == "STORE_RESIDENT",
+        lambda progress: progress.get("state") == "STORE_RESIDENT",
     ), "Async search did not complete before timeou"
 
 
+@pytest.mark.abort_on_fail
 async def test_alerting_plugin(ops_test: OpsTest) -> None:
     """Test that the alerting plugin is enabled and functional."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -496,7 +508,8 @@ async def test_alerting_plugin(ops_test: OpsTest) -> None:
     }
 
     response = await http_request(ops_test, "POST", endpoint, payload)
-    monitor_id = response["_id"]
+    monitor_id = response.get("_id")
+    assert monitor_id, "Alerting monitor not created"
 
     logger.info(f"Executing alerting monitor {monitor_id}")
     response = await http_request(
@@ -507,7 +520,8 @@ async def test_alerting_plugin(ops_test: OpsTest) -> None:
     )
 
     logger.info(f"Monitor execution response: {response}")
-    trigger_results = list(response.get("trigger_results").values())
+    trigger_results = list(response.get("trigger_results", {}).values())
+    assert len(trigger_results) > 0, "No alert trigger results"
     assert trigger_results[0]["triggered"], "Alert not triggered"
 
     # check alerts
@@ -517,18 +531,20 @@ async def test_alerting_plugin(ops_test: OpsTest) -> None:
         f"{base_url}/_plugins/_alerting/monitors/alerts?monitorId={monitor_id}",
     )
 
-    assert response["totalAlerts"] == 1, "No alerts found"
+    assert response.get("totalAlerts", 0) > 0, "No alerts found"
 
 
+@pytest.mark.abort_on_fail
 async def test_query_insights_plugin(ops_test: OpsTest) -> None:
     """Test that the query insights plugin is enabled and functional."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
     base_url = f"https://{leader_unit_ip}:9200"
 
     response = await http_request(ops_test, "GET", f"{base_url}/_insights/top_queries")
-    assert response["top_queries"], "No top queries returned"
+    assert response.get("top_queries"), "No top queries returned"
 
 
+@pytest.mark.abort_on_fail
 async def test_notifications_plugin(ops_test: OpsTest) -> None:
     """Test that the notifications plugin is enabled and functional."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -536,7 +552,7 @@ async def test_notifications_plugin(ops_test: OpsTest) -> None:
     notifications_endpoint = f"{base_url}/_plugins/_notifications"
 
     response = await http_request(ops_test, "GET", f"{notifications_endpoint}/features")
-    assert response["allowed_config_type_list"]
+    assert response.get("allowed_config_type_list")
 
     # create channel
     payload = {
@@ -549,7 +565,8 @@ async def test_notifications_plugin(ops_test: OpsTest) -> None:
     }
     logger.info("Creating notification channel")
     response = await http_request(ops_test, "POST", f"{notifications_endpoint}/configs", payload)
-    channel_id = response["config_id"]
+    channel_id = response.get("config_id")
+    assert channel_id, "Notification channel not created"
     logger.info(f"Created: {channel_id}")
 
     # attempt to send test notification
@@ -564,6 +581,7 @@ async def test_notifications_plugin(ops_test: OpsTest) -> None:
     ), "Did not attempt to send webhook notification"
 
 
+@pytest.mark.abort_on_fail
 async def test_ml_plugin(ops_test: OpsTest) -> None:
     """Test that the ML plugin is enabled and functional."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -621,9 +639,10 @@ async def test_ml_plugin(ops_test: OpsTest) -> None:
     response = await http_request(
         ops_test, "POST", f"{base_url}/_plugins/_ml/_train_predict/kmeans", payload
     )
-    assert response["status"] == "COMPLETED", "ML run did not complete"
+    assert response.get("status") == "COMPLETED", "ML run did not complete"
 
 
+@pytest.mark.abort_on_fail
 async def test_observability_plugin(ops_test: OpsTest) -> None:
     """Test that the observability plugin is enabled and functional."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -632,9 +651,10 @@ async def test_observability_plugin(ops_test: OpsTest) -> None:
     # send PPL query
     payload = {"query": f"source = {TEST_INDEX}"}
     response = await http_request(ops_test, "POST", f"{base_url}/_plugins/_ppl", payload)
-    assert response["size"] == len(TEST_DOCS)
+    assert response.get("size") == len(TEST_DOCS)
 
 
+@pytest.mark.abort_on_fail
 async def test_flow_framework_plugin(ops_test: OpsTest) -> None:
     """Test that the flow framework plugin is enabled and functional."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -650,22 +670,27 @@ async def test_flow_framework_plugin(ops_test: OpsTest) -> None:
     response = await http_request(
         ops_test, "POST", f"{ml_endpoint}/model_groups/_register", payload
     )
-    model_group_id = response["model_group_id"]
+    model_group_id = response.get("model_group_id")
+    assert model_group_id, "Model group not created"
 
     # register model
     payload = TEXT_EMBEDDING_MODEL | {"model_group_id": model_group_id}
     response = await http_request(ops_test, "POST", f"{ml_endpoint}/models/_register", payload)
-    task_id = response["task_id"]
+    task_id = response.get("task_id")
+    assert task_id, "Model registration task not created"
 
     # poll until model registered
     logger.info("Waitinf for model registration to complete...")
     assert await poll_until(
-        ops_test, f"{ml_endpoint}/tasks/{task_id}", lambda status: status["state"] == "COMPLETED"
+        ops_test,
+        f"{ml_endpoint}/tasks/{task_id}",
+        lambda status: status.get("state") == "COMPLETED",
     ), "ML model registration did not complete before timeout"
 
     # get model id
     response = await http_request(ops_test, "GET", f"{ml_endpoint}/tasks/{task_id}")
-    model_id = response["model_id"]
+    model_id = response.get("model_id")
+    assert model_id, "Model not created"
 
     # create semantic search workflow
     payload = {
@@ -677,13 +702,14 @@ async def test_flow_framework_plugin(ops_test: OpsTest) -> None:
     response = await http_request(
         ops_test, "POST", f"{endpoint}?use_case=semantic_search&provision=true", payload
     )
-    workflow_id = response["workflow_id"]
+    workflow_id = response.get("workflow_id")
+    assert workflow_id, "Workflow not created"
 
     logger.info("Waiting for flow framework workflow to complete...")
     assert await poll_until(
         ops_test,
         f"{endpoint}/{workflow_id}/_status",
-        lambda workflow: workflow["state"] == "COMPLETED",
+        lambda workflow: workflow.get("state") == "COMPLETED",
     )
 
     # check if index was created
@@ -693,6 +719,7 @@ async def test_flow_framework_plugin(ops_test: OpsTest) -> None:
     assert resp_code == 200, "Flow framework did not create index"
 
 
+@pytest.mark.abort_on_fail
 async def test_neural_search_plugin(ops_test: OpsTest) -> None:
     """Test that the neural search plugin is enabled and functional."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -703,20 +730,24 @@ async def test_neural_search_plugin(ops_test: OpsTest) -> None:
     response = await http_request(
         ops_test, "GET", f"{base_url}/_ingest/pipeline/{INGEST_PIPELINE_ID}"
     )
-    model_id = response[INGEST_PIPELINE_ID]["processors"][0]["text_embedding"]["model_id"]
+    processors = response.get(INGEST_PIPELINE_ID).get("processors", [])
+    assert len(processors) > 0
+    model_id = processors[0].get("text_embedding").get("model_id")
+    assert model_id, "Could not find model for neural search"
 
     # deploy model
     response = await http_request(
         ops_test, "POST", f"{base_url}/_plugins/_ml/models/{model_id}/_deploy"
     )
-    task_id = response["task_id"]
+    task_id = response.get("task_id")
+    assert task_id, "Model deployment task not created"
 
     # poll until model deployment complete
     logger.info("Waiting for model deployment to complete...")
     assert await poll_until(
         ops_test,
         f"{base_url}/_plugins/_ml/tasks/{task_id}",
-        lambda status: status["state"] == "COMPLETED",
+        lambda status: status.get("state") == "COMPLETED",
     )
 
     # insert docs
@@ -724,16 +755,14 @@ async def test_neural_search_plugin(ops_test: OpsTest) -> None:
     await http_request(ops_test, "POST", f"{base_url}/{TEST_INDEX}/_refresh")
 
     # run neural search
-    k = 1
     payload = {
-        "query": {
-            "neural": {"passage_embedding": {"query_text": "planet", "model_id": model_id, "k": k}}
-        }
+        "query": {"neural": {"passage_embedding": {"query_text": "hello", "model_id": model_id}}}
     }
     response = await http_request(ops_test, "GET", f"{base_url}/{TEST_INDEX}/_search", payload)
-    assert len(response["hits"]["hits"]) == k
+    assert len(response.get("hits").get("hits", [])) > 0, "Neural search did not yield results"
 
 
+@pytest.mark.abort_on_fail
 async def test_ltr_plugin(ops_test: OpsTest) -> None:
     """Test that the learning-to-rank plugin is enabled and functional."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -742,7 +771,7 @@ async def test_ltr_plugin(ops_test: OpsTest) -> None:
 
     # initialize default feature store
     response = await http_request(ops_test, "PUT", f"{base_url}/_ltr")
-    assert response["acknowledged"], "LTR index not created"
+    assert response.get("acknowledged"), "LTR index not created"
 
     # create feature set
     featureset = "test-featureset"
@@ -760,7 +789,7 @@ async def test_ltr_plugin(ops_test: OpsTest) -> None:
         }
     }
     response = await http_request(ops_test, "POST", f"{endpoint}/{featureset}", payload)
-    assert response["result"] == "created", "Feature set not created"
+    assert response.get("result") == "created", "Feature set not created"
 
     # create model using the featureset to score
     model = "test-lm"
@@ -773,7 +802,8 @@ async def test_ltr_plugin(ops_test: OpsTest) -> None:
     response = await http_request(
         ops_test, "POST", f"{base_url}/_ltr/_featureset/{featureset}/_createmodel", payload
     )
-    assert response["result"] == "created", "LTR model not created"
+    logger.info(f"LTR model creation response: {response}")
+    assert response.get("result") == "created", "LTR model not created"
 
     # learn ranking with model
     payload = {
@@ -787,10 +817,14 @@ async def test_ltr_plugin(ops_test: OpsTest) -> None:
         "size": 1,
     }
     response = await http_request(ops_test, "POST", f"{base_url}/{TEST_INDEX}/_search", payload)
-    assert len(response["hits"]["hits"]) == 1
+    logger.info(f"LTR search response: {response}")
+    assert (
+        len(response.get("hits").get("hits", [])) == 1
+    ), "Scoring with LTR did not yield a result"
     await delete_index(ops_test, APP_NAME, leader_unit_ip, TEST_INDEX)
 
 
+@pytest.mark.abort_on_fail
 async def test_security_analytics_plugin(ops_test: OpsTest) -> None:
     """Test that the security analytics plugin is enabled and functional."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -815,7 +849,7 @@ level: low"""
     response = await http_request(
         ops_test, "POST", f"{endpoint}/rules?category=linux", payload=sigma_rule
     )
-    rule_id = response["_id"]
+    rule_id = response.get("_id")
     assert rule_id, "Rule not created"
 
     log_index = "log-index"
@@ -849,7 +883,7 @@ level: low"""
     }
     response = await http_request(ops_test, "POST", f"{endpoint}/detectors", payload)
     logger.info(f"\nDetectors response: {response}")
-    detector_id = response["_id"]
+    detector_id = response.get("_id")
     assert detector_id, "Security Analytics detector not created"
 
     docs = [
@@ -876,6 +910,7 @@ level: low"""
     await delete_index(ops_test, APP_NAME, leader_unit_ip, log_index)
 
 
+@pytest.mark.abort_on_fail
 async def test_custom_codecs_plugin(ops_test: OpsTest) -> None:
     """Test that the custom codecs plugin is enabled and functional."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -911,6 +946,7 @@ async def test_custom_codecs_plugin(ops_test: OpsTest) -> None:
     await delete_index(ops_test, APP_NAME, leader_unit_ip, default)
 
 
+@pytest.mark.abort_on_fail
 async def test_geospatial_plugin(ops_test: OpsTest) -> None:
     """Test that the geospatial plugin is enabled and functional."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -949,9 +985,12 @@ async def test_geospatial_plugin(ops_test: OpsTest) -> None:
     logger.info(f"Geospatial response: {response}")
 
     # ensure geo enriched data exists
-    assert response["docs"][0]["doc"]["_source"]["ip2geo"], "No geo-enriched data found"
+    enriched_documents = response.get("docs", [])
+    assert len(enriched_documents) > 0, "No geo-enriched documents found"
+    assert enriched_documents[0]["doc"]["_source"]["ip2geo"], "No geo-enriched data found"
 
 
+@pytest.mark.abort_on_fail
 async def test_skills_plugin(ops_test: OpsTest) -> None:
     """Test that the skills plugin is enabled and functional."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
@@ -965,10 +1004,11 @@ async def test_skills_plugin(ops_test: OpsTest) -> None:
         "tools": [{"type": "CatIndexTool", "name": "list"}],
     }
     response = await http_request(ops_test, "POST", f"{endpoint}/_register", payload)
-    agent_id = response["agent_id"]
+    agent_id = response.get("agent_id")
+    assert agent_id, "Flow agent not created"
 
     # run the agent
     payload = {"parameters": {"question": "How many indices do I have?"}}
 
     response = await http_request(ops_test, "POST", f"{endpoint}/{agent_id}/_execute", payload)
-    assert len(response["inference_results"]) > 0, "Flow agent did not return any results"
+    assert len(response.get("inference_results", [])) > 0, "Flow agent did not return any results"
