@@ -5,7 +5,6 @@
 import asyncio
 import json
 import logging
-import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Optional
 
@@ -216,50 +215,63 @@ async def test_reports_scheduler(ops_test: OpsTest) -> None:
     response = await http_request(
         ops_test,
         "GET",
-        f"{dash_base_url}/api/saved_objects/_find?type=search&search_fields=title&search={sample_data}",
+        f"{dash_base_url}/api/saved_objects/_find?type=dashboard&search_fields=title&search={sample_data}",
     )
     logger.info(f"Search fields response: {response}")
     dash_id = response["saved_objects"][0]["id"]
 
-    end_ms = int(time.time() * 1000)
-    begin_ms = end_ms - 15 * 60 * 1000
+    start = int(datetime.now(timezone.utc).timestamp() * 1000)
     payload = {
-        "beginTimeMs": begin_ms,
-        "endTimeMs": end_ms,
-        "reportDefinitionDetails": {
-            "id": "csv-reports",
-            "createdTimeMs": end_ms,
-            "lastUpdatedTimeMs": end_ms,
-            "reportDefinition": {
-                "name": "csv-report-name",
-                "description": "CSV from saved search",
-                "isEnabled": True,
-                "source": {
-                    "type": "SavedSearch",
-                    "id": dash_id,
-                    "origin": f"https://{dash_leader_unit_ip}:5601",
-                    "description": "ecommerce saved search",
-                },
-                "format": {"fileFormat": "Csv", "duration": "PT15M"},
-                "trigger": {"triggerType": "Download"},
-                "delivery": {
-                    "configIds": [],
-                    "title": "",
-                    "textDescription": "",
-                    "htmlDescription": "",
-                },
+        "reportDefinition": {
+            "name": f"{sample_data}-report-definition",
+            "isEnabled": True,
+            "source": {
+                "description": f"{sample_data} report",
+                "type": "Dashboard",
+                "origin": dash_base_url,
+                "id": dash_id,
             },
-        },
-        "status": "Success",
+            "format": {"duration": "PT12H", "fileFormat": "Pdf"},
+            "trigger": {
+                "triggerType": "IntervalSchedule",
+                "schedule": {"interval": {"start_time": start, "period": 1, "unit": "Minutes"}},
+            },
+            "delivery": {
+                "title": "",
+                "textDescription": "",
+                "htmlDescription": "",
+                "configIds": [],
+            },
+        }
     }
 
     leader_unit_ip = await get_leader_unit_ip(ops_test)
     base_url = f"https://{leader_unit_ip}:9200"
-    endpoint = f"{base_url}/_plugins/_reports/on_demand"
-    logger.info("Creating report...")
-    response = await http_request(ops_test, "PUT", endpoint, payload)
-    logger.info(f"Report response: {response}")
-    assert response["reportInstance"].get("id"), "No report instance created"
+    endpoint = f"{base_url}/_plugins/_reports"
+
+    logger.info("Creating report definition...")
+    response = await http_request(ops_test, "POST", f"{endpoint}/definition", payload)
+
+    logger.info(f"Report definition response: {response}")
+    report_definition_id = response["reportDefinitionId"]
+
+    logger.info("Wait for schedule interval time to pass...")
+    await asyncio.sleep(60)
+
+    logger.info("Poll for report instance creation")
+    await poll_until(
+        ops_test, f"{endpoint}/instances", lambda instances: instances.get("totalHits") > 0
+    )
+
+    # fetch report instance
+    response = await http_request(ops_test, "GET", f"{endpoint}/instances")
+    logger.info(f"Instances {response}")
+    assert report_definition_id in [
+        instance["reportDefinitionDetails"]["id"] for instance in response["reportInstanceList"]
+    ], "Could not find report instance from report definition"
+
+    # delete report definition
+    await http_request(ops_test, "DELETE", f"{endpoint}/definition/{report_definition_id}")
 
 
 async def test_sql_plugin(ops_test: OpsTest) -> None:
@@ -451,6 +463,7 @@ async def test_async_search_plugin(ops_test: OpsTest) -> None:
     async_job_id = response["id"]
 
     # poll until complete
+    logger.info("Waiting for async search job to complete...")
     assert await poll_until(
         ops_test,
         f"{endpoint}/{async_job_id}",
@@ -467,7 +480,7 @@ async def test_alerting_plugin(ops_test: OpsTest) -> None:
     # create monitor
     payload = {
         "name": "alerting-test",
-        "monitor-type": "query_level_monitor",
+        "monitor_type": "query_level_monitor",
         "schedule": {"period": {"interval": 1, "unit": "MINUTES"}},
         "inputs": [
             {"search": {"indices": [TEST_INDEX], "query": {"size": 0, "query": {"match_all": {}}}}}
@@ -485,14 +498,26 @@ async def test_alerting_plugin(ops_test: OpsTest) -> None:
     response = await http_request(ops_test, "POST", endpoint, payload)
     monitor_id = response["_id"]
 
-    logger.info(f"Executing monitor {monitor_id} dryrun")
+    logger.info(f"Executing alerting monitor {monitor_id}")
     response = await http_request(
         ops_test,
         "POST",
-        f"{endpoint}/{monitor_id}/_execute?dryrun=true",
+        f"{endpoint}/{monitor_id}/_execute",
+        payload={"periodStart": "now-30m", "periodEnd": "now"},
     )
 
-    assert response["trigger_results"], "No alerting trigger results"
+    logger.info(f"Monitor execution response: {response}")
+    trigger_results = list(response.get("trigger_results").values())
+    assert trigger_results[0]["triggered"], "Alert not triggered"
+
+    # check alerts
+    response = await http_request(
+        ops_test,
+        "GET",
+        f"{base_url}/_plugins/_alerting/monitors/alerts?monitorId={monitor_id}",
+    )
+
+    assert response["totalAlerts"] == 1, "No alerts found"
 
 
 async def test_query_insights_plugin(ops_test: OpsTest) -> None:
@@ -528,7 +553,7 @@ async def test_notifications_plugin(ops_test: OpsTest) -> None:
     logger.info(f"Created: {channel_id}")
 
     # attempt to send test notification
-    logger.info(f"Attempting test notification to channel {channel_id} (should attempt but fail)")
+    logger.info(f"Attempting test notification to channel {channel_id} (attempt should fail)")
     response = await http_request(
         ops_test, "GET", f"{notifications_endpoint}/feature/test/{channel_id}"
     )
@@ -632,7 +657,8 @@ async def test_flow_framework_plugin(ops_test: OpsTest) -> None:
     response = await http_request(ops_test, "POST", f"{ml_endpoint}/models/_register", payload)
     task_id = response["task_id"]
 
-    # poll until registered
+    # poll until model registered
+    logger.info("Waitinf for model registration to complete...")
     assert await poll_until(
         ops_test, f"{ml_endpoint}/tasks/{task_id}", lambda status: status["state"] == "COMPLETED"
     ), "ML model registration did not complete before timeout"
@@ -652,6 +678,8 @@ async def test_flow_framework_plugin(ops_test: OpsTest) -> None:
         ops_test, "POST", f"{endpoint}?use_case=semantic_search&provision=true", payload
     )
     workflow_id = response["workflow_id"]
+
+    logger.info("Waiting for flow framework workflow to complete...")
     assert await poll_until(
         ops_test,
         f"{endpoint}/{workflow_id}/_status",
@@ -684,6 +712,7 @@ async def test_neural_search_plugin(ops_test: OpsTest) -> None:
     task_id = response["task_id"]
 
     # poll until model deployment complete
+    logger.info("Waiting for model deployment to complete...")
     assert await poll_until(
         ops_test,
         f"{base_url}/_plugins/_ml/tasks/{task_id}",
@@ -768,7 +797,7 @@ async def test_security_analytics_plugin(ops_test: OpsTest) -> None:
     base_url = f"https://{leader_unit_ip}:9200"
     endpoint = f"{base_url}/_plugins/_security_analytics"
 
-    # add custom rule to select doc with activity = dangerous
+    # add custom rule to select doc with activity = suspicious
     sigma_rule = """
 title: Critical Detector
 id: 11111111-2222-3333-4444-555555555555
@@ -798,22 +827,10 @@ level: low"""
         extra_mappings={
             "properties": {
                 "activity": {"type": "keyword"},
-                "user": {"type": "keyword"},
+                "name": {"type": "keyword"},
             }
         },
     )
-    # create index
-    # await http_request(
-    #     ops_test,
-    #     "POST",
-    #     f"{endpoint}/mappings",
-    #     {
-    #         "index_name": log_index,
-    #         "rule_topic": "linux",
-    #         "partial": True,
-    #         "alias_mappings": {"properties": {"": {"type": "alias", "path": "EventID"}}},
-    #     },
-    # )
 
     # create detector
     payload = {
@@ -847,6 +864,7 @@ level: low"""
     await asyncio.sleep(60)
 
     # check for findings
+    logger.info("Waiting for security analytics finding to be reported...")
     assert await poll_until(
         ops_test,
         f"{endpoint}/findings/_search?detector_id={detector_id}",
@@ -875,7 +893,6 @@ async def test_custom_codecs_plugin(ops_test: OpsTest) -> None:
     docs = [{"x": i, "blob": "A" * 100} for i in range(5000)]
     body = bulk_encode(docs, zstd) + "\n" + bulk_encode(docs, default)
     await bulk_insert(ops_test, APP_NAME, leader_unit_ip, body)
-    # await index_doc(ops_test, APP_NAME, leader_unit_ip, codecs, 1, doc={"x": 1})
 
     response = await http_request(
         ops_test, "GET", f"{base_url}/{zstd}/_settings?flat_settings=true"
@@ -911,14 +928,14 @@ async def test_geospatial_plugin(ops_test: OpsTest) -> None:
     assert success, "Could not download Geospatial data source manifest"
 
     # wait for data source to download
-    logger.info("Waiting for data source to be available")
+    logger.info("Waiting for data to be available...")
     assert await poll_until(
         ops_test,
         f"{endpoint}/{datasource}",
         lambda ds: ds["datasources"][0]["state"] == "AVAILABLE",
         timeout=60 * 5,
         interval=10,
-    ), "Geo data source not available before timeout"
+    ), "Geo data not available before timeout"
 
     geo_pipeline = "geo-pipeline"
     payload = {"processors": [{"ip2geo": {"field": "ip", "datasource": datasource}}]}
@@ -930,7 +947,7 @@ async def test_geospatial_plugin(ops_test: OpsTest) -> None:
         ops_test, "POST", f"{base_url}/_ingest/pipeline/{geo_pipeline}/_simulate", payload
     )
     logger.info(f"Geospatial response: {response}")
-    
+
     # ensure geo enriched data exists
     assert response["docs"][0]["doc"]["_source"]["ip2geo"], "No geo-enriched data found"
 
