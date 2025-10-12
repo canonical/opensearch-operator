@@ -146,7 +146,6 @@ def store_ca(
     alias: str, store_pwd: str, store_path: str, ca: str, keep_previous: bool = True
 ) -> bool:
     """Add new CA cert to trust store."""
-
     # This loop and split are to handle when the CA is a chain with intermediate certs
     certs = list(reversed(split_ca_chain(ca)))
 
