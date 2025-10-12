@@ -31,6 +31,9 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 
 
+KEYTOOL = "opensearch.keytool"
+
+
 def hash_string(string: str) -> str:
     """Hashes the given string."""
     salt = bcrypt.gensalt()
@@ -125,46 +128,64 @@ def to_pkcs8(private_key: str, password: Optional[str] = None) -> str:
         os.unlink(tmp_pkcs8_key.name)
 
 
+def split_ca_chain(pem_content: str) -> list[str]:
+    """Split PEM chain into individual certificates."""
+    certs = []
+    current_cert = ""
+
+    for line in pem_content.split("\n"):
+        current_cert += line + "\n"
+        if "-----END CERTIFICATE-----" in line:
+            certs.append(current_cert.strip())
+            current_cert = ""
+
+    return certs
+
+
 def store_ca(
     alias: str, store_pwd: str, store_path: str, ca: str, keep_previous: bool = True
 ) -> bool:
     """Add new CA cert to trust store."""
-    keytool = "opensearch.keytool"
 
-    if keep_previous:
-        cmd = f"{keytool} -changealias -alias {alias} -destalias old-{alias} -keystore {store_path} -storetype PKCS12"
-        args = f"-storepass {store_pwd}"
-        try:
-            run_cmd(cmd, args)
-            logger.info(f"Current CA {alias} was renamed to old-{alias}.")
-        except OpenSearchCmdError as e:
-            # This message means there was no "ca" alias or store before, if it happens ignore
-            if not (
-                f"Alias <{alias}> does not exist" in e.out
-                or "Keystore file does not exist" in e.out
-            ):
+    # This loop and split are to handle when the CA is a chain with intermediate certs
+    certs = list(reversed(split_ca_chain(ca)))
+
+    for index in range(len(certs)):
+        if keep_previous:
+            cmd = f"{KEYTOOL} -changealias -alias {alias}-{index} -destalias old-{alias}-{index} -keystore {store_path} -storetype PKCS12"
+            args = f"-storepass {store_pwd}"
+            try:
+                run_cmd(cmd, args)
+                logger.info(f"Current CA {alias}-{index} was renamed to old-{alias}-{index}.")
+            except OpenSearchCmdError as e:
+                # This message means there was no "ca" alias or store before, if it happens ignore
+                if not (
+                    f"Alias <{alias}-{index}> does not exist" in e.out
+                    or "Keystore file does not exist" in e.out
+                ):
+                    raise
+
+        with tempfile.NamedTemporaryFile(
+            mode="w+t", dir=os.path.dirname(store_path)
+        ) as ca_tmp_file:
+            ca_tmp_file.write(certs[index])
+            ca_tmp_file.flush()
+            try:
+                run_cmd(
+                    f"""{KEYTOOL} -importcert \
+                    -noprompt \
+                    -alias {alias}-{index} \
+                    -keystore {store_path} \
+                    -file {ca_tmp_file.name} \
+                    -storetype PKCS12
+                    """,
+                    f"-storepass {store_pwd}",
+                )
+                run_cmd(f"sudo chmod +r {store_path}")
+                logger.info("New CA was added to truststore.")
+            except OpenSearchCmdError as e:
+                logging.error(f"Error storing the ca-cert: {e}")
                 return False
-
-    with tempfile.NamedTemporaryFile(mode="w+t", dir=os.path.dirname(store_path)) as ca_tmp_file:
-        ca_tmp_file.write(ca)
-        ca_tmp_file.flush()
-        try:
-            run_cmd(
-                f"""{keytool} -importcert \
-                -trustcacerts \
-                -noprompt \
-                -alias {alias} \
-                -keystore {store_path} \
-                -file {ca_tmp_file.name} \
-                -storetype PKCS12
-                """,
-                f"-storepass {store_pwd}",
-            )
-            run_cmd(f"sudo chmod +r {store_path}")
-            logger.info("New CA was added to truststore.")
-        except OpenSearchCmdError as e:
-            logging.error(f"Error storing the ca-cert: {e}")
-            return False
 
     return True
 
@@ -174,14 +195,12 @@ def list_aliases(store_pwd: str, store_path: str) -> Optional[list[str]]:
     if not exists(store_path):
         return None
 
-    keytool = "opensearch.keytool"
-
     # we fetch the list of stored aliases
-    cmd = f"{keytool} -list -keystore {store_path} -storetype PKCS12"
+    cmd = f"{KEYTOOL} -v -list -keystore {store_path} -storetype PKCS12"
     args = f"-storepass {store_pwd}"
 
     try:
-        resp = run_cmd(cmd, args).out.split()
+        resp = run_cmd(cmd, args).out.split("\n")
         return [
             line.split("Alias name:")[-1].strip()
             for line in resp
@@ -206,18 +225,28 @@ def list_cas(store_pwd: str, store_path: str) -> Optional[dict[str, str]]:
         return None
 
     # parse output to retrieve the current CA (in case there are many)
+    certificates = split_ca_chain(stored_certs)
+
     start_cert_marker = "-----BEGIN CERTIFICATE-----"
-    end_cert_marker = "-----END CERTIFICATE-----"
-    certificates = stored_certs.split(end_cert_marker)
 
     certs = {}
     for cert in certificates:
         alias = [line for line in cert.split("\n") if line.strip().startswith("friendlyName:")][0]
         alias = alias.split("friendlyName:")[-1].strip()
 
-        certs[alias] = f"{start_cert_marker}{cert.split(start_cert_marker)[1]}{end_cert_marker}"
+        alias_split = alias.split("-")  # support for CA chains with multiple intermediate CAs
+        ca_index = int(alias_split[-1])
+        ca_alias = "-".join(alias_split[:-1])
+        certs.setdefault(ca_alias, []).insert(
+            ca_index, f"{start_cert_marker}{cert.split(start_cert_marker)[1]}"
+        )
 
-    return certs
+    # since we add a suffix for the index of the CA chain content, we need to re-arrange the output
+    cas = {}
+    for alias, certs_list in certs.items():
+        cas[alias] = "\n".join(certs_list)
+
+    return cas
 
 
 def read_ca(alias: str, store_pwd: str, store_path: str) -> Optional[str]:
@@ -230,9 +259,7 @@ def remove_ca(alias: str, store_pwd: str, store_path: str) -> None:
     if not exists(store_path):
         return
 
-    keytool = "opensearch.keytool"
-
-    list_cmd = f"{keytool} -list -keystore {store_path} -alias {alias} -storetype PKCS12"
+    list_cmd = f"{KEYTOOL} -list -keystore {store_path} -alias {alias} -storetype PKCS12"
     list_args = f"-storepass {store_pwd}"
     try:
         run_cmd(list_cmd, list_args)
@@ -241,7 +268,7 @@ def remove_ca(alias: str, store_pwd: str, store_path: str) -> None:
         if f"Alias <{alias}> does not exist" in e.out:
             return
 
-    del_cmd = f"{keytool} -delete -keystore {store_path} -alias {alias} -storetype PKCS12"
+    del_cmd = f"{KEYTOOL} -delete -keystore {store_path} -alias {alias} -storetype PKCS12"
     del_args = f"-storepass {store_pwd}"
     run_cmd(del_cmd, del_args)
     logger.info(f"Removed {alias} from truststore.")
