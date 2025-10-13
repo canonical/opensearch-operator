@@ -103,10 +103,8 @@ After accessing Grafana web interface, select the “Charmed OpenSearch” dashb
 
 The dashboard filters for juju-specific elements, e.g. application name, unit, model;
 and also OpenSearch’s cluster and roles.
-The cluster dropdown allows to select which cluster we want to see the statistics from:
-
-It is also possible to select a subset of nodes following roles.
-That can select nodes across models or applications as well.
+The cluster dropdown lets you choose which cluster’s statistics to display.
+You can also filter the view by selecting specific node roles, including nodes that span different models or applications.
 
 ![Charmed-Opensearch Dashboard 1|690x342](img/dash1.png)
 
