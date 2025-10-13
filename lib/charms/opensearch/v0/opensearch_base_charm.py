@@ -602,7 +602,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             logger.warning(
                 "Removing units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
-        if not (self.unit.is_leader() and self.opensearch.is_node_up()):
+        if not self.unit.is_leader():
+            return
+
+        if not self.opensearch.is_node_up():
+            logger.debug("Node is not up. Deferring event.")
+            event.defer()
             return
 
         # Now, we register in the leader application the presence of departing unit's name
@@ -632,9 +637,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 f"Waiting for units to leave: expecting {self.app.planned_units()}, currently {n_units}. Deferring event."
             )
             event.defer()
-
-        if not self.unit.is_leader():
-            return
 
         self.opensearch_peer_cm.validate_recommended_cm_unit_count(remaining_nodes)
 

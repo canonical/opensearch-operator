@@ -280,6 +280,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if not self.charm.unit.is_leader():
             return
 
+        if not self.charm.opensearch.is_node_up():
+            # if this unit is the one departing, dont update fleet apps
+            # otherwise, update fleet apps after service restarts and event is re-emitted
+            logger.debug("Node is not up. Deferring event.")
+            event.defer()
+            return
+
         # we need to update the fleet planned units
         target_relation_ids = [
             rel.id
