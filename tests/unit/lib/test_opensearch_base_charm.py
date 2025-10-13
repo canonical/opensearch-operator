@@ -91,7 +91,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.harness.begin()
 
         self.charm = self.harness.charm
-        self.charm.opensearch_config.apply_performance_profile = MagicMock()
+        self.charm.opensearch_config.set_jvm_heap_size = MagicMock()
 
         for typ in ["ok", "ko"]:
             self.deployment_descriptions[typ].app = App(
@@ -250,9 +250,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         """Test start event for nodes that only have the `data` role."""
         with (
             patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up,
-            patch(
-                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
-            ),
+            patch(f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size"),
         ):
             is_node_up.return_value = False
             _apply_peer_cm_directives_and_check_if_can_start.return_value = True
@@ -342,9 +340,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         """Test on start event."""
         with (
             patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up,
-            patch(
-                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
-            ),
+            patch(f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size"),
             patch(
                 f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchDistribution.is_service_started"
             ),
@@ -367,7 +363,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
         with (
             patch(
-                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size"
             ) as perf_profile,
             patch(
                 f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchDistribution.is_service_started"
@@ -394,7 +390,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         with (
             patch(f"{self.OPENSEARCH_DISTRO}.start") as start,
             patch(
-                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size"
             ) as perf_profile,
             patch(
                 f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchDistribution.is_service_started"
@@ -420,6 +416,21 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             start.assert_called_once()
             _post_start_init.assert_called_once()
 
+    @patch(f"{BASE_LIB_PATH}.state.OpenSearchApp.deployment_description")
+    @patch(f"{BASE_LIB_PATH}.opensearch_health.OpenSearchHealth.apply", return_value="green")
+    @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size")
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_memory_requirements",
+        return_value=[],
+    )
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_cluster_topology",
+        return_value=[],
+    )
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_missing_system_requirements",
+        return_value=[],
+    )
     @patch(f"{BASE_LIB_PATH}.opensearch_backups.BackupManager.is_backup_in_progress")
     @patch(f"{BASE_LIB_PATH}.opensearch_backups.BackupManager.is_restore_in_progress")
     @patch(f"{BASE_CHARM_CLASS}._stop_opensearch")
@@ -427,13 +438,26 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(
         f"{BASE_LIB_PATH}.opensearch_relation_provider.OpenSearchProvider.remove_lingering_relation_users_and_roles"
     )
-    def test_on_update_status(self, _, cert_expiration_remaining_hours, _stop_opensearch, __, ___):
+    def test_on_update_status(
+        self,
+        _,
+        cert_expiration_remaining_hours,
+        _stop_opensearch,
+        __,
+        ___,
+        ____,
+        _____,
+        ______,
+        _______,
+        ________,
+        _________,
+    ):
         """Test on update status."""
         with patch(
-            f"{self.OPENSEARCH_DISTRO}.missing_sys_requirements"
-        ) as missing_sys_requirements:
+            f"{self.BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_missing_system_requirements"
+        ) as check_missing_requirements:
             # test missing sys requirements
-            missing_sys_requirements.return_value = ["ulimit -n not set"]
+            check_missing_requirements.return_value = ["ulimit -n not set"]
             self.charm.on.update_status.emit()
             self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 

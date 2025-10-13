@@ -15,7 +15,6 @@ from charms.opensearch.v0.constants_charm import (
     DataRoleRemovalForbidden,
     KibanaserverUser,
     PClusterNoRelation,
-    PClusterWrongNodesCountForQuorum,
     PClusterWrongRelation,
     PClusterWrongRolesProvided,
     PeerClusterOrchestratorRelationName,
@@ -182,7 +181,6 @@ class OpenSearchPeerClustersManager:
                 for option in self._charm.config.get("roles", "").split(",")
                 if option
             ],
-            profile=self._charm.performance_profile.current.typ.value,
         )
 
     def _new_cluster_setup(self, config: PeerClusterConfig) -> DeploymentDescription:
@@ -241,7 +239,6 @@ class OpenSearchPeerClustersManager:
                 init_hold=config.init_hold,
                 roles=config.roles,
                 data_temperature=config.data_temperature,
-                profile=self._charm.performance_profile.current.typ.value,
             ),
             start=start_mode,
             pending_directives=directives,
@@ -295,7 +292,6 @@ class OpenSearchPeerClustersManager:
                 init_hold=prev_deployment.config.init_hold,
                 roles=config.roles,
                 data_temperature=config.data_temperature,
-                profile=self._charm.performance_profile.current.typ.value,
             ),
             start=start_mode,
             state=deployment_state,
@@ -445,24 +441,6 @@ class OpenSearchPeerClustersManager:
 
         logger.info("Less than 3 CM-eligible units in this cluster")
         return False
-
-    def validate_recommended_cm_unit_count(self, nodes: Optional[List[Node]] = None) -> None:
-        """Validates that the cluster has at least 3 CM-eligible units.
-
-        If validation fails, sets the application status to Blocked.
-        """
-        if nodes is None:
-            nodes = ClusterTopology.nodes(
-                self._charm.opensearch, self._opensearch.is_node_up(), self._charm.alt_hosts
-            )
-
-        if self.has_recommended_cm_count(nodes):
-            self._charm.peers_data.delete(Scope.APP, "is_expecting_cm_unit")
-            self._charm.status.clear(PClusterWrongNodesCountForQuorum, app=True)
-            return
-
-        self._charm.peers_data.put(Scope.APP, "is_expecting_cm_unit", True)
-        self._charm.status.set(BlockedStatus(PClusterWrongNodesCountForQuorum), app=True)
 
     def apps_in_fleet(self) -> List[PeerClusterApp]:
         """Returns list of apps in cluster fleet"""

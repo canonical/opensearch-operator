@@ -530,33 +530,6 @@ class OpenSearchDistribution(ABC):
 
         return exclusions
 
-    def missing_sys_requirements(self) -> List[str]:
-        """Checks the system requirements."""
-
-        def apply(prop: str, value: int) -> bool:
-            """Apply a sysctl value and check if it was set."""
-            try:
-                self._run_cmd(f"sysctl -w {prop}={value}")
-                return int(self._run_cmd(f"sysctl -n {prop}")) == value
-            except OpenSearchCmdError:
-                return False
-
-        missing_requirements = []
-
-        prop, val = "vm.max_map_count", 262144
-        if int(self._run_cmd(f"sysctl -n {prop}")) < val and not apply(prop, val):
-            missing_requirements.append(f"{prop} should be at least {val}")
-
-        prop, val = "vm.swappiness", 1
-        if int(self._run_cmd(f"sysctl -n {prop}")) > val and not apply(prop, 0):
-            missing_requirements.append(f"{prop} should be at most 1")
-
-        prop, val = "net.ipv4.tcp_retries2", 5
-        if int(self._run_cmd(f"sysctl -n {prop}")) > val and not apply(prop, val):
-            missing_requirements.append(f"{prop} should be at most {val}")
-
-        return missing_requirements
-
     @cached_property
     def version(self) -> str:
         """Returns the version number of this opensearch instance.
@@ -569,3 +542,54 @@ class OpenSearchDistribution(ABC):
         output = self.run_bin("opensearch-bin", "--version 2>/dev/null")
         logger.debug(f"version call output: {output}")
         return output.split(", ")[0].split(": ")[1]
+
+    def meminfo(self) -> dict[str, float]:
+        """Read the /proc/meminfo file and return the values.
+
+        According to the kernel source code, the values are always in kB:
+            https://github.com/torvalds/linux/blob/
+                2a130b7e1fcdd83633c4aa70998c314d7c38b476/fs/proc/meminfo.c#L31
+        """
+        with open("/proc/meminfo") as f:
+            meminfo = f.read().split("\n")
+            meminfo = [line.split() for line in meminfo if line.strip()]
+
+        return {line[0][:-1]: float(line[1]) for line in meminfo}
+
+    def _apply_system_requirement(self, system_requirement: str, value: int) -> bool:
+        """Apply a system requirement."""
+        try:
+            self._run_cmd(f"sysctl -w {system_requirement}={value}")
+            return int(self._run_cmd(f"sysctl -n {system_requirement}")) == value
+        except OpenSearchCmdError:
+            return False
+
+    def _get_kernel_property_value(self, prop: str) -> int:
+        """Get the value of a kernel parameter."""
+        return int(self._run_cmd(f"sysctl -n {prop}"))
+
+    def check_missing_system_requirements(self) -> List[str]:
+        """Checks the system requirements."""
+        missing_requirements = []
+
+        prop, val = "vm.max_map_count", 262144
+        if self._get_kernel_property_value(prop) < val and not self._apply_system_requirement(
+            prop, val
+        ):
+            missing_requirements.append(f"{prop} should be at least {val}")
+
+        prop, val = "vm.swappiness", 0
+        if self._get_kernel_property_value(prop) > val and not self._apply_system_requirement(
+            prop, 0
+        ):
+            missing_requirements.append(f"{prop} should be at most {val}")
+
+        prop, val = "net.ipv4.tcp_retries2", 5
+        if self._get_kernel_property_value(prop) > val and not self._apply_system_requirement(
+            prop, val
+        ):
+            missing_requirements.append(f"{prop} should be at most {val}")
+
+        if missing_requirements:
+            logger.error("Missing system requirements: %s", missing_requirements)
+        return missing_requirements
