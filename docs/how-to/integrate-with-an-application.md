@@ -77,7 +77,7 @@ class MyCharm(CharmBase):
 
 ### Integrate the client application with OpenSearch
 
-To integrate `opensearch` with your client applicationm run:
+To integrate `opensearch` with your client application, run:
 
 ```shell
 juju integrate opensearch <application>

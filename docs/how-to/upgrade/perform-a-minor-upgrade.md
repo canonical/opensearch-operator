@@ -42,7 +42,7 @@ To upgrade your OpenSearch cluster, follow these steps:
 1. Collect all necessary pre-upgrade information.
   It will be required for the rollback (if requested). **Do NOT skip this step**.
 2. (optional) Scale-up: The new sacrificial unit will be the first to be updated,
-  and will simplify the rollback procedure in case of the upgrade failure.
+  and will simplify the rollback procedure in the case of an upgrade failure.
 3. Prepare the “Charmed OpenSearch” Juju application for the in-place upgrade.
   See the step description below for all the technical details the charm executes.
 4. Upgrade: Only one app unit will be upgraded once started.

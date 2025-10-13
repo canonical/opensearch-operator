@@ -128,9 +128,9 @@ to understand how to safely remove units in a production environment.
 ```
 
 ```{warning}
-In highly available deployment, only scaling down to 3 nodes is safe.
+In highly available deployments, only scaling down to 3 nodes is safe.
 If only 2 nodes are online, neither can be unavailable nor removed.
-The service will become **unavailable** and **data may be lost**  if scaling below 2 nodes.
+The service will become **unavailable** and **data may be lost** if scaling below 2 nodes.
 ```
 
 Removing a unit from the Juju application scales down your OpenSearch cluster by one node.

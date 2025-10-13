@@ -14,7 +14,7 @@ Charmed OpenSearch Tutorial: [6. Scale horizontally](tutorial-6-scale-horizontal
 
 ## 1. Check cluster health before scaling down
 
-First of all, make sure that removing nodes is a safe operation to do.
+First, ensure that removing nodes is a safe operation by checking the health of the cluster.
 For that, check the health of the cluster. This can be done via Juju or via the OpenSearch API.
 
 ### Via Juju
@@ -98,14 +98,14 @@ curl --cacert cert.pem -k -XGET https://10.180.162.96:9200/_cat/shards -u admin:
 
 A general good course of action here would be to scale up (add a unit) to have a `green` state where all primary and replica shards are well assigned.
 
-To investigate why is your cluster in a `yellow` state. You can make the following call to have an explanation:
+To investigate why your cluster is in a `yellow` state, run the following command:
 
 ```shell
 curl --cacert cert.pem -k -XGET "https://10.180.162.96:9200/_cluster/allocation/explain?filter_path=index,shard,primary,**.node_name,**.node_decision,**.decider,**.decision,**.*explanation,**.unassigned_info,**.*delay"  -u admin:admin_password
 ```
 
 <!-- What can we expect as an output?-->
-Depending on the output, there may be a different course of action. For example: scaling up, adding more storage to the existing nodes, or perhaps [manually re-route](https://www.elastic.co/guide/en/elasticsearch/reference/7.10/cluster-reroute.html) the relevant shard manually to another node.
+Depending on the output, there may be a different course of action. For example: scaling up, adding more storage to the existing nodes, or [manually re-routing](https://www.elastic.co/guide/en/elasticsearch/reference/7.10/cluster-reroute.html) the relevant shard to another node.
 
 To scale up by one unit, run the following command:
 ```shell
@@ -137,7 +137,7 @@ curl --cacert cert.pem -XGET https://admin:admin_password@10.180.162.96:9200/_cl
 
 ## 2. Scale down one unit
 
-Once you made sure that removing a unit is safe to do, you can proceed to removing **a single unit**. It is unsafe to remove more than one unit at a time.
+Once you have verified that it is safe to remove a unit, proceed with removing **a single unit**. It is unsafe to remove more than one unit at a time.
 
 ```{note}
 Although we implement a rolling units removal,
@@ -159,12 +159,12 @@ Make sure you monitor the status of the application using: `juju status --watch 
 
 ## 3. Repeat cluster health check
 
-After removing **one unit**, depending on the roles of the said unit,
-the charm may reconfigure and restart a unit to balance the node roles.
+After removing **one unit**,
+the charm may reconfigure and restart another unit to balance the node roles.
 You can monitor this with `juju status --watch 1s`.
 <!-- what happens to each role?-->
 
-Make sure you wait for the whole application to stabilize before you consider removing further units.
+Wait for the application to fully stabilize before removing additional units.
 
 Once the application is stable, check the health of the cluster as detailed in the section
 [Understand the meaning of the cluster status](scale-cluster-health-status) and react accordingly.

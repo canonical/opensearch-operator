@@ -129,7 +129,7 @@ as it is assumed the deployment happens on a single LXD cluster.
    ```{note}
    It is imperative that only the main orchestrator app sets the `init_hold` config option to
    `false` (by default) - the non-main orchestrator apps should set the value to `true`
-   to prevent the application from starting before being integrated with the main.
+   to prevent the application from starting before being integrated with the main orchestrator.
    ```
 
 3. After deploying the nodes of the `main` app and additional `cluster_manager`

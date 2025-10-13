@@ -112,7 +112,7 @@ sudo microk8s config > ~/.kube/config
 
 #### Deploy COS
 
-The remainder of this section will consider that you have successfully deployed a K8s cluster
+The remainder of this section assumes that you have successfully deployed a K8s cluster
 and your local `kubectl` is configured to connect with that cluster.
 The cluster must be configured with a LoadBalancer service.
 

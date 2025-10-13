@@ -68,8 +68,7 @@ Cloud      Regions  Default    Type  Credentials  Source    Description
 localhost  1        localhost  lxd   1            built-in  LXD Container Hypervisor
 ```
 
-Notice that Juju already has a built-in knowledge of LXD and how it works, so there is no need
-for additional setup. A controller will be used to deploy and control Charmed OpenSearch.
+A controller will be used to deploy and control Charmed OpenSearch.
 
 Run the following command to bootstrap a Juju controller named `opensearch-demo` on LXD:
 

@@ -17,7 +17,7 @@ the steps described here may potentially cause data loss.
 ## Introduction
 
 This document will describe the different steps needed to bring disks that have previously
-being used by OpenSearch, and hence still hold data and metadata of that cluster;
+been used by OpenSearch, and hence still hold data and metadata of that cluster;
 and how to reuse these disks. These disks will be named across this document as *used disks*.
 
 The document is intended for cases where a quick recovery is needed.
@@ -28,7 +28,7 @@ before proceeding with any of the steps described below.
 ### Pre-requisites
 
 Before starting, make sure that the disks are visible within Juju.
-For the reminder of the document, the following deployment will be used as example:
+For the remainder of the document, the following deployment will be used as example:
 
 ```text
 $ juju status
@@ -66,7 +66,7 @@ For more details, [refer to Juju storage management documentation](https://juju.
 
 ## Re-using disks use-cases
 
-OpenSearch does have a set of APIs and mechanisms to detect the existence of previous data
+OpenSearch provides a set of APIs and mechanisms to detect existing data
 on a given node and how to interact with that data. Most notable mechanisms are:
 (i) the `/_dangling` API,
 [as described in the upstream docs](https://opensearch.org/docs/latest/api-reference/index-apis/dangling-index/);
@@ -171,7 +171,7 @@ juju ssh opensearch/0
 
 Checking the logs, it is possible to see the unit is waiting for the cluster to become available
 and intermittently listing its last-known peers that are now unreachable.
-The following message on the logs will show up:
+The following message will appear in the logs:
 
 ```text
 sudo journalctl -u snap.opensearch.daemon -f
@@ -186,7 +186,7 @@ To remove the stale metadata, first, stop the service:
 sudo systemctl stop snap.opensearch.daemon
 ```
 
-Then, execute detach the node from its old references:
+Then, detach the node from its old references:
 
 ```text
 $ sudo -u snap_daemon \
@@ -257,17 +257,17 @@ Restart the service:
 sudo systemctl start snap.opensearch.daemon
 ```
 
-The cluster will be correctly form a new UUID. It is possible to also add more units, either fresh ones or even units detached from another cluster, as explained on the previous section.
+The cluster will correctly form a new UUID. It is possible to also add more units, either fresh ones or even units detached from another cluster, as explained on the previous section.
 
 ## Dangling indices
 
 Now, the *used disk*  is successfully mounted to the cluster.
-The next step is to check for indices that  did not exist in the cluster.
+The next step is to check for indices that did not exist in the cluster.
 That can be done using the `/_dangling` API.
-To understand n more details how to list and recover dangling indices, refer to the
+For more details on how to list and recover dangling indices, refer to the
 [OpenSearch documentation on this API](https://opensearch.org/docs/latest/api-reference/index-apis/dangling-index/).
 
 ```{caution}
-This API cannot offer any guarantees as to whether the imported data truly represents the latest state of the data
+This API cannot guarantee that the imported data accurately represents the latest state of the data
 when the index was still part of the cluster.
 ```
