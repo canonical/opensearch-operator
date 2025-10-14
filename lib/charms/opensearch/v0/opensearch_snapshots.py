@@ -144,11 +144,12 @@ class OpenSearchSnapshotsEvents(Object):
         self.charm.snapshots_manager.store_s3_ca(self.object_storage_config.s3.tls_ca_chain)
 
         s3_credentials = self.object_storage_config.s3.credentials
+        s3_data = {
+            "s3.client.default.access_key": s3_credentials.access_key,
+            "s3.client.default.secret_key": s3_credentials.secret_key,
+        }
         self.charm.keystore_manager.put_entries(
-            {
-                "s3.client.default.access_key": s3_credentials.access_key,
-                "s3.client.default.secret_key": s3_credentials.secret_key,
-            }
+            s3_data,
         )
         self.charm.keystore_manager.reload()
 
@@ -387,11 +388,12 @@ class OpenSearchSnapshotsEvents(Object):
         if object_storage_type == "s3-pcluster":
             self.charm.snapshots_manager.store_s3_ca(object_storage_config.s3.tls_ca_chain)
             credentials = object_storage_config.s3.credentials
+            s3_data = {
+                "s3.client.default.access_key": credentials.access_key,
+                "s3.client.default.secret_key": credentials.secret_key,
+            }
             self.charm.keystore_manager.put_entries(
-                {
-                    "s3.client.default.access_key": credentials.access_key,
-                    "s3.client.default.secret_key": credentials.secret_key,
-                }
+                s3_data,
             )
         elif object_storage_type == "azure-pcluster":
             credentials = object_storage_config.azure.credentials
@@ -575,19 +577,28 @@ class OpenSearchSnapshotsEvents(Object):
         if self.charm.upgrade_in_progress:
             return "Backup/Restore operations not supported while upgrade in-progress."
 
-        if not self.object_storage_type:
+        ost = self.object_storage_type
+        if not ost:
             return "Missing relation with an object storage integrator."
 
-        if self.object_storage_type == "conflict":
+        if ost == "conflict":
             return "Conflict: more than one object storage integrators integrated."
 
         if not self.charm.opensearch.is_node_up() and not self.charm.alt_hosts:
             return "Connectivity issue: the opensearch service is not reachable."
 
+        repo_name = self.charm.snapshots_manager.repository_name(ost)
+        logger.debug(f"[snapshots] precheck: type={ost} repo={repo_name} alt_hosts={self.charm.alt_hosts}")
+
         try:
-            if not self.charm.snapshots_manager.is_repository_created(self.object_storage_type):
-                self._ensure_repository()
-                return "The opensearch repository has not been created yet."
+            if not self.charm.snapshots_manager.is_repository_created(ost):
+                osc = self.object_storage_config
+                if not osc:
+                    return "Object storage configuration not ready."
+                logger.info(f"[snapshots] repo {repo_name} missing; attempting create.")
+                self.charm.snapshots_manager.create_repo(ost, osc)
+                if not self.charm.snapshots_manager.is_repository_created(ost):
+                    return "The opensearch repository has not been created yet."
         except OpenSearchHttpError as e:
             return f"Action failed with: {str(e)}."
 
@@ -651,6 +662,8 @@ class OpenSearchSnapshotsManager:
             settings = {
                 "bucket": object_storage_config.s3.bucket,
                 "base_path": object_storage_config.s3.base_path,
+                "region": object_storage_config.s3.region,
+                "endpoint": object_storage_config.s3.endpoint,
             }
 
         elif object_storage_type in {"azure", "azure-pcluster"}:
@@ -663,7 +676,7 @@ class OpenSearchSnapshotsManager:
                 "bucket": object_storage_config.gcs.bucket,
                 "base_path": object_storage_config.gcs.base_path,
             }
-        repo_type = self._backend_type(object_storage_type)
+        repo_type = self._repo_type(object_storage_type)
         response = self.opensearch.request(
             "PUT",
             f"_snapshot/{repo_name}?verify=false",
@@ -698,15 +711,18 @@ class OpenSearchSnapshotsManager:
         """Create an OpenSearch snapshot."""
         repo_name = self.repository_name(object_storage_type)
         snapshot_id = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT).lower()
+        SYSTEM_INDICES = {".opendistro_security", OpenSearchNodeLock.OPENSEARCH_INDEX}
 
-        indices_to_ignore = "-,".join(
-            SYSTEM_INDICES
-        )  # the prefix dash ensures opensearch discards it
+        ignore = [f"-{idx}" for idx in SYSTEM_INDICES]
+        indices_clause = ",".join(["*"] + ignore)
+
+        # create snapshot
         response = self.opensearch.request(
             "PUT",
             f"_snapshot/{repo_name}/{snapshot_id}?wait_for_completion=false",
-            payload={"indices": f"*, -{indices_to_ignore}"},
+            payload={"indices": indices_clause},
             alt_hosts=self.charm.alt_hosts,
+            timeout=30,
         )
 
         logger.info(f"Snapshot request submitted with backup-id: {snapshot_id}")
@@ -959,7 +975,7 @@ class OpenSearchSnapshotsManager:
                 return True
             raise
 
-    def _backend_type(self, object_storage_type: ObjectStorageType) -> str:
+    def _repo_type(self, object_storage_type: ObjectStorageType) -> str:
         if object_storage_type in {"s3", "s3-pcluster"}:
             return "s3"
         if object_storage_type in {"azure", "azure-pcluster"}:
