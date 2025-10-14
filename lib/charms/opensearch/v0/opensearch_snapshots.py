@@ -648,9 +648,11 @@ class OpenSearchSnapshotsManager:
         repo_name = name or self.repository_name(object_storage_type)
         settings = {}
         if object_storage_type in {"s3", "s3-pcluster"}:
-            settings = object_storage_config.s3.model_dump(
-                exclude={"tls_ca_chain", "credentials"}, exclude_none=True
-            )
+            settings = {
+                "bucket": object_storage_config.s3.bucket,
+                "base_path": object_storage_config.s3.base_path,
+            }
+
         elif object_storage_type in {"azure", "azure-pcluster"}:
             settings = {
                 "container": object_storage_config.azure.container,
