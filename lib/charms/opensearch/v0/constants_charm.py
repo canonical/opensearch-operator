@@ -99,6 +99,7 @@ HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."
 WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on their service."
 NewIndexRequested = "new index {index} requested"
 RestoreInProgress = "Restore in progress..."
+BackupInProgress = "Backup in progress..."
 BackupSetupStart = "Backup setup started."
 BackupConfigureStart = "Configuring backup service..."
 BackupInDisabling = "Disabling backup service..."
@@ -134,6 +135,7 @@ OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 S3_RELATION = "s3-credentials"
 AZURE_RELATION = "azure-credentials"
+GCS_RELATION = "gcs-credentials"
 
 OAUTH_RELATION = "oauth"
 
