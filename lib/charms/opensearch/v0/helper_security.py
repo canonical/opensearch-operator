@@ -266,7 +266,7 @@ def remove_ca(alias: str, store_pwd: str, store_path: str) -> None:
     del_cmd = f"{KEYTOOL} -delete -keystore {store_path} -alias {alias} -storetype PKCS12"
     del_args = f"-storepass {store_pwd}"
     run_cmd(del_cmd, del_args)
-    logger.info(f"Removed %s from truststore.", alias)
+    logger.info("Removed %s from truststore.", alias)
 
 
 def store_key_pair(
