@@ -558,14 +558,13 @@ class OpenSearchTLS(Object):
             logging.error("CA cert  or truststore-password not found, quitting.")
             return False
 
-        is_ca_stored = store_ca(
+        if not store_ca(
             alias=CA_ALIAS,
             store_pwd=admin_secrets.get("truststore-password"),
             store_path=f"{self.certs_path}/{CA_ALIAS}.p12",
             ca=secrets.get("ca-cert"),
             keep_previous=True,
-        )
-        if not is_ca_stored:
+        ):
             return False
 
         self._add_ca_to_request_bundle(secrets.get("chain"))
