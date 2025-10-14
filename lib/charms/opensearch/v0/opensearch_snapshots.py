@@ -481,7 +481,7 @@ class OpenSearchSnapshotsEvents(Object):
     def object_storage_type(self) -> ObjectStorageType | None:  # noqa C901
         """Get the current object storage type."""
         dep = self.charm.opensearch_peer_cm.deployment_desc()
-        if not dep or dep.typ in {DeploymentType.MAIN_ORCHESTRATOR, DeploymentType.OTHER}:
+        if not dep or dep.typ in {DeploymentType.MAIN_ORCHESTRATOR}:
             active_rels = [
                 rel
                 for rel in [
