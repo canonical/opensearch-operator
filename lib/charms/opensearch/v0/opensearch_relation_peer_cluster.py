@@ -611,7 +611,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             secret_key=self.charm.secrets.get(Scope.APP, "azure-secret-key"),
         )
 
-
     def _s3_credentials(
         self, deployment_desc: DeploymentDescription
     ) -> Optional[S3RelDataCredentials]:

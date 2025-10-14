@@ -25,6 +25,7 @@ from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
     S3_RELATION,
     BackupInProgress,
+    PeerClusterRelationName,
     RestoreInProgress,
 )
 from charms.opensearch.v0.helper_cluster import ClusterState
@@ -36,7 +37,6 @@ from charms.opensearch.v0.models import (
     ObjectStorageConfig,
     S3RelData,
 )
-from charms.opensearch.v0.constants_charm import PeerClusterRelationName
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_health import HealthColors
@@ -303,7 +303,11 @@ class OpenSearchSnapshotsEvents(Object):
 
         # Fetch the snapshot with the corresponding ID
         try:
-            if not (snapshot := self.charm.snapshots_manager.get_snapshot(self.object_storage_type, snapshot_id)):
+            if not (
+                snapshot := self.charm.snapshots_manager.get_snapshot(
+                    self.object_storage_type, snapshot_id
+                )
+            ):
                 logger.error("Backup %s not found", snapshot_id)
                 event.fail(f"Backup {snapshot_id} not found.")
                 return
@@ -352,7 +356,7 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.status.clear(RestoreInProgress)
 
     def _on_peer_clusters_relation_changed_for_snapshots(self, event):
-        """Apply snapshots config when the orchestrator broadcasts credentials over peer-clusters."""
+        """Apply snapshots config when the orchestrator broadcasts over peer-clusters."""
         # Only leaders perform cluster-level config
         if not self.charm.unit.is_leader():
             return
@@ -362,7 +366,8 @@ class OpenSearchSnapshotsEvents(Object):
             event.defer()
             return
 
-        # In large deployments we only react here when NOT the main orchestrator
+        # When it is the main orchestrator, it is same with single cluster
+        # so we don't need to apply cluster-level config.
         if dep.typ == DeploymentType.MAIN_ORCHESTRATOR:
             return
 
@@ -422,8 +427,6 @@ class OpenSearchSnapshotsEvents(Object):
         if not dep:
             return
 
-        # If we were configured via peer-clusters and the orchestrator relation is leaving,
-        # remove the repo and any custom CA we set for S3.
         object_storage_type = self.object_storage_type
 
         # Nothing to do if not ready
@@ -438,7 +441,7 @@ class OpenSearchSnapshotsEvents(Object):
         elif object_storage_type == "azure-pcluster":
             keystore_entries = ["azure.client.default.account", "azure.client.default.key"]
         else:
-            keystore_entries = [] # gcs credentials
+            keystore_entries = []  # gcs credentials
 
         if not self._cleanup(
             object_storage_type=object_storage_type, keystore_entries=keystore_entries
@@ -446,12 +449,14 @@ class OpenSearchSnapshotsEvents(Object):
             event.defer()
             return
 
-        if object_storage_type in {"s3-pcluster"} and self.charm.snapshots_manager.is_custom_s3_ca_stored():
+        if (
+            object_storage_type in {"s3-pcluster"}
+            and self.charm.snapshots_manager.is_custom_s3_ca_stored()
+        ):
             self.charm.snapshots_manager.store_s3_ca(s3_tls_ca_chain=None)
-            # restart opensearch to clean up the new CA if the service is up
+            # restart opensearch to clean up the new CA
             if self.charm.request_opensearch_restart(reason="clean up the object storage CA"):
                 return
-
 
     def _cleanup(
         self, object_storage_type: ObjectStorageType | None, keystore_entries: list[str]
@@ -623,7 +628,6 @@ class OpenSearchSnapshotsEvents(Object):
                 logger.info("Created snapshot repository for %s", obj_type)
         except OpenSearchHttpError as e:
             logger.error("ensure_repository failed: %s", e)
-
 
 
 class OpenSearchSnapshotsManager:
@@ -932,23 +936,21 @@ class OpenSearchSnapshotsManager:
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def should_restart_for_full_setup(
-        self,
-        object_storage_type: ObjectStorageType,
-        object_storage_config: ObjectStorageConfig
+        self, object_storage_type: ObjectStorageType, object_storage_config: ObjectStorageConfig
     ) -> bool:
         """Check if a restart is needed for full setup."""
         if not self.opensearch.is_started():
             return False
 
         try:
-            test_repo =  f"tmp-{self.charm.unit_name}-{self.repository_name(object_storage_type)}"
+            test_repo = f"tmp-{self.charm.unit_name}-{self.repository_name(object_storage_type)}"
             self.create_repo(object_storage_type, object_storage_config, name=test_repo)
             # best effort clean up
             try:
                 self.remove_repo(object_storage_type)
             except Exception:
                 pass
-            # creation succeded, no restart needed
+            # creation succeeded, no restart needed
             return False
         except OpenSearchHttpError as e:
             if e.response_body.get("error", {}).get("type") == "repository_verification_exception":

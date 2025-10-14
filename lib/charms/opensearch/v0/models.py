@@ -509,6 +509,7 @@ class ObjectStorageConfig(Model):
     azure: AzureRelData | None = None
     gcs: GcsRelData | None = None
 
+
 class PeerClusterRelDataCredentials(Model):
     """Model class for credentials passed on the PCluster relation."""
 
