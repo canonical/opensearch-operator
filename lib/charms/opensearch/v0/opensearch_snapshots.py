@@ -588,7 +588,9 @@ class OpenSearchSnapshotsEvents(Object):
             return "Connectivity issue: the opensearch service is not reachable."
 
         repo_name = self.charm.snapshots_manager.repository_name(ost)
-        logger.debug(f"[snapshots] precheck: type={ost} repo={repo_name} alt_hosts={self.charm.alt_hosts}")
+        logger.debug(
+            f"[snapshots] precheck: type={ost} repo={repo_name} alt_hosts={self.charm.alt_hosts}"
+        )
 
         try:
             if not self.charm.snapshots_manager.is_repository_created(ost):
@@ -711,8 +713,6 @@ class OpenSearchSnapshotsManager:
         """Create an OpenSearch snapshot."""
         repo_name = self.repository_name(object_storage_type)
         snapshot_id = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT).lower()
-        SYSTEM_INDICES = {".opendistro_security", OpenSearchNodeLock.OPENSEARCH_INDEX}
-
         ignore = [f"-{idx}" for idx in SYSTEM_INDICES]
         indices_clause = ",".join(["*"] + ignore)
 
