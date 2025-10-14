@@ -2033,6 +2033,26 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             )
         )
 
+    def request_opensearch_restart(
+        self,
+        *,
+        reason: str | None = None,
+        when_started_only: bool = True,
+    ) -> bool:
+        """Ask the charm to restart OpenSearch via its internal restart event.
+
+        Returns True if a restart was requested/emitted, False if skipped.
+        """
+        msg = f"Requesting OpenSearch restart{f" ({reason})" if reason else ''}"
+        logger.info(msg)
+
+        if when_started_only and not self.opensearch.is_started():
+            logger.debug("Skipping restart request: OpenSearch not started yet.")
+            return False
+
+        self._restart_opensearch_event.emit()
+        return True
+
     @property
     def unit_ip(self) -> str:
         """IP address of the current unit."""

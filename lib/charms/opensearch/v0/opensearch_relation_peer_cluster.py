@@ -587,61 +587,59 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
     def _azure_credentials(
         self, deployment_desc: DeploymentDescription
     ) -> Optional[AzureRelDataCredentials]:
-        """Retrieve Azure storage credentials."""
+        """Retrieve Azure storage credentials from the azure-storage-integrator relation."""
+        rel = self.charm.model.get_relation(AZURE_RELATION)
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
-            if not self.charm.model.get_relation(AZURE_RELATION):
+            if not rel or not rel.app:
+                return None
+            rdata = dict(rel.data[rel.app])
+            storage_account = rdata.get("storage-account")
+            secret_key = rdata.get("secret-key")
+            if not (storage_account and secret_key):
                 return None
 
-            azure_storage_conn_info = self.charm.backup.client.get_azure_storage_connection_info()
-            if not azure_storage_conn_info.get("storage-account"):
-                return None
-
-            # As the main orchestrator, this application must set the azure information.
-            storage_account = azure_storage_conn_info.get("storage-account")
-            secret_key = azure_storage_conn_info.get("secret-key")
-
-            # set the secrets in the charm
-            # TODO Move this to azure relation and include both in one secret
+            # Persist for requirers via peer-clusters
             self.charm.secrets.put(Scope.APP, "azure-storage-account", storage_account)
             self.charm.secrets.put(Scope.APP, "azure-secret-key", secret_key)
-
             return AzureRelDataCredentials(storage_account=storage_account, secret_key=secret_key)
 
+        # non-main orchestrators: use what the provider already saved in secrets
         if not self.charm.secrets.get(Scope.APP, "azure-storage-account"):
             return None
-
-        # Return what we have received from the peer relation
         return AzureRelDataCredentials(
-            storage_account=self.charm.secrets.get(Scope.APP, "azure-access-key"),
+            storage_account=self.charm.secrets.get(Scope.APP, "azure-storage-account"),
             secret_key=self.charm.secrets.get(Scope.APP, "azure-secret-key"),
         )
+
 
     def _s3_credentials(
         self, deployment_desc: DeploymentDescription
     ) -> Optional[S3RelDataCredentials]:
-        """Retrieve S3 storage credentials."""
+        """Retrieve S3 storage credentials from s3 integrator relation."""
+        rel = self.charm.model.get_relation(S3_RELATION)
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
-            if not self.charm.model.get_relation(S3_RELATION):
+            if not rel or not rel.app:
+                return None
+            # Read directly from the integrator app's databag
+            rdata = dict(rel.data[rel.app])
+            access_key = rdata.get("access-key")
+            secret_key = rdata.get("secret-key")
+            tls_ca_chain = rdata.get("tls-ca-chain")
+            if not (access_key and secret_key):
                 return None
 
-            if not self.charm.backup.client.get_s3_connection_info().get("access-key"):
-                return None
-
-            # As the main orchestrator, this application must set the S3 information.
-            access_key = self.charm.backup.client.get_s3_connection_info().get("access-key")
-            secret_key = self.charm.backup.client.get_s3_connection_info().get("secret-key")
-
-            # set the secrets in the charm
-            # TODO Move this to s3 relation and include both in one secret
+            # Persist for requirers via peer-clusters
             self.charm.secrets.put(Scope.APP, "s3-access-key", access_key)
             self.charm.secrets.put(Scope.APP, "s3-secret-key", secret_key)
+            return S3RelDataCredentials(
+                access_key=access_key,
+                secret_key=secret_key,
+                tls_ca_chain=tls_ca_chain,
+            )
 
-            return S3RelDataCredentials(access_key=access_key, secret_key=secret_key)
-
+        # Non-main orchestrators: use what the provider already saved in secrets
         if not self.charm.secrets.get(Scope.APP, "s3-access-key"):
             return None
-
-        # Return what we have received from the peer relation
         return S3RelDataCredentials(
             access_key=self.charm.secrets.get(Scope.APP, "s3-access-key"),
             secret_key=self.charm.secrets.get(Scope.APP, "s3-secret-key"),
@@ -1377,6 +1375,8 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 data={"cluster_fleet_apps": json.dumps(cluster_fleet_apps)},
                 rel_id=rel_id,
             )
+
+    # delete  self.charm.opensearch_peer_cm.get(Scope.UNIT, "snapshot-object-storage-type")
 
     def _cm_nodes(self, orchestrators: PeerClusterOrchestrators) -> List[Node]:
         """Fetch the cm nodes passed from the peer cluster relation not api call."""
