@@ -1,0 +1,159 @@
+[32mINFO    [0m root:helpers_jwt.py:36 JWT successfully generated
+[32mINFO    [0m integration.relations.test_jwt_auth:test_jwt_auth.py:77 Creating signing-key secret
+[32mINFO    [0m integration.relations.test_jwt_auth:test_jwt_auth.py:84 Configuring jwt-integrator
+[32mINFO    [0m integration.relations.test_jwt_auth:test_jwt_auth.py:92 Integrating opensearch with jwt-integrator
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  01:48:27Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+jwt-integrator                     blocked      1  jwt-integrator            1/edge           1  no       Missing 'signing-key' or 'roles-key' con... Run `status-detail`: 0 action required; 1 additional statuses.
+opensearch                         active       3  opensearch                                 0  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+jwt-integrator/0*            blocked   executing  4        10.164.16.169             (config-changed) Missing 'signing-key' or 'roles-key' con... Run `status-detail`: 0 action required; 1 additional sta...
+opensearch/0                 active    executing  0        10.164.16.230   9200/tcp  
+opensearch/1*                active    executing  1        10.164.16.129   9200/tcp  
+opensearch/2                 active    executing  2        10.164.16.92    9200/tcp  
+self-signed-certificates/0*  active    idle       3        10.164.16.98              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.164.16.230  juju-b9856f-0  ubuntu@24.04  github-runner  Running
+1        started  10.164.16.129  juju-b9856f-1  ubuntu@24.04  github-runner  Running
+2        started  10.164.16.92   juju-b9856f-2  ubuntu@24.04  github-runner  Running
+3        started  10.164.16.98   juju-b9856f-3  ubuntu@22.04  github-runner  Running
+4        started  10.164.16.169  juju-b9856f-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:27 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.08f  -- (10.164.16.230) -- [executing (since: 01:48:27)] active: 
+		opensearch-1.08f* -- (10.164.16.129) -- [executing (since: 01:48:27)] active: 
+		opensearch-2.08f  -- (10.164.16.92) -- [executing (since: 01:48:27)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:38 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.08f  -- (10.164.16.230) -- [idle (since: 01:48:30)] active: 
+		opensearch-1.08f* -- (10.164.16.129) -- [idle (since: 01:48:34)] active: 
+		opensearch-2.08f  -- (10.164.16.92) -- [idle (since: 01:48:30)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.08f  -- (10.164.16.230) -- [idle (since: 01:48:30)] active: 
+		opensearch-1.08f* -- (10.164.16.129) -- [idle (since: 01:48:34)] active: 
+		opensearch-2.08f  -- (10.164.16.92) -- [idle (since: 01:48:30)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.08f  -- (10.164.16.230) -- [idle (since: 01:48:30)] active: 
+		opensearch-1.08f* -- (10.164.16.129) -- [idle (since: 01:48:34)] active: 
+		opensearch-2.08f  -- (10.164.16.92) -- [idle (since: 01:48:30)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 01:49:12 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.relations.test_jwt_auth:test_jwt_auth.py:103 Test access to `/_cat/nodes` with JWT
+[32mINFO    [0m integration.relations.test_jwt_auth:test_jwt_auth.py:110 Access with JWT successful
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.164.16.129:9200/_cat/nodes
+[32mINFO    [0m integration.relations.test_jwt_auth:test_jwt_auth.py:114 Access with Basic Auth successful
+[32mINFO    [0m integration.relations.test_jwt_auth:test_jwt_auth.py:116 Remove relation with jwt-integrator
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  01:49:15Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+jwt-integrator                     active      1  jwt-integrator            1/edge           1  no       
+opensearch                         active      3  opensearch                                 0  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+jwt-integrator/0*            active    executing  4        10.164.16.169             
+opensearch/0                 active    executing  0        10.164.16.230   9200/tcp  
+opensearch/1*                active    executing  1        10.164.16.129   9200/tcp  
+opensearch/2                 active    executing  2        10.164.16.92    9200/tcp  
+self-signed-certificates/0*  active    idle       3        10.164.16.98              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.164.16.230  juju-b9856f-0  ubuntu@24.04  github-runner  Running
+1        started  10.164.16.129  juju-b9856f-1  ubuntu@24.04  github-runner  Running
+2        started  10.164.16.92   juju-b9856f-2  ubuntu@24.04  github-runner  Running
+3        started  10.164.16.98   juju-b9856f-3  ubuntu@22.04  github-runner  Running
+4        started  10.164.16.169  juju-b9856f-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.08f  -- (10.164.16.230) -- [executing (since: 01:49:15)] active: 
+		opensearch-1.08f* -- (10.164.16.129) -- [executing (since: 01:49:15)] active: 
+		opensearch-2.08f  -- (10.164.16.92) -- [executing (since: 01:49:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.08f  -- (10.164.16.230) -- [idle (since: 01:49:17)] active: 
+		opensearch-1.08f* -- (10.164.16.129) -- [idle (since: 01:49:18)] active: 
+		opensearch-2.08f  -- (10.164.16.92) -- [idle (since: 01:49:17)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.08f  -- (10.164.16.230) -- [idle (since: 01:49:17)] active: 
+		opensearch-1.08f* -- (10.164.16.129) -- [idle (since: 01:49:18)] active: 
+		opensearch-2.08f  -- (10.164.16.92) -- [idle (since: 01:49:17)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 01:49:49 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.relations.test_jwt_auth:test_jwt_auth.py:129 Test access to `/_cat/nodes` with JWT
+[32mINFO    [0m integration.relations.test_jwt_auth:test_jwt_auth.py:134 Access with JWT failed as expected
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.164.16.129:9200/_cat/nodes
+[32mINFO    [0m integration.relations.test_jwt_auth:test_jwt_auth.py:138 Access with Basic Auth successful
+[32mINFO    [0m integration.relations.test_jwt_auth:test_jwt_auth.py:141 Remove Opensearch cluster
