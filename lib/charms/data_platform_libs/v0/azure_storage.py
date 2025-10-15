@@ -35,7 +35,9 @@ LIBAPI = 0
 # to 0 if you are raising the major API version
 LIBPATCH = 1
 
+
 logger = logging.getLogger(__name__)
+
 
 AZURE_STORAGE_REQUIRED_INFO = ["container", "storage-account", "secret-key", "connection-protocol"]
 
@@ -70,6 +72,7 @@ class StorageConnectionInfoGoneEvent(RelationEvent):
 
 class AzureStorageProviderEvents(CharmEvents):
     """Events for the AzureStorageProvider side implementation."""
+
     storage_connection_info_requested = EventSource(StorageConnectionInfoRequestedEvent)
 
 
@@ -96,9 +99,7 @@ class AzureStorageRequirerEventHandlers(RequirerEventHandlers):
 
     on = AzureStorageRequirerEvents()  # pyright: ignore[reportAssignmentType]
 
-    def __init__(
-        self, charm: CharmBase, relation_data: AzureStorageRequirerData
-    ):
+    def __init__(self, charm: CharmBase, relation_data: AzureStorageRequirerData):
         super().__init__(charm, relation_data)
 
         self.relation_name = relation_data.relation_name
@@ -213,7 +214,9 @@ class AzureStorageRequirerEventHandlers(RequirerEventHandlers):
     def _on_relation_broken_event(self, event: RelationBrokenEvent) -> None:
         """Event handler for handling relation_broken event."""
         logger.info("Azure Storage relation broken...")
-        getattr(self.on, "storage_connection_info_gone").emit(event.relation, app=event.app, unit=event.unit)
+        getattr(self.on, "storage_connection_info_gone").emit(
+            event.relation, app=event.app, unit=event.unit
+        )
 
     @property
     def relations(self) -> List[Relation]:
@@ -237,12 +240,15 @@ class AzureStorageRequires(AzureStorageRequirerData, AzureStorageRequirerEventHa
 class AzureStorageProviderData(ProviderData):
     """The Data abstraction of the provider side of Azure storage relation."""
 
+    RESOURCE_FIELD = "container"
+
     def __init__(self, model: Model, relation_name: str) -> None:
         super().__init__(model, relation_name)
 
 
 class AzureStorageProviderEventHandlers(EventHandlers):
     """The event handlers related to provider side of Azure Storage relation."""
+
     on = AzureStorageProviderEvents()
 
     def __init__(
@@ -256,7 +262,13 @@ class AzureStorageProviderEventHandlers(EventHandlers):
             return
         diff = self._diff(event)
         if "container" in diff.added:
-            self.on.storage_connection_info_requested.emit(event.relation, app=event.app, unit=event.unit)
+            self.on.storage_connection_info_requested.emit(
+                event.relation, app=event.app, unit=event.unit
+            )
+
+    def _on_secret_changed_event(self, event: SecretChangedEvent) -> None:
+        """Event emitted when the secret has changed."""
+        pass
 
 
 class AzureStorageProvides(AzureStorageProviderData, AzureStorageProviderEventHandlers):
