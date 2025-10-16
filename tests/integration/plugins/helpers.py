@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 """Helper functions related to testing the different plugins."""
-import asyncio
 import json
 import logging
 import random
@@ -13,8 +12,10 @@ from pytest_operator.plugin import OpsTest
 from tenacity import (
     RetryError,
     Retrying,
+    TryAgain,
     retry,
     stop_after_attempt,
+    stop_after_delay,
     wait_fixed,
     wait_random,
 )
@@ -152,14 +153,16 @@ async def poll_until(
     """Poll endpoint until condition is true or timeout"""
     logger.info(f"Polling {endpoint}...")
     try:
-        async with asyncio.timeout(timeout):
-            while True:
+        for attempt in Retrying(
+            stop=stop_after_delay(timeout), wait=wait_fixed(wait=interval), reraise=True
+        ):
+            with attempt:
                 response = await http_request(ops_test, "GET", endpoint)
                 if condition(response):
-                    logger.info(f"Done. Condition met: {response}")
+                    logger.info(f"Condition not met: {response}")
                     return True
                 logger.info(f"Condition not met: {response}")
-                await asyncio.sleep(interval)
-    except asyncio.TimeoutError:
+                raise TryAgain
+    except RetryError:
         logger.info("Polling timed out")
-        raise
+        return False

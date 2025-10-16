@@ -55,10 +55,10 @@ async def list_keystore_keys(ops_test: OpsTest, app: str, unit_id: int) -> Tuple
 @pytest.mark.skip_if_deployed
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy_active(ops_test: OpsTest, charm, series) -> None:
-    """Build and deploy one unit of OpenSearch."""
+    """Build test environment"""
     await ops_test.model.set_config(MODEL_CONFIG)
 
-    # Deploy TLS Certificates operator.
+    # Deploy large deployment of OpenSearch, TLS Certificates operator and SMTP integrator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(
@@ -100,6 +100,7 @@ async def test_build_and_deploy_active(ops_test: OpsTest, charm, series) -> None
         apps=[MAIN_APP, DATA_APP],
         status="active",
     )
+    await ops_test.model.wait_for_idle(apps=[SMTP_INTEGRATOR], status="blocked")
 
 
 @pytest.mark.abort_on_fail
