@@ -1,0 +1,140 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  01:50:29Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+azure-storage-integrator           blocked      1  azure-storage-integrator  latest/edge     22  no       Missing parameters: ['container', 'storage-account', 'credentials']
+failover                           active       2  opensearch                                 1  no       
+main                               active       1  opensearch                                 2  no       
+opensearch                         active       1  opensearch                                 0  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+azure-storage-integrator/0*  error     idle       1        10.222.247.173            hook failed: "config-changed"
+failover/0*                  active    idle       4        10.222.247.220  9200/tcp  
+failover/1                   active    idle       5        10.222.247.233  9200/tcp  
+main/0*                      active    executing  3        10.222.247.211  9200/tcp  
+opensearch/0*                active    idle       2        10.222.247.192  9200/tcp  
+self-signed-certificates/0*  active    idle       0        10.222.247.177            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.222.247.177  juju-1e4647-0  ubuntu@22.04  github-runner  Running
+1        started  10.222.247.173  juju-1e4647-1  ubuntu@22.04  github-runner  Running
+2        started  10.222.247.192  juju-1e4647-2  ubuntu@24.04  github-runner  Running
+3        started  10.222.247.211  juju-1e4647-3  ubuntu@24.04  github-runner  Running
+4        started  10.222.247.220  juju-1e4647-4  ubuntu@24.04  github-runner  Running
+5        started  10.222.247.233  juju-1e4647-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-3: 01:41:07 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:41:07 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-main-0: 01:41:07 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:41:12 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:41:12 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:41:12 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:41:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:41:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-0: 01:41:16 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:41:22 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:41:22 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-azure-storage-integrator-0: 01:41:22 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-5: 01:42:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:42:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-1: 01:42:10 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:42:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:42:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:42:58 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-failover-0: 01:43:40 ERROR unit.failover/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:43:40 ERROR unit.failover/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 01:43:41 ERROR unit.failover/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:43:41 ERROR unit.failover/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 01:43:43 ERROR unit.failover/0.juju-log certificates:13: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:43:43 ERROR unit.failover/0.juju-log certificates:13: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 01:43:44 ERROR unit.failover/0.juju-log certificates:13: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:43:44 ERROR unit.failover/0.juju-log certificates:13: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 01:43:46 ERROR unit.failover/0.juju-log certificates:13: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:43:46 ERROR unit.failover/0.juju-log certificates:13: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 01:43:47 ERROR unit.failover/0.juju-log peer-cluster:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:43:47 ERROR unit.failover/0.juju-log peer-cluster:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 01:43:47 ERROR unit.failover/0.juju-log peer-cluster:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:43:47 ERROR unit.failover/0.juju-log peer-cluster:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 01:43:49 ERROR unit.failover/0.juju-log peer-cluster:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:43:49 ERROR unit.failover/0.juju-log peer-cluster:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 01:43:50 ERROR unit.failover/0.juju-log peer-cluster:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:43:50 ERROR unit.failover/0.juju-log peer-cluster:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 01:43:51 ERROR unit.failover/0.juju-log peer-cluster:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:43:51 ERROR unit.failover/0.juju-log peer-cluster:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-0: 01:47:29 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:47:29 ERROR unit.opensearch/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:47:30 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:47:30 ERROR unit.opensearch/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:47:32 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:47:32 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:47:32 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:47:32 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:47:33 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:47:33 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:47:35 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:47:35 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:47:35 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:47:35 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-azure-storage-integrator-0: 01:50:27 ERROR unit.azure-storage-integrator/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-azure-storage-integrator-0/charm/src/charm.py", line 41, in <module>
+    ops.main.main(AzureStorageIntegratorCharm)
+  File "/var/lib/juju/agents/unit-azure-storage-integrator-0/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 352, in main
+    return _legacy_main.main(
+  File "/var/lib/juju/agents/unit-azure-storage-integrator-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-azure-storage-integrator-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 565, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-azure-storage-integrator-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 550, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-azure-storage-integrator-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 502, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-azure-storage-integrator-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 537, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-azure-storage-integrator-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-azure-storage-integrator-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 907, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-azure-storage-integrator-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 997, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-azure-storage-integrator-0/charm/src/events/base.py", line 59, in wrapper_hook
+    res = hook(event_handler, event)
+  File "/var/lib/juju/agents/unit-azure-storage-integrator-0/charm/src/events/general.py", line 76, in _on_config_changed
+    self.legacy_azure_storage_manager.update(self.context.azure_storage)
+  File "/var/lib/juju/agents/unit-azure-storage-integrator-0/charm/src/managers/azure_storage.py", line 20, in update
+    self.relation_data.update_relation_data(
+  File "/var/lib/juju/agents/unit-azure-storage-integrator-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 616, in wrapper
+    return f(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-azure-storage-integrator-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1742, in update_relation_data
+    return self._update_relation_data(relation, data)
+  File "/var/lib/juju/agents/unit-azure-storage-integrator-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1834, in _update_relation_data
+    raise PrematureDataAccessError(
+charms.data_platform_libs.v0.data_interfaces.PrematureDataAccessError: Premature access to relation data, update is forbidden before the connection is initialized.
+unit-azure-storage-integrator-0: 01:50:28 ERROR juju.worker.uniter.operation hook "config-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:185 Cleaning backups from cloud buckets
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:511 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.25.1 Python/3.12.3 (Linux-6.14.0-33-generic-x86_64-with-glibc2.39)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': '7edd3368-aa32-11f0-bc86-00163e479f5e'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:547 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': '2dbdb3e1-d01e-003d-483f-3ec4c9000000'
+    'x-ms-client-request-id': '7edd3368-aa32-11f0-bc86-00163e479f5e'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Thu, 16 Oct 2025 01:50:30 GMT'
