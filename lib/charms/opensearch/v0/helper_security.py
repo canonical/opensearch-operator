@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 KEYTOOL = "opensearch.keytool"
+OLD_CA_PREFIX = "old-"
 
 
 def hash_string(string: str) -> str:
@@ -144,11 +145,11 @@ def store_ca(
 
     for index in range(len(certs)):
         if keep_previous:
-            cmd = f"{KEYTOOL} -changealias -alias {alias}-{index} -destalias old-{alias}-{index} -keystore {store_path} -storetype PKCS12"
+            cmd = f"{KEYTOOL} -changealias -alias {alias}-{index} -destalias {OLD_CA_PREFIX}{alias}-{index} -keystore {store_path} -storetype PKCS12"
             args = f"-storepass {store_pwd}"
             try:
                 run_cmd(cmd, args)
-                logger.info(f"Current CA {alias}-{index} was renamed to old-{alias}-{index}.")
+                logger.info(f"Current CA {alias}-{index} was renamed to {OLD_CA_PREFIX}{alias}-{index}.")
             except OpenSearchCmdError as e:
                 # This message means there was no "ca" alias or store before, if it happens ignore
                 if not (
@@ -207,7 +208,7 @@ def list_aliases(store_pwd: str, store_path: str) -> Optional[list[str]]:
 
 
 def list_cas(store_pwd: str, store_path: str) -> Optional[dict[str, str]]:
-    """List the CAs current stored in a trust store."""
+    """List the CAs currently stored in a trust store."""
     if not exists(store_path):
         return None
 
