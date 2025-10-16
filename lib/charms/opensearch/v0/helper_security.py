@@ -149,7 +149,9 @@ def store_ca(
             args = f"-storepass {store_pwd}"
             try:
                 run_cmd(cmd, args)
-                logger.info(f"Current CA {alias}-{index} was renamed to {OLD_CA_PREFIX}{alias}-{index}.")
+                logger.info(
+                    f"Current CA {alias}-{index} was renamed to {OLD_CA_PREFIX}{alias}-{index}."
+                )
             except OpenSearchCmdError as e:
                 # This message means there was no "ca" alias or store before, if it happens ignore
                 if not (
