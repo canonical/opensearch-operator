@@ -10,7 +10,11 @@ from datetime import datetime
 from hashlib import md5
 from typing import Any, Dict, List, Literal, Optional
 
-from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS, GCS_CREDENTIALS
+from charms.opensearch.v0.constants_secrets import (
+    AZURE_CREDENTIALS,
+    GCS_CREDENTIALS,
+    S3_CREDENTIALS,
+)
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from pydantic import BaseModel, Field, root_validator, validator
 from pydantic.utils import ROOT_KEY
@@ -289,6 +293,7 @@ class S3RelDataCredentials(Model):
 
         allow_population_by_field_name = True
 
+
 class JWTAuthConfiguration(Model):
     """Model class for the configuration parameters of JWT authentication."""
 
@@ -300,7 +305,6 @@ class JWTAuthConfiguration(Model):
     required_audience: Optional[str] = None
     required_issuer: Optional[str] = None
     jwt_clock_skew_tolerance_seconds: Optional[int] = None
-
 
 
 class S3RelData(Model):

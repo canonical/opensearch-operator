@@ -127,6 +127,7 @@ def to_pkcs8(private_key: str, password: Optional[str] = None) -> str:
         os.unlink(tmp_key.name)
         os.unlink(tmp_pkcs8_key.name)
 
+
 def split_ca_chain(pem_content: str) -> list[str]:
     """Split PEM chain into individual certificates."""
     certs = []

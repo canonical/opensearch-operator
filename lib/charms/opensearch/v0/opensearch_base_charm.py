@@ -91,14 +91,14 @@ from charms.opensearch.v0.opensearch_relation_peer_cluster import (
 )
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
+from charms.opensearch.v0.opensearch_snapshots import (
+    OpenSearchSnapshotsEvents,
+    OpenSearchSnapshotsManager,
+)
 from charms.opensearch.v0.opensearch_tls import OLD_CA_ALIAS, OpenSearchTLS
 from charms.opensearch.v0.opensearch_users import (
     OpenSearchUserManager,
     OpenSearchUserMgmtError,
-)
-from charms.opensearch.v0.opensearch_snapshots import (
-    OpenSearchSnapshotsEvents,
-    OpenSearchSnapshotsManager,
 )
 from charms.opensearch.v0.state import OpenSearchClusterState
 from charms.tls_certificates_interface.v3.tls_certificates import (

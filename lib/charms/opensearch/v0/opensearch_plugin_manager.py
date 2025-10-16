@@ -20,16 +20,19 @@ from charms.opensearch.v0.helper_plugins import (
     remove_plugin_secret,
     store_plugin_secret,
 )
-from charms.opensearch.v0.models import PluginConfigInfo
+from charms.opensearch.v0.models import (
+    AzureRelData,
+    GcsRelData,
+    ObjectStorageConfig,
+    PluginConfigInfo,
+    S3RelData,
+)
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.smtp_integrator.v0.smtp import DEFAULT_RELATION_NAME as SMTP_RELATION
 from charms.smtp_integrator.v0.smtp import SmtpRequires
 from ops import BlockedStatus
 from ops.framework import Object
-
-from charms.opensearch.v0.models import ObjectStorageConfig, S3RelData, AzureRelData, GcsRelData
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
-from charms.opensearch.v0.opensearch_internal_data import Scope
 
 # The unique Charmhub library identifier, never change it
 LIBID = "da838485175f47dbbbb83d76c07cab4c"
@@ -202,7 +205,9 @@ class OpenSearchPluginEvents(Object):
         wrote_keys = False
         for label in added:
             plugin = app_plugins[label]
-            logger.info("[plugins/peer] processing added label=%s secret_id=%s", label, plugin.secret_id)
+            logger.info(
+                "[plugins/peer] processing added label=%s secret_id=%s", label, plugin.secret_id
+            )
             if not plugin.secret_id:
                 continue
 
@@ -210,7 +215,6 @@ class OpenSearchPluginEvents(Object):
             content = self.charm.secrets.get_tracked_secret(
                 plugin.secret_id, Scope.APP, label
             ).get_content()
-            
 
             if not (plugin_payload := decode_plugin_secret_content(content, label)):
                 continue
@@ -236,15 +240,16 @@ class OpenSearchPluginEvents(Object):
                 obj_type_marker = "s3-pcluster"
             elif repo.get("type") == "azure":
                 obj_type_marker = "azure-pcluster"
-            #elif repo.get("type") == "gcs":
+            # elif repo.get("type") == "gcs":
             #    obj_type_marker = "gcs-pcluster"
             else:
                 obj_type_marker = None
 
-
             if obj_type_marker:
-                self.charm.peers_data.put(Scope.UNIT, "snapshot-object-storage-type", obj_type_marker)
-                logger.info("[plugins/peer] set marker=%s and ensured repo", obj_type_marker)   
+                self.charm.peers_data.put(
+                    Scope.UNIT, "snapshot-object-storage-type", obj_type_marker
+                )
+                logger.info("[plugins/peer] set marker=%s and ensured repo", obj_type_marker)
 
         # reload keystore once after all adds/removes
         if wrote_keys:

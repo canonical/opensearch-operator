@@ -32,7 +32,15 @@ from charms.opensearch.v0.constants_charm import (
 from charms.opensearch.v0.constants_tls import TLS_RELATION, CertType
 from charms.opensearch.v0.helper_charm import all_units, run_cmd
 from charms.opensearch.v0.helper_networking import get_host_public_ip
-from charms.opensearch.v0.helper_security import generate_password
+from charms.opensearch.v0.helper_security import (
+    generate_password,
+    get_cert_issuer,
+    get_cert_issuer_from_path,
+    read_ca,
+    remove_ca,
+    store_ca,
+    store_key_pair,
+)
 from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
@@ -50,14 +58,6 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
 )
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationCreatedEvent
 from ops.framework import Object
-from charms.opensearch.v0.helper_security import (
-    read_ca,
-    remove_ca,
-    store_ca,
-    store_key_pair,
-    get_cert_issuer,
-    get_cert_issuer_from_path,
-)
 
 if typing.TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
@@ -553,7 +553,7 @@ class OpenSearchTLS(Object):
             self._create_keystore_pwd_if_not_exists(Scope.APP, CertType.APP_ADMIN, "ca")
 
         admin_secrets = (
-                self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val, peek=True) or {}
+            self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val, peek=True) or {}
         )
 
         if not ((secrets or {}).get("ca-cert") and admin_secrets.get("truststore-password")):

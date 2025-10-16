@@ -132,7 +132,6 @@ class OpenSearchSnapshotsEvents(Object):
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
 
-
     # Provider side
 
     def _on_s3_credentials_changed(self, event: CredentialsChangedEvent) -> None:
@@ -198,13 +197,17 @@ class OpenSearchSnapshotsEvents(Object):
             return
 
         # remove local/unit tracking
-        self.charm.plugin_manager.remove_plugin_config(scope=Scope.UNIT, label=SNAPSHOTS_SECRET_LABEL)
+        self.charm.plugin_manager.remove_plugin_config(
+            scope=Scope.UNIT, label=SNAPSHOTS_SECRET_LABEL
+        )
         self.charm.peers_data.delete(Scope.UNIT, "snapshot-object-storage-type")
 
         # provider cleans up APP-scoped secret + APP record
         if self.charm.unit.is_leader():
             remove_plugin_secret(self.charm, SNAPSHOTS_SECRET_LABEL)
-            self.charm.plugin_manager.remove_plugin_config(scope=Scope.APP, label=SNAPSHOTS_SECRET_LABEL)
+            self.charm.plugin_manager.remove_plugin_config(
+                scope=Scope.APP, label=SNAPSHOTS_SECRET_LABEL
+            )
 
             # tell consumers the APP secret is gone so they drop unit keys
             if self.charm.opensearch_peer_cm.is_provider(typ="main"):
@@ -260,13 +263,17 @@ class OpenSearchSnapshotsEvents(Object):
             return
 
         # remove local/unit tracking
-        self.charm.plugin_manager.remove_plugin_config(scope=Scope.UNIT, label=SNAPSHOTS_SECRET_LABEL)
+        self.charm.plugin_manager.remove_plugin_config(
+            scope=Scope.UNIT, label=SNAPSHOTS_SECRET_LABEL
+        )
         self.charm.peers_data.delete(Scope.UNIT, "snapshot-object-storage-type")
 
         # provider cleans up APP-scoped secret + APP record
         if self.charm.unit.is_leader():
             remove_plugin_secret(self.charm, SNAPSHOTS_SECRET_LABEL)
-            self.charm.plugin_manager.remove_plugin_config(scope=Scope.APP, label=SNAPSHOTS_SECRET_LABEL)
+            self.charm.plugin_manager.remove_plugin_config(
+                scope=Scope.APP, label=SNAPSHOTS_SECRET_LABEL
+            )
 
             # notify consumers so they drop unit keys and repo
             if self.charm.opensearch_peer_cm.is_provider(typ="main"):
@@ -274,7 +281,9 @@ class OpenSearchSnapshotsEvents(Object):
 
     def _republish_if_possible(self, event=None) -> None:
         # only provider should publish
-        if not (self.charm.unit.is_leader() and self.charm.opensearch_peer_cm.is_provider(typ="main")):
+        if not (
+            self.charm.unit.is_leader() and self.charm.opensearch_peer_cm.is_provider(typ="main")
+        ):
             return
 
         typ = self.object_storage_type
@@ -463,11 +472,13 @@ class OpenSearchSnapshotsEvents(Object):
             event.defer()
             return
 
-        if object_storage_type == "s3-pcluster" and self.charm.snapshots_manager.is_custom_s3_ca_stored():
+        if (
+            object_storage_type == "s3-pcluster"
+            and self.charm.snapshots_manager.is_custom_s3_ca_stored()
+        ):
             self.charm.snapshots_manager.store_s3_ca(s3_tls_ca_chain=None)
             if self.charm.request_opensearch_restart(reason="clean up the object storage CA"):
                 return
-
 
     # Helpers
 
@@ -509,7 +520,6 @@ class OpenSearchSnapshotsEvents(Object):
                 logger.info("[snapshots/grant] granted secret to peer relation id=%s", rel.id)
             except Exception as e:
                 logger.warning("[snapshots/grant] grant to rel %s failed: %s", rel.id, e)
-
 
     def _publish_snapshots_secret(
         self, object_storage_type: Literal["s3", "azure", "gcs"], cfg: ObjectStorageConfig
@@ -560,7 +570,9 @@ class OpenSearchSnapshotsEvents(Object):
             tls_ca_chain = cfg.s3.tls_ca_chain or raw["tls_ca_chain"]
 
             if not bucket:
-                logger.warning("[snapshots] s3 publish: missing bucket in cfg and relation; not publishing")
+                logger.warning(
+                    "[snapshots] s3 publish: missing bucket in cfg and relation; not publishing"
+                )
                 return
 
             payload = {
@@ -584,7 +596,9 @@ class OpenSearchSnapshotsEvents(Object):
             base_path = cfg.azure.base_path or raw["base_path"]
 
             if not container:
-                logger.warning("[snapshots] azure publish: missing container in cfg and relation; not publishing")
+                logger.warning(
+                    "[snapshots] azure publish: missing container in cfg and relation; not publishing"
+                )
                 return
 
             payload = {
@@ -596,7 +610,11 @@ class OpenSearchSnapshotsEvents(Object):
         elif object_storage_type == "gcs" and cfg.gcs:
             payload = {
                 "keys": {},
-                "repo": {"type": "gcs", "bucket": cfg.gcs.bucket, "base_path": cfg.gcs.base_path or ""},
+                "repo": {
+                    "type": "gcs",
+                    "bucket": cfg.gcs.bucket,
+                    "base_path": cfg.gcs.base_path or "",
+                },
             }
             rel_name = GCS_RELATION
 
@@ -624,9 +642,7 @@ class OpenSearchSnapshotsEvents(Object):
         # Juju secrets must be str -> str. Hence, store a single JSON blob.
         content = {"payload": json.dumps(payload)}
 
-        secret_id = store_plugin_secret(
-            self.charm, content=content, label=SNAPSHOTS_SECRET_LABEL
-        )
+        secret_id = store_plugin_secret(self.charm, content=content, label=SNAPSHOTS_SECRET_LABEL)
         if not secret_id:
             logger.warning("[snapshots] secret publish failed; not updating APP plugin record")
             return
@@ -766,7 +782,6 @@ class OpenSearchSnapshotsEvents(Object):
         finally:
             self.charm.status.clear(RestoreInProgress)
 
-
     # Computed properties
 
     @property
@@ -862,7 +877,9 @@ class OpenSearchSnapshotsEvents(Object):
         ost = self.object_storage_type
         logger.debug("[snapshots] precheck: object_storage_type=%s", ost)
         if not ost:
-            logger.warning("[snapshots/precheck] no object storage type; trying last-resort bootstrap")
+            logger.warning(
+                "[snapshots/precheck] no object storage type; trying last-resort bootstrap"
+            )
             if self._bootstrap_from_app_secret():
                 ost = self.object_storage_type
                 logger.info("[snapshots/precheck] bootstrap succeeded; ost=%s", ost)
@@ -950,12 +967,16 @@ class OpenSearchSnapshotsEvents(Object):
         # read the APP-scoped plugin record which is written by the provider
         app_plugins = self.charm.state.app.plugin_config_info
         if SNAPSHOTS_SECRET_LABEL not in app_plugins:
-            logger.debug("[snapshots/bootstrap] APP plugin_config_info lacks '%s'", SNAPSHOTS_SECRET_LABEL)
+            logger.debug(
+                "[snapshots/bootstrap] APP plugin_config_info lacks '%s'", SNAPSHOTS_SECRET_LABEL
+            )
             return False
 
         plugin = app_plugins[SNAPSHOTS_SECRET_LABEL]
         if not plugin.secret_id:
-            logger.debug("[snapshots/bootstrap] APP plugin '%s' has no secret_id", SNAPSHOTS_SECRET_LABEL)
+            logger.debug(
+                "[snapshots/bootstrap] APP plugin '%s' has no secret_id", SNAPSHOTS_SECRET_LABEL
+            )
             return False
 
         logger.info("[snapshots/bootstrap] fetching APP secret id=%s", plugin.secret_id)
@@ -963,7 +984,9 @@ class OpenSearchSnapshotsEvents(Object):
         try:
             content = self.charm.model.get_secret(id=plugin.secret_id).get_content()
         except Exception as e:
-            logger.warning("[snapshots/bootstrap] failed to read APP secret id=%s: %s", plugin.secret_id, e)
+            logger.warning(
+                "[snapshots/bootstrap] failed to read APP secret id=%s: %s", plugin.secret_id, e
+            )
             return False
 
         payload = self.parse_secret_content(content)
@@ -974,7 +997,9 @@ class OpenSearchSnapshotsEvents(Object):
         keys = payload.get("keys", {})
         repo = payload.get("repo", {})
         tls_ca_chain = payload.get("tlscachain")
-        logger.info("[snapshots/bootstrap] decoded secret: keys=%d, repo=%s", len(keys), repo.get("type"))
+        logger.info(
+            "[snapshots/bootstrap] decoded secret: keys=%d, repo=%s", len(keys), repo.get("type")
+        )
 
         # write keys to keystore
         if keys:
@@ -1000,7 +1025,9 @@ class OpenSearchSnapshotsEvents(Object):
 
             obj_type_marker = "s3-pcluster"
             if tls_ca_chain:
-                logger.debug("[snapshots/bootstrap] storing S3 CA chain (len=%d)", len(tls_ca_chain))
+                logger.debug(
+                    "[snapshots/bootstrap] storing S3 CA chain (len=%d)", len(tls_ca_chain)
+                )
                 self.charm.snapshots_manager.store_s3_ca(tls_ca_chain)
 
             obj_cfg = ObjectStorageConfig(
@@ -1063,7 +1090,9 @@ class OpenSearchSnapshotsEvents(Object):
         # ensure repository
         try:
             if not self.charm.snapshots_manager.is_repository_created(obj_type_marker):
-                logger.info("[snapshots/bootstrap] repo missing; creating repo for %s", obj_type_marker)
+                logger.info(
+                    "[snapshots/bootstrap] repo missing; creating repo for %s", obj_type_marker
+                )
                 self.charm.snapshots_manager.create_repo(obj_type_marker, obj_cfg)
             else:
                 logger.debug("[snapshots/bootstrap] repo already exists for %s", obj_type_marker)
@@ -1187,7 +1216,11 @@ class OpenSearchSnapshotsManager:
         snapshot_recoveries = [
             r
             for r in recovery_resp
-            if (r["type"] == "snapshot" and r["repository"] == repo_name and r["snapshot"] == snapshot_id)
+            if (
+                r["type"] == "snapshot"
+                and r["repository"] == repo_name
+                and r["snapshot"] == snapshot_id
+            )
         ]
         restored_indices = set([r["index"] for r in snapshot_recoveries if r["stage"] == "done"])
         expected_indices = set(snapshot.get("indices", []))
@@ -1214,7 +1247,9 @@ class OpenSearchSnapshotsManager:
             for index, payload in response["indices"].items()
             if not payload["closed"]
         }
-        closed_indices = [index for index in indices_to_close if index not in indices_failed_to_close]
+        closed_indices = [
+            index for index in indices_to_close if index not in indices_failed_to_close
+        ]
 
         logger.error("Failed to close some indices: \n%s", indices_failed_to_close)
         return closed_indices, indices_failed_to_close
@@ -1330,9 +1365,12 @@ class OpenSearchSnapshotsManager:
     def is_custom_s3_ca_stored(self, s3_ca_chain: str | None = None) -> bool:
         """Check if a custom CA for the object storage is stored in the cacerts trust store."""
         try:
-            stored_cacerts = list_cas(
-                store_pwd="changeit", store_path=f"{self.opensearch.paths.certs}/cacerts.p12"
-            ) or {}
+            stored_cacerts = (
+                list_cas(
+                    store_pwd="changeit", store_path=f"{self.opensearch.paths.certs}/cacerts.p12"
+                )
+                or {}
+            )
         except Exception:
             # if the keystore doesn't exist yet or list_cas fails, treat as CA is not stored
             stored_cacerts = {}
@@ -1374,7 +1412,9 @@ class OpenSearchSnapshotsManager:
             test_repo = f"tmp-{self.charm.unit_name}-{self.repository_name(object_storage_type)}"
             self.create_repo(object_storage_type, object_storage_config, name=test_repo)
             try:
-                self.opensearch.request("DELETE", f"_snapshot/{test_repo}", alt_hosts=self.charm.alt_hosts)
+                self.opensearch.request(
+                    "DELETE", f"_snapshot/{test_repo}", alt_hosts=self.charm.alt_hosts
+                )
             except Exception:
                 logger.warning("[plugins/peer] unable to remove tmp-snapshot")
                 pass
