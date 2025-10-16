@@ -50,6 +50,14 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
 )
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationCreatedEvent
 from ops.framework import Object
+from charms.opensearch.v0.helper_security import (
+    read_ca,
+    remove_ca,
+    store_ca,
+    store_key_pair,
+    get_cert_issuer,
+    get_cert_issuer_from_path,
+)
 
 if typing.TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm

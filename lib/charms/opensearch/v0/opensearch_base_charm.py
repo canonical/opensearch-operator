@@ -96,6 +96,10 @@ from charms.opensearch.v0.opensearch_users import (
     OpenSearchUserManager,
     OpenSearchUserMgmtError,
 )
+from charms.opensearch.v0.opensearch_snapshots import (
+    OpenSearchSnapshotsEvents,
+    OpenSearchSnapshotsManager,
+)
 from charms.opensearch.v0.state import OpenSearchClusterState
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
@@ -225,7 +229,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.plugin_events = OpenSearchPluginEvents(self)
         self.smtp_events = SmtpEvents(self)
 
-        self.backup = backup(self)
+        self.snapshots_manager = OpenSearchSnapshotsManager(self, self.opensearch)
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
         self.peer_cluster_provider = OpenSearchPeerClusterProvider(self)
@@ -279,6 +283,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # Ensure that only one instance of the `_on_peer_relation_changed` handler exists
         # in the deferred event queue
         self._is_peer_rel_changed_deferred = False
+        self.snapshots_events = OpenSearchSnapshotsEvents(self)
 
     @property
     @abc.abstractmethod
@@ -1912,13 +1917,16 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
     def request_opensearch_restart(
         self,
-        *,
         reason: str | None = None,
         when_started_only: bool = True,
     ) -> bool:
         """Ask the charm to restart OpenSearch via its internal restart event.
+        Args:
+            reason: The restart reason.
+            when_started_only: If true, only the data node is started.
 
-        Returns True if a restart was requested/emitted, False if skipped.
+        Returns:
+             True if a restart was requested/emitted, False if skipped.
         """
         msg = f"Requesting OpenSearch restart{f" ({reason})" if reason else ''}"
         logger.info(msg)

@@ -27,6 +27,10 @@ from charms.smtp_integrator.v0.smtp import SmtpRequires
 from ops import BlockedStatus
 from ops.framework import Object
 
+from charms.opensearch.v0.models import ObjectStorageConfig, S3RelData, AzureRelData, GcsRelData
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
+from charms.opensearch.v0.opensearch_internal_data import Scope
+
 # The unique Charmhub library identifier, never change it
 LIBID = "da838485175f47dbbbb83d76c07cab4c"
 
@@ -153,7 +157,7 @@ class SmtpEvents(Object):
             return
 
         content = event.secret.get_content(refresh=True)
-        if not (plugin_config := decode_plugin_secret_content(content, self.secret_label)):
+        if not (plugin_config := decode_plugin_secret_content(content, label)):
             return
 
         if not (keys := plugin_config.get("keys")):
@@ -185,15 +189,20 @@ class OpenSearchPluginEvents(Object):
 
     def _on_peer_relation_changed(self, event):  # noqa: C901
         """Handle plugin secret-related peer relation changes."""
-        # if this is a subcluster, all units must add plugin keys from secrets to their keystores
+        # Only sub-clusters consume secrets from the main provider
         if not self.charm.opensearch_peer_cm.is_consumer(of="main"):
             return
 
         app_plugins = self.charm.state.app.plugin_config_info
         unit_plugins = self.charm.state.unit.plugin_config_info
         added, removed = diff(app_plugins.keys(), unit_plugins.keys())
+        logger.debug("[plugins/peer] added=%s removed=%s", list(added), list(removed))
+
+        # add/update
+        wrote_keys = False
         for label in added:
             plugin = app_plugins[label]
+            logger.info("[plugins/peer] processing added label=%s secret_id=%s", label, plugin.secret_id)
             if not plugin.secret_id:
                 continue
 
@@ -201,31 +210,65 @@ class OpenSearchPluginEvents(Object):
             content = self.charm.secrets.get_tracked_secret(
                 plugin.secret_id, Scope.APP, label
             ).get_content()
+            
 
-            if not (plugin_config := decode_plugin_secret_content(content, label)):
+            if not (plugin_payload := decode_plugin_secret_content(content, label)):
                 continue
 
-            keys_to_add = plugin_config.get("keys")
+            keys_to_add = plugin_payload.get("keys") or {}
+            repo = plugin_payload.get("repo") or {}
+            tls_ca_chain = plugin_payload.get("tlscachain")
 
-            # store on unit for later removal (only keys needed and not values)
-            self.charm.plugin_manager.put_plugin_config(
-                scope=Scope.UNIT, label=label, cleanup={"keys": list(keys_to_add.keys())}
-            )
-            self.charm.keystore.add_entries(keys_to_add)
+            # store on unit for later removal (only key names)
+            if keys_to_add:
+                self.charm.plugin_manager.put_plugin_config(
+                    scope=Scope.UNIT, label=label, cleanup={"keys": list(keys_to_add.keys())}
+                )
+                self.charm.keystore.add_entries(keys_to_add)
+                wrote_keys = True
 
+            # store S3 CA (optional)
+            if repo.get("type") == "s3" and tls_ca_chain:
+                self.charm.snapshots_manager.store_s3_ca(tls_ca_chain)
+
+            # create local marker so actions can detect storage type
+            if repo.get("type") == "s3":
+                obj_type_marker = "s3-pcluster"
+            elif repo.get("type") == "azure":
+                obj_type_marker = "azure-pcluster"
+            #elif repo.get("type") == "gcs":
+            #    obj_type_marker = "gcs-pcluster"
+            else:
+                obj_type_marker = None
+
+
+            if obj_type_marker:
+                self.charm.peers_data.put(Scope.UNIT, "snapshot-object-storage-type", obj_type_marker)
+                logger.info("[plugins/peer] set marker=%s and ensured repo", obj_type_marker)   
+
+        # reload keystore once after all adds/removes
+        if wrote_keys:
+            if not self.charm.keystore.reload():
+                logger.debug("Could not reload secure settings. Deferring event.")
+                event.defer()
+                return
+            logger.debug("[plugins/peer] keystore reloaded successfully")
+
+        # remove
         for label in removed:
-            # this unit should delete the keys it wrote as the app secret has been removed
+            # delete any keys this unit wrote previously
             cleanup = unit_plugins[label].cleanup
             for key, items in cleanup.items():
-                if key == "keys":
+                if key == "keys" and items:
                     self.charm.keystore.remove_entries(items)
 
-        # reload keystore
+        # reload keystore after removals
         if not self.charm.keystore.reload():
             logger.debug("Could not reload secure settings. Deferring event.")
             event.defer()
             return
 
+        # finalize cleanup metadata after successful reload
         for label in removed:
             self.charm.plugin_manager.remove_plugin_config(scope=Scope.UNIT, label=label)
 
