@@ -744,6 +744,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.tempfile.NamedTemporaryFile")
     @patch("charms.opensearch.v0.helper_security.run_cmd")
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
+    @patch("charms.opensearch.v0.helper_security.split_ca_chain")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mocks to avoid I/O
     @patch("builtins.open", side_effect=unittest.mock.mock_open())
@@ -753,6 +754,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         deployment_type,
         _,
         deployment_desc,
+        split_ca_chain,
         read_stored_ca,
         run_cmd,
         named_temporary_file,
@@ -827,17 +829,20 @@ class TestOpenSearchTLS(unittest.TestCase):
         self.harness.set_leader(is_leader=True)
         original_status = self.harness.model.unit.status
 
+        split_ca_chain.return_value = ["new_ca"]
         self.charm.tls._on_certificate_available(event_mock)
 
         mock_add_ca_to_request_bundle.assert_called_once()
 
-        # Old CA cert is saved with corresponding alias, new new CA cert added to keystore
+        # Old CA cert is saved with corresponding alias, new CA cert added to keystore
         assert run_cmd.call_count == 3
         assert re.search(
-            "keytool *-changealias *-alias ca *-destalias old-ca",
+            "opensearch.keytool -changealias -alias ca-0 -destalias old-ca-0",
             run_cmd.call_args_list[0].args[0],
         )
-        assert re.search("keytool *-importcert.* *-alias ca", run_cmd.call_args_list[1].args[0])
+        assert re.search(
+            "opensearch.keytool -importcert.* *-alias ca-0", run_cmd.call_args_list[1].args[0]
+        )
         assert (
             "chmod +r /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12"
             in run_cmd.call_args_list[2].args[0]
@@ -1606,6 +1611,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.helper_security.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mock to avoid I/O
+    @patch("charms.opensearch.v0.helper_security.split_ca_chain")
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
     @patch("builtins.open", side_effect=unittest.mock.mock_open())
     def test_on_certificate_available_rotation_ongoing_on_this_unit(
@@ -1615,6 +1621,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         leader,
         _,
         read_stored_ca,
+        split_ca_chain,
         deployment_desc,
         run_cmd,
         named_temporary_file,
@@ -1677,6 +1684,7 @@ class TestOpenSearchTLS(unittest.TestCase):
                 self.rel_id, f"{self.charm.unit.name}", {"tls_ca_renewing": "True"}
             )
 
+        split_ca_chain.return_value = ["new_ca"]
         self.charm.tls._on_certificate_available(self.charm.on.certificate_available)
 
         # exactly three run_cmd commands to be executed: checking the current CA for the
@@ -1724,6 +1732,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.helper_security.run_cmd")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     # Mock to avoid I/O
+    @patch("charms.opensearch.v0.helper_security.split_ca_chain")
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.read_stored_ca")
     @patch("builtins.open", side_effect=unittest.mock.mock_open())
     def test_on_certificate_available_rotation_ongoing_on_another_unit(
@@ -1733,6 +1742,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         leader,
         _,
         read_stored_ca,
+        split_ca_chain,
         deployment_desc,
         run_cmd,
         __,
@@ -1797,6 +1807,7 @@ class TestOpenSearchTLS(unittest.TestCase):
                 self.rel_id, f"{self.charm.app.name}/1", {"tls_ca_renewing": "True"}
             )
 
+        split_ca_chain.return_value = ["new_ca"]
         self.charm.tls._on_certificate_available(self.charm.on.certificate_available)
 
         # exactly three run_cmd commands to be executed: checking the current CA for the
