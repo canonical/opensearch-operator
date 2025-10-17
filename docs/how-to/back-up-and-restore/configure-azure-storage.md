@@ -19,7 +19,7 @@ juju deploy azure-storage-integrator --channel latest/edge
 juju config azure-storage-integrator storage-account=<Azure_storage_account> container=<Azure_storage_container>
 ```
 
-Then, add the the secret key to the charm:
+Then, add the secret key to the charm:
 
 ```shell
 juju add-secret mysecret secret-key=<Azure_storage_key>
