@@ -101,4 +101,7 @@ The dashboard filters for juju-specific elements, e.g. application name, unit, m
 
 It is also possible to select a subset of nodes following roles. That can select nodes across models or applications as well.
 
-![Screenshot from 2024-06-28 18-53-33|690x124](upload://6VrppOeXntY5zUga6LzBIo8umbB.png)
+![Charmed-Opensearch Dashboard 1|690x342](upload://qFpwVcHJAk1M1ymQWxMqxxiwPm9.png)
+
+
+![Charmed-Opensearch Dashboard 2|690x324](upload://oxIdiHPhMSd1eBu606bkJH8Oiur.png)
