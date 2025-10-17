@@ -68,9 +68,9 @@ juju integrate grafana-agent prometheus
 Finally, integrate `grafana-agent` with consumed COS offers:
 
 ```shell
-juju integrate grafana-agent-k8s opensearch:grafana-dashboard
-juju integrate grafana-agent-k8s opensearch:logging
-juju integrate grafana-agent-k8s opensearch:metrics-endpoint
+juju integrate grafana-agent opensearch:grafana-dashboard
+juju integrate grafana-agent opensearch:logging
+juju integrate grafana-agent opensearch:cos-agent
 ```
 
 After this is complete, Grafana will show the new dashboard `Charmed OpenSearch`
