@@ -159,7 +159,7 @@ async def poll_until(
             with attempt:
                 response = await http_request(ops_test, "GET", endpoint)
                 if condition(response):
-                    logger.info(f"Condition not met: {response}")
+                    logger.info(f"Done. Condition met: {response}")
                     return True
                 logger.info(f"Condition not met: {response}")
                 raise TryAgain
