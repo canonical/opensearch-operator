@@ -47,7 +47,7 @@ the charm automatically assigns the following roles to all nodes.
 
 #### User set roles
 
-There are currently two ways for users to set roles in an application: at deploy time,
+There are currently two ways for users to set roles in an application: at deployment time,
 or via a config change. Note that a role change will effectively trigger a rolling restart
 of the OpenSearch application.
 

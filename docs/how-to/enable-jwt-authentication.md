@@ -56,7 +56,7 @@ Now grant permissions for the secret to JWT integrator:
 juju grant-secret jwt-key jwt-integrator
 ```
 
-Next step is to provide the secret URI as configuration option:
+The next step is to provide the secret URI as configuration option:
 
 ```shell
 juju config jwt-integrator signing-key=<your-secret-URI>
