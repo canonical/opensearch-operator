@@ -34,7 +34,7 @@ from charms.opensearch.v0.constants_charm import (
     BackupRelShouldNotExist,
     BackupSetupFailed,
 )
-from charms.opensearch.v0.opensearch_backups import S3_REPOSITORY
+from charms.opensearch.v0.opensearch_snapshots import S3_REPOSITORY
 from pytest_operator.plugin import OpsTest
 
 from ..ha.continuous_writes import ContinuousWrites

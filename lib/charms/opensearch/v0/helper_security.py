@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 KEYTOOL = "opensearch.keytool"
+OLD_CA_PREFIX = "old-"
 
 
 def hash_string(string: str) -> str:
@@ -130,16 +131,9 @@ def to_pkcs8(private_key: str, password: Optional[str] = None) -> str:
 
 def split_ca_chain(pem_content: str) -> list[str]:
     """Split PEM chain into individual certificates."""
-    certs = []
-    current_cert = ""
-
-    for line in pem_content.split("\n"):
-        current_cert += line + "\n"
-        if "-----END CERTIFICATE-----" in line:
-            certs.append(current_cert.strip())
-            current_cert = ""
-
-    return certs
+    end_cert_marker = "-----END CERTIFICATE-----"
+    parts = [part.strip() for part in pem_content.split(end_cert_marker) if part.strip()]
+    return [f"{part}\n{end_cert_marker}" for part in parts]
 
 
 def store_ca(
@@ -151,16 +145,21 @@ def store_ca(
 
     for index in range(len(certs)):
         if keep_previous:
-            cmd = f"{KEYTOOL} -changealias -alias {alias}-{index} -destalias old-{alias}-{index} -keystore {store_path} -storetype PKCS12"
+            cmd = f"{KEYTOOL} -changealias -alias {alias}-{index} -destalias {OLD_CA_PREFIX}{alias}-{index} -keystore {store_path} -storetype PKCS12"
             args = f"-storepass {store_pwd}"
             try:
                 run_cmd(cmd, args)
-                logger.info(f"Current CA {alias}-{index} was renamed to old-{alias}-{index}.")
+                logger.info(
+                    f"Current CA {alias}-{index} was renamed to {OLD_CA_PREFIX}{alias}-{index}."
+                )
             except OpenSearchCmdError as e:
                 # This message means there was no "ca" alias or store before, if it happens ignore
                 if not (
-                    f"Alias <{alias}-{index}> does not exist" in e.out
-                    or "Keystore file does not exist" in e.out
+                    e.out is not None
+                    and (
+                        f"Alias <{alias}-{index}> does not exist" in e.out
+                        or "Keystore file does not exist" in e.out
+                    )
                 ):
                     raise
 
@@ -183,7 +182,7 @@ def store_ca(
                 run_cmd(f"sudo chmod +r {store_path}")
                 logger.info("New CA was added to truststore.")
             except OpenSearchCmdError as e:
-                logging.error(f"Error storing the ca-cert: {e}")
+                logger.error("Error storing the ca-cert: %s", e)
                 return False
 
     return True
@@ -206,12 +205,12 @@ def list_aliases(store_pwd: str, store_path: str) -> Optional[list[str]]:
             if line.startswith("Alias name:")
         ]
     except OpenSearchCmdError as e:
-        logging.error(f"Error reading the current truststore: {e}")
+        logger.error("Error reading the current truststore: %s", e)
         return None
 
 
 def list_cas(store_pwd: str, store_path: str) -> Optional[dict[str, str]]:
-    """List the CAs current stored in a trust store."""
+    """List the CAs currently stored in a trust store."""
     if not exists(store_path):
         return None
 
@@ -220,7 +219,7 @@ def list_cas(store_pwd: str, store_path: str) -> Optional[dict[str, str]]:
     try:
         stored_certs = run_cmd(cmd, args).out
     except OpenSearchCmdError as e:
-        logging.error(f"Error reading the current truststore: {e}")
+        logging.error("Error reading the current truststore: %s", e)
         return None
 
     # parse output to retrieve the current CA (in case there are many)
@@ -264,13 +263,13 @@ def remove_ca(alias: str, store_pwd: str, store_path: str) -> None:
         run_cmd(list_cmd, list_args)
     except OpenSearchCmdError as e:
         # This message means there was no "ca" alias or store before, if it happens ignore
-        if f"Alias <{alias}> does not exist" in e.out:
+        if e.out and f"Alias <{alias}> does not exist" in e.out:
             return
 
     del_cmd = f"{KEYTOOL} -delete -keystore {store_path} -alias {alias} -storetype PKCS12"
     del_args = f"-storepass {store_pwd}"
     run_cmd(del_cmd, del_args)
-    logger.info(f"Removed {alias} from truststore.")
+    logger.info("Removed %s from truststore.", alias)
 
 
 def store_key_pair(
@@ -305,11 +304,11 @@ def store_key_pair(
         run_cmd(cmd, args)
         run_cmd(f"sudo chmod +r {store_path}")
     except OpenSearchCmdError as e:
-        logging.error(f"Error storing the TLS certificates for {name}: {e}")
+        logger.error("Error storing the TLS certificates for %s: %s", name, e)
     finally:
         tmp_key.close()
         tmp_cert.close()
-        logger.info(f"TLS certificate for {name} stored.")
+        logger.info("TLS certificate for %s stored.", name)
 
 
 def get_cert_issuer(cert: str) -> Optional[str]:
@@ -323,7 +322,7 @@ def get_cert_issuer(cert: str) -> Optional[str]:
     try:
         return run_cmd(f"openssl x509 -in {tmp_ca_file.name} -noout -issuer").out
     except OpenSearchCmdError as e:
-        logger.error(f"Error reading the current truststore: {e}")
+        logger.error("Error reading the current truststore: %s", e)
         return None
     finally:
         tmp_ca_file.close()
@@ -340,7 +339,7 @@ def get_cert_issuer_from_path(store_pwd: str, store_path: str) -> Optional[str]:
             """,
         ).out
     except OpenSearchCmdError as e:
-        logger.error(f"Error reading the current certificate: {e}")
+        logger.error("Error reading the current certificate: %s", e)
         return None
 
 
@@ -354,8 +353,8 @@ def get_cert_issuer_from_keystore(store_pwd: str, store_path: str) -> Optional[s
     try:
         return run_cmd(command=cmd, args=args).out
     except OpenSearchCmdError as e:
-        logger.error(f"Error reading the current certificate: {e}")
+        logger.error("Error reading the current certificate: %s", e)
         return None
     except AttributeError as e:
-        logger.error(f"Error reading secret: {e}")
+        logger.error("Error reading secret: %s", e)
         return None

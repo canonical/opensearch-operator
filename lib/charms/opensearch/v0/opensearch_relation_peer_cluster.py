@@ -603,7 +603,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             self.charm.secrets.put(Scope.APP, "azure-secret-key", secret_key)
             return AzureRelDataCredentials(storage_account=storage_account, secret_key=secret_key)
 
-        # non-main orchestrators: use what the provider already saved in secrets
+        # non-main orchestrators use what the provider already saved in secrets
         if not self.charm.secrets.get(Scope.APP, "azure-storage-account"):
             return None
         return AzureRelDataCredentials(
@@ -636,7 +636,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 tls_ca_chain=tls_ca_chain,
             )
 
-        # Non-main orchestrators: use what the provider already saved in secrets
+        # Non-main orchestrators use what the provider already saved in secrets
         if not self.charm.secrets.get(Scope.APP, "s3-access-key"):
             return None
         return S3RelDataCredentials(

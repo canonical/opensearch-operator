@@ -1,4 +1,4 @@
-# Copyright 2024 Canonical Ltd.
+# Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """OpenSearch Snapshots."""
@@ -94,7 +94,7 @@ class OpenSearchSnapshotsEvents(Object):
         self.azure_requirer = AzureStorageRequires(charm, AZURE_RELATION)
         self.gcs_requirer = AzureStorageRequires(charm, GCS_RELATION)
 
-        # simple deployments or to main orchestrator
+        # simple deployments or main orchestrator
         self.framework.observe(
             self.s3_requirer.on.credentials_changed, self._on_s3_credentials_changed
         )
@@ -238,7 +238,7 @@ class OpenSearchSnapshotsEvents(Object):
             event.fail(error_message)
             return
 
-        # Create new snapshot
+        # Create a new snapshot
         try:
             snapshot_id = self.charm.snapshots_manager.create_snapshot(
                 object_storage_type=self.object_storage_type
@@ -262,7 +262,7 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.status.clear(BackupInProgress)
 
     def _on_list_backups_action(self, event: ActionEvent) -> None:
-        """Handler for list backups  changes."""
+        """Handler for list backups changes."""
         if error_message := self._action_missing_pre_requisites(report_running_operations=False):
             event.fail(error_message)
             return
@@ -544,7 +544,6 @@ class OpenSearchSnapshotsEvents(Object):
             gcs_rel = self.charm.model.get_relation(GCS_RELATION)
             if not gcs_rel or not gcs_rel.app:
                 return None
-            # TODO: get gcs data from relation data properly
 
         pcluster_rel_data = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)
         if object_storage_type == "s3-pcluster":
