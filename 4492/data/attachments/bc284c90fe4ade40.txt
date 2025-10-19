@@ -1,0 +1,57 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  02:04:52Z
+
+App                       Version  Status       Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         maintenance      3  opensearch                                 0  no       Waiting for TLS to be fully configured...
+s3-integrator                      waiting        0/1  s3-integrator             1/stable       145  no       waiting for machine
+self-signed-certificates           waiting        0/1  self-signed-certificates  latest/stable  264  no       waiting for machine
+
+Unit                        Workload     Agent       Machine  Public address  Ports  Message
+opensearch/0*               maintenance  idle        2        10.47.68.99            Waiting for TLS to be fully configured...
+opensearch/1                maintenance  idle        3        10.47.68.57            Waiting for TLS to be fully configured...
+opensearch/2                maintenance  idle        4        10.47.68.75            Waiting for TLS to be fully configured...
+s3-integrator/0             waiting      allocating  0        10.47.68.66            waiting for machine
+self-signed-certificates/0  waiting      allocating  1        10.47.68.224           waiting for machine
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        down     10.47.68.66   juju-0a953a-0  ubuntu@22.04  github-runner  Running
+1        pending  10.47.68.224  juju-0a953a-1  ubuntu@22.04  github-runner  Running
+2        started  10.47.68.99   juju-0a953a-2  ubuntu@24.04  github-runner  Running
+3        started  10.47.68.57   juju-0a953a-3  ubuntu@24.04  github-runner  Running
+4        started  10.47.68.75   juju-0a953a-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-2: 01:42:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:42:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:42:16 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:42:19 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:42:19 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 01:42:19 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:42:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:42:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 01:42:24 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:185 Cleaning backups from cloud buckets
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:511 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.25.1 Python/3.12.3 (Linux-6.14.0-33-generic-x86_64-with-glibc2.39)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': '00caf329-ac90-11f0-9505-00163e51a9fb'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:547 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'eab7a8ea-301e-008c-709c-40dadc000000'
+    'x-ms-client-request-id': '00caf329-ac90-11f0-9505-00163e51a9fb'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Sun, 19 Oct 2025 02:04:54 GMT'

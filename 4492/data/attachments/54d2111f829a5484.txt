@@ -1,0 +1,24 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  02:04:53Z
+
+App                       Version  Status       Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         maintenance      1  opensearch                                 0  no       Waiting for TLS to be fully configured...
+self-signed-certificates           waiting        0/1  self-signed-certificates  latest/stable  264  no       waiting for machine
+
+Unit                        Workload     Agent       Machine  Public address  Ports  Message
+opensearch/0*               maintenance  idle        1        10.97.40.137           Waiting for TLS to be fully configured...
+self-signed-certificates/0  waiting      allocating  0        10.97.40.235           waiting for machine
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        pending  10.97.40.235  juju-f7d4da-0  ubuntu@22.04  github-runner  Running
+1        started  10.97.40.137  juju-f7d4da-1  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-1: 01:39:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:39:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:39:27 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...

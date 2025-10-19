@@ -1,0 +1,92 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  02:41:52Z
+
+App                       Version  Status       Scale  Charm                     Channel        Rev  Exposed  Message
+failover                           waiting          2  opensearch                                 1  no       TLS not fully configured in related 'main-orchestrator'.
+main                               maintenance      1  opensearch                                 0  no       Waiting for TLS to be fully configured...
+opensearch                         waiting          1  opensearch                                 2  no       TLS not fully configured in related 'main-orchestrator'.
+s3-integrator                      waiting        0/1  s3-integrator             1/stable       145  no       waiting for machine
+self-signed-certificates           waiting        0/1  self-signed-certificates  latest/stable  264  no       waiting for machine
+
+Unit                        Workload     Agent       Machine  Public address  Ports  Message
+failover/0                  maintenance  idle        4        10.186.156.141         Waiting for the admin user to be fully configured...
+failover/1*                 maintenance  idle        5        10.186.156.144         Waiting for the admin user to be fully configured...
+main/0*                     maintenance  idle        3        10.186.156.136         Waiting for TLS to be fully configured...
+opensearch/0*               maintenance  idle        2        10.186.156.189         Waiting for the admin user to be fully configured...
+s3-integrator/0             waiting      allocating  0        10.186.156.103         waiting for machine
+self-signed-certificates/0  waiting      allocating  1        10.186.156.33          waiting for machine
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        down     10.186.156.103  juju-5e1087-0  ubuntu@22.04  github-runner  Running
+1        pending  10.186.156.33   juju-5e1087-1  ubuntu@22.04  github-runner  Running
+2        started  10.186.156.189  juju-5e1087-2  ubuntu@24.04  github-runner  Running
+3        started  10.186.156.136  juju-5e1087-3  ubuntu@24.04  github-runner  Running
+4        started  10.186.156.141  juju-5e1087-4  ubuntu@24.04  github-runner  Running
+5        started  10.186.156.144  juju-5e1087-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-2: 01:39:08 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:39:08 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:39:08 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-5: 01:39:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:39:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-1: 01:39:10 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:39:15 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:39:15 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-main-0: 01:39:15 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:39:15 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:39:15 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-0: 01:39:15 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-opensearch-0: 01:40:49 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:40:49 ERROR unit.opensearch/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:40:50 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:40:50 ERROR unit.opensearch/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:40:51 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:40:51 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:40:51 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:40:51 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-failover-1: 01:40:51 ERROR unit.failover/1.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 01:40:51 ERROR unit.failover/1.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-0: 01:40:52 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:40:52 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-failover-1: 01:40:52 ERROR unit.failover/1.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 01:40:52 ERROR unit.failover/1.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-0: 01:40:53 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:40:53 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:40:53 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:40:53 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-failover-1: 01:40:53 ERROR unit.failover/1.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 01:40:53 ERROR unit.failover/1.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 01:40:53 ERROR unit.failover/1.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 01:40:53 ERROR unit.failover/1.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 01:40:54 ERROR unit.failover/1.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 01:40:54 ERROR unit.failover/1.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 01:40:55 ERROR unit.failover/1.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 01:40:55 ERROR unit.failover/1.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 01:40:55 ERROR unit.failover/1.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 01:40:55 ERROR unit.failover/1.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:185 Cleaning backups from cloud buckets
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:511 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.25.1 Python/3.12.3 (Linux-6.14.0-33-generic-x86_64-with-glibc2.39)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': '2bf1d62b-ac95-11f0-9dba-00163e4b3f04'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:547 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'bbef84a0-101e-0022-71a1-4077cd000000'
+    'x-ms-client-request-id': '2bf1d62b-ac95-11f0-9dba-00163e4b3f04'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Sun, 19 Oct 2025 02:41:54 GMT'
