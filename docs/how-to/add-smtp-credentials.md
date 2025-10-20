@@ -1,9 +1,11 @@
 (how-to-guides-add-smtp-credentials)=
-# How to add SMTP credentials
+# How to add SMTP credentials to enable email notifications
 
-This document explains how to add SMTP credentials to the OpenSearch keystore
+This document describes how to add SMTP credentials in order for the Notifications plugin to authenticate an email sender account.
 
-in order for the Notifications plugin to authenticate an email sender account.
+```{note}
+Sending emails through an SMTP server that uses self-signed certificates is not currently supported.
+```
 
 ## Deploy the SMTP integrator
 
@@ -35,25 +37,20 @@ smtp-integrator/0*           blocked   idle   4        10.45.114.15             
 Configure the SMTP integrator:
 
 ```shell
-juju config smtp-integrator user="<stmp-username>" password="<smtp-password>"
+juju config smtp-integrator user="<stmp-username>" password="<smtp-password>" host="<any non-empty string>"
 ```
 **Important**
 The [OpenSearch documention](https://docs.opensearch.org/2.19/observing-your-data/notifications/index/#create-email-sender) instructs you to specify a unique sender name when creating an email sender. This name must match the value of `user` you pass to the SMTP integrator. The sender name and username must be identical.
 
-The charm also requires a `host` configuration option, although the OpenSearch charm does not use this value. You can provide any non-empty string:
-
-```shell
-juju config smtp-integrator host="<non-empty string>"
-```
+The charm also requires a `host` configuration option, although the OpenSearch charm does not use this value. You can provide any non-empty string.
 
 ## Integrate the SMTP integrator and OpenSearch
 
-Integrate the SMTP integrator with the OpenSearch application to add the credentials to the OpenSearch keystore:
+Integrate the SMTP integrator with the OpenSearch application:
 
 ```shell
 juju integrate smtp-integrator:smtp opensearch
 ```
-Once integrated, the OpenSearch units will automatically update their keystores.
 
 ## Large Deployments
 
@@ -78,7 +75,7 @@ you will see a `blocked` status message similar to:
 
 ```shell
 App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch-data                    blocked      1  opensearch                                 2  no       SMTP relation must be created with the main cluster-orchestrator.
+opensearch-data                    blocked      1  opensearch                                 2  no       SMTP relation must be created with the main-orchestrator cluster.
 opensearch-failover                active       1  opensearch                                 1  no
 opensearch-main                    active       1  opensearch                                 0  no
 self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no

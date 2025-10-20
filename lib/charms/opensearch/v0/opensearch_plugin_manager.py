@@ -64,7 +64,7 @@ class SmtpEvents(Object):
     def _on_smtp_credentials_changed(self, event) -> None:
         """Creates secret containing key, value pairs for keystore"""
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
-            logger.debug("Node not up yet. Deferring event.")
+            logger.debug("Deployment not ready. Deferring event.")
             event.defer()
             return
 
@@ -136,7 +136,7 @@ class SmtpEvents(Object):
     def _on_smtp_credentials_gone(self, event) -> None:
         """Removes secret when credentials are gone"""
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
-            logger.debug("Node not up yet. Deferring event.")
+            logger.debug("Deployment not ready. Deferring event.")
             event.defer()
             return
 
