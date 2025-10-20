@@ -93,7 +93,7 @@ class OpenSearchSnap(OpenSearchDistribution):
                 return False
             with open(f"/proc/{pid}/stat") as f:
                 stat = f.read()
-        except subprocess.CalledProcessError:
+        except (subprocess.CalledProcessError, OpenSearchCmdError):
             return False
 
         # From: https://github.com/torvalds/linux/blob/ \
