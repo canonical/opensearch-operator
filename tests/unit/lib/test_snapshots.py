@@ -2,16 +2,34 @@
 # See LICENSE file for licensing details.
 import json
 from types import SimpleNamespace
-from unittest.mock import PropertyMock, patch
-
-import pytest
 from charms.opensearch.v0.constants_charm import AZURE_RELATION, S3_RELATION
 from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_health import HealthColors
+
+from unittest.mock import patch, PropertyMock
 from ops import testing
+import pytest
+
+from charms.opensearch.v0.constants_charm import S3_RELATION
+
+from charms.opensearch.v0.models import ObjectStorageConfig, S3RelData
+
+_S3_PEM = """-----BEGIN CERTIFICATE-----
+MIIDdTCCAl2gAwIBAgIUTestFakeCertForUnitTestsOnly1234567890
+-----END CERTIFICATE-----"""
+
+S3_CONN_INFO_WITH_CA = {
+    "access-key": "ACCESSXXX",
+    "secret-key": "secret",
+    "bucket": "mybucket",
+    "endpoint": "https://s3.example.com",
+    "region": "us-east-1",
+    "path": "base/path",
+    "tls_ca_chain": _S3_PEM,
+}
 
 S3_CONN_INFO = {
     "access-key": "ACCESSXXX",
@@ -30,6 +48,12 @@ AZURE_CONN_INFO = {
     "path": "base/path",
 }
 
+def _s3_relation():
+    return testing.Relation(
+        endpoint=S3_RELATION,
+        interface="s3",
+        remote_app_name="s3-integrator",
+    )
 
 def _relation_for_backend(backend: str) -> testing.Relation:
     if backend == "s3":
@@ -448,7 +472,6 @@ def test_restore_success(metadata, actions, charm_config, mk_ctx, backend):
         ) as m_apply,
     ):
         ctx.run(ctx.on.action("restore", params={"backup-id": "2025-01-01T10:00:00Z"}), st)
-        # The action doesn't set a result on pure success; just assert we reached health.apply
         assert m_apply.called
 
 
@@ -581,7 +604,6 @@ def test_restore_start_http_error(metadata, actions, charm_config, mk_ctx, backe
 
 @pytest.mark.parametrize("backend", ["s3", "azure"])
 def test_restore_non_restored_indices(metadata, actions, charm_config, mk_ctx, backend):
-    """If some indices didn’t restore, action fails with a count."""
     ctx = mk_ctx(metadata, actions, charm_config)
     st = testing.State(leader=True, relations={_relation_for_backend(backend)})
 
@@ -778,7 +800,6 @@ def test_prereq_repo_missing_and_cannot_create(metadata, actions, charm_config, 
 
 @pytest.mark.parametrize("backend", ["s3", "azure"])
 def test_prereq_http_error_during_precheck(metadata, actions, charm_config, mk_ctx, backend):
-    """Any HTTP error in precheck should shown up in the message."""
     ctx = mk_ctx(metadata, actions, charm_config)
     st = testing.State(leader=True, relations={_relation_for_backend(backend)})
 
@@ -813,7 +834,6 @@ def test_prereq_http_error_during_precheck(metadata, actions, charm_config, mk_c
     "color", [HealthColors.RED, HealthColors.YELLOW_TEMP, HealthColors.UNKNOWN]
 )
 def test_prereq_health_gates(metadata, actions, charm_config, mk_ctx, color):
-    """Health RED/YELLOW_TEMP/UNKNOWN blocks actions with specific messages."""
     backend = "s3"
     ctx = mk_ctx(metadata, actions, charm_config)
     st = testing.State(leader=True, relations={_relation_for_backend(backend)})
@@ -844,7 +864,6 @@ def test_prereq_health_gates(metadata, actions, charm_config, mk_ctx, color):
 
 
 def test_prereq_running_operations(metadata, actions, charm_config, mk_ctx):
-    """If a snapshot or restore is running, block action with a proper message."""
     backend = "s3"
     ctx = mk_ctx(metadata, actions, charm_config)
     st = testing.State(leader=True, relations={_relation_for_backend(backend)})
@@ -941,3 +960,88 @@ def test_prereq_conflict_multiple_relations(metadata, actions, charm_config, mk_
             ctx.run(ctx.on.action("create-backup"), st)
 
     assert "conflict" in err.value.message.lower()
+
+
+def test_repo_creation_passes_s3_ca_to_manager(metadata, actions, charm_config, mk_ctx):
+    CA = "-----BEGIN CERT-----\nMIIB...==\n-----END CERT-----\n"
+    s3_model = S3RelData.from_dict({
+        "bucket": S3_CONN_INFO["bucket"],
+        "endpoint": S3_CONN_INFO["endpoint"],
+        "region": S3_CONN_INFO["region"],
+        "path": S3_CONN_INFO.get("path"),
+        "tls-ca-chain": CA,
+        "credentials": {
+            "access-key": S3_CONN_INFO["access-key"],
+            "secret-key": S3_CONN_INFO["secret-key"],
+        },
+        "s3-uri-style": S3_CONN_INFO.get("s3-uri-style", False),
+    })
+    obj_cfg = ObjectStorageConfig(s3=s3_model)
+
+    ctx = mk_ctx(metadata, actions, charm_config)
+    s3 = testing.Relation(endpoint=S3_RELATION, interface="s3", remote_app_name="s3-integrator")
+    st = testing.State(leader=True, relations={s3})
+
+    with (
+        # force S3 flow
+        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
+              new_callable=PropertyMock, return_value="s3"),
+        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_config",
+              new_callable=PropertyMock, return_value=obj_cfg),
+        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_repository_created",
+              side_effect=[False, True]),
+        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.create_repo",
+              side_effect=lambda ost, osc, name=None: (
+                  (_ for _ in ()).throw(AssertionError("CA not forwarded to create_repo"))
+                  if (osc.s3.tls_ca_chain != CA) else "s3-repository"
+              )),
+        patch("charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
+              return_value=object()),
+        patch.object(OpenSearchDistribution, "is_node_up", return_value=True),
+        patch.object(OpenSearchBaseCharm, "alt_hosts", new_callable=PropertyMock, return_value=[]),
+        patch("charms.opensearch.v0.opensearch_health.OpenSearchHealth.get", return_value=HealthColors.GREEN),
+        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_snapshot_running", return_value=False),
+        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_restore_running", return_value=False),
+        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.create_snapshot",
+              return_value="2025-01-01T10:00:00Z"),
+        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.get_snapshot",
+              return_value={"snapshot": "2025-01-01T10:00:00Z", "state": "SUCCESS"}),
+    ):
+        ctx.run(ctx.on.action("create-backup"), st)
+        assert ctx.action_results == {"backup-id": "2025-01-01T10:00:00Z", "status": "SUCCESS"}
+
+
+
+def test_missing_s3_ca_does_not_block_operations(metadata, actions, charm_config, mk_ctx):
+    ctx = mk_ctx(metadata, actions, charm_config)
+    st = testing.State(leader=True, relations={_s3_relation()})
+
+    s3_no_ca = {k: v for k, v in S3_CONN_INFO_WITH_CA.items() if k != "tls_ca_chain"}
+
+    with (
+        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
+              new_callable=PropertyMock, return_value="s3"),
+        patch("charms.data_platform_libs.v0.s3.S3Requirer.get_s3_connection_info",
+              return_value=s3_no_ca),
+        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_repository_created",
+              return_value=True),
+        patch("charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
+              return_value=object()),
+        patch.object(OpenSearchDistribution, "is_node_up", return_value=True),
+        patch.object(OpenSearchBaseCharm, "alt_hosts", new_callable=PropertyMock, return_value=[]),
+        patch("charms.opensearch.v0.opensearch_health.OpenSearchHealth.get",
+              return_value=HealthColors.GREEN),
+        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_snapshot_running",
+              return_value=False),
+        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_restore_running",
+              return_value=False),
+        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.create_snapshot",
+              return_value="2025-01-01T10:00:00Z"),
+        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.get_snapshot",
+              return_value={"snapshot": "2025-01-01T10:00:00Z", "state": "SUCCESS"}),
+    ):
+        ctx.run(ctx.on.action("create-backup"), st)
+        assert ctx.action_results == {
+            "backup-id": "2025-01-01T10:00:00Z",
+            "status": "SUCCESS",
+        }
