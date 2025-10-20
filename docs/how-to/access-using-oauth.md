@@ -51,9 +51,9 @@ juju status --watch 5s
 
 ## Deploy the Identity Platform on MicroK8s
 
-### Prepare MicroK8s and add it to the existing controller.
+### Prepare MicroK8s and add it to the existing controller
 
-Install microk8s and enable hostpath-storage, dns and metallb plugins:
+Install MicroK8s and enable hostpath-storage, dns and metallb plugins:
 
 ```shell
 sudo snap install microk8s --classic
@@ -61,7 +61,7 @@ sudo microk8s enable hostpath-storage dns
 sudo microk8s enable metallb:10.0.0.2-10.0.0.3
 ```
 
-Add Microk8s cloud to your existing Juju Controller using kubeconfig file:
+Add MicroK8s cloud to your existing Juju Controller using kubeconfig file:
 
 ```shell
 sudo microk8s config > microk8s-cluster.yaml
