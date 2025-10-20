@@ -102,7 +102,7 @@ class SmtpEvents(Object):
             return
 
         # store keys to remove later
-        self.charm.plugin_manager.put_plugin_config(
+        self.charm.plugin_manager.add_plugin_config(
             scope=Scope.UNIT,
             label=self.secret_label,
             cleanup={"keys": list(entries.keys())},
@@ -229,7 +229,7 @@ class OpenSearchPluginEvents(Object):
             self.charm.plugin_manager.put_plugin_config(
                 scope=Scope.UNIT, label=label, cleanup={"keys": list(keys_to_add.keys())}
             )
-            self.charm.keystore.add_entries(keys_to_add)
+            self.charm.keystore.put_entries(keys_to_add)
 
         for label in removed:
             # this unit should delete the keys it wrote as the app secret has been removed

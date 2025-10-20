@@ -1,0 +1,9 @@
+summary: test_profiles.py
+environment:
+  TEST_MODULE: profiles/test_profiles.py
+systems:
+  - self-hosted-linux-amd64-noble-xlarge
+execute: |
+  tox run -e integration -- "tests/integration/$TEST_MODULE" --model testing --alluredir="$SPREAD_TASK/allure-results"
+artifacts:
+  - allure-results
