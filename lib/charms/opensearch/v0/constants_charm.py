@@ -72,6 +72,7 @@ BackupRelShouldNotExist = "This unit should not be related to backup relation"
 BackupRelDataIncomplete = "Backup relation data missing or incomplete."
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
 SecretAccessError = "Failed to access secret, please check permissions."
+SmtpRelationInvalid = "SMTP relation must be created with the main cluster-orchestrator."
 JWTAuthConfigInvalid = (
     "Configuration for JWT authentication is invalid. Check and correct parameters."
 )

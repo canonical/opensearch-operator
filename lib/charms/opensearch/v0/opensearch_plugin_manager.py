@@ -13,14 +13,14 @@ config-changed, upgrade, s3-credentials-changed, etc.
 import logging
 from typing import TYPE_CHECKING, Dict, List, Optional
 
-from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.constants_charm import PeerRelationName, SmtpRelationInvalid
 from charms.opensearch.v0.helper_charm import Status, diff
 from charms.opensearch.v0.helper_plugins import (
     decode_plugin_secret_content,
     remove_plugin_secret,
     store_plugin_secret,
 )
-from charms.opensearch.v0.models import PluginConfigInfo
+from charms.opensearch.v0.models import DeploymentType, PluginConfigInfo
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.smtp_integrator.v0.smtp import DEFAULT_RELATION_NAME as SMTP_RELATION
 from charms.smtp_integrator.v0.smtp import SmtpRequires
@@ -66,6 +66,16 @@ class SmtpEvents(Object):
 
     def _on_smtp_credentials_changed(self, event) -> None:
         """Creates secret containing key, value pairs for keystore"""
+        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+            logger.debug("Node not up yet. Deferring event.")
+            event.defer()
+            return
+
+        if deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR:
+            if self.charm.unit.is_leader():
+                self.charm.status.set(BlockedStatus(SmtpRelationInvalid), app=True)
+            return
+
         if not self.charm.opensearch.is_started():
             # node must be reachable to reload settings after adding keys
             event.defer()
@@ -126,6 +136,16 @@ class SmtpEvents(Object):
 
     def _on_smtp_credentials_gone(self, event) -> None:
         """Removes secret when credentials are gone"""
+        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+            logger.debug("Node not up yet. Deferring event.")
+            event.defer()
+            return
+
+        if deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR:
+            if self.charm.unit.is_leader():
+                self.charm.status.clear(SmtpRelationInvalid, app=True)
+            return
+
         plugin_config = self.charm.state.unit.plugin_config_info.get(self.secret_label)
         keys = plugin_config.cleanup.get("keys")
 
