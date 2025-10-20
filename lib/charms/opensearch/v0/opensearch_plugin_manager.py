@@ -95,7 +95,7 @@ class SmtpEvents(Object):
             f"opensearch.notifications.core.email.{user}.password": f"{parameters.password}",
         }
 
-        self.charm.keystore.add_entries(entries)
+        self.charm.keystore.put_entries(entries)
         if not self.charm.keystore.reload():
             logger.debug("Could not reload secure settings. Deferring event.")
             event.defer()
@@ -179,7 +179,7 @@ class SmtpEvents(Object):
             cleanup={"keys": list(keys.keys())},
         )
 
-        self.charm.keystore.add_entries(keys)
+        self.charm.keystore.put_entries(keys)
         if not self.charm.keystore.reload():
             logger.debug("Could not reload secure settings. Deferring event.")
             event.defer()
@@ -229,7 +229,7 @@ class OpenSearchPluginEvents(Object):
             self.charm.plugin_manager.put_plugin_config(
                 scope=Scope.UNIT, label=label, cleanup={"keys": list(keys_to_add.keys())}
             )
-            self.charm.keystore.add_entries(keys_to_add)
+            self.charm.keystore.put_entries(keys_to_add)
 
         for label in removed:
             # this unit should delete the keys it wrote as the app secret has been removed

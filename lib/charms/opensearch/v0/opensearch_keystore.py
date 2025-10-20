@@ -14,6 +14,7 @@ from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
+    OpenSearchHttpError,
 )
 
 # The unique Charmhub library identifier, never change it

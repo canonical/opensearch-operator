@@ -860,14 +860,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             event.defer()
             return
 
-        perf_profile_needs_restart = False
-
         if not self.opensearch_provider.update_relations_roles_mapping():
             event.defer()
 
-        if self.opensearch.is_service_started() and perf_profile_needs_restart:
+        if self.opensearch.is_service_started() and profile_restart_needed:
             logger.debug(
-                f"Restarting opensearch due to config change: perf_profile_needs_restart={perf_profile_needs_restart}"
+                "Restarting opensearch due to config change: profile_restart_needed=%s",
+                profile_restart_needed,
             )
             self._restart_opensearch_event.emit()
 
