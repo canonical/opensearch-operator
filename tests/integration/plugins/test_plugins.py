@@ -556,8 +556,8 @@ async def test_reports_scheduler(ops_test: OpsTest, deploy_type: str) -> None:
         apps=[DASHBOARDS_APP_NAME, APP_NAME],
         status="active",
     )
-    dash_leader_unit_ip = await get_leader_unit_ip(ops_test, app=DASHBOARDS_APP_NAME)
-    dash_base_url = f"https://{dash_leader_unit_ip}:5601"
+    dashboards_leader_unit_ip = await get_leader_unit_ip(ops_test, app=DASHBOARDS_APP_NAME)
+    dashboards_base_url = f"https://{dashboards_leader_unit_ip}:5601"
 
     # download sample data
     sample_data = "ecommerce"
@@ -565,7 +565,7 @@ async def test_reports_scheduler(ops_test: OpsTest, deploy_type: str) -> None:
     response = await http_request(
         ops_test,
         "POST",
-        f"{dash_base_url}/api/sample_data/{sample_data}",
+        f"{dashboards_base_url}/api/sample_data/{sample_data}",
         extra_headers={"osd-xsrf": "true"},
     )
     logger.info(f"Download response: {response}")
@@ -575,10 +575,10 @@ async def test_reports_scheduler(ops_test: OpsTest, deploy_type: str) -> None:
     response = await http_request(
         ops_test,
         "GET",
-        f"{dash_base_url}/api/saved_objects/_find?type=dashboard&search_fields=title&search={sample_data}",
+        f"{dashboards_base_url}/api/saved_objects/_find?type=dashboard&search_fields=title&search={sample_data}",
     )
     logger.info(f"Search fields response: {response}")
-    dash_id = response["saved_objects"][0]["id"]
+    dashboard_id = response["saved_objects"][0]["id"]
 
     start = int(datetime.now(timezone.utc).timestamp() * 1000)
     payload = {
@@ -588,8 +588,8 @@ async def test_reports_scheduler(ops_test: OpsTest, deploy_type: str) -> None:
             "source": {
                 "description": f"{sample_data} report",
                 "type": "Dashboard",
-                "origin": dash_base_url,
-                "id": dash_id,
+                "origin": dashboards_base_url,
+                "id": dashboard_id,
             },
             "format": {"duration": "PT12H", "fileFormat": "Pdf"},
             "trigger": {
@@ -607,6 +607,21 @@ async def test_reports_scheduler(ops_test: OpsTest, deploy_type: str) -> None:
 
     leader_unit_ip = await get_leader_unit_ip(ops_test)
     base_url = f"https://{leader_unit_ip}:9200"
+
+    # set job interval to 1m (min value)
+    settings = {
+        "persistent": {
+            "plugins.index_state_management.job_interval": 1,
+            "plugins.index_state_management.jitter": 0,
+        }
+    }
+
+    await http_request(
+        ops_test,
+        "PUT",
+        f"{base_url}/_cluster/settings",
+        settings,
+    )
     endpoint = f"{base_url}/_plugins/_reports"
 
     logger.info("Creating report definition...")
@@ -637,7 +652,7 @@ async def test_reports_scheduler(ops_test: OpsTest, deploy_type: str) -> None:
     await http_request(ops_test, "DELETE", f"{endpoint}/definition/{report_definition_id}")
 
     # delete sample data
-    await http_request(ops_test, "DELETE", f"{dash_base_url}/api/sampple_data/{sample_data}")
+    await http_request(ops_test, "DELETE", f"{dashboards_base_url}/api/sample_data/{sample_data}")
 
     # remove dashboards application
     await ops_test.model.remove_application(DASHBOARDS_APP_NAME, block_until_done=True)
@@ -677,21 +692,6 @@ async def test_ism_and_job_scheduler_plugins(ops_test: OpsTest, deploy_type: str
     """Test that the ISM and job scheduler plugins are enabled and functional."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
     base_url = f"https://{leader_unit_ip}:9200"
-
-    # set job interval to 1m (min value)
-    settings = {
-        "persistent": {
-            "plugins.index_state_management.job_interval": 1,
-            "plugins.index_state_management.jitter": 0,
-        }
-    }
-
-    await http_request(
-        ops_test,
-        "PUT",
-        f"{base_url}/_cluster/settings",
-        settings,
-    )
 
     # create index with alias
     index_alias = "ism-test"
@@ -775,10 +775,11 @@ async def test_anomaly_detection(ops_test: OpsTest, deploy_type: str) -> None:
     # insert time series data with an anomaly
     start = datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
     n = 500
+    anomaly = 1000.0
     docs = []
     for i in range(n):
         timestamp = (start + timedelta(minutes=i)).isoformat().replace("+00:00", "Z")
-        value = 1000.0 if i == 200 else 10.0 + (i % 5)
+        value = anomaly if i == 200 else 10.0 + (i % 5)
         docs.append({"timestamp": timestamp, "value": value})
 
     await bulk_insert(ops_test, APP_NAME, leader_unit_ip, bulk_encode(docs, anomaly_index))
@@ -786,7 +787,7 @@ async def test_anomaly_detection(ops_test: OpsTest, deploy_type: str) -> None:
 
     # create detector
     detector = {
-        "name": "anonmaly-detection",
+        "name": "anomaly-detection",
         "time_field": "timestamp",
         "indices": [anomaly_index],
         "feature_attributes": [
@@ -798,22 +799,52 @@ async def test_anomaly_detection(ops_test: OpsTest, deploy_type: str) -> None:
         ],
         "detection_interval": {"period": {"interval": 1, "unit": "Minutes"}},
     }
+    response = await http_request(ops_test, "POST", detectors_url, detector)
+    logger.info(f"Detector creation response {response}")
+    detector_id = response.get("_id")
+    assert detector_id, "Detector not created"
 
-    # preview detector
+    # run detector
     start_time = int(start.timestamp() * 1000)
     end_time = int((start + timedelta(minutes=n)).timestamp() * 1000)
-    payload = {
-        "detector": detector,
-        "period_start": start_time,
-        "period_end": end_time,
-    }
     response = await http_request(
         ops_test,
         "POST",
-        f"{detectors_url}/_preview",
-        payload,
+        f"{detectors_url}/{detector_id}/_start",
+        {
+            "start_time": start_time,
+            "end_time": end_time,
+        },
     )
-    assert len(response.get("anomaly_result")) > 0, "No anomalies found"
+    task_id = response.get("_id")
+    assert task_id, "Anomaly detection task not created"
+
+    # task will complete almost immediately
+    await asyncio.sleep(5)
+
+    payload = {
+        "query": {
+            "bool": {
+                "filter": [
+                    {"term": {"detector_id": detector_id}},
+                    {"range": {"anomaly_grade": {"gt": 0}}},
+                    {"term": {"task_id": task_id}},
+                ]
+            }
+        }
+    }
+
+    response = await http_request(ops_test, "POST", f"{detectors_url}/results/_search", payload)
+    logger.info(f"Respnse: {response}")
+    assert response.get("hits").get("total").get("value", 0) > 0, "No anomalies found"
+    assert (
+        response.get("hits").get("hits")[0].get("_source").get("feature_data")[0].get("data")
+        == anomaly
+    ), "Unexpected anomaly result"
+
+    # stop detector
+    await http_request(ops_test, "POST", f"{detectors_url}/{detector_id}/_stop")
+    await http_request(ops_test, "DELETE", f"{detectors_url}/{detector_id}")
     await delete_index(ops_test, APP_NAME, leader_unit_ip, anomaly_index)
 
 
@@ -846,7 +877,7 @@ async def test_async_search_plugin(ops_test: OpsTest, deploy_type: str) -> None:
         ops_test,
         f"{endpoint}/{async_job_id}",
         lambda progress: progress.get("state") == "STORE_RESIDENT",
-    ), "Async search did not complete before timeou"
+    ), "Async search did not complete before timeout"
 
 
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
