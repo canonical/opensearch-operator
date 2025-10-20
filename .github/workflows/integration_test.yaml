@@ -107,6 +107,10 @@ jobs:
         with:
           pattern: ${{ inputs.artifact-prefix }}-*
           merge-multiple: true
+      - name: Pin lxc image for jammy
+        run: |
+          sudo lxc image copy ubuntu:568f69ff1166 local:
+          sudo lxc image alias create "juju/ubuntu@22.04/amd64" 568f69ff1166
       - name: Run spread job
         timeout-minutes: 180
         id: spread
@@ -136,6 +140,12 @@ jobs:
       - timeout-minutes: 1
         if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
         run: snap list
+      - name: lxc image list
+        timeout-minutes: 1
+        if: ${{ (success() || (failure() && steps.spread.outcome == 'failure')) && inputs.path-to-charm-directory == 'machines' }}
+        # sudo needed since spread runs scripts as root
+        run: |
+          sudo lxc image list
       - name: Select model
         timeout-minutes: 1
         # `!contains(matrix.job.spread_job, 'juju29')` workaround for juju 2 error:
