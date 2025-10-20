@@ -10,19 +10,22 @@ This class is instantiated at the operator level and is called at every relevant
 config-changed, upgrade, s3-credentials-changed, etc.
 """
 
-import json
 import logging
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_charm import Status, diff
+from charms.opensearch.v0.helper_plugins import (
+    decode_plugin_secret_content,
+    remove_plugin_secret,
+    store_plugin_secret,
+)
 from charms.opensearch.v0.models import PluginConfigInfo
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.smtp_integrator.v0.smtp import DEFAULT_RELATION_NAME as SMTP_RELATION
 from charms.smtp_integrator.v0.smtp import SmtpRequires
 from ops import BlockedStatus
 from ops.framework import Object
-from ops.model import SecretNotFoundError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "da838485175f47dbbbb83d76c07cab4c"
@@ -110,12 +113,10 @@ class SmtpEvents(Object):
         if not self.charm.unit.is_leader():
             return
 
-        self.charm.secrets.put(Scope.APP, self.secret_label, json.dumps({"keys": entries}))
-        secret_id = self.charm.secrets.get_secret_id(Scope.APP, self.secret_label)
-        self.charm.plugin_manager.put_plugin_config(
-            scope=Scope.APP,
+        store_plugin_secret(
+            self.charm,
+            content={"keys": entries},
             label=self.secret_label,
-            secret_id=secret_id,
             relation_name=self.relation_name,
         )
 
@@ -140,17 +141,10 @@ class SmtpEvents(Object):
         if not self.charm.unit.is_leader():
             return
 
-        try:
-            self.charm.secrets.delete(Scope.APP, self.secret_label)
-            self.charm.plugin_manager.remove_plugin_config(
-                scope=Scope.APP, label=self.secret_label
-            )
-
-            # if unit is main orchestrator leader, remove secrets transferred to subclusters
-            if self.charm.opensearch_peer_cm.is_provider(typ="main"):
-                self.charm.peer_cluster_provider.refresh_relation_data(event)
-        except SecretNotFoundError:
-            logger.debug("Can't find secret %s", self.secret_label)
+        remove_plugin_secret(self.charm, self.secret_label)
+        # if unit is main orchestrator leader, remove secrets transferred to subclusters
+        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+            self.charm.peer_cluster_provider.refresh_relation_data(event)
 
     def _on_secret_changed(self, event) -> None:
         """Handles secret changes"""
@@ -159,14 +153,7 @@ class SmtpEvents(Object):
             return
 
         content = event.secret.get_content(refresh=True)
-        if not (raw := content.get(self.secret_label)):
-            logger.warning("Secret %s has no %s payload", event.secret.label, self.secret_label)
-            return
-
-        try:
-            plugin_config = json.loads(raw)
-        except json.JSONDecodeError:
-            logger.error("Malformed JSON in secret %s", event.secret.label)
+        if not (plugin_config := decode_plugin_secret_content(content, self.secret_label)):
             return
 
         if not (keys := plugin_config.get("keys")):
@@ -214,13 +201,8 @@ class OpenSearchPluginEvents(Object):
             content = self.charm.secrets.get_tracked_secret(
                 plugin.secret_id, Scope.APP, label
             ).get_content()
-            if not (raw := content.get(label)):
-                continue
 
-            try:
-                plugin_config = json.loads(raw)
-            except json.JSONDecodeError:
-                logger.error("Invalid JSON in secret for label %s", label)
+            if not (plugin_config := decode_plugin_secret_content(content, label)):
                 continue
 
             keys_to_add = plugin_config.get("keys")
@@ -265,10 +247,9 @@ class OpenSearchPluginManager:
         """Adds plugin configuration information to peer relation data"""
         state = self._state.app if scope == Scope.APP else self._state.unit
         plugins = state.plugin_config_info
-        plugin_config = plugins.get(label) or PluginConfigInfo(
-            relation_name=relation_name,
-            secret_id=secret_id,
-        )
+        plugin_config = plugins.get(label) or PluginConfigInfo()
+        plugin_config.relation_name = relation_name
+        plugin_config.secret_id = secret_id
         if cleanup:
             plugin_config.add_cleanup_items(cleanup)
         plugins[label] = plugin_config
