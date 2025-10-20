@@ -37,7 +37,7 @@ The upper portion of this page describes the Operating System (OS) where the cha
 
 ## Project & community
 
-Charmed OpenSearch is an official distribution of OpenSearch .
+Charmed OpenSearch is an official distribution of OpenSearch.
 It’s an open-source project that welcomes community contributions, suggestions,
 fixes and constructive feedback:
 
