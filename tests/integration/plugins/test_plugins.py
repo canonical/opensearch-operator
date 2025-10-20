@@ -835,7 +835,7 @@ async def test_anomaly_detection(ops_test: OpsTest, deploy_type: str) -> None:
     }
 
     response = await http_request(ops_test, "POST", f"{detectors_url}/results/_search", payload)
-    logger.info(f"Respnse: {response}")
+    logger.info(f"Anomaly results search response: {response}")
     assert response.get("hits").get("total").get("value", 0) > 0, "No anomalies found"
     assert (
         response.get("hits").get("hits")[0].get("_source").get("feature_data")[0].get("data")
