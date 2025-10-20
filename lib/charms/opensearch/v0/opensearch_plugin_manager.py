@@ -95,7 +95,7 @@ class SmtpEvents(Object):
             f"opensearch.notifications.core.email.{user}.password": f"{parameters.password}",
         }
 
-        self.charm.keystore.add_entries(entries)
+        self.charm.keystore.put_entries(entries)
         if not self.charm.keystore.reload():
             logger.debug("Could not reload secure settings. Deferring event.")
             event.defer()
@@ -179,7 +179,7 @@ class SmtpEvents(Object):
             cleanup={"keys": list(keys.keys())},
         )
 
-        self.charm.keystore.add_entries(keys)
+        self.charm.keystore.put_entries(keys)
         if not self.charm.keystore.reload():
             logger.debug("Could not reload secure settings. Deferring event.")
             event.defer()
