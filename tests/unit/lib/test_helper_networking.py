@@ -5,7 +5,7 @@
 
 import unittest
 import uuid
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_networking import (
@@ -55,17 +55,21 @@ class TestHelperNetworking(unittest.TestCase):
         self.charm.opensearch_exclusions._delete_voting = MagicMock()
         self.charm.opensearch_exclusions._removed_units_to_cleanup = MagicMock(return_value=[])
         self.charm.opensearch_config = MagicMock()
-        self.harness.update_relation_data(
-            self.rel_id, f"{self.charm.app.name}/1", {"private-address": "2.2.2.2"}
-        )
-        self.harness.update_relation_data(
-            self.rel_id, f"{self.charm.app.name}/2", {"private-address": "3.3.3.3"}
-        )
+        with patch(
+            "charms.opensearch.v0.opensearch_profile.ProfilesManager.check_missing_requirements",
+            return_value=[],
+        ):
+            self.harness.update_relation_data(
+                self.rel_id, f"{self.charm.app.name}/1", {"private-address": "2.2.2.2"}
+            )
+            self.harness.update_relation_data(
+                self.rel_id, f"{self.charm.app.name}/2", {"private-address": "3.3.3.3"}
+            )
 
-        self.assertDictEqual(
-            units_ips(self.charm, PeerRelationName),
-            {"0": "1.1.1.1", "1": "2.2.2.2", "2": "3.3.3.3"},
-        )
+            self.assertDictEqual(
+                units_ips(self.charm, PeerRelationName),
+                {"0": "1.1.1.1", "1": "2.2.2.2", "2": "3.3.3.3"},
+            )
 
     def test_is_reachable(self):
         """Test if host is reachable."""
