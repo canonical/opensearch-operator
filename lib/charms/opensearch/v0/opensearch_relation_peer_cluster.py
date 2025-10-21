@@ -279,7 +279,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
     def _on_peer_cluster_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Event received by all units in sub-cluster when a sub-cluster leaves the relation."""
-        if not self.charm.unit.is_leader():
+        if not (self.charm.unit.is_leader() and len(event.relation.units) > 0):
             return
 
         if not self.charm.opensearch.is_node_up():

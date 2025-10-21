@@ -610,7 +610,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             logger.warning(
                 "Removing units during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
-        if not self.unit.is_leader():
+        if not (self.unit.is_leader() and len(event.relation.units) > 0):
             return
 
         if not self.opensearch.is_node_up():
