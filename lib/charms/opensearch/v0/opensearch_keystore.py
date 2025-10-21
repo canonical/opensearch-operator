@@ -8,13 +8,15 @@ This module manages OpenSearch keystore access and lifecycle.
 import functools
 import logging
 import os
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
 
-from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
 )
+
+if TYPE_CHECKING:
+    from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 
 # The unique Charmhub library identifier, never change it
 LIBID = "de98efa151804b699d5d6128fa100807"

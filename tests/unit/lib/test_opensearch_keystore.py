@@ -65,3 +65,13 @@ class TestOpenSearchKeystore(unittest.TestCase):
         self.charm.opensearch.run_bin = MagicMock(return_value="")
         self.keystore._delete("key1")
         self.charm.opensearch.run_bin.assert_has_calls([call("keystore", "remove key1")])
+
+    def test_remove_entries_ignores_missing_keys(self) -> None:
+        """Tests that removing non-existent keys does not raise exception"""
+        self.charm.opensearch.run_bin = MagicMock(
+            side_effect=OpenSearchCmdError(
+                cmd="remove nonexistent",
+                err="ERROR: Setting [s3.client.default.access_key] does not exist in the keystore.",
+            )
+        )
+        self.keystore.remove_entries(["s3.client.default.access_key"])
