@@ -926,13 +926,18 @@ class OpenSearchSnapshotsManager:
 
     def is_custom_s3_ca_stored(self, s3_ca_chain: str | None = None) -> bool:
         """Check if a custom CA for the object storage is stored in the cacerts trust store."""
-        stored_cacerts = list_cas(
-            store_pwd="changeit", store_path=f"{self.opensearch.paths.certs}/cacerts.p12"
+        stored_cacerts = (
+            list_cas(store_pwd="changeit", store_path=f"{self.opensearch.paths.certs}/cacerts.p12")
+            or {}
         )
         if not s3_ca_chain:
             return stored_cacerts.get("s3-snapshots-gateway") is not None
 
-        return stored_cacerts.get("s3-snapshots-gateway") == s3_ca_chain
+        def _normalize_pem(s: str) -> str:
+            return "\n".join([line.rstrip() for line in s.strip().splitlines()])
+
+        val = stored_cacerts.get("s3-snapshots-gateway")
+        return _normalize_pem(val) == _normalize_pem(s3_ca_chain) if val else False
 
     def store_s3_ca(self, s3_tls_ca_chain: str | None) -> None:
         """Store or remove an s3 TLS CA chain on the cacerts trust store."""

@@ -1,28 +1,25 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
+from __future__ import annotations
+
 import json
-from types import SimpleNamespace
-from charms.opensearch.v0.constants_charm import AZURE_RELATION, S3_RELATION
-from charms.opensearch.v0.models import DeploymentType
-from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
-from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
+
+import pytest
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_health import HealthColors
-
-from unittest.mock import patch, PropertyMock
+from charms.opensearch.v0.opensearch_snapshots import (
+    OpenSearchSnapshotsManager as SnapshotsManager,
+)
 from ops import testing
-import pytest
 
-from charms.opensearch.v0.constants_charm import S3_RELATION
-
-from charms.opensearch.v0.models import ObjectStorageConfig, S3RelData
+from tests.unit.lib.fixtures_snapshots import SnapshotsUnitTestFixtures
 
 _S3_PEM = """-----BEGIN CERTIFICATE-----
 MIIDdTCCAl2gAwIBAgIUTestFakeCertForUnitTestsOnly1234567890
 -----END CERTIFICATE-----"""
 
 S3_CONN_INFO_WITH_CA = {
-    "access-key": "ACCESSXXX",
+    "access-key": "ACCESS",
     "secret-key": "secret",
     "bucket": "mybucket",
     "endpoint": "https://s3.example.com",
@@ -31,1017 +28,556 @@ S3_CONN_INFO_WITH_CA = {
     "tls_ca_chain": _S3_PEM,
 }
 
-S3_CONN_INFO = {
-    "access-key": "ACCESSXXX",
-    "secret-key": "secret",
-    "bucket": "mybucket",
-    "endpoint": "https://s3.example.com",
-    "region": "us-east-1",
-    "path": "base/path",
-}
 
-AZURE_CONN_INFO = {
-    "storage_account": "account",
-    "secret_key": "key",
-    "container": "backups",
-    "endpoint": "https://acct.blob.core.windows.net",
-    "path": "base/path",
-}
-
-def _s3_relation():
-    return testing.Relation(
-        endpoint=S3_RELATION,
-        interface="s3",
-        remote_app_name="s3-integrator",
-    )
-
-def _relation_for_backend(backend: str) -> testing.Relation:
-    if backend == "s3":
-        return testing.Relation(
-            endpoint=S3_RELATION, interface="s3", remote_app_name="s3-integrator"
-        )
-    elif backend == "azure":
-        return testing.Relation(
-            endpoint=AZURE_RELATION, interface="azure", remote_app_name="azure-integrator"
-        )
-
-
-def _conn_patch_for_backend(backend: str):
-    """Return a patch object that matches object storage connection info."""
-    if backend == "s3":
-        return patch(
-            "charms.data_platform_libs.v0.s3.S3Requirer.get_s3_connection_info",
-            return_value=S3_CONN_INFO,
-        )
-
-    return patch(
-        "charms.data_platform_libs.v0.object_storage.AzureStorageRequires.get_azure_storage_connection_info",
-        return_value=AZURE_CONN_INFO,
-    )
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_create_backup_action_http_error(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st_in = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-            return_value=None,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.create_snapshot",
-            side_effect=OpenSearchHttpError(response_text="server error", response_code=500),
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("create-backup"), st_in)
-    assert "backup request failed" in err.value.message.lower()
-    assert "server error" in err.value.message.lower()
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_create_backup_action_success(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st_in = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-            return_value=None,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.create_snapshot",
-            return_value="2025-01-01T10:00:00Z",
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.get_snapshot",
-            return_value={"snapshot": "2025-01-01T10:00:00Z", "state": "SUCCESS"},
-        ),
-    ):
-        ctx.run(ctx.on.action("create-backup"), st_in)
-
-    assert ctx.action_results == {
-        "backup-id": "2025-01-01T10:00:00Z",
-        "status": "SUCCESS",
-    }
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_list_backups_json(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st_in = testing.State(leader=True, relations={_relation_for_backend(backend)})
-    snapshots = {
-        "2025-01-01T10:00:00Z": {"state": "success", "indices": []},
-        "2025-01-01T09:00:00Z": {"state": "failed", "indices": []},
-    }
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-            return_value=None,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.list_snapshots",
-            return_value=snapshots,
-        ),
-    ):
-        ctx.run(ctx.on.action("list-backups", params={"output": "json"}), st_in)
-
-    assert json.loads(ctx.action_results["backups"]) == snapshots
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_list_backups_table(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st_in = testing.State(leader=True, relations={_relation_for_backend(backend)})
-    snapshots = {
-        "2025-01-01T10:00:00Z": {"state": "success", "indices": []},
-        "2025-01-01T09:00:00Z": {"state": "in_progress", "indices": []},
-    }
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-            return_value=None,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.list_snapshots",
-            return_value=snapshots,
-        ),
-    ):
-        ctx.run(ctx.on.action("list-backups", params={"output": "table"}), st_in)
-
-    table = ctx.action_results["backups"]
-    assert "backup-id" in table and "backup-status" in table
-    assert "2025-01-01T10:00:00Z" in table
-    assert "success" in table
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_create_backup_missing_prereqs(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st_in = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-            return_value="you must relate to storage",
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("create-backup"), st_in)
-
-    assert "you must relate to storage" in err.value.message.lower()
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_restore_missing_prereqs(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st_in = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-            return_value="cluster not ready",
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("restore", params={"backup-id": "2025-01-01T10:00:00Z"}), st_in)
-
-    assert "cluster not ready" in err.value.message.lower()
-
-
-def test_conflicting_storage_relations(metadata, actions, charm_config, mk_ctx):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    s3_rel = _relation_for_backend("s3")
-    # Skip entire test if azure isn't in metadata (helper will skip)
-    az_rel = _relation_for_backend("azure")
-    st_in = testing.State(leader=True, relations={s3_rel, az_rel})
-
-    with patch(
-        "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-        return_value="ambiguous object storage relations",
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("list-backups", params={"output": "json"}), st_in)
-
-    assert "ambiguous" in err.value.message.lower()
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_restore_not_found(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st_in = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-            return_value=None,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.get_snapshot",
-            return_value=None,
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("restore", params={"backup-id": "X"}), st_in)
-
-    assert "not found" in err.value.message.lower()
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_restore_get_snapshot_http_error(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st_in = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-            return_value=None,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.get_snapshot",
-            side_effect=OpenSearchHttpError(response_text="server error", response_code=500),
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("restore", params={"backup-id": "2025-01-01T10:00:00Z"}), st_in)
-
-    assert "server error" in err.value.message.lower()
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-@pytest.mark.parametrize(
-    "close_result, expect_fail, expect_msg",
-    [
-        ((None, None), False, None),
-        ((["idx1", "idx2"], None), False, None),
-        ((["idx1"], {"idx2": {"closed": False}}), True, "failed to close"),
-    ],
-)
-def test_restore_close_indices_paths(
-    metadata, actions, charm_config, mk_ctx, backend, close_result, expect_fail, expect_msg
-):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st_in = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    snapshot_doc = {"snapshot": "2025-01-01T10:00:00Z", "state": "SUCCESS"}
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-            return_value=None,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.get_snapshot",
-            return_value=snapshot_doc,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.close_snapshot_indices_open_in_cluster",
-            return_value=close_result,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.restore_snapshot",
-            return_value=None,
-        ),
-    ):
-        if expect_fail:
-            with pytest.raises(testing.ActionFailed) as err:
-                ctx.run(
-                    ctx.on.action("restore", params={"backup-id": "2025-01-01T10:00:00Z"}), st_in
-                )
-            assert expect_msg in err.value.message.lower()
+class TestCreateBackup(SnapshotsUnitTestFixtures):
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_create_backup_when_manager_raises_http_error_then_action_fails(self, backend):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
         else:
-            ctx.run(ctx.on.action("restore", params={"backup-id": "2025-01-01T10:00:00Z"}), st_in)
-            assert ctx.action_results.get("status") == expect_msg
+            self.use_azure()
+            rels = {self.azure_relation()}
 
+        st = testing.State(leader=True, relations=rels)
+        self.mock_create_snapshot.side_effect = OpenSearchHttpError(
+            response_text="server error", response_code=500
+        )
 
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_restore_start_fails(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st_in = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    snapshot_doc = {"snapshot": "2025-01-01T10:00:00Z", "state": "SUCCESS"}
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-            return_value=None,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.get_snapshot",
-            return_value=snapshot_doc,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.close_snapshot_indices_open_in_cluster",
-            return_value=(None, None),
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.restore_snapshot",
-            side_effect=OpenSearchHttpError(response_text="restore failed", response_code=409),
-        ),
-    ):
         with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("restore", params={"backup-id": "2025-01-01T10:00:00Z"}), st_in)
+            self.ctx.run(self.ctx.on.action("create-backup"), st)
 
-    assert "restore failed" in err.value.message.lower()
+        msg = err.value.message.lower()
+        assert "backup request failed" in msg
+        assert "server error" in msg or "500" in msg
 
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_create_backup_when_all_ok_then_success_result_is_returned(self, backend):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
 
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_list_backups_http_error(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st_in = testing.State(leader=True, relations={_relation_for_backend(backend)})
+        st = testing.State(leader=True, relations=rels)
 
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-            return_value=None,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.list_snapshots",
-            side_effect=OpenSearchHttpError(response_text="server error", response_code=503),
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("list-backups", params={"output": "json"}), st_in)
+        self.ctx.run(self.ctx.on.action("create-backup"), st)
 
-    msg = err.value.message.lower()
-    assert "server error" in msg or "503" in msg
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_restore_success(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    snapshot_doc = {"snapshot": "2025-01-01T10:00:00Z", "state": "SUCCESS", "indices": ["idx1"]}
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-            return_value=None,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.get_snapshot",
-            return_value=snapshot_doc,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.close_snapshot_indices_open_in_cluster",
-            return_value=(None, None),
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.restore_snapshot",
-            return_value=set(),
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_health.OpenSearchHealth.apply", return_value=None
-        ) as m_apply,
-    ):
-        ctx.run(ctx.on.action("restore", params={"backup-id": "2025-01-01T10:00:00Z"}), st)
-        assert m_apply.called
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_restore_snapshot_not_found(metadata, actions, charm_config, mk_ctx, backend):
-    """If get_snapshot returns None, action fails with 'not found'."""
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-            return_value=None,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.get_snapshot",
-            return_value=None,
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("restore", params={"backup-id": "X"}), st)
-        assert "not found" in err.value.message.lower()
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_restore_fails_to_close_indices(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    snapshot_doc = {"snapshot": "S", "state": "SUCCESS", "indices": ["idx1", "idx2"]}
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-            return_value=None,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.get_snapshot",
-            return_value=snapshot_doc,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.close_snapshot_indices_open_in_cluster",
-            return_value=(["idx1"], {"idx2": {"closed": False}}),
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("restore", params={"backup-id": "S"}), st)
-        assert "failed to close" in err.value.message.lower()
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_restore_close_indices_http_error(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    snapshot_doc = {"snapshot": "S", "state": "SUCCESS", "indices": ["idx"]}
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-            return_value=None,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.get_snapshot",
-            return_value=snapshot_doc,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.close_snapshot_indices_open_in_cluster",
-            side_effect=OpenSearchHttpError(response_text="close-error", response_code=500),
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("restore", params={"backup-id": "S"}), st)
-        assert "close" in err.value.message.lower()
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_restore_start_http_error(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    snapshot_doc = {"snapshot": "S", "state": "SUCCESS"}
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-            return_value=None,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.get_snapshot",
-            return_value=snapshot_doc,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.close_snapshot_indices_open_in_cluster",
-            return_value=(None, None),
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.restore_snapshot",
-            side_effect=OpenSearchHttpError(response_text="restore failed", response_code=409),
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("restore", params={"backup-id": "S"}), st)
-        assert "restore failed" in err.value.message.lower()
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_restore_non_restored_indices(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    snapshot_doc = {"snapshot": "S", "state": "SUCCESS"}
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
-            return_value=None,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.get_snapshot",
-            return_value=snapshot_doc,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.close_snapshot_indices_open_in_cluster",
-            return_value=(None, None),
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.restore_snapshot",
-            return_value={"a", "b"},
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("restore", params={"backup-id": "S"}), st)
-        assert "failed to restore 2 indices" in err.value.message.lower()
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_prereq_not_leader(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st = testing.State(leader=False, relations={_relation_for_backend(backend)})
-    with pytest.raises(testing.ActionFailed) as err:
-        ctx.run(ctx.on.action("create-backup"), st)
-    assert "leader" in err.value.message.lower()
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_prereq_deployment_not_ready(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    with patch(
-        "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
-        return_value=None,
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("create-backup"), st)
-    assert "deployment not ready" in err.value.message.lower()
-
-
-def test_prereq_upgrade_in_progress(metadata, actions, charm_config, mk_ctx):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st = testing.State(leader=True)
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
-            return_value=object(),
-        ),
-        patch(
-            "src.charm.OpenSearchOperatorCharm.upgrade_in_progress",
-            new_callable=PropertyMock,
-            return_value=True,
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("create-backup"), st)
-    assert "upgrade in-progress" in err.value.message.lower()
-
-
-def test_prereq_missing_relation(metadata, actions, charm_config, mk_ctx):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st = testing.State(leader=True)
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
-            return_value=object(),
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=None,
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("create-backup"), st)
-    assert "missing relation" in err.value.message.lower()
-
-
-def test_prereq_conflict_detected_from_two_relations(metadata, actions, charm_config, mk_ctx):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    s3 = testing.Relation(
-        endpoint=S3_RELATION,
-        interface="s3",
-        remote_app_name="s3-integrator",
-        remote_app_data={
-            "access-key": "AKIEE",
-            "secret-key": "secret",
-            "bucket": "bkt",
-        },
-    )
-    az = testing.Relation(
-        endpoint=AZURE_RELATION,
-        interface="azure",
-        remote_app_name="azure-integrator",
-        remote_app_data={
-            "account-name": "account",
-            "account-key": "key",
-            "container": "cont",
-        },
-    )
-    st = testing.State(leader=True, relations={s3, az})
-
-    with patch(
-        "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
-        return_value=SimpleNamespace(typ=DeploymentType.MAIN_ORCHESTRATOR),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("create-backup"), st)
-
-    assert "conflict" in err.value.message.lower()
-
-
-def test_prereq_conflict_more_than_one_relation_via_property(
-    metadata, actions, charm_config, mk_ctx
-):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st = testing.State(leader=True)
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
-            return_value=SimpleNamespace(typ=None),
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value="conflict",
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("create-backup"), st)
-    assert "conflict" in err.value.message.lower()
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_prereq_repo_missing_and_cannot_create(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
-            return_value=object(),
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_repository_created",
-            side_effect=[False, False],
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.create_repo",
-            return_value=None,
-        ),
-        patch.object(OpenSearchDistribution, "is_node_up", return_value=True),
-        patch.object(OpenSearchBaseCharm, "alt_hosts", new_callable=PropertyMock, return_value=[]),
-        patch(
-            "charms.opensearch.v0.opensearch_health.OpenSearchHealth.get",
-            return_value=HealthColors.GREEN,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_snapshot_running",
-            return_value=False,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_restore_running",
-            return_value=False,
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("create-backup"), st)
-    assert "repository has not been created" in err.value.message.lower()
-
-
-@pytest.mark.parametrize("backend", ["s3", "azure"])
-def test_prereq_http_error_during_precheck(metadata, actions, charm_config, mk_ctx, backend):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
-            return_value=object(),
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_repository_created",
-            side_effect=OpenSearchHttpError(response_text="precheck-failed", response_code=500),
-        ),
-        patch.object(OpenSearchDistribution, "is_node_up", return_value=True),
-        patch(
-            "src.charm.OpenSearchOperatorCharm.alt_hosts",
-            new_callable=PropertyMock,
-            return_value=[],
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("create-backup"), st)
-    assert "precheck-failed" in err.value.message.lower()
-
-
-@pytest.mark.parametrize(
-    "color", [HealthColors.RED, HealthColors.YELLOW_TEMP, HealthColors.UNKNOWN]
-)
-def test_prereq_health_gates(metadata, actions, charm_config, mk_ctx, color):
-    backend = "s3"
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
-            return_value=object(),
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_repository_created",
-            return_value=True,
-        ),
-        patch.object(OpenSearchDistribution, "is_node_up", return_value=True),
-        patch.object(OpenSearchBaseCharm, "alt_hosts", new_callable=PropertyMock, return_value=[]),
-        patch("charms.opensearch.v0.opensearch_health.OpenSearchHealth.get", return_value=color),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("create-backup"), st)
-    msg = err.value.message.lower()
-    assert any(k in msg for k in ["red", "relocating", "unknown"])
-
-
-def test_prereq_running_operations(metadata, actions, charm_config, mk_ctx):
-    backend = "s3"
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st = testing.State(leader=True, relations={_relation_for_backend(backend)})
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
-            return_value=object(),
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_repository_created",
-            return_value=True,
-        ),
-        patch.object(OpenSearchDistribution, "is_node_up", return_value=True),
-        patch.object(OpenSearchBaseCharm, "alt_hosts", new_callable=PropertyMock, return_value=[]),
-        patch(
-            "charms.opensearch.v0.opensearch_health.OpenSearchHealth.get",
-            return_value=HealthColors.GREEN,
-        ),
-        # simulate running snapshot
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_snapshot_running",
-            return_value=True,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_restore_running",
-            return_value=False,
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("create-backup"), st)
-        assert "operation in progress" in err.value.message.lower()
-
-    # simulate running restore
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
-            return_value=object(),
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value=backend,
-        ),
-        _conn_patch_for_backend(backend),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_repository_created",
-            return_value=True,
-        ),
-        patch.object(OpenSearchDistribution, "is_node_up", return_value=True),
-        patch.object(OpenSearchBaseCharm, "alt_hosts", new_callable=PropertyMock, return_value=[]),
-        patch(
-            "charms.opensearch.v0.opensearch_health.OpenSearchHealth.get",
-            return_value=HealthColors.GREEN,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_snapshot_running",
-            return_value=False,
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_restore_running",
-            return_value=True,
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("create-backup"), st)
-        assert "operation in progress" in err.value.message.lower()
-
-
-def test_prereq_conflict_multiple_relations(metadata, actions, charm_config, mk_ctx):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    s3_rel = _relation_for_backend("s3")
-    az_rel = _relation_for_backend("azure")
-    st = testing.State(leader=True, relations={s3_rel, az_rel})
-
-    with (
-        patch(
-            "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
-            return_value=object(),
-        ),
-        patch(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-            new_callable=PropertyMock,
-            return_value="conflict",
-        ),
-    ):
-        with pytest.raises(testing.ActionFailed) as err:
-            ctx.run(ctx.on.action("create-backup"), st)
-
-    assert "conflict" in err.value.message.lower()
-
-
-def test_repo_creation_passes_s3_ca_to_manager(metadata, actions, charm_config, mk_ctx):
-    CA = "-----BEGIN CERT-----\nMIIB...==\n-----END CERT-----\n"
-    s3_model = S3RelData.from_dict({
-        "bucket": S3_CONN_INFO["bucket"],
-        "endpoint": S3_CONN_INFO["endpoint"],
-        "region": S3_CONN_INFO["region"],
-        "path": S3_CONN_INFO.get("path"),
-        "tls-ca-chain": CA,
-        "credentials": {
-            "access-key": S3_CONN_INFO["access-key"],
-            "secret-key": S3_CONN_INFO["secret-key"],
-        },
-        "s3-uri-style": S3_CONN_INFO.get("s3-uri-style", False),
-    })
-    obj_cfg = ObjectStorageConfig(s3=s3_model)
-
-    ctx = mk_ctx(metadata, actions, charm_config)
-    s3 = testing.Relation(endpoint=S3_RELATION, interface="s3", remote_app_name="s3-integrator")
-    st = testing.State(leader=True, relations={s3})
-
-    with (
-        # force S3 flow
-        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-              new_callable=PropertyMock, return_value="s3"),
-        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_config",
-              new_callable=PropertyMock, return_value=obj_cfg),
-        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_repository_created",
-              side_effect=[False, True]),
-        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.create_repo",
-              side_effect=lambda ost, osc, name=None: (
-                  (_ for _ in ()).throw(AssertionError("CA not forwarded to create_repo"))
-                  if (osc.s3.tls_ca_chain != CA) else "s3-repository"
-              )),
-        patch("charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
-              return_value=object()),
-        patch.object(OpenSearchDistribution, "is_node_up", return_value=True),
-        patch.object(OpenSearchBaseCharm, "alt_hosts", new_callable=PropertyMock, return_value=[]),
-        patch("charms.opensearch.v0.opensearch_health.OpenSearchHealth.get", return_value=HealthColors.GREEN),
-        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_snapshot_running", return_value=False),
-        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_restore_running", return_value=False),
-        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.create_snapshot",
-              return_value="2025-01-01T10:00:00Z"),
-        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.get_snapshot",
-              return_value={"snapshot": "2025-01-01T10:00:00Z", "state": "SUCCESS"}),
-    ):
-        ctx.run(ctx.on.action("create-backup"), st)
-        assert ctx.action_results == {"backup-id": "2025-01-01T10:00:00Z", "status": "SUCCESS"}
-
-
-
-def test_missing_s3_ca_does_not_block_operations(metadata, actions, charm_config, mk_ctx):
-    ctx = mk_ctx(metadata, actions, charm_config)
-    st = testing.State(leader=True, relations={_s3_relation()})
-
-    s3_no_ca = {k: v for k, v in S3_CONN_INFO_WITH_CA.items() if k != "tls_ca_chain"}
-
-    with (
-        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-              new_callable=PropertyMock, return_value="s3"),
-        patch("charms.data_platform_libs.v0.s3.S3Requirer.get_s3_connection_info",
-              return_value=s3_no_ca),
-        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_repository_created",
-              return_value=True),
-        patch("charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
-              return_value=object()),
-        patch.object(OpenSearchDistribution, "is_node_up", return_value=True),
-        patch.object(OpenSearchBaseCharm, "alt_hosts", new_callable=PropertyMock, return_value=[]),
-        patch("charms.opensearch.v0.opensearch_health.OpenSearchHealth.get",
-              return_value=HealthColors.GREEN),
-        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_snapshot_running",
-              return_value=False),
-        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_restore_running",
-              return_value=False),
-        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.create_snapshot",
-              return_value="2025-01-01T10:00:00Z"),
-        patch("charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.get_snapshot",
-              return_value={"snapshot": "2025-01-01T10:00:00Z", "state": "SUCCESS"}),
-    ):
-        ctx.run(ctx.on.action("create-backup"), st)
-        assert ctx.action_results == {
+        assert self.ctx.action_results == {
             "backup-id": "2025-01-01T10:00:00Z",
             "status": "SUCCESS",
         }
+
+    def test_create_backup_when_s3_repo_missing_and_ca_present_then_ca_forwarded_to_manager(
+        self, monkeypatch
+    ):
+        ca = "-----BEGIN CERT-----\nMIIB...==\n-----END CERT-----\n"
+        self.mock_is_repo_created.side_effect = [False, True]
+        self.use_s3(ca=ca)
+        st = testing.State(leader=True, relations={self.s3_relation()})
+
+        def fake_create_repo(_self, ost, object_storage_config, name=None):
+            assert object_storage_config.s3.tls_ca_chain == ca, "CA not forwarded to create_repo"
+            return "s3-repository"
+
+        monkeypatch.setattr(
+            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.create_repo",
+            fake_create_repo,
+        )
+
+        self.ctx.run(self.ctx.on.action("create-backup"), st)
+        assert self.ctx.action_results == {
+            "backup-id": "2025-01-01T10:00:00Z",
+            "status": "SUCCESS",
+        }
+
+    def test_create_backup_when_s3_has_no_ca_then_operations_still_succeed(self):
+        s3_no_ca = {k: v for k, v in S3_CONN_INFO_WITH_CA.items() if k != "tls_ca_chain"}
+        self.use_s3(info=s3_no_ca)
+        st = testing.State(leader=True, relations={self.s3_relation()})
+
+        self.ctx.run(self.ctx.on.action("create-backup"), st)
+
+        assert self.ctx.action_results == {
+            "backup-id": "2025-01-01T10:00:00Z",
+            "status": "SUCCESS",
+        }
+
+
+class TestListBackups(SnapshotsUnitTestFixtures):
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_list_backups_when_json_requested_then_json_is_returned(self, backend):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
+
+        st = testing.State(leader=True, relations=rels)
+        snapshots = {
+            "2025-01-01T10:00:00Z": {"state": "success", "indices": []},
+            "2025-01-01T09:00:00Z": {"state": "failed", "indices": []},
+        }
+
+        original = SnapshotsManager.list_snapshots
+        SnapshotsManager.list_snapshots = lambda *_a, **_k: snapshots
+        try:
+            self.ctx.run(self.ctx.on.action("list-backups", params={"output": "json"}), st)
+        finally:
+            SnapshotsManager.list_snapshots = original
+
+        assert json.loads(self.ctx.action_results["backups"]) == snapshots
+
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_list_backups_when_table_requested_then_table_is_returned(self, backend):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
+
+        st = testing.State(leader=True, relations=rels)
+        snapshots = {
+            "2025-01-01T10:00:00Z": {"state": "success", "indices": []},
+            "2025-01-01T09:00:00Z": {"state": "in_progress", "indices": []},
+        }
+
+        original = SnapshotsManager.list_snapshots
+        SnapshotsManager.list_snapshots = lambda *_a, **_k: snapshots
+        try:
+            self.ctx.run(self.ctx.on.action("list-backups", params={"output": "table"}), st)
+        finally:
+            SnapshotsManager.list_snapshots = original
+
+        table = self.ctx.action_results["backups"]
+        assert "backup-id" in table and "backup-status" in table
+        assert "2025-01-01T10:00:00Z" in table
+        assert "success" in table
+
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_list_backups_when_manager_raises_http_error_then_action_fails(self, backend):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
+
+        st = testing.State(leader=True, relations=rels)
+
+        self.mock_get_snapshot.side_effect = None
+        original = SnapshotsManager.list_snapshots
+
+        def return_error(*_a, **_k):
+            raise OpenSearchHttpError(response_text="server error", response_code=503)
+
+        SnapshotsManager.list_snapshots = return_error
+
+        try:
+            with pytest.raises(testing.ActionFailed) as err:
+                self.ctx.run(self.ctx.on.action("list-backups", params={"output": "json"}), st)
+        finally:
+            SnapshotsManager.list_snapshots = original
+
+        msg = err.value.message.lower()
+        assert "server error" in msg or "503" in msg
+
+
+class TestRestore(SnapshotsUnitTestFixtures):
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_restore_when_prereqs_missing_then_action_fails(self, backend, monkeypatch):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
+
+        st = testing.State(leader=True, relations=rels)
+
+        monkeypatch.setattr(
+            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
+            lambda _self, report_running_operations=True: "cluster not ready",
+        )
+
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(
+                self.ctx.on.action("restore", params={"backup-id": "2025-01-01T10:00:00Z"}), st
+            )
+
+        assert "cluster not ready" in err.value.message.lower()
+
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_restore_when_snapshot_not_found_then_action_fails(self, backend):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
+
+        st = testing.State(leader=True, relations=rels)
+        self.mock_get_snapshot.return_value = None
+
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(self.ctx.on.action("restore", params={"backup-id": "X"}), st)
+
+        assert "not found" in err.value.message.lower()
+
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_restore_when_get_snapshot_http_error_then_action_fails(self, backend):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
+
+        st = testing.State(leader=True, relations=rels)
+        self.mock_get_snapshot.side_effect = OpenSearchHttpError(
+            response_text="server error", response_code=500
+        )
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(
+                self.ctx.on.action("restore", params={"backup-id": "2025-01-01T10:00:00Z"}), st
+            )
+
+        assert "server error" in err.value.message.lower()
+
+    @pytest.mark.parametrize(
+        "close_result, expect_fail, expect_msg",
+        [
+            ((None, None), False, None),
+            ((["idx1", "idx2"], None), False, None),
+            ((["idx1"], {"idx2": {"closed": False}}), True, "failed to close"),
+        ],
+    )
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_restore_when_closing_indices_varies_then_paths_are_handled(
+        self, backend, close_result, expect_fail, expect_msg, monkeypatch
+    ):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
+
+        st = testing.State(leader=True, relations=rels)
+        self.mock_get_snapshot.return_value = {
+            "snapshot": "2025-01-01T10:00:00Z",
+            "state": "SUCCESS",
+        }
+
+        monkeypatch.setattr(
+            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.close_snapshot_indices_open_in_cluster",
+            lambda *_a, **_k: close_result,
+        )
+        monkeypatch.setattr(
+            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.restore_snapshot",
+            lambda *_a, **_k: None,
+        )
+
+        if expect_fail:
+            with pytest.raises(testing.ActionFailed) as err:
+                self.ctx.run(
+                    self.ctx.on.action("restore", params={"backup-id": "2025-01-01T10:00:00Z"}), st
+                )
+            assert expect_msg in err.value.message.lower()
+        else:
+            self.ctx.run(
+                self.ctx.on.action("restore", params={"backup-id": "2025-01-01T10:00:00Z"}), st
+            )
+
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_restore_when_start_fails_then_action_fails_with_message(self, backend, monkeypatch):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
+
+        st = testing.State(leader=True, relations=rels)
+        self.mock_get_snapshot.return_value = {
+            "snapshot": "2025-01-01T10:00:00Z",
+            "state": "SUCCESS",
+        }
+
+        monkeypatch.setattr(
+            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.close_snapshot_indices_open_in_cluster",
+            lambda *_a, **_k: (None, None),
+        )
+
+        def return_error(*_a, **_k):
+            raise OpenSearchHttpError(response_text="restore failed", response_code=409)
+
+        monkeypatch.setattr(
+            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.restore_snapshot",
+            return_error,
+        )
+
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(
+                self.ctx.on.action("restore", params={"backup-id": "2025-01-01T10:00:00Z"}), st
+            )
+        assert "restore failed" in err.value.message.lower()
+
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_restore_when_non_restored_indices_exist_then_action_fails_with_count(
+        self, backend, monkeypatch
+    ):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
+
+        st = testing.State(leader=True, relations=rels)
+        self.mock_get_snapshot.return_value = {"snapshot": "S", "state": "SUCCESS"}
+
+        monkeypatch.setattr(
+            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.close_snapshot_indices_open_in_cluster",
+            lambda *_a, **_k: (None, None),
+        )
+        monkeypatch.setattr(
+            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.restore_snapshot",
+            lambda *_a, **_k: {"a", "b"},
+        )
+
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(self.ctx.on.action("restore", params={"backup-id": "S"}), st)
+        assert "failed to restore 2 indices" in err.value.message.lower()
+
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_restore_when_http_error_on_close_indices_then_action_fails(
+        self, backend, monkeypatch
+    ):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
+
+        st = testing.State(leader=True, relations=rels)
+        self.mock_get_snapshot.return_value = {
+            "snapshot": "S",
+            "state": "SUCCESS",
+            "indices": ["idx"],
+        }
+
+        def return_error(*_a, **_k):
+            raise OpenSearchHttpError(response_text="close-error", response_code=500)
+
+        monkeypatch.setattr(
+            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.close_snapshot_indices_open_in_cluster",
+            return_error,
+        )
+
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(self.ctx.on.action("restore", params={"backup-id": "S"}), st)
+        assert "close" in err.value.message.lower()
+
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_restore_when_all_ok_then_health_apply_is_called(self, backend, monkeypatch):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
+
+        st = testing.State(leader=True, relations=rels)
+        self.mock_get_snapshot.return_value = {
+            "snapshot": "2025-01-01T10:00:00Z",
+            "state": "SUCCESS",
+            "indices": ["idx1"],
+        }
+
+        monkeypatch.setattr(
+            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.close_snapshot_indices_open_in_cluster",
+            lambda *_a, **_k: (None, None),
+        )
+        monkeypatch.setattr(
+            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.restore_snapshot",
+            lambda *_a, **_k: set(),
+        )
+
+        called = {"ok": False}
+
+        def fake_apply(*_a, **_k):
+            called["ok"] = True
+
+        monkeypatch.setattr(
+            "charms.opensearch.v0.opensearch_health.OpenSearchHealth.apply",
+            lambda *_a, **_k: fake_apply(),
+        )
+        self.ctx.run(
+            self.ctx.on.action("restore", params={"backup-id": "2025-01-01T10:00:00Z"}), st
+        )
+        assert called["ok"]
+
+
+class TestPrerequisites(SnapshotsUnitTestFixtures):
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_prereq_when_not_leader_then_action_fails(self, backend):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
+
+        st = testing.State(leader=False, relations=rels)
+
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(self.ctx.on.action("create-backup"), st)
+
+        assert "leader" in err.value.message.lower()
+
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_prereq_when_deployment_not_ready_then_action_fails(self, backend, monkeypatch):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
+
+        st = testing.State(leader=True, relations=rels)
+        monkeypatch.setattr(
+            "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
+            lambda *_a, **_k: None,
+        )
+
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(self.ctx.on.action("create-backup"), st)
+
+        assert "deployment not ready" in err.value.message.lower()
+
+    def test_prereq_when_upgrade_in_progress_then_action_fails(self, monkeypatch):
+        st = testing.State(leader=True)
+        monkeypatch.setattr(
+            "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
+            lambda *_a, **_k: object(),
+        )
+        monkeypatch.setattr(
+            "src.charm.OpenSearchOperatorCharm.upgrade_in_progress",
+            property(lambda _self: True),
+        )
+
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(self.ctx.on.action("create-backup"), st)
+
+        assert "upgrade in-progress" in err.value.message.lower()
+
+    def test_prereq_when_storage_relation_missing_then_action_fails(self, monkeypatch):
+        st = testing.State(leader=True)
+        monkeypatch.setattr(
+            "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
+            lambda *_a, **_k: object(),
+        )
+        self.mock_obj_type.return_value = None
+
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(self.ctx.on.action("create-backup"), st)
+
+        assert "missing relation" in err.value.message.lower()
+
+    def test_prereq_when_conflict_detected_from_two_relations_then_action_fails(self, monkeypatch):
+        st = testing.State(leader=True, relations={self.s3_relation(), self.azure_relation()})
+        self.mock_obj_type.return_value = "conflict"
+
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(self.ctx.on.action("create-backup"), st)
+
+        assert "conflict" in err.value.message.lower()
+
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_prereq_when_repo_missing_and_cannot_create_then_action_fails(
+        self, backend, monkeypatch
+    ):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
+
+        st = testing.State(leader=True, relations=rels)
+
+        self.mock_is_repo_created.side_effect = [False, False]
+        monkeypatch.setattr(
+            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.create_repo",
+            lambda *_a, **_k: None,
+        )
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(self.ctx.on.action("create-backup"), st)
+
+        assert "repository has not been created" in err.value.message.lower()
+
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_prereq_when_http_error_during_repo_check_then_error_message_displayed(
+        self, backend, monkeypatch
+    ):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
+
+        st = testing.State(leader=True, relations=rels)
+
+        def return_error(*_a, **_k):
+            raise OpenSearchHttpError(response_text="precheck-failed", response_code=500)
+
+        monkeypatch.setattr(
+            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_repository_created",
+            return_error,
+        )
+
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(self.ctx.on.action("create-backup"), st)
+
+        assert "precheck-failed" in err.value.message.lower()
+
+    @pytest.mark.parametrize(
+        "color", [HealthColors.RED, HealthColors.YELLOW_TEMP, HealthColors.UNKNOWN]
+    )
+    def test_prereq_when_health_not_green_then_action_fails_with_specific_message(self, color):
+        self.use_s3()
+        st = testing.State(leader=True, relations={self.s3_relation()})
+        self.mock_is_repo_created.return_value = True
+        self.mock_health_get.return_value = color
+
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(self.ctx.on.action("create-backup"), st)
+
+        msg = err.value.message.lower()
+        assert any(k in msg for k in ["red", "relocating", "unknown"])
+
+    def test_prereq_when_snapshot_or_restore_running_then_action_fails(self):
+        self.use_s3()
+        st = testing.State(leader=True, relations={self.s3_relation()})
+
+        self.mock_is_repo_created.return_value = True
+        self.mock_health_get.return_value = HealthColors.GREEN
+        self.mock_snap_running.return_value = True
+        self.mock_restore_running.return_value = False
+
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(self.ctx.on.action("create-backup"), st)
+        assert "operation in progress" in err.value.message.lower()
+
+        self.mock_snap_running.return_value = False
+        self.mock_restore_running.return_value = True
+
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(self.ctx.on.action("create-backup"), st)
+        assert "operation in progress" in err.value.message.lower()

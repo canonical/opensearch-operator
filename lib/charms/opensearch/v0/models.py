@@ -312,7 +312,7 @@ class S3RelData(Model):
     base_path: Optional[str] = Field(alias="path", default=None)
     protocol: Optional[str] = None
     storage_class: Optional[str] = Field(alias="storage-class", default=None)
-    tls_ca_chain: Optional[str] = Field(alias="tls-ca-chain", default=None)
+    tls_ca_chain: Optional[str] = Field(None, alias="tls-ca-chain")
     credentials: S3RelDataCredentials = Field(alias=S3_CREDENTIALS, default=S3RelDataCredentials())
     path_style_access: bool = Field(alias="s3-uri-style", default=False)
 
@@ -346,6 +346,17 @@ class S3RelData(Model):
             base_path = re.sub(r"/+", "/", base_path).strip().strip("/")
         values["base_path"] = base_path or None
 
+        return values
+
+    @root_validator(pre=True)
+    def _normalize_tls_chain(cls, values: Dict[str, Any]) -> Dict[str, Any]:  # noqa: N805
+        t = values.get("tls-ca-chain")
+        if isinstance(t, list):
+            values["tls-ca-chain"] = "\n".join(s.strip() for s in t if s)
+        elif t is None:
+            pass
+        elif not isinstance(t, str):
+            values["tls-ca-chain"] = str(t)
         return values
 
     @validator("path_style_access", pre=True)
