@@ -76,7 +76,7 @@ class OpenSearchPluginManager:
         self._opensearch = charm.opensearch
         self._opensearch_config = charm.opensearch_config
         self._charm_config = self._charm.model.config
-        self._keystore = OpenSearchKeystore(self._charm)
+        self._keystore = OpenSearchKeystore(charm.opensearch)
 
     @functools.cached_property
     def cluster_config(self):

@@ -85,7 +85,9 @@ PClusterWaitingForFailoverPromotion = (
     "Main-cluster-orchestrator removed, waiting for failover promotion."
 )
 PClusterMainIsRequirer = "Main orchestrator cannot be a requirer"
-
+InvalidProfileConfigOption = (
+    "Invalid profile configuration option. Only `production` and `testing` values are allowed."
+)
 
 # Maintenance statuses
 InstallProgress = "Installing OpenSearch..."

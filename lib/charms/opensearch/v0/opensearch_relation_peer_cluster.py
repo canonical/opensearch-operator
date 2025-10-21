@@ -156,7 +156,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):  # noqa: C901
         """Event received by all units in sub-cluster when a new sub-cluster joins the relation."""
-        logger.debug("PeerClusterRelationChanged event handler starting")
+        if self.charm.state.app.deployment_description:
+            self.charm.profiles_manager.check_missing_requirements()
+
         if not self.charm.unit.is_leader():
             logger.debug("Node not a leader. Skipping refresh relation data")
             return
@@ -361,11 +363,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         # check if any credentials exist without relations
         self._block_if_has_credentials_with_missing_relations()
-
-        # ensuring quorum
-        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
-        cms = self._fetch_local_cm_nodes(deployment_desc)
-        self.charm.opensearch_peer_cm.validate_recommended_cm_unit_count(cms)
 
     def _block_if_has_credentials_with_missing_relations(self) -> None:
         """Checks if the relation data has credentials for non-related apps"""
@@ -960,6 +957,9 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):  # noqa: C901
         """Peer cluster relation change hook. Crucial to capture changes from the provider side."""
+        if self.charm.state.app.deployment_description:
+            self.charm.profiles_manager.check_missing_requirements()
+
         if not self.charm.unit.is_leader():
             return
 

@@ -17,7 +17,6 @@ from charms.opensearch.v0.constants_charm import (
     RestoreInProgress,
 )
 from charms.opensearch.v0.helper_cluster import IndexStateEnum
-from charms.opensearch.v0.models import PerformanceType
 from charms.opensearch.v0.opensearch_backups import (
     S3_REPOSITORY,
     BackupServiceState,
@@ -70,7 +69,6 @@ def create_deployment_desc(*args, **kwargs):
             cluster_name="logs",
             init_hold=False,
             roles=["cluster_manager", "data"],
-            profile=PerformanceType.PRODUCTION,
         ),
         start=StartMode.WITH_PROVIDED_ROLES,
         pending_directives=[],

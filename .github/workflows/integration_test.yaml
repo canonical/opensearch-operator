@@ -107,6 +107,11 @@ jobs:
         with:
           pattern: ${{ inputs.artifact-prefix }}-*
           merge-multiple: true
+      # TODO Remove pinned image when problem is resolved on jammy
+      - name: Pin lxc image for jammy
+        run: |
+          sudo lxc image copy ubuntu:568f69ff1166 local:
+          sudo lxc image alias create "juju/ubuntu@22.04/amd64" 568f69ff1166
       - name: Run spread job
         timeout-minutes: 180
         id: spread
