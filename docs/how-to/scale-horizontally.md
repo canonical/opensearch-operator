@@ -108,6 +108,7 @@ curl --cacert cert.pem -k -XGET "https://10.180.162.96:9200/_cluster/allocation/
 Depending on the output, there may be a different course of action. For example: scaling up, adding more storage to the existing nodes, or [manually re-routing](https://www.elastic.co/guide/en/elasticsearch/reference/7.10/cluster-reroute.html) the relevant shard to another node.
 
 To scale up by one unit, run the following command:
+
 ```shell
 juju add-unit -n 1
 ```
