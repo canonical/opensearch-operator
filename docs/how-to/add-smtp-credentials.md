@@ -39,6 +39,7 @@ Configure the SMTP integrator:
 ```shell
 juju config smtp-integrator user="<stmp-username>" password="<smtp-password>" host="<any non-empty string>"
 ```
+
 **Important**
 The [OpenSearch documention](https://docs.opensearch.org/2.19/observing-your-data/notifications/index/#create-email-sender) instructs you to specify a unique sender name when creating an email sender. This name must match the value of `user` you pass to the SMTP integrator. The sender name and username must be identical.
 
