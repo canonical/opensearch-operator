@@ -102,7 +102,7 @@ class SmtpEvents(Object):
             return
 
         # store keys to remove later
-        self.charm.plugin_manager.add_plugin_config(
+        self.charm.plugin_manager.put_plugin_config(
             scope=Scope.UNIT,
             label=self.secret_label,
             cleanup={"keys": list(entries.keys())},
