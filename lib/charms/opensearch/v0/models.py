@@ -312,7 +312,7 @@ class S3RelData(Model):
     base_path: Optional[str] = Field(alias="path", default=None)
     protocol: Optional[str] = None
     storage_class: Optional[str] = Field(alias="storage-class", default=None)
-    tls_ca_chain: Optional[str] = Field(None, alias="tls-ca-chain")
+    tls_ca_chain: Optional[str] = Field(alias="tls-ca-chain", default=None)
     credentials: S3RelDataCredentials = Field(alias=S3_CREDENTIALS, default=S3RelDataCredentials())
     path_style_access: bool = Field(alias="s3-uri-style", default=False)
 

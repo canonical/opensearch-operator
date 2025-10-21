@@ -140,8 +140,12 @@ class OpenSearchSnapshotsEvents(Object):
         ):
             logger.warning("No S3 object storage configuration.")
             return
-
-        self.charm.snapshots_manager.store_s3_ca(self.object_storage_config.s3.tls_ca_chain)
+        if self.charm.snapshots_manager.requires_custom_s3_ca(object_storage_type, self.object_storage_config):
+            self.charm.snapshots_manager.store_s3_ca(self.object_storage_config.s3.tls_ca_chain)
+        else:
+            # If a custom CA is currently stored but no longer required, drop it
+            if self.charm.snapshots_manager.is_custom_s3_ca_stored():
+                self.charm.snapshots_manager.store_s3_ca(None)
 
         s3_credentials = self.object_storage_config.s3.credentials
         s3_data = {
@@ -386,7 +390,11 @@ class OpenSearchSnapshotsEvents(Object):
             return
         #  store/remove custom S3 CA only for S3
         if object_storage_type == "s3-pcluster":
-            self.charm.snapshots_manager.store_s3_ca(object_storage_config.s3.tls_ca_chain)
+            if self.charm.snapshots_manager.requires_custom_s3_ca(object_storage_type, self.object_storage_config):
+                self.charm.snapshots_manager.store_s3_ca(object_storage_config.s3.tls_ca_chain)
+            else:
+                if self.charm.snapshots_manager.is_custom_s3_ca_stored():
+                    self.charm.snapshots_manager.store_s3_ca(None)
             credentials = object_storage_config.s3.credentials
             s3_data = {
                 "s3.client.default.access_key": credentials.access_key,
@@ -631,6 +639,7 @@ class OpenSearchSnapshotsEvents(Object):
         obj_cfg = self.object_storage_config
         if not obj_type or not obj_cfg or obj_type == "conflict":
             return
+
         try:
             if not self.charm.snapshots_manager.is_repository_created(obj_type):
                 self.charm.snapshots_manager.create_repo(
