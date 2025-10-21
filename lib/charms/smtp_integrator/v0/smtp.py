@@ -68,7 +68,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 18
+LIBPATCH = 19
 
 PYDEPS = ["pydantic>=2"]
 
@@ -170,6 +170,9 @@ class SmtpRelationData(BaseModel):
         if self.password:
             result["password"] = self.password
         if self.password_id:
+            if "password" in result:
+                logger.warning("password field exists along with password_id field, removing.")
+                del result["password"]
             result["password_id"] = self.password_id
         return result
 
@@ -313,7 +316,7 @@ class SmtpRequires(ops.Object):
             try:
                 password = (
                     self.model.get_secret(id=relation_data.get("password_id"))
-                    .get_content()
+                    .get_content(refresh=True)
                     .get("password")
                 )
             except ops.model.ModelError as exc:
@@ -321,17 +324,7 @@ class SmtpRequires(ops.Object):
                     f"Could not consume secret {relation_data.get('password_id')}"
                 ) from exc
 
-        return SmtpRelationData(
-            host=typing.cast(str, relation_data.get("host")),
-            port=typing.cast(int, relation_data.get("port")),
-            user=relation_data.get("user"),
-            password=password,
-            password_id=relation_data.get("password_id"),
-            auth_type=AuthType(relation_data.get("auth_type")),
-            transport_security=TransportSecurity(relation_data.get("transport_security")),
-            domain=relation_data.get("domain"),
-            skip_ssl_verify=typing.cast(bool, relation_data.get("skip_ssl_verify")),
-        )
+        return SmtpRelationData(**{**relation_data, "password": password})  # type: ignore
 
     def _is_relation_data_valid(self, relation: ops.Relation) -> bool:
         """Validate the relation data.
@@ -428,9 +421,13 @@ class SmtpProvides(ops.Object):
             relation: the relation for which to update the data.
             smtp_data: a SmtpRelationData instance wrapping the data to be updated.
         """
-        relation_data = smtp_data.to_relation_data()
-        if relation_data["auth_type"] == AuthType.NONE.value:
+        new_data = smtp_data.to_relation_data()
+        if new_data["auth_type"] == AuthType.NONE.value:
             logger.warning('Insecure setting: auth_type has a value "none"')
-        if relation_data["transport_security"] == TransportSecurity.NONE.value:
+        if new_data["transport_security"] == TransportSecurity.NONE.value:
             logger.warning('Insecure setting: transport_security has value "none"')
-        relation.data[self.charm.model.app].update(relation_data)
+        relation_data = relation.data[self.charm.model.app]
+        if dict(relation_data) != dict(new_data):
+            logger.info("update data in relation id:%s", relation.id)
+            relation_data.clear()
+            relation_data.update(new_data)
