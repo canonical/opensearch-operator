@@ -10,7 +10,6 @@ import typing
 import ops
 from charms.opensearch.v0.constants_charm import InstallError, InstallProgress
 from charms.opensearch.v0.helper_cos import update_grafana_dashboards_title
-from charms.opensearch.v0.models import PerformanceType
 from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchInstallError
 from ops.charm import InstallEvent
@@ -139,12 +138,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
 
     def _on_upgrade_charm(self, _):
         update_grafana_dashboards_title(self)
-        if not self.performance_profile.current:
-            # We are running (1) install or (2) an upgrade on instance that pre-dates profile
-            # First, we set this unit's effective profile -> 1G heap and no index templates.
-            # Our goal is to make sure this value exists once the refresh is finished
-            # and it represents the accurate value for this unit.
-            self.performance_profile.current = PerformanceType.TESTING
+        # TODO check backwards compatibility for profiles
 
         if self._unit_lifecycle.authorized_leader:
             if not self._upgrade.in_progress:

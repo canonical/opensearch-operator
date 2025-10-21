@@ -889,7 +889,7 @@ class OpenSearchNonOrchestratorClusterBackup(OpenSearchBackupBase):
             if not plugin.data:
                 continue
             entries_to_add = plugin.config().secret_entries
-            self.charm.keystore.add_entries(entries_to_add)
+            self.charm.keystore.put_entries(entries_to_add)
 
         if not self.charm.keystore.reload():
             logger.debug("Could not reload secure settings. Deferring event.")
@@ -1082,7 +1082,7 @@ class OpenSearchMainBackup(ABC, OpenSearchBackupBase):
         self.charm.status.set(MaintenanceStatus(BackupSetupStart))
 
         entries_to_add = self.plugin.config().secret_entries
-        self.charm.keystore.add_entries(entries_to_add)
+        self.charm.keystore.put_entries(entries_to_add)
         if not self.charm.keystore.reload():
             logger.debug("Could not reload secure settings. Deferring event.")
             event.defer()
