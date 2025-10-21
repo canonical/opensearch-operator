@@ -76,9 +76,11 @@ async def test_configure_and_use_jwt(charm, series, ops_test: OpsTest) -> None:
 
     logger.info("Creating signing-key secret")
     secret_name = "jwt-signing-key"
-    secret_id = await ops_test.model.add_secret(
-        name=secret_name, data_args=[f"signing-key={generated_jwt['signing-key']}"]
-    )
+    secret_id = (
+        await ops_test.juju(
+            "add-secret", secret_name, f"signing-key={generated_jwt['signing-key']}"
+        )
+    )[1].strip()
     await ops_test.model.grant_secret(secret_name=secret_name, application=JWT_APP_NAME)
 
     logger.info(f"Configuring {JWT_APP_NAME}")
