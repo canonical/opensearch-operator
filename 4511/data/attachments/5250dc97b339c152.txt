@@ -1,0 +1,374 @@
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:795 Connecting to existing model concierge-lxd:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/self-signed-certificates-264
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/opensearch-1
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/opensearch-2
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/opensearch-0
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.11   unsupported  01:45:34Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch-data                    waiting    0/1  opensearch                                 1  no       waiting for machine
+opensearch-failover                waiting    0/3  opensearch                                 2  no       waiting for machine
+opensearch-main                    waiting    0/1  opensearch                                 0  no       waiting for machine
+self-signed-certificates           waiting    0/1  self-signed-certificates  latest/stable  264  no       waiting for machine
+
+Unit                        Workload  Agent       Machine  Public address  Ports  Message
+opensearch-data/0           waiting   allocating  1                               waiting for machine
+opensearch-failover/0       waiting   allocating  3                               waiting for machine
+opensearch-failover/1       waiting   allocating  4                               waiting for machine
+opensearch-failover/2       waiting   allocating                                  waiting for machine
+opensearch-main/0           waiting   allocating  2                               waiting for machine
+self-signed-certificates/0  waiting   allocating  0        10.116.200.254         waiting for machine
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        pending  10.116.200.254  juju-067b57-0  ubuntu@22.04  github-runner  Running
+1        pending                  pending        ubuntu@24.04                 
+2        pending                  pending        ubuntu@24.04                 
+3        pending                  pending        ubuntu@24.04                 
+4        pending                  pending        ubuntu@24.04                 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:45:34 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: self-signed-certificates - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: self waiting -- message: waiting for machine
+		self-signed-certificates-0.af2  -- (10.116.200.254) -- [allocating (since: 01:45:24)] waiting: waiting for machine
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:47:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: self-signed-certificates - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: self active -- message: None
+		self-signed-certificates-0.af2* -- (10.116.200.254) -- [idle (since: 01:46:56)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:47:59 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: self-signed-certificates - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: self active -- message: None
+		self-signed-certificates-0.af2* -- (10.116.200.254) -- [idle (since: 01:46:56)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:10 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 01:48:11 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.11   unsupported  01:48:11Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch-data                    blocked      1  opensearch                                 1  no       Cannot start. Waiting for peer cluster relation...
+opensearch-failover                blocked      3  opensearch                                 2  no       Cannot start. Waiting for peer cluster relation...
+opensearch-main                    blocked      1  opensearch                                 0  no       Missing TLS relation with this cluster.
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports  Message
+opensearch-data/0*           blocked      executing  1        10.116.200.135         Missing requirements: At least 1 cluster manager nodes are required.
+opensearch-failover/0*       blocked      executing  3        10.116.200.77          Missing requirements: At least 1 data nodes are required.
+opensearch-failover/1        maintenance  executing  4        10.116.200.160         (install) Installing OpenSearch...
+opensearch-failover/2        blocked      executing  5        10.116.200.56          Missing requirements: At least 1 data nodes are required.
+opensearch-main/0*           blocked      executing  2        10.116.200.2           Missing TLS relation with this cluster.
+self-signed-certificates/0*  active       executing  0        10.116.200.254         
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.116.200.254  juju-067b57-0  ubuntu@22.04  github-runner  Running
+1        started  10.116.200.135  juju-067b57-1  ubuntu@24.04  github-runner  Running
+2        started  10.116.200.2    juju-067b57-2  ubuntu@24.04  github-runner  Running
+3        started  10.116.200.77   juju-067b57-3  ubuntu@24.04  github-runner  Running
+4        started  10.116.200.160  juju-067b57-4  ubuntu@24.04  github-runner  Running
+5        started  10.116.200.56   juju-067b57-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Waiting for TLS to be fully configured...
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [executing (since: 01:48:11)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: Cannot run cluster with current roles. Waiting for data node...
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [executing (since: 01:48:21)] blocked: Cannot run cluster with current roles. Waiting for data node...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch waiting -- message: Waiting for OpenSearch to start...
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [executing (since: 01:48:27)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch waiting -- message: Waiting for OpenSearch to start...
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [executing (since: 01:48:27)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch waiting -- message: Waiting for OpenSearch to start...
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [executing (since: 01:48:27)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch waiting -- message: Waiting for OpenSearch to start...
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [executing (since: 01:49:06)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:16 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: Cannot run cluster with current roles. Waiting for data node...
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [executing (since: 01:49:06)] blocked: Cannot run cluster with current roles. Waiting for data node...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: Cannot run cluster with current roles. Waiting for data node...
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [executing (since: 01:49:06)] blocked: Cannot run cluster with current roles. Waiting for data node...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:38 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: Cannot run cluster with current roles. Waiting for data node...
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [executing (since: 01:49:31)] blocked: Cannot run cluster with current roles. Waiting for data node...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: Cannot run cluster with current roles. Waiting for data node...
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [executing (since: 01:49:31)] blocked: Cannot run cluster with current roles. Waiting for data node...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:50:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: Cannot run cluster with current roles. Waiting for data node...
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [executing (since: 01:49:56)] blocked: Cannot run cluster with current roles. Waiting for data node...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:50:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [executing (since: 01:50:09)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:50:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [idle (since: 01:50:22)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:50:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [idle (since: 01:50:22)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:50:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [idle (since: 01:50:22)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:50:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [idle (since: 01:50:22)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:51:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [idle (since: 01:50:22)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:51:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [idle (since: 01:50:22)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:51:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [idle (since: 01:50:22)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:51:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-failover-0.acc* -- (10.116.200.77) -- [idle (since: 01:51:24)] active: 
+		opensearch-failover-1.acc  -- (10.116.200.160) -- [idle (since: 01:51:22)] active: 
+		opensearch-failover-2.acc  -- (10.116.200.56) -- [idle (since: 01:51:28)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:51:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-failover-0.acc* -- (10.116.200.77) -- [idle (since: 01:51:24)] active: 
+		opensearch-failover-1.acc  -- (10.116.200.160) -- [idle (since: 01:51:22)] active: 
+		opensearch-failover-2.acc  -- (10.116.200.56) -- [idle (since: 01:51:28)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:52:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-failover-0.acc* -- (10.116.200.77) -- [idle (since: 01:51:24)] active: 
+		opensearch-failover-1.acc  -- (10.116.200.160) -- [idle (since: 01:51:22)] active: 
+		opensearch-failover-2.acc  -- (10.116.200.56) -- [idle (since: 01:51:28)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:52:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [idle (since: 01:52:12)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:52:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [idle (since: 01:52:12)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:52:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [idle (since: 01:52:12)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:52:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [idle (since: 01:52:12)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:52:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [idle (since: 01:52:12)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:53:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [idle (since: 01:52:12)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:53:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.dc9* -- (10.116.200.2) -- [idle (since: 01:52:12)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:53:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 01:53:34 -- Waiting for model: complete.

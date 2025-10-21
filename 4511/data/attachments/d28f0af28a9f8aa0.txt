@@ -1,0 +1,93 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'opensearch': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'active', 'since': '21 Oct 2025 01:44:41Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 's3-credentials': [{'related-application': 's3-integrator', 'interface': 's3', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/0': {'workload-status': {'current': 'active', 'since': '21 Oct 2025 01:44:41Z'}, 'juju-status': {'current': 'idle', 'since': '21 Oct 2025 01:48:05Z', 'version': '3.6.11'}, 'leader': True, 'machine': '2', 'open-ports': ['9200/tcp'], 'public-address': '10.40.23.160'}, 'opensearch/1': {'workload-status': {'current': 'active', 'since': '21 Oct 2025 01:45:23Z'}, 'juju-status': {'current': 'idle', 'since': '21 Oct 2025 01:48:05Z', 'version': '3.6.11'}, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.40.23.163'}, 'opensearch/2': {'workload-status': {'current': 'active', 'since': '21 Oct 2025 01:45:00Z'}, 'juju-status': {'current': 'idle', 'since': '21 Oct 2025 01:48:06Z', 'version': '3.6.11'}, 'machine': '4', 'open-ports': ['9200/tcp'], 'public-address': '10.40.23.43'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 's3-integrator': {'charm': 's3-integrator', 'base': {'name': 'ubuntu', 'channel': '22.04'}, 'charm-origin': 'charmhub', 'charm-name': 's3-integrator', 'charm-rev': 145, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'blocked', 'message': "Missing parameters: ['access-key', 'secret-key']", 'since': '21 Oct 2025 01:42:20Z'}, 'relations': {'s3-credentials': [{'related-application': 'opensearch', 'interface': 's3', 'scope': 'global'}], 's3-integrator-peers': [{'related-application': 's3-integrator', 'interface': 's3-integrator-peers', 'scope': 'global'}]}, 'units': {'s3-integrator/0': {'workload-status': {'current': 'blocked', 'message': "Missing parameters: ['access-key', 'secret-key']", 'since': '21 Oct 2025 01:42:20Z'}, 'juju-status': {'current': 'idle', 'since': '21 Oct 2025 01:48:06Z', 'version': '3.6.11'}, 'leader': True, 'machine': '0', 'public-address': '10.40.23.171'}}, 'endpoint-bindings': {'': 'alpha', 's3-credentials': 'alpha', 's3-integrator-peers': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '22.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 264, 'charm-channel': 'latest/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '21 Oct 2025 01:42:57Z'}, 'relations': {'certificates': [{'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '21 Oct 2025 01:42:57Z'}, 'juju-status': {'current': 'idle', 'since': '21 Oct 2025 01:44:40Z', 'version': '3.6.11'}, 'leader': True, 'machine': '1', 'public-address': '10.40.23.158'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [executing] active: 
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.11   unsupported  01:48:24Z
+
+App                       Version  Status       Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         maintenance      3  opensearch                                 0  no       Configuring backup service...
+s3-integrator                      active           1  s3-integrator             1/stable       145  no       
+self-signed-certificates           active           1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports     Message
+opensearch/0*                maintenance  executing  2        10.40.23.160    9200/tcp  Configuring backup service...
+opensearch/1                 active       idle       3        10.40.23.163    9200/tcp  
+opensearch/2                 active       executing  4        10.40.23.43     9200/tcp  
+s3-integrator/0*             active       idle       0        10.40.23.171              
+self-signed-certificates/0*  active       idle       1        10.40.23.158              
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.40.23.171  juju-6ba45e-0  ubuntu@22.04  github-runner  Running
+1        started  10.40.23.158  juju-6ba45e-1  ubuntu@22.04  github-runner  Running
+2        started  10.40.23.160  juju-6ba45e-2  ubuntu@24.04  github-runner  Running
+3        started  10.40.23.163  juju-6ba45e-3  ubuntu@24.04  github-runner  Running
+4        started  10.40.23.43   juju-6ba45e-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Configuring backup service...
+		opensearch-0.8ee* -- (10.40.23.160) -- [executing (since: 01:48:08)] maintenance: Configuring backup service...
+		opensearch-1.8ee  -- (10.40.23.163) -- [idle (since: 01:48:24)] active: 
+		opensearch-2.8ee  -- (10.40.23.43) -- [idle (since: 01:48:24)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:35 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Configuring backup service...
+		opensearch-0.8ee* -- (10.40.23.160) -- [executing (since: 01:48:08)] maintenance: Configuring backup service...
+		opensearch-1.8ee  -- (10.40.23.163) -- [idle (since: 01:48:24)] active: 
+		opensearch-2.8ee  -- (10.40.23.43) -- [idle (since: 01:48:24)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Backup setup failed, check logs for details
+		opensearch-0.8ee* -- (10.40.23.160) -- [idle (since: 01:48:41)] blocked: Backup setup failed, check logs for details
+		opensearch-1.8ee  -- (10.40.23.163) -- [idle (since: 01:48:24)] active: 
+		opensearch-2.8ee  -- (10.40.23.43) -- [idle (since: 01:48:24)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Backup setup failed, check logs for details
+		opensearch-0.8ee* -- (10.40.23.160) -- [idle (since: 01:48:41)] blocked: Backup setup failed, check logs for details
+		opensearch-1.8ee  -- (10.40.23.163) -- [idle (since: 01:48:24)] active: 
+		opensearch-2.8ee  -- (10.40.23.43) -- [idle (since: 01:48:24)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Backup setup failed, check logs for details
+		opensearch-0.8ee* -- (10.40.23.160) -- [idle (since: 01:48:41)] blocked: Backup setup failed, check logs for details
+		opensearch-1.8ee  -- (10.40.23.163) -- [idle (since: 01:48:24)] active: 
+		opensearch-2.8ee  -- (10.40.23.43) -- [idle (since: 01:48:24)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:19 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 01:49:20 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.40.23.160:9200/_snapshot/s3-repository/_all
