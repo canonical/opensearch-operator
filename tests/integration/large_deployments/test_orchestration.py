@@ -23,31 +23,26 @@ logger = logging.getLogger(__name__)
 MAIN_APP = "opensearch-main"
 FAILOVER_APP = "opensearch-failover"
 DATA_APP = "opensearch-data"
-_2nd_DATA_APP = "opensearch-data-two"
+DATA_APP_TWO = "opensearch-data-two"
 
 CLUSTER_NAME = "app"
 
-APP_UNITS = {MAIN_APP: 1, FAILOVER_APP: 1, DATA_APP: 1, _2nd_DATA_APP: 1}
-
-CMS_NOT_ENOUGH_STATUS = (
-    "Less than 3 cluster-manager-eligible units in this cluster. Add more units."
-)
+APP_UNITS = {MAIN_APP: 1, FAILOVER_APP: 1, DATA_APP: 1, DATA_APP_TWO: 1}
 
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
     """Build and deploy one unit of OpenSearch."""
-    assert ops_test.model is not None
     await ops_test.model.set_config(MODEL_CONFIG)
 
     await ops_test.model.create_storage_pool("local", "lxd", "volume-type=standard")
 
     # Deploy TLS Certificates operator.
-    config = {"ca-common-name": "CN_CA"}
+    tls_config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(
-            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
+            TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=tls_config
         ),
         ops_test.model.deploy(
             charm,
@@ -77,8 +72,8 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
         ),
         ops_test.model.deploy(
             charm,
-            application_name=_2nd_DATA_APP,
-            num_units=APP_UNITS[_2nd_DATA_APP],
+            application_name=DATA_APP_TWO,
+            num_units=APP_UNITS[DATA_APP_TWO],
             series=series,
             config={"cluster_name": CLUSTER_NAME, "roles": "data", "init_hold": True}
             | CONFIG_OPTS,
@@ -88,25 +83,25 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
     for app in APP_UNITS:
         await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
 
-    for app in [FAILOVER_APP, DATA_APP, _2nd_DATA_APP]:
+    for app in [FAILOVER_APP, DATA_APP, DATA_APP_TWO]:
         await ops_test.model.integrate(
             f"{MAIN_APP}:peer-cluster-orchestrator", f"{app}:peer-cluster"
         )
 
-    for app in [DATA_APP, _2nd_DATA_APP]:
+    for app in [DATA_APP, DATA_APP_TWO]:
         await ops_test.model.integrate(
             f"{FAILOVER_APP}:peer-cluster-orchestrator", f"{app}:peer-cluster"
         )
 
     await wait_until(
         ops_test,
-        apps=[MAIN_APP, DATA_APP, FAILOVER_APP, _2nd_DATA_APP, TLS_CERTIFICATES_APP_NAME],
+        apps=[MAIN_APP, DATA_APP, FAILOVER_APP, DATA_APP_TWO, TLS_CERTIFICATES_APP_NAME],
         apps_statuses=["active"],
         units_full_statuses={
             MAIN_APP: {"units": {"active": []}},
             DATA_APP: {"units": {"active": []}},
             FAILOVER_APP: {"units": {"active": []}},
-            _2nd_DATA_APP: {"units": {"active": []}},
+            DATA_APP_TWO: {"units": {"active": []}},
             TLS_CERTIFICATES_APP_NAME: {"units": {"active": []}},
         },
         wait_for_exact_units=1,
@@ -114,10 +109,8 @@ async def test_build_and_deploy(ops_test: OpsTest, charm, series) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_check_orchestrators(ops_test: OpsTest) -> None:
+async def test_check_orchestrators_in_rel_data(ops_test: OpsTest) -> None:
     """Test that the orchestrators are correctly set."""
-    assert ops_test.model is not None
-
     data_app = ops_test.model.applications[DATA_APP]
     assert data_app is not None
     orchestrators = await get_application_relation_data(
@@ -138,30 +131,29 @@ async def test_check_orchestrators(ops_test: OpsTest) -> None:
 
 @pytest.mark.abort_on_fail
 async def test_demotion_through_relation_removal(ops_test: OpsTest) -> None:
-    assert ops_test.model is not None
-
+    """Test that removing the main orchestrator relations demotes it and promotes the failover."""
     main_app = ops_test.model.applications[MAIN_APP]
     assert main_app is not None
 
-    for app in [FAILOVER_APP, DATA_APP, _2nd_DATA_APP]:
+    for app in [FAILOVER_APP, DATA_APP, DATA_APP_TWO]:
         await main_app.remove_relation(
             f"{MAIN_APP}:peer-cluster-orchestrator", f"{app}:peer-cluster"
         )
 
     await wait_until(
         ops_test,
-        apps=[MAIN_APP, DATA_APP, FAILOVER_APP, _2nd_DATA_APP],
+        apps=[MAIN_APP, DATA_APP, FAILOVER_APP, DATA_APP_TWO],
         apps_full_statuses={
             MAIN_APP: {"active": []},
-            FAILOVER_APP: {"blocked": [CMS_NOT_ENOUGH_STATUS]},
+            FAILOVER_APP: {"active": []},
             DATA_APP: {"active": []},
-            _2nd_DATA_APP: {"active": []},
+            DATA_APP_TWO: {"active": []},
         },
         units_full_statuses={
             MAIN_APP: {"units": {"active": []}},
             FAILOVER_APP: {"units": {"active": []}},
             DATA_APP: {"units": {"active": []}},
-            _2nd_DATA_APP: {"units": {"active": []}},
+            DATA_APP_TWO: {"units": {"active": []}},
         },
         wait_for_exact_units=1,
     )
@@ -186,26 +178,24 @@ async def test_demotion_through_relation_removal(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_failover_election_after_relation_integration(ops_test: OpsTest) -> None:
+async def test_failover_election_after_restoring_integration(ops_test: OpsTest) -> None:
     """Test that the failover orchestrator is correctly elected after re-adding relations."""
-    assert ops_test.model is not None
-
     await ops_test.model.integrate(
         f"{FAILOVER_APP}:peer-cluster-orchestrator", f"{MAIN_APP}:peer-cluster"
     )
-    for app in [DATA_APP, _2nd_DATA_APP]:
+    for app in [DATA_APP, DATA_APP_TWO]:
         await ops_test.model.integrate(
             f"{MAIN_APP}:peer-cluster-orchestrator", f"{app}:peer-cluster"
         )
 
     await wait_until(
         ops_test,
-        apps=[MAIN_APP, DATA_APP, _2nd_DATA_APP],
+        apps=[MAIN_APP, DATA_APP, DATA_APP_TWO],
         apps_statuses=["active"],
         units_full_statuses={
             MAIN_APP: {"units": {"active": []}},
             DATA_APP: {"units": {"active": []}},
-            _2nd_DATA_APP: {"units": {"active": []}},
+            DATA_APP_TWO: {"units": {"active": []}},
         },
         wait_for_exact_units=1,
     )
@@ -230,11 +220,9 @@ async def test_failover_election_after_relation_integration(ops_test: OpsTest) -
 
 
 @pytest.mark.abort_on_fail
-async def test_scale_failover_to_0_and_back(ops_test: OpsTest) -> None:
+async def test_scale_promoted_main_to_0_then_up(ops_test: OpsTest) -> None:
     """Test scaling main orchestrator to 0 and back to 1 unit."""
     # Main orchestrator is the failover app at this point
-    assert ops_test.model is not None
-
     failover_app = ops_test.model.applications[FAILOVER_APP]
     assert failover_app is not None
 
@@ -247,16 +235,16 @@ async def test_scale_failover_to_0_and_back(ops_test: OpsTest) -> None:
 
     await wait_until(
         ops_test,
-        apps=[MAIN_APP, DATA_APP, _2nd_DATA_APP],
+        apps=[MAIN_APP, DATA_APP, DATA_APP_TWO],
         apps_full_statuses={
-            MAIN_APP: {"blocked": [CMS_NOT_ENOUGH_STATUS]},
+            MAIN_APP: {"active": []},
             DATA_APP: {"active": []},
-            _2nd_DATA_APP: {"active": []},
+            DATA_APP_TWO: {"active": []},
         },
         units_full_statuses={
             MAIN_APP: {"units": {"active": []}},
             DATA_APP: {"units": {"active": []}},
-            _2nd_DATA_APP: {"units": {"active": []}},
+            DATA_APP_TWO: {"units": {"active": []}},
         },
         wait_for_exact_units=1,
     )
@@ -283,21 +271,20 @@ async def test_scale_failover_to_0_and_back(ops_test: OpsTest) -> None:
     await failover_app.add_unit(attach_storage=failover_app_storages)
     await wait_until(
         ops_test,
-        apps=[MAIN_APP, DATA_APP, FAILOVER_APP, _2nd_DATA_APP],
+        apps=[MAIN_APP, DATA_APP, FAILOVER_APP, DATA_APP_TWO],
         apps_full_statuses={
-            MAIN_APP: {"blocked": [CMS_NOT_ENOUGH_STATUS]},
-            FAILOVER_APP: {
-                "blocked": [
-                    "Cannot start. Waiting for peer cluster relation...",
-                    CMS_NOT_ENOUGH_STATUS,
+            MAIN_APP: {
+                "waiting": [
+                    "Waiting for peer cluster relation to be created in related 'failover-orchestrator'."
                 ]
             },
+            FAILOVER_APP: {"blocked": ["Cannot start. Waiting for peer cluster relation..."]},
             DATA_APP: {
                 "waiting": [
                     "Waiting for peer cluster relation to be created in related 'failover-orchestrator'."
                 ]
             },
-            _2nd_DATA_APP: {
+            DATA_APP_TWO: {
                 "waiting": [
                     "Waiting for peer cluster relation to be created in related 'failover-orchestrator'."
                 ]
@@ -306,8 +293,10 @@ async def test_scale_failover_to_0_and_back(ops_test: OpsTest) -> None:
         units_full_statuses={
             MAIN_APP: {"units": {"active": []}},
             FAILOVER_APP: {"units": {"active": []}},
-            DATA_APP: {"units": {"active": []}},
-            _2nd_DATA_APP: {"units": {"active": []}},
+            DATA_APP: {
+                "units": {"active": ["Missing requirements: At least 1 data nodes are required."]}
+            },
+            DATA_APP_TWO: {"units": {"active": []}},
         },
     )
 
@@ -321,17 +310,17 @@ async def test_scale_failover_to_0_and_back(ops_test: OpsTest) -> None:
 
     await wait_until(
         ops_test,
-        apps=[MAIN_APP, DATA_APP, _2nd_DATA_APP],
+        apps=[MAIN_APP, DATA_APP, DATA_APP_TWO],
         apps_full_statuses={
-            MAIN_APP: {"blocked": [CMS_NOT_ENOUGH_STATUS]},
-            FAILOVER_APP: {"blocked": [CMS_NOT_ENOUGH_STATUS]},
+            MAIN_APP: {"active": []},
+            FAILOVER_APP: {"active": []},
             DATA_APP: {"active": []},
-            _2nd_DATA_APP: {"active": []},
+            DATA_APP_TWO: {"active": []},
         },
         units_full_statuses={
             MAIN_APP: {"units": {"active": []}},
             DATA_APP: {"units": {"active": []}},
-            _2nd_DATA_APP: {"units": {"active": []}},
+            DATA_APP_TWO: {"units": {"active": []}},
         },
         wait_for_exact_units=1,
     )
