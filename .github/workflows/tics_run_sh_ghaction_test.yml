@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, amd64, tiobe, jammy]
 
     steps:
       - name: Checkout the project
@@ -27,6 +27,9 @@ jobs:
         run: |
           pipx install tox
           pipx install poetry
+
+      - name: Setup tmate session
+        uses: canonical/action-tmate@main
 
       - name: Run tox tests to create coverage.xml
         run: tox run -e unit
