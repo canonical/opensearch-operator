@@ -1047,7 +1047,7 @@ async def test_ml_plugin(ops_test: OpsTest, deploy_type: str) -> None:
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
 @pytest.mark.abort_on_fail
 async def test_observability_plugin(ops_test: OpsTest, deploy_type: str) -> None:
-    """Test that the observability plugin is enabled and functional."""
+    """Test that PPL queries can be interpreted for the observability plugin."""
     leader_unit_ip = await get_leader_unit_ip(ops_test)
     base_url = f"https://{leader_unit_ip}:9200"
 
