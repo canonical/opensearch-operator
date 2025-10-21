@@ -26,9 +26,9 @@ class TestOpenSearchKeystore(unittest.TestCase):
         """Add data to keystore."""
         self.charm.opensearch.request = MagicMock(return_value={"status": 200})
         self.charm.opensearch.run_bin = MagicMock(return_value="")
-        self.keystore.add_entries({"key1": "secret1"})
+        self.keystore.put_entries({"key1": "secret1"})
         self.charm.opensearch.run_bin.assert_has_calls(
-            [call("keystore", "add --force --stdin key1", stdin="secret1")]
+            [call("keystore", "add key1 --force", stdin="secret1")]
         )
 
     def test_keystore_delete_keypair(self) -> None:
