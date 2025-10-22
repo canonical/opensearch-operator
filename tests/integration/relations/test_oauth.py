@@ -322,7 +322,7 @@ async def test_oauth_relation_restricted(ops_test: OpsTest, charm, series, micro
     result = requests.get(
         opensearch_url, headers={"Authorization": f"Bearer {oauth_access_token}"}, verify=False
     )
-    assert result.json().get("status") == 401, "`Unauthorized` error expected"
+    assert result.status_code == 401, "`Unauthorized` error expected"
     logger.info("Access with OAuth Token failed as expected")
 
     logger.info(f"Remove relation with {DATA_APP}")
