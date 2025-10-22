@@ -213,6 +213,7 @@ def run_cmd(command: str, args: str = None) -> SimpleNamespace:
             shell=True,
             text=True,
             encoding="utf-8",
+            errors="replace",
             timeout=25,
             env=os.environ,
         )

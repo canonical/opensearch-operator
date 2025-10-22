@@ -136,6 +136,91 @@ def split_ca_chain(pem_content: str) -> list[str]:
     return [f"{part}\n{end_cert_marker}" for part in parts]
 
 
+def _run(cmd: list[str]):
+    return subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=30,
+        env=os.environ,
+    )
+
+
+def store_s3_ca(
+    alias: str, store_pwd: str, store_path: str, ca: str, keep_previous: bool = True
+) -> bool:
+    """Add new CA cert to trust store for S3."""
+    tmpdir = os.path.dirname(store_path)
+    certs = list(reversed(split_ca_chain(ca)))
+
+    for i, pem in enumerate(certs):
+        ix_alias = f"{alias}-{i}"
+        old_alias = f"old-{alias}-{i}"
+
+        # rename old alias
+        if keep_previous:
+            p = _run(
+                [
+                    "opensearch.keytool",
+                    "-changealias",
+                    "-alias",
+                    ix_alias,
+                    "-destalias",
+                    old_alias,
+                    "-keystore",
+                    store_path,
+                    "-storetype",
+                    "PKCS12",
+                    "-storepass",
+                    store_pwd,
+                ]
+            )
+            if p.returncode != 0:
+                msg = (p.stdout or "") + (p.stderr or "")
+                if "does not exist" not in msg and "Keystore file does not exist" not in msg:
+                    return False
+
+        fd, tmpfile = tempfile.mkstemp(dir=tmpdir)
+        try:
+            with os.fdopen(fd, "w") as f:
+                f.write(pem)
+
+            p = _run(
+                [
+                    "opensearch.keytool",
+                    "-importcert",
+                    "-noprompt",
+                    "-alias",
+                    ix_alias,
+                    "-keystore",
+                    store_path,
+                    "-file",
+                    tmpfile,
+                    "-storetype",
+                    "PKCS12",
+                    "-storepass",
+                    store_pwd,
+                ]
+            )
+
+            if p.returncode != 0:
+                listed = list_cas(store_pwd=store_pwd, store_path=store_path) or {}
+                if ix_alias not in listed:
+                    return False
+        finally:
+            try:
+                os.remove(tmpfile)
+            except FileNotFoundError:
+                pass
+
+    _run(["chown", "snap_daemon:root", store_path])
+    _run(["chmod", "0644", store_path])
+    return True
+
+
 def store_ca(
     alias: str, store_pwd: str, store_path: str, ca: str, keep_previous: bool = True
 ) -> bool:
@@ -209,7 +294,7 @@ def list_aliases(store_pwd: str, store_path: str) -> Optional[list[str]]:
         return None
 
 
-def list_cas(store_pwd: str, store_path: str) -> Optional[dict[str, str]]:
+def list_cas(store_pwd: str, store_path: str) -> Optional[dict[str, str]]:  # noqa: C901
     """List the CAs currently stored in a trust store."""
     if not exists(store_path):
         return None
@@ -222,29 +307,48 @@ def list_cas(store_pwd: str, store_path: str) -> Optional[dict[str, str]]:
         logging.error("Error reading the current truststore: %s", e)
         return None
 
-    # parse output to retrieve the current CA (in case there are many)
-    certificates = split_ca_chain(stored_certs)
+    # split by -----END CERTIFICATE-----
+    cert_blocks = split_ca_chain(stored_certs)
 
     start_cert_marker = "-----BEGIN CERTIFICATE-----"
+    chains: dict[str, list[tuple[int, str]]] = {}
 
-    certs = {}
-    for cert in certificates:
-        alias = [line for line in cert.split("\n") if line.strip().startswith("friendlyName:")][0]
-        alias = alias.split("friendlyName:")[-1].strip()
-
-        alias_split = alias.split("-")  # support for CA chains with multiple intermediate CAs
-        ca_index = int(alias_split[-1])
-        ca_alias = "-".join(alias_split[:-1])
-        certs.setdefault(ca_alias, []).insert(
-            ca_index, f"{start_cert_marker}{cert.split(start_cert_marker)[1]}"
+    for block in cert_blocks:
+        # find the friendlyName: line produced by openssl pkcs12
+        alias_line = next(
+            (line for line in block.split("\n") if line.strip().startswith("friendlyName:")), None
         )
+        if not alias_line:
+            continue
+        alias = alias_line.split("friendlyName:", 1)[-1].strip()
 
-    # since we add a suffix for the index of the CA chain content, we need to re-arrange the output
-    cas = {}
-    for alias, certs_list in certs.items():
-        cas[alias] = "\n".join(certs_list)
+        # extract the PEM body
+        if start_cert_marker not in block:
+            continue
+        pem = f"{start_cert_marker}{block.split(start_cert_marker, 1)[1]}".strip()
 
-    return cas
+        # parse optional trailing -<int> index
+        base = alias
+        idx = 0
+        parts = alias.rsplit("-", 1)
+        if len(parts) == 2:
+            maybe_idx = parts[1]
+            try:
+                idx = int(maybe_idx)
+                base = parts[0]
+            except ValueError:
+                # alias had a dash but no numeric index, keep whole alias as base and idx=0
+                pass
+
+        chains.setdefault(base, []).append((idx, pem))
+
+    # reassemble chains in index order
+    out: dict[str, str] = {}
+    for base, items in chains.items():
+        items.sort(key=lambda t: t[0])
+        out[base] = "\n".join(p for _, p in items if p)
+
+    return out
 
 
 def read_ca(alias: str, store_pwd: str, store_path: str) -> Optional[str]:
