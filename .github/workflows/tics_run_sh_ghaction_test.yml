@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, linux, amd64, tiobe, noble]
+    runs-on: [self-hosted, linux, amd64, tiobe, jammy]
 
     steps:
       - name: Checkout the project
@@ -16,9 +16,6 @@ jobs:
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y python3-venv
-
-      - name: Setup tmate session
-        uses: canonical/action-tmate@main
 
       - name: Install pipx
         run: python3 -m pip install --user pipx && python3 -m pipx ensurepath
@@ -31,6 +28,12 @@ jobs:
           pipx install tox
           pipx install poetry
 
+      # This step is required since the configuration of aproxy on the self-hosted runner
+      # Makes the socket connections to several ip's give false positive results. This is due
+      # to the aproxy configuration that is excluding only a range of ip's
+      - name: Exclude the opensearch test host from proxy
+        run: |
+          sudo nft add element ip aproxy exclude { 1.1.1.1 }
 
       - name: Run tox tests to create coverage.xml
         run: tox run -e unit
