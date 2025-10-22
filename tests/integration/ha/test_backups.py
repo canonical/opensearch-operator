@@ -20,7 +20,6 @@ import logging
 import os
 import random
 import string
-import subprocess
 import time
 import uuid
 from datetime import datetime
@@ -48,7 +47,7 @@ from ..helpers import (
     http_request,
     run_action,
 )
-from ..helpers_deployments import get_application_units, wait_until
+from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import (
     add_juju_secret,
@@ -119,18 +118,10 @@ async def force_clear_cwrites_index():
 
 
 @pytest.fixture(scope="session")
-def cloud_configs(microceph: Dict[str, str]) -> Dict[str, Dict[str, str]]:
+def cloud_configs(storage_config: Dict[str, str]) -> Dict[str, Dict[str, str]]:
     # Figure out the address of the LXD host itself, where tests are executed
     # this is where microceph will be installed.
-    ip = subprocess.check_output(["hostname", "-I"]).decode().split()[0]
-    results = {
-        "microceph": {
-            "endpoint": f"http://{ip}",
-            "bucket": microceph.bucket,
-            "path": BackupsPath,
-            "region": "default",
-        },
-    }
+    results = storage_config
     if os.environ["AWS_ACCESS_KEY"]:
         results["aws"] = {
             "endpoint": "https://s3.amazonaws.com",
@@ -147,16 +138,10 @@ def cloud_configs(microceph: Dict[str, str]) -> Dict[str, Dict[str, str]]:
     return results
 
 
-
 @pytest.fixture(scope="session")
-def cloud_credentials(microceph: Dict[str, str]) -> Dict[str, Dict[str, str]]:
+def cloud_credentials(storage_credentials: Dict[str, str]) -> Dict[str, Dict[str, str]]:
     """Read cloud credentials."""
-    results = {
-        "microceph": {
-            "access-key": microceph.access_key_id,
-            "secret-key": microceph.secret_access_key,
-        },
-    }
+    results = storage_credentials
     if os.environ["AWS_ACCESS_KEY"]:
         results["aws"] = {
             "access-key": os.environ["AWS_ACCESS_KEY"],
@@ -244,6 +229,8 @@ async def _configure_s3(
         "path": config["path"],
         "region": config.get("region", "") or "",
     }
+    if tls_ca_chain := config.get("tls-ca-chain"):
+        base_cfg["tls-ca-chain"] = tls_ca_chain
 
     await ops_test.model.applications[S3_INTEGRATOR].set_config(base_cfg)
 
@@ -343,6 +330,7 @@ async def test_large_deployment_build_and_deploy(
     ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
 ) -> None:
     """Build and deploy a large cluster (main/failover orchestrators + data.hot node).
+
     The following apps will be deployed:
     * main: the main orchestrator
     * failover: the failover orchestrator
@@ -619,6 +607,7 @@ async def test_restore_to_new_cluster(
     force_clear_cwrites_index,
 ) -> None:
     """Tear down cluster, redeploy clean, then restore prior backups and validate.
+
     Restores each of the previous backups we created and compare with their doc count.
     The cluster is considered healthy if:
     1) At each backup restored, check our track of doc count vs. current index count
