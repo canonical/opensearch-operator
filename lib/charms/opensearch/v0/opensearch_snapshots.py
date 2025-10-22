@@ -426,8 +426,8 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.snapshots_manager.store_s3_ca(payload.get("tls_ca_chain") or None)
             self.charm.keystore_manager.put_entries(
                 {
-                    "s3.client.default.access_key": payload["access_key"],
-                    "s3.client.default.secret_key": payload["secret_key"],
+                    "s3.client.default.access_key": payload["access-key"],
+                    "s3.client.default.secret_key": payload["secret-key"],
                 }
             )
             effective_cfg = ObjectStorageConfig.from_dict(
@@ -438,8 +438,8 @@ class OpenSearchSnapshotsEvents(Object):
                         "base_path": payload["base_path"],
                         "region": payload["region"],
                         "credentials": {
-                            "access-key": payload["access_key"],
-                            "secret-key": payload["secret_key"],
+                            "access-key": payload["access-key"],
+                            "secret-key": payload["secret-key"],
                         },
                         "tls-ca-chain": payload.get("tls_ca_chain") or "",
                     }
@@ -449,7 +449,7 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.keystore_manager.put_entries(
                 {
                     "azure.client.default.account": payload["storage_account"],
-                    "azure.client.default.key": payload["secret_key"],
+                    "azure.client.default.key": payload["secret-key"],
                 }
             )
             effective_cfg = ObjectStorageConfig.from_dict(
@@ -459,7 +459,7 @@ class OpenSearchSnapshotsEvents(Object):
                         "base_path": payload["base_path"],
                         "credentials": {
                             "storage-account": payload["storage_account"],
-                            "secret-key": payload["secret_key"],
+                            "secret-key": payload["secret-key"],
                         },
                     }
                 }
@@ -1094,8 +1094,8 @@ class OpenSearchSnapshotsManager:
 # helpers
 def _get_s3_secret_data(rel_data: S3RelData) -> dict:
     return {
-        "access_key": rel_data.credentials.access_key,
-        "secret_key": rel_data.credentials.secret_key,
+        "access-key": rel_data.credentials.access_key,
+        "secret-key": rel_data.credentials.secret_key,
     }
 
 
@@ -1112,11 +1112,7 @@ def _get_s3_repo_data(rel_data: S3RelData) -> dict:
 
 def _get_azure_secret_data(rel_data: AzureRelData) -> dict:
     return {
-        "type": "azure",
-        "container": rel_data.container,
-        "base_path": rel_data.base_path,
-        "storage_account": rel_data.credentials.storage_account,
-        "secret_key": rel_data.credentials.secret_key,
+        "secret-key": rel_data.credentials.secret_key,
     }
 
 
@@ -1126,7 +1122,6 @@ def _get_azure_repo_data(rel_data: AzureRelData) -> dict:
         "container": rel_data.container,
         "base_path": rel_data.base_path,
         "storage_account": rel_data.credentials.storage_account,
-        "secret_key": rel_data.credentials.secret_key,
     }
 
 
