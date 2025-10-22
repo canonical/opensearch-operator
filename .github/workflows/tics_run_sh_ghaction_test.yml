@@ -33,7 +33,7 @@ jobs:
       # to the aproxy configuration that is excluding only a range of ip's
       - name: Exclude the opensearch test host from proxy
         run: |
-          sudo nft add element ip aproxy exclude { 1.1.1.1 }
+          sudo nft add element ip aproxy exclude "{ 1.1.1.1 }"
 
       - name: Run tox tests to create coverage.xml
         run: tox run -e unit
