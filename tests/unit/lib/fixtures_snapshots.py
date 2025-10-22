@@ -57,7 +57,7 @@ class SnapshotsUnitTestFixtures:
     )
 
     patch_s3_conn = patch(
-        "charms.data_platform_libs.v0.s3.S3Requirer.get_s3_connection_info",
+        "charms.data_platform_libs.v0.s3.S3Requires.get_s3_connection_info",
         return_value=DEFAULT_S3_INFO,
     )
     patch_az_conn = patch(
