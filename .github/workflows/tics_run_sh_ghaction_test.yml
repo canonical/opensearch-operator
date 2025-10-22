@@ -17,6 +17,9 @@ jobs:
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y python3-venv
 
+      - name: Setup tmate session
+        uses: canonical/action-tmate@main
+
       - name: Install pipx
         run: python3 -m pip install --user pipx && python3 -m pipx ensurepath
 
@@ -28,8 +31,6 @@ jobs:
           pipx install tox
           pipx install poetry
 
-      - name: Setup tmate session
-        uses: canonical/action-tmate@main
 
       - name: Run tox tests to create coverage.xml
         run: tox run -e unit
