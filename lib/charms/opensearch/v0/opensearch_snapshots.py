@@ -398,9 +398,9 @@ class OpenSearchSnapshotsEvents(Object):
             return
 
         # read the effective storage type/config coming from peer-clusters
-        os_type = self.charm.opensearch_peer_cm.get_app(OS_PEER_KEY_TYPE)
-        secret_id = self.charm.opensearch_peer_cm.get_app(OS_PEER_KEY_SECRET)
-        rev = self.charm.opensearch_peer_cm.get_app(OS_PEER_KEY_REV)
+        os_type = self.charm.peers_data.get(Scope.APP, OS_PEER_KEY_TYPE)
+        secret_id = self.charm.peers_data.get(Scope.APP,OS_PEER_KEY_SECRET)
+        rev = self.charm.peers_data.get(Scope.APP, OS_PEER_KEY_REV)
 
         if not os_type or not secret_id or not rev:
             return
@@ -552,7 +552,7 @@ class OpenSearchSnapshotsEvents(Object):
         except Exception:
             pass
         try:
-            self.charm.peers_data.delete(Scope.UNIT, "snapshot-object-storage-revision")
+            self.charm.peers_data.delete(Scope.UNIT, OS_PEER_KEY_REV)
         except Exception:
             pass
 
@@ -1119,7 +1119,7 @@ def _bump_revision(cur: Optional[str]) -> int:
 def _publish_to_peers_with_secret(charm, os_type: str, payload: dict) -> None:
     """Create a new secret with payload, grant it to peer-cluster, and publish keys + revision."""
     # best-effort delete old secret first
-    old_secret_id = charm.opensearch_peer_cm.get_app(OS_PEER_KEY_SECRET)
+    old_secret_id = charm.peers_data.get(Scope.APP, OS_PEER_KEY_SECRET)
     if old_secret_id:
         try:
             old_sec = charm.model.get_secret(id=old_secret_id)
@@ -1141,16 +1141,16 @@ def _publish_to_peers_with_secret(charm, os_type: str, payload: dict) -> None:
             pass
 
     # bump and publish revision
-    cur_rev = charm.opensearch_peer_cm.get_app(OS_PEER_KEY_REV)
+    cur_rev = charm.peers_data.get(Scope.APP, OS_PEER_KEY_REV)
     new_rev = _bump_revision(cur_rev)
 
-    charm.opensearch_peer_cm.put_app(OS_PEER_KEY_TYPE, os_type)
-    charm.opensearch_peer_cm.put_app(OS_PEER_KEY_SECRET, secret_id)
-    charm.opensearch_peer_cm.put_app(OS_PEER_KEY_REV, str(new_rev))
+    charm.peers_data.put_object(Scope.APP, {OS_PEER_KEY_TYPE: os_type})
+    charm.peers_data.put_object(Scope.APP, {OS_PEER_KEY_SECRET: secret_id})
+    charm.peers_data.put_object(Scope.APP, {OS_PEER_KEY_REV: str(new_rev)})
 
 
 def _clear_from_peers_and_delete_secret(charm) -> None:
-    old_secret_id = charm.opensearch_peer_cm.get_app(OS_PEER_KEY_SECRET)
+    old_secret_id = charm.peers_data.get(Scope.APP, OS_PEER_KEY_SECRET)
     if old_secret_id:
         try:
             sec = charm.model.get_secret(id=old_secret_id)
@@ -1159,6 +1159,6 @@ def _clear_from_peers_and_delete_secret(charm) -> None:
             pass
     new_rev = 0
     # clear type and secret, set revision to 0 so non-orchestrators drop local state
-    charm.opensearch_peer_cm.delete_app(OS_PEER_KEY_TYPE)
-    charm.opensearch_peer_cm.delete_app(OS_PEER_KEY_SECRET)
-    charm.opensearch_peer_cm.put_app(OS_PEER_KEY_REV, str(new_rev))
+    charm.peers_cm.delete(Scope.APP, OS_PEER_KEY_TYPE)
+    charm.peers_cm.delete(Scope.APP, OS_PEER_KEY_SECRET)
+    charm.peers_cm.put_object(OS_PEER_KEY_REV, str(new_rev))
