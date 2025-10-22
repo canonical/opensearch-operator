@@ -405,8 +405,7 @@ class OpenSearchSnapshotsEvents(Object):
         os_type = self.charm.peers_data.get(Scope.APP, OS_PEER_KEY_TYPE)
         repo = self.charm.peers_data.get(Scope.APP, OS_PEER_KEY_REPO)
         rev = self.charm.peers_data.get(Scope.APP, OS_PEER_KEY_REV)
-        secret_id = repo.get("secret_id")
-        if not os_type or not secret_id or not rev:
+        if not os_type or not repo or not repo.get("secret_id")or not rev:
             return
 
         # keep last seen revision in unit-scope, if changed, re-read secret
