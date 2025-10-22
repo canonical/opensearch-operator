@@ -247,6 +247,7 @@ async def test_setup_large_cluster(ops_test: OpsTest, charm, series, microk8s_mo
     """Replace the Opensearch application with a large deployment cluster."""
     logger.info("Remove Opensearch application")
     await ops_test.model.remove_application("opensearch", block_until_done=True)
+    await ops_test.model.remove_application(SECOND_DATA_INTEGRATOR_NAME, block_until_done=True)
 
     logger.info("Create large deployment cluster of Opensearch")
     await asyncio.gather(
