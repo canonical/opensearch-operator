@@ -399,7 +399,7 @@ class OpenSearchSnapshotsEvents(Object):
 
         # read the effective storage type/config coming from peer-clusters
         os_type = self.charm.peers_data.get(Scope.APP, OS_PEER_KEY_TYPE)
-        secret_id = self.charm.peers_data.get(Scope.APP,OS_PEER_KEY_SECRET)
+        secret_id = self.charm.peers_data.get(Scope.APP, OS_PEER_KEY_SECRET)
         rev = self.charm.peers_data.get(Scope.APP, OS_PEER_KEY_REV)
 
         if not os_type or not secret_id or not rev:
