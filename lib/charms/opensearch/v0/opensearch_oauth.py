@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from charms.hydra.v0.oauth import ClientConfig, OAuthRequirer
 from charms.opensearch.v0.constants_charm import OAUTH_RELATION, OAuthRelationInvalid
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.models import DeploymentType, StartMode
+from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import (
@@ -158,13 +158,3 @@ class OAuthHandler(Object):
         return bool(self.charm.opensearch_peer_cm.deployment_desc()) and bool(
             self.charm.peers_data.get(Scope.APP, "security_index_initialised")
         )
-
-    def _is_admin_script_eligible(self) -> bool:
-        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
-        return (
-            deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
-            and (
-                "data" in deployment_desc.config.roles
-                or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
-            )
-        ) or self.charm.opensearch_peer_cm.is_provider(typ="main")
