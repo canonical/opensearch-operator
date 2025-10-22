@@ -127,15 +127,15 @@ async def force_clear_cwrites_index():
 
 
 @pytest.fixture(scope="session")
-def cloud_configs(storage_config: Dict[str, str]) -> Dict[str, Dict[str, str]]:
+def cloud_configs(microceph: Dict[str, str]) -> Dict[str, Dict[str, str]]:
     """Return cloud configs, including MicroCeph with HTTPS and tls-ca-chain."""
     results = {
         "microceph": {
-            "endpoint": storage_config["endpoint"],
-            "bucket": storage_config["bucket"],
+            "endpoint": microceph["endpoint"],
+            "bucket": microceph["bucket"],
             "path": BackupsPath,
-            "region": storage_config.get("region", "") or "test",
-            "tls-ca-chain": storage_config["tls-ca-chain"],
+            "region": microceph.get("region", "") or "test",
+            "tls-ca-chain": microceph["tls-ca-chain"],
         },
     }
     if os.environ.get("AWS_ACCESS_KEY"):
@@ -155,12 +155,12 @@ def cloud_configs(storage_config: Dict[str, str]) -> Dict[str, Dict[str, str]]:
 
 
 @pytest.fixture(scope="session")
-def cloud_credentials(storage_credentials: Dict[str, str]) -> Dict[str, Dict[str, str]]:
+def cloud_credentials(microceph: Dict[str, str]) -> Dict[str, Dict[str, str]]:
     """Return credentials for each cloud."""
     results = {
         "microceph": {
-            "access-key": storage_credentials["access-key"],
-            "secret-key": storage_credentials["secret-key"],
+            "access-key": microceph["access-key"],
+            "secret-key": microceph["secret-key"],
         },
     }
     if os.environ.get("AWS_ACCESS_KEY"):
