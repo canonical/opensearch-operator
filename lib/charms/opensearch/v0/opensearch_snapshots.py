@@ -8,7 +8,6 @@ import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal, Optional, Tuple
 
-from charms.data_platform_libs.v0.data_interfaces import Scope
 from charms.data_platform_libs.v0.azure_storage import (
     AzureStorageRequires,
 )
@@ -18,6 +17,7 @@ from charms.data_platform_libs.v0.azure_storage import (
 from charms.data_platform_libs.v0.azure_storage import (
     StorageConnectionInfoGoneEvent as StorageConnectionInfoGoneEventAzure,
 )
+from charms.data_platform_libs.v0.data_interfaces import Scope
 from charms.data_platform_libs.v0.s3 import (
     S3Requires,
 )

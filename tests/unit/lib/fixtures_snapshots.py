@@ -61,7 +61,7 @@ class SnapshotsUnitTestFixtures:
         return_value=DEFAULT_S3_INFO,
     )
     patch_az_conn = patch(
-        "charms.data_platform_libs.v0.object_storage.AzureStorageRequires.get_azure_storage_connection_info",
+        "charms.data_platform_libs.v0.azure_storage.AzureStorageRequires.get_azure_storage_connection_info",
         return_value=DEFAULT_AZURE_INFO,
     )
 
