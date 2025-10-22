@@ -20,13 +20,13 @@ import logging
 import os
 import random
 import string
+import subprocess
 import time
 import uuid
 from datetime import datetime
 from typing import Dict
 
 import boto3
-import botocore
 import pytest
 from azure.storage.blob import BlobServiceClient
 from charms.opensearch.v0.constants_charm import (
@@ -48,7 +48,7 @@ from ..helpers import (
     http_request,
     run_action,
 )
-from ..helpers_deployments import wait_until
+from ..helpers_deployments import get_application_units, wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import (
     add_juju_secret,
@@ -84,6 +84,7 @@ LARGE_DEPLOYMENTS_ALL_CLOUDS = [
     ALL_GROUPS[(cloud, "large")] for cloud in ["aws", "microceph", "azure"]
 ]
 
+
 S3_INTEGRATOR = "s3-integrator"
 S3_INTEGRATOR_CHANNEL = "1/stable"
 S3_RELATION = "s3-credentials"
@@ -117,35 +118,27 @@ async def force_clear_cwrites_index():
         pass
 
 
-#  MicroCeph (RADOS GW) integration
-# We rely on the preparation fixtures provided in the same test tree (conftest.py):
-# - storage_config(): {endpoint, bucket, path, region, tls-ca-chain (base64 PEM)}
-# - storage_credentials(): {access-key, secret-key}
-# These are produced by a setup that bootstraps microceph,
-# enables RGW on 445 with a self-signed cert,
-# and writes cert.pem to the working directory.
-
-
 @pytest.fixture(scope="session")
 def cloud_configs(microceph: Dict[str, str]) -> Dict[str, Dict[str, str]]:
-    """Return cloud configs, including MicroCeph with HTTPS and tls-ca-chain."""
+    # Figure out the address of the LXD host itself, where tests are executed
+    # this is where microceph will be installed.
+    ip = subprocess.check_output(["hostname", "-I"]).decode().split()[0]
     results = {
         "microceph": {
-            "endpoint": microceph["endpoint"],
-            "bucket": microceph["bucket"],
+            "endpoint": f"http://{ip}",
+            "bucket": microceph.bucket,
             "path": BackupsPath,
-            "region": microceph.get("region", "") or "test",
-            "tls-ca-chain": microceph["tls-ca-chain"],
+            "region": "default",
         },
     }
-    if os.environ.get("AWS_ACCESS_KEY"):
+    if os.environ["AWS_ACCESS_KEY"]:
         results["aws"] = {
             "endpoint": "https://s3.amazonaws.com",
             "bucket": "data-charms-testing",
             "path": BackupsPath,
             "region": "us-east-1",
         }
-    if os.environ.get("AZURE_SECRET_KEY"):
+    if os.environ["AZURE_SECRET_KEY"]:
         results["azure"] = {
             "connection-protocol": "abfss",
             "container": "data-charms-testing",
@@ -154,21 +147,22 @@ def cloud_configs(microceph: Dict[str, str]) -> Dict[str, Dict[str, str]]:
     return results
 
 
+
 @pytest.fixture(scope="session")
 def cloud_credentials(microceph: Dict[str, str]) -> Dict[str, Dict[str, str]]:
-    """Return credentials for each cloud."""
+    """Read cloud credentials."""
     results = {
         "microceph": {
-            "access-key": microceph["access-key"],
-            "secret-key": microceph["secret-key"],
+            "access-key": microceph.access_key_id,
+            "secret-key": microceph.secret_access_key,
         },
     }
-    if os.environ.get("AWS_ACCESS_KEY"):
+    if os.environ["AWS_ACCESS_KEY"]:
         results["aws"] = {
             "access-key": os.environ["AWS_ACCESS_KEY"],
             "secret-key": os.environ["AWS_SECRET_KEY"],
         }
-    if os.environ.get("AZURE_SECRET_KEY"):
+    if os.environ["AZURE_SECRET_KEY"]:
         results["azure"] = {
             "secret-key": os.environ["AZURE_SECRET_KEY"],
             "storage-account": os.environ["AZURE_STORAGE_ACCOUNT"],
@@ -182,6 +176,7 @@ def remove_backups(  # noqa C901
     cloud_credentials: Dict[str, Dict[str, str]],
 ):
     """Remove previously created backups from cloud buckets/containers."""
+    """Remove previously created backups from the cloud-corresponding bucket."""
     yield
 
     logger.info("Cleaning backups from cloud buckets")
@@ -189,49 +184,51 @@ def remove_backups(  # noqa C901
         if cloud_name not in cloud_credentials:
             continue
 
-        if cloud_name in ("aws", "microceph"):
-            if not all(k in cloud_credentials[cloud_name] for k in ("access-key", "secret-key")):
+        if cloud_name == "aws" or cloud_name == "microceph":
+            if (
+                "access-key" not in cloud_credentials[cloud_name]
+                or "secret-key" not in cloud_credentials[cloud_name]
+            ):
+                # This cloud has not been used in this test run
                 continue
 
-            # For MicroCeph we must verify with the local self-signed cert.
-            # cert.pem is created by the microceph preparation fixture.
-            verify_arg = "cert.pem" if cloud_name == "microceph" else True
             session = boto3.session.Session(
                 aws_access_key_id=cloud_credentials[cloud_name]["access-key"],
                 aws_secret_access_key=cloud_credentials[cloud_name]["secret-key"],
-                region_name=config.get("region") or None,
+                region_name=config["region"],
             )
-            s3 = session.client("s3", endpoint_url=config["endpoint"], verify=verify_arg)
+            s3 = session.resource("s3", endpoint_url=config["endpoint"])
+            bucket = s3.Bucket(config["bucket"])
 
+            # Some of our runs target only a single cloud, therefore, they will
+            # raise errors on the other cloud's bucket. We catch and log them.
             try:
-                # list and delete objects with BackupsPath prefix
-                paginator = s3.get_paginator("list_objects_v2")
-                for page in paginator.paginate(Bucket=config["bucket"], Prefix=f"{BackupsPath}/"):
-                    for obj in page.get("Contents", []):
-                        s3.delete_object(Bucket=config["bucket"], Key=obj["Key"])
-            except botocore.exceptions.BotoCoreError as e:
-                logger.warning(f"Failed to clean up backups on {cloud_name}: {e}")
+                bucket.objects.filter(Prefix=f"{BackupsPath}/").delete()
+            except Exception as e:
+                logger.warning(f"Failed to clean up backups: {e}")
 
         if cloud_name == "azure":
-            if not all(
-                k in cloud_credentials[cloud_name] for k in ("secret-key", "storage-account")
+            if (
+                "secret-key" not in cloud_credentials[cloud_name]
+                or "storage-account" not in cloud_credentials[cloud_name]
             ):
+                # This cloud has not been used in this test run
                 continue
 
             storage_account = cloud_credentials[cloud_name]["storage-account"]
             secret_key = cloud_credentials[cloud_name]["secret-key"]
-            connection_string = (
-                f"DefaultEndpointsProtocol=https;AccountName={storage_account};"
-                f"AccountKey={secret_key};EndpointSuffix=core.windows.net"
-            )
+            connection_string = f"DefaultEndpointsProtocol=https;AccountName={storage_account};AccountKey={secret_key};EndpointSuffix=core.windows.net"
             blob_service_client = BlobServiceClient.from_connection_string(connection_string)
             container_client = blob_service_client.get_container_client(config["container"])
 
+            # List and delete blobs with the specified prefix
+            blobs_to_delete = container_client.list_blobs(name_starts_with=BackupsPath)
+
             try:
-                for blob in container_client.list_blobs(name_starts_with=BackupsPath):
+                for blob in blobs_to_delete:
                     container_client.delete_blob(blob.name)
             except Exception as e:
-                logger.warning(f"Failed to clean up backups on azure: {e}")
+                logger.warning(f"Failed to clean up backups: {e}")
 
 
 async def _configure_s3(
@@ -247,8 +244,6 @@ async def _configure_s3(
         "path": config["path"],
         "region": config.get("region", "") or "",
     }
-    if "tls-ca-chain" in config:
-        base_cfg["tls-ca-chain"] = config["tls-ca-chain"]  # base64 PEM
 
     await ops_test.model.applications[S3_INTEGRATOR].set_config(base_cfg)
 
@@ -272,10 +267,12 @@ async def _configure_azure(
     ops_test: OpsTest,
     config: Dict[str, str],
     credentials: Dict[str, str],
-    app_name: str | None = None,
+    app_name: str = None,
 ) -> None:
     await ops_test.model.applications[AZURE_INTEGRATOR].set_config(config)
+    logger.info("Adding Juju secret for secret-key config option for azure-storage-integrator")
 
+    # Creates a new secret for each test
     local_label = "".join(random.choice(string.ascii_letters) for _ in range(10))
     credentials_secret_uri = await add_juju_secret(
         ops_test,
@@ -283,12 +280,24 @@ async def _configure_azure(
         local_label,
         {"secret-key": credentials["secret-key"]},
     )
-    await ops_test.model.applications[AZURE_INTEGRATOR].set_config(
-        {"storage-account": credentials["storage-account"], "credentials": credentials_secret_uri}
+    logger.info(
+        f"Juju secret for secret-key config option for azure-storage-integrator added. Secret URI: {credentials_secret_uri}"
     )
 
+    configuration_parameters = {
+        "storage-account": credentials["storage-account"],
+        "credentials": credentials_secret_uri,
+    }
+    # apply new configuration options
+    logger.info("Setting up configuration for azure-storage-integrator charm...")
+    await ops_test.model.applications[AZURE_INTEGRATOR].set_config(configuration_parameters)
+
     apps = [AZURE_INTEGRATOR] if app_name is None else [AZURE_INTEGRATOR, app_name]
-    await ops_test.model.wait_for_idle(apps=apps, status="active", timeout=TIMEOUT)
+    await ops_test.model.wait_for_idle(
+        apps=apps,
+        status="active",
+        timeout=TIMEOUT,
+    )
 
 
 @pytest.mark.parametrize("cloud_name,deploy_type", SMALL_DEPLOYMENTS_ALL_CLOUDS)
@@ -333,7 +342,15 @@ async def test_small_deployment_build_and_deploy(
 async def test_large_deployment_build_and_deploy(
     ops_test: OpsTest, charm, series, cloud_name: str, deploy_type: str
 ) -> None:
-    """Build and deploy a large cluster (main/failover orchestrators + data.hot node)."""
+    """Build and deploy a large cluster (main/failover orchestrators + data.hot node).
+    The following apps will be deployed:
+    * main: the main orchestrator
+    * failover: the failover orchestrator
+    * opensearch (or APP_NAME): the data.hot node
+
+    The data node is selected to adopt the "APP_NAME" value because it is the node which
+    ContinuousWrites will later target its writes to.
+    """
     if await app_name(ops_test):
         return
 
@@ -384,17 +401,18 @@ async def test_large_deployment_build_and_deploy(
             config=data_hot_conf | CONFIG_OPTS,
         ),
     )
-
+    # Large deployment setup
     await ops_test.model.integrate("main:peer-cluster-orchestrator", "failover:peer-cluster")
     await ops_test.model.integrate("main:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster")
     await ops_test.model.integrate(
         "failover:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster"
     )
-
+    # TLS setup
     await ops_test.model.integrate("main", TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.integrate("failover", TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
 
+    # Charms except s3-integrator should be active
     await wait_until(
         ops_test,
         apps=[TLS_CERTIFICATES_APP_NAME, "main", "failover", APP_NAME],
@@ -439,6 +457,7 @@ async def test_large_setups_relations_with_misconfiguration(
     backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
     backup_relation = AZURE_RELATION if cloud_name == "azure" else S3_RELATION
 
+    # Now, relate failover cluster to backup-integrator and review the status
     await ops_test.model.integrate(f"failover:{backup_relation}", backup_integrator)
     await ops_test.model.integrate(f"{APP_NAME}:{backup_relation}", backup_integrator)
     await wait_until(
@@ -452,6 +471,7 @@ async def test_large_setups_relations_with_misconfiguration(
         idle_period=IDLE_PERIOD,
     )
 
+    # Reverting should return it to normal
     await ops_test.model.applications[APP_NAME].destroy_relation(
         f"{APP_NAME}:{backup_relation}", backup_integrator
     )
@@ -496,6 +516,8 @@ async def test_create_backup_and_restore(
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
     date_before_backup = datetime.utcnow()
+
+    # Wait, we want to make sure the timestamps are different
     await asyncio.sleep(5)
 
     assert (
@@ -511,7 +533,6 @@ async def test_create_backup_and_restore(
     await assert_restore_indices_and_compare_consistency(
         ops_test, app, leader_id, unit_ip, backup_id
     )
-
     global cwrites_backup_doc_count
     cwrites_backup_doc_count[backup_id] = await index_docs_count(
         ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME
@@ -533,14 +554,15 @@ async def test_remove_and_readd_backup_relation(
     app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
     apps = [app] if deploy_type == "small" else [app, APP_NAME]
 
-    leader_id = await get_leader_unit_id(ops_test, app=app)
-    unit_ip = await get_leader_unit_ip(ops_test, app=app)
-    config = cloud_configs[cloud_name]
+    leader_id: int = await get_leader_unit_id(ops_test, app=app)
+    unit_ip: str = await get_leader_unit_ip(ops_test, app=app)
+    config: Dict[str, str] = cloud_configs[cloud_name]
 
     backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
     backup_relation = AZURE_RELATION if cloud_name == "azure" else S3_RELATION
 
     logger.info("Remove backup relation")
+    # Remove relation
     await ops_test.model.applications[app].destroy_relation(
         backup_relation, f"{backup_integrator}:{backup_relation}"
     )
@@ -561,6 +583,8 @@ async def test_remove_and_readd_backup_relation(
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
     date_before_backup = datetime.utcnow()
+
+    # Wait, we want to make sure the timestamps are different
     await asyncio.sleep(5)
 
     assert (
@@ -576,7 +600,6 @@ async def test_remove_and_readd_backup_relation(
     await assert_restore_indices_and_compare_consistency(
         ops_test, app, leader_id, unit_ip, backup_id
     )
-
     global cwrites_backup_doc_count
     cwrites_backup_doc_count[backup_id] = await index_docs_count(
         ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME
@@ -595,7 +618,12 @@ async def test_restore_to_new_cluster(
     deploy_type: str,
     force_clear_cwrites_index,
 ) -> None:
-    """Tear down cluster, redeploy clean, then restore prior backups and validate."""
+    """Tear down cluster, redeploy clean, then restore prior backups and validate.
+    Restores each of the previous backups we created and compare with their doc count.
+    The cluster is considered healthy if:
+    1) At each backup restored, check our track of doc count vs. current index count
+    2) Try to write to that new index.
+    """
     app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
     backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
     backup_integrator_channel = (
@@ -611,6 +639,7 @@ async def test_restore_to_new_cluster(
 
     logging.info("Deploying a new cluster")
     await ops_test.model.set_config(MODEL_CONFIG)
+    # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
 
     await asyncio.gather(
@@ -621,6 +650,7 @@ async def test_restore_to_new_cluster(
         ops_test.model.deploy(charm, num_units=3, series=series, config=CONFIG_OPTS),
     )
 
+    # Relate it to OpenSearch to set up TLS.
     await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME, app],
@@ -628,6 +658,8 @@ async def test_restore_to_new_cluster(
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
+    # Credentials not set yet, this will move the opensearch to blocked state
+    # Credentials are set per test scenario
     await ops_test.model.integrate(app, backup_integrator)
 
     leader_id = await get_leader_unit_id(ops_test, app=app)
@@ -639,29 +671,36 @@ async def test_restore_to_new_cluster(
         await _configure_azure(ops_test, config_cloud, cloud_credentials[cloud_name], app)
     else:
         await _configure_s3(ops_test, config_cloud, cloud_credentials[cloud_name], app)
-
     backups = await list_backups(ops_test, leader_id, app=app)
 
     global cwrites_backup_doc_count
+    # We are expecting 2x backups available
     assert len(backups) == 2
     assert len(cwrites_backup_doc_count) == 2
-
+    count = 0
     for backup_id in backups.keys():
         assert await restore(ops_test, backup_id, unit_ip, leader_id, app=app)
         count = await index_docs_count(ops_test, app, unit_ip, ContinuousWrites.INDEX_NAME)
+
+        # Ensure we have the same doc count as we had on the original cluster
         assert count == cwrites_backup_doc_count[backup_id]
+
+        # restart the continuous writes and check the cluster is still accessible post restore
         await assert_start_and_check_continuous_writes(ops_test, unit_ip, app)
 
-    # Final DR: take a fresh backup while writing on the new cluster
-    logger.info("Final DR stage: backup+restore with active writes")
+    # take a fresh backup while writing on the new cluster
+    logger.info("Final stage: backup+restore with active writes")
     writer: ContinuousWrites = ContinuousWrites(ops_test, app)
 
+    # store the global cwrites object
     global global_cwrites
     global_cwrites = writer
 
     await writer.start()
     time.sleep(10)
     date_before_backup = datetime.utcnow()
+
+    # Wait, we want to make sure the timestamps are different
     await asyncio.sleep(5)
 
     assert (
@@ -672,12 +711,24 @@ async def test_restore_to_new_cluster(
         > date_before_backup
     )
 
+    # continuous writes checks
     await assert_continuous_writes_increasing(writer)
     await assert_continuous_writes_consistency(ops_test, writer, [app])
+    # This assert assures we have taken a new backup, after the last restore from the original
+    # cluster. That means the index is writable.
     await assert_restore_indices_and_compare_consistency(
         ops_test, app, leader_id, unit_ip, backup_id
     )
+    # Clear the writer manually, as we are not using the conftest c_writes_runner to do so
     await writer.clear()
+
+
+# -------------------------------------------------------------------------------------------
+# Tests for the "allgroup" group
+#
+# This group will iterate over each cloud, update its credentials via config and rerun
+# the backup and restore tests.
+# -------------------------------------------------------------------------------------------
 
 
 @pytest.mark.group(id="all")
@@ -689,6 +740,7 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest, charm, series) ->
         return
 
     await ops_test.model.set_config(MODEL_CONFIG)
+    # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
     await asyncio.gather(
         ops_test.model.deploy(
@@ -698,6 +750,7 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest, charm, series) ->
         ops_test.model.deploy(charm, num_units=3, series=series, config=CONFIG_OPTS),
     )
 
+    # Relate it to OpenSearch to set up TLS.
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
@@ -705,13 +758,19 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest, charm, series) ->
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
+    # Credentials not set yet, this will move the opensearch to blocked state
+    # Credentials are set per test scenario
     await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR)
 
 
 @pytest.mark.group(id="all")
 @pytest.mark.abort_on_fail
 async def test_repo_missing_message(ops_test: OpsTest) -> None:
-    """Validate the repository missing message format from OpenSearch."""
+    """Validate the repository missing message format from OpenSearch.
+
+    We use the message format to monitor the cluster status. We need to know if this
+    message pattern changed between releases of OpenSearch.
+    """
     app: str = (await app_name(ops_test)) or APP_NAME
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
     resp = await http_request(
@@ -768,14 +827,17 @@ async def test_change_config_and_backup_restore(
 
     initial_count: int = 0
     for cloud_name in cloud_configs.keys():
+        # Azure has no different config setups at this point
         if cloud_name == "azure":
             continue
-
         logger.debug(
             f"Index {ContinuousWrites.INDEX_NAME} has {initial_count} documents, starting there"
         )
+        # Start the ContinuousWrites here instead of bringing as a fixture because we want to do
+        # it for every cloud config we have and we have to stop it before restore, right down.
         writer: ContinuousWrites = ContinuousWrites(ops_test, app, initial_count=initial_count)
 
+        # store the global cwrites object
         global global_cwrites
         global_cwrites = writer
 
@@ -783,23 +845,31 @@ async def test_change_config_and_backup_restore(
         time.sleep(10)
 
         logger.info(f"Syncing credentials for {cloud_name}")
-        config = cloud_configs[cloud_name]
+        config: Dict[str, str] = cloud_configs[cloud_name]
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
         date_before_backup = datetime.utcnow()
+
+        # Wait, we want to make sure the timestamps are different
         await asyncio.sleep(5)
 
         assert (
             datetime.strptime(
-                backup_id := await create_backup(ops_test, leader_id, unit_ip=unit_ip),
+                backup_id := await create_backup(
+                    ops_test,
+                    leader_id,
+                    unit_ip=unit_ip,
+                ),
                 OPENSEARCH_BACKUP_ID_FORMAT,
             )
             > date_before_backup
         )
 
+        # continuous writes checks
         await assert_continuous_writes_increasing(writer)
         await assert_continuous_writes_consistency(ops_test, writer, [app])
         await assert_restore_indices_and_compare_consistency(
             ops_test, app, leader_id, unit_ip, backup_id
         )
+        # Clear the writer manually, as we are not using the conftest c_writes_runner to do so
         await writer.clear()
