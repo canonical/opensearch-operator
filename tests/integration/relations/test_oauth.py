@@ -32,7 +32,7 @@ DATA_APP = "opensearch-data"
 CLUSTER_NAME = "log-app"
 REL_ORCHESTRATOR = "peer-cluster-orchestrator"
 REL_PEER = "peer-cluster"
-APP_UNITS = {MAIN_APP: 1, FAILOVER_APP: 1, DATA_APP: 3}
+APP_UNITS = {MAIN_APP: 1, FAILOVER_APP: 1, DATA_APP: 1}
 
 logger = logging.getLogger(__name__)
 
@@ -313,7 +313,7 @@ async def test_oauth_relation_restricted(ops_test: OpsTest, charm, series, micro
         apps_full_statuses={
             DATA_APP: {"blocked": [OAuthRelationInvalid]},
         },
-        wait_for_exact_units={DATA_APP: 3},
+        wait_for_exact_units={DATA_APP: 1},
     )
 
     logger.info("Verifying access is not possible")
@@ -334,7 +334,7 @@ async def test_oauth_relation_restricted(ops_test: OpsTest, charm, series, micro
         apps=[DATA_APP],
         apps_full_statuses={DATA_APP: {"active": []}},
         units_statuses=["active"],
-        wait_for_exact_units={DATA_APP: 3},
+        wait_for_exact_units={DATA_APP: 1},
     )
 
 
