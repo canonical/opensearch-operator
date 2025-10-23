@@ -85,7 +85,7 @@ LARGE_DEPLOYMENTS_ALL_CLOUDS = [
 
 
 S3_INTEGRATOR = "s3-integrator"
-S3_INTEGRATOR_CHANNEL = "2/edge"
+S3_INTEGRATOR_CHANNEL = "1/stable"
 S3_RELATION = "s3-credentials"
 AZURE_INTEGRATOR = "azure-storage-integrator"
 AZURE_INTEGRATOR_CHANNEL = "latest/edge"
@@ -233,17 +233,15 @@ async def _configure_s3(
         base_cfg["tls-ca-chain"] = tls_ca_chain
 
     await ops_test.model.applications[S3_INTEGRATOR].set_config(base_cfg)
-
-    # credentials via juju secret
-    local_label = "".join(random.choice(string.ascii_letters) for _ in range(10))
-    credentials_secret_uri = await add_juju_secret(
+    s3_integrator_id = (await get_application_units(ops_test, S3_INTEGRATOR))[
+        0
+    ].id  # We redeploy s3-integrator once, so we may have anything >=0 as id
+    await run_action(
         ops_test,
-        S3_INTEGRATOR,
-        local_label,
-        {"secret-key": credentials["secret-key"], "access-key": credentials["access-key"]},
-    )
-    await ops_test.model.applications[S3_INTEGRATOR].set_config(
-        {"credentials": credentials_secret_uri}
+        s3_integrator_id,
+        "sync-s3-credentials",
+        params=credentials,
+        app=S3_INTEGRATOR,
     )
 
     apps = [S3_INTEGRATOR] if app_name is None else [S3_INTEGRATOR, app_name]
