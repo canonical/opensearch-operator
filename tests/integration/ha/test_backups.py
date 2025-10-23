@@ -47,7 +47,7 @@ from ..helpers import (
     http_request,
     run_action,
 )
-from ..helpers_deployments import wait_until
+from ..helpers_deployments import get_application_units, wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import (
     add_juju_secret,
