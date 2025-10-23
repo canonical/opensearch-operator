@@ -394,8 +394,8 @@ class OpenSearchDistribution(ABC):
             if output.returncode != 0:
                 logger.debug(f"{command}:\n Stderr: {output.stderr}\n Stdout: {output.stdout}")
                 raise OpenSearchCmdError(command, output.stdout, output.stderr)
-        except (TimeoutError, subprocess.TimeoutExpired) as e:
-            raise OpenSearchCmdError(e)
+        except (TimeoutError, subprocess.TimeoutExpired):
+            raise OpenSearchCmdError(command)
         return output.stdout.strip()
 
     @abstractmethod
