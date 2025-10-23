@@ -199,10 +199,8 @@ class OpenSearchSnapshotsEvents(Object):
             need_restart = False
 
         if need_restart:
-            if self.charm.request_opensearch_restart(reason="apply new object storage CA"):
-                # defer only when we actually emitted the restart
-                event.defer()
-                return
+            self.charm.request_opensearch_restart(reason="apply new object storage CA")
+            # defer only when we actually emitted the restart
         self._ensure_repository(object_storage_type, self.object_storage_config)
 
     def _on_s3_credentials_gone(self, event: StorageConnectionInfoGoneEventS3) -> None:
@@ -484,12 +482,10 @@ class OpenSearchSnapshotsEvents(Object):
             need_restart = False
 
         if need_restart:
-            if self.charm.request_opensearch_restart(reason="apply new object storage CA"):
-                # record revision before leaving so we don't loop
-                self.charm.peers_data.put(Scope.UNIT, OS_PEER_KEY_REV, rev)
-                # defer only when we actually emitted the restart
-                event.defer()
-                return
+            self.charm.request_opensearch_restart(reason="apply new object storage CA")
+            # record revision before leaving so we don't loop
+            self.charm.peers_data.put(Scope.UNIT, OS_PEER_KEY_REV, rev)
+            # defer only when we actually emitted the restart
 
         # ensure repository exists
         self._ensure_repository(os_type + "-pcluster", effective_cfg)
@@ -550,8 +546,7 @@ class OpenSearchSnapshotsEvents(Object):
             and self.charm.snapshots_manager.is_custom_s3_ca_stored()
         ):
             self.charm.snapshots_manager.store_s3_ca(s3_tls_ca_chain=None)
-            if self.charm.request_opensearch_restart(reason="clean up the object storage CA"):
-                return
+            self.charm.request_opensearch_restart(reason="clean up the object storage CA")
 
         try:
             self.charm.peers_data.delete(Scope.UNIT, OS_PEER_KEY_TYPE)
@@ -826,15 +821,16 @@ class OpenSearchSnapshotsManager:
         snapshot_id = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT).lower()
         ignore = [f"-{idx}" for idx in SYSTEM_INDICES]
         indices_clause = ",".join(["*"] + ignore)
-
+        logger.info("indices_clause: %s", indices_clause)
         # create snapshot
         response = self.opensearch.request(
             "PUT",
             f"_snapshot/{repo_name}/{snapshot_id}?wait_for_completion=false",
-            payload={"indices": indices_clause},
+            payload={"indices": indices_clause, "ignore_unavailable": True},
             alt_hosts=self.charm.alt_hosts,
             timeout=30,
         )
+
 
         logger.info(f"Snapshot request submitted with backup-id: {snapshot_id}")
         logger.debug(f"Create snapshot request with id: {snapshot_id} - response: {response}")
@@ -961,7 +957,7 @@ class OpenSearchSnapshotsManager:
         """List all snapshots in the current repository."""
         repo_name = self.repository_name(object_storage_type)
         response = self.opensearch.request(
-            "GET", f"_snapshot/{repo_name}", alt_hosts=self.charm.alt_hosts
+            "GET", f"_snapshot/{repo_name}_all?pretty", alt_hosts=self.charm.alt_hosts
         )
         snapshots = {
             snapshot["snapshot"].upper(): {
@@ -1033,7 +1029,7 @@ class OpenSearchSnapshotsManager:
     def is_custom_s3_ca_stored(self, s3_ca_chain: str | None = None) -> bool:
         """Check if a custom CA for the object storage is stored in the cacerts trust store."""
         stored_cacerts = (
-            list_cas(store_pwd="changeit", store_path=f"{self.opensearch.paths.certs}/s3.p12")
+            list_cas(store_pwd="changeit", store_path=f"{self.opensearch.paths.certs}/cacerts.p12")
             or {}
         )
         if not s3_ca_chain:
@@ -1048,9 +1044,9 @@ class OpenSearchSnapshotsManager:
     def store_s3_ca(self, s3_tls_ca_chain: str | None) -> None:
         """Store or remove an S3 TLS CA chain on the cacerts trust store."""
         if s3_tls_ca_chain:
-            store_ca(
+            store_s3_ca(
                 store_pwd="changeit",
-                store_path=f"{self.opensearch.paths.certs}/s3.p12",
+                store_path=f"{self.opensearch.paths.certs}/cacerts.p12",
                 alias="s3-snapshots-gateway",
                 ca=s3_tls_ca_chain,
                 keep_previous=False,
@@ -1059,7 +1055,7 @@ class OpenSearchSnapshotsManager:
             remove_ca(
                 alias="s3-snapshots-gateway",
                 store_pwd="changeit",
-                store_path=f"{self.opensearch.paths.certs}/s3.p12",
+                store_path=f"{self.opensearch.paths.certs}/cacerts.p12",
             )
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
