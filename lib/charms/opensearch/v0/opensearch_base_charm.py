@@ -2041,7 +2041,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         Returns True if a restart was requested/emitted, False if skipped.
         """
-        msg = f"Requesting OpenSearch restart{f" ({reason})" if reason else ''}"
+        msg = f"Requesting OpenSearch restart for {reason}"
+        if msg:
+            msg = msg + f"for {reason}"
         logger.info(msg)
         self._restart_opensearch_event.emit()
 
