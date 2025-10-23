@@ -205,6 +205,7 @@ def store_s3_ca(
                     store_pwd,
                 ]
             )
+            logger.info("Stored CA cert using alias %s and stored to %s", ix_alias, store_path)
 
             if p.returncode != 0:
                 listed = list_cas(store_pwd=store_pwd, store_path=store_path) or {}

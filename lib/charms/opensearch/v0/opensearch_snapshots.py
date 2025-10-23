@@ -37,7 +37,7 @@ from charms.opensearch.v0.constants_charm import (
     RestoreInProgress,
 )
 from charms.opensearch.v0.helper_cluster import ClusterState
-from charms.opensearch.v0.helper_security import list_cas, remove_ca, store_ca
+from charms.opensearch.v0.helper_security import list_cas, remove_ca, store_s3_ca
 from charms.opensearch.v0.models import (
     AzureRelData,
     DeploymentType,
@@ -57,7 +57,10 @@ from ops import (
     Relation,
     Secret,
 )
+import base64
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
+
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "89db18e639c64a6ea223c63172c04dc6."
@@ -403,7 +406,7 @@ class OpenSearchSnapshotsEvents(Object):
 
         # read the effective storage type/config coming from peer-clusters
         os_type = self.charm.peers_data.get(Scope.APP, OS_PEER_KEY_TYPE)
-        repo = self.charm.peers_data.get(Scope.APP, OS_PEER_KEY_REPO)
+        repo = self.charm.peers_data.get_object(Scope.APP, OS_PEER_KEY_REPO)
         rev = self.charm.peers_data.get(Scope.APP, OS_PEER_KEY_REV)
         if not os_type or not repo or not repo.get("secret_id")or not rev:
             return
@@ -423,7 +426,7 @@ class OpenSearchSnapshotsEvents(Object):
             return
 
         if payload.get("type") == "s3":
-            self.charm.snapshots_manager.store_s3_ca(payload.get("tls_ca_chain") or None)
+            self.charm.snapshots_manager.store_s3_ca(repo.get("tls_ca_chain") or None)
             self.charm.keystore_manager.put_entries(
                 {
                     "s3.client.default.access_key": payload["access-key"],
@@ -576,6 +579,10 @@ class OpenSearchSnapshotsEvents(Object):
                 self.charm.keystore_manager.remove_entries(keystore_entries)
             else:
                 logger.debug("No keystore entries found to remove during cleanup.")
+        except OpenSearchCmdError as e:
+            logger.warning("Failed to remove keystore entries during cleanup for %s: %s.", object_storage_type, e)
+
+        try:
             self.charm.snapshots_manager.remove_repo(object_storage_type=object_storage_type)
             self.charm.keystore_manager.reload()
             self.charm.peers_data.delete(Scope.UNIT, OS_PEER_KEY_TYPE)
@@ -1016,21 +1023,17 @@ class OpenSearchSnapshotsManager:
         """Check if the current object storage setup requires the use of a custom CA."""
         if object_storage_type not in {"s3", "s3-pcluster"}:
             return False
-
-        cas = (
-            list_cas(store_pwd="changeit", store_path=f"{self.opensearch.paths.certs}/cacerts.p12")
-            or {}
-        )
         chain = (object_storage_config.s3 and object_storage_config.s3.tls_ca_chain) or None
         if not chain:
             return False
 
-        return "s3-snapshots-gateway-0" not in cas
+        logger.info("S3 CA is required.")
+        return True
 
     def is_custom_s3_ca_stored(self, s3_ca_chain: str | None = None) -> bool:
         """Check if a custom CA for the object storage is stored in the cacerts trust store."""
         stored_cacerts = (
-            list_cas(store_pwd="changeit", store_path=f"{self.opensearch.paths.certs}/cacerts.p12")
+            list_cas(store_pwd="changeit", store_path=f"{self.opensearch.paths.certs}/s3.p12")
             or {}
         )
         if not s3_ca_chain:
@@ -1043,11 +1046,11 @@ class OpenSearchSnapshotsManager:
         return _normalize_pem(val) == _normalize_pem(s3_ca_chain) if val else False
 
     def store_s3_ca(self, s3_tls_ca_chain: str | None) -> None:
-        """Store or remove an s3 TLS CA chain on the cacerts trust store."""
+        """Store or remove an S3 TLS CA chain on the cacerts trust store."""
         if s3_tls_ca_chain:
             store_ca(
                 store_pwd="changeit",
-                store_path=f"{self.opensearch.paths.certs}/cacerts.p12",
+                store_path=f"{self.opensearch.paths.certs}/s3.p12",
                 alias="s3-snapshots-gateway",
                 ca=s3_tls_ca_chain,
                 keep_previous=False,
@@ -1056,7 +1059,7 @@ class OpenSearchSnapshotsManager:
             remove_ca(
                 alias="s3-snapshots-gateway",
                 store_pwd="changeit",
-                store_path=f"{self.opensearch.paths.certs}/cacerts.p12",
+                store_path=f"{self.opensearch.paths.certs}/s3.p12",
             )
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
@@ -1135,7 +1138,7 @@ def _bump_revision(cur: Optional[str]) -> int:
 def _publish_to_peers_with_secret(charm, os_type: str, secret_data: dict, repo_data: dict) -> None:
     """Create a new secret with payload, grant it to peer-cluster, and publish keys + revision."""
     # best-effort delete old secret first
-    if old_repo_data := charm.peers_data.get(Scope.APP, OS_PEER_KEY_REPO):
+    if old_repo_data := charm.peers_data.get_object(Scope.APP, OS_PEER_KEY_REPO):
         old_secret_id = old_repo_data.get("secret_id")
         if old_secret_id:
             try:
@@ -1161,13 +1164,15 @@ def _publish_to_peers_with_secret(charm, os_type: str, secret_data: dict, repo_d
     cur_rev = charm.peers_data.get(Scope.APP, OS_PEER_KEY_REV)
     new_rev = _bump_revision(cur_rev)
 
-    charm.peers_data.put_object(Scope.APP, {OS_PEER_KEY_TYPE: os_type})
-    charm.peers_data.put_object(Scope.APP, {OS_PEER_KEY_REPO: repo_data})
-    charm.peers_data.put_object(Scope.APP, {OS_PEER_KEY_REV: str(new_rev)})
+    charm.peers_data.put_object(Scope.APP, OS_PEER_KEY_TYPE, os_type)
+    charm.peers_data.put_object(Scope.APP, OS_PEER_KEY_REPO, repo_data)
+    charm.peers_data.put_object(Scope.APP, OS_PEER_KEY_REV, str(new_rev))
 
 
 def _clear_from_peers_and_delete_secret(charm) -> None:
-    repo_data = charm.peers_data.get(Scope.APP, OS_PEER_KEY_REPO)
+    repo_data = charm.peers_data.get_object(Scope.APP, OS_PEER_KEY_REPO)
+    if not repo_data:
+        return
     old_secret_id = repo_data.get("secret_id")
     if old_secret_id:
         try:
@@ -1177,6 +1182,6 @@ def _clear_from_peers_and_delete_secret(charm) -> None:
             pass
     new_rev = 0
     # clear type and secret, set revision to 0 so non-orchestrators drop local state
-    charm.peers_cm.delete(Scope.APP, OS_PEER_KEY_TYPE)
-    charm.peers_cm.delete(Scope.APP, OS_PEER_KEY_REPO)
-    charm.peers_cm.put_object(OS_PEER_KEY_REV, str(new_rev))
+    charm.peers_data.delete(Scope.APP, OS_PEER_KEY_TYPE)
+    charm.peers_data.delete(Scope.APP, OS_PEER_KEY_REPO)
+    charm.peers_data.put_object(Scope.APP, OS_PEER_KEY_REV, str(new_rev))
