@@ -6,20 +6,18 @@
 import json
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Literal, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Literal, Tuple
 
 from charms.data_platform_libs.v0.azure_storage import (
     AzureStorageRequires,
-)
-from charms.data_platform_libs.v0.azure_storage import (
     StorageConnectionInfoChangedEvent,
     StorageConnectionInfoGoneEvent,
 )
 from charms.data_platform_libs.v0.data_interfaces import Scope
 from charms.data_platform_libs.v0.s3 import (
-    S3Requirer,
     CredentialsChangedEvent,
     CredentialsGoneEvent,
+    S3Requirer,
 )
 from charms.opensearch.v0.constants_charm import (
     AZURE_RELATION,
@@ -40,7 +38,10 @@ from charms.opensearch.v0.models import (
     S3RelData,
 )
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
+from charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchCmdError,
+    OpenSearchHttpError,
+)
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from ops import (
@@ -51,10 +52,7 @@ from ops import (
     Relation,
     Secret,
 )
-import base64
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
-
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "89db18e639c64a6ea223c63172c04dc6."
@@ -108,9 +106,7 @@ class OpenSearchSnapshotsEvents(Object):
         self.framework.observe(
             self.s3_requirer.on.credentials_changed, self._on_s3_credentials_changed
         )
-        self.framework.observe(
-            self.s3_requirer.on.credentials_gone, self._on_s3_credentials_gone
-        )
+        self.framework.observe(self.s3_requirer.on.credentials_gone, self._on_s3_credentials_gone)
         self.framework.observe(
             self.azure_requirer.on.storage_connection_info_changed,
             self._on_azure_credentials_changed,
@@ -403,56 +399,58 @@ class OpenSearchSnapshotsEvents(Object):
         # read the effective storage type/config coming from peer-clusters
         os_type = self.charm.peers_data.get(Scope.APP, OS_PEER_KEY_TYPE)
         repo = self.charm.peers_data.get_object(Scope.APP, OS_PEER_KEY_REPO)
-        rev = self.charm.peers_data.get(Scope.APP, OS_PEER_KEY_REV)
-        if not os_type or not repo or not repo.get("secret_id")or not rev:
+        if not os_type or not repo or not repo.get("secret_id"):
             return
 
-        try:
-            sec = self.charm.model.get_secret(id=secret_id)
-            payload = sec.get_content()
-        except Exception as e:
-            logger.error("Failed to read object-storage secret %s: %s", secret_id, e)
-            event.defer()
-            return
+        secret_id = repo.get("secret_id")
+        secret_payload = {}
+        if secret_id:
+            try:
+                secret = self.charm.model.get_secret(id=secret_id)
+                secret_payload = secret.get_content()
+            except Exception as e:
+                logger.error("Failed to read object-storage secret %s: %s", secret_id, e)
+                event.defer()
+                return
 
-        if payload.get("type") == "s3":
+        if repo and repo.get("type") == "s3":
             self.charm.snapshots_manager.store_s3_ca(repo.get("tls_ca_chain") or None)
             self.charm.keystore_manager.put_entries(
                 {
-                    "s3.client.default.access_key": payload["access-key"],
-                    "s3.client.default.secret_key": payload["secret-key"],
+                    "s3.client.default.access_key": secret_payload.get("access-key", ""),
+                    "s3.client.default.secret_key": secret_payload.grt("secret-key", ""),
                 }
             )
             effective_cfg = ObjectStorageConfig.from_dict(
                 {
                     "s3": {
-                        "endpoint": payload["endpoint"],
-                        "bucket": payload["bucket"],
-                        "base_path": payload["base_path"],
-                        "region": payload["region"],
+                        "endpoint": repo.get("endpoint"),
+                        "bucket": repo.get("bucket"),
+                        "base_path": repo.get("base_path"),
+                        "region": repo.get("region"),
                         "credentials": {
-                            "access-key": payload["access-key"],
-                            "secret-key": payload["secret-key"],
+                            "access-key": secret_payload.get("access-key"),
+                            "secret-key": secret_payload.get("secret-key"),
                         },
-                        "tls-ca-chain": payload.get("tls_ca_chain") or "",
+                        "tls-ca-chain": repo.get("tls_ca_chain", ""),
                     }
                 }
             )
-        elif payload.get("type") == "azure":
+        elif repo and repo.get("type") == "azure":
             self.charm.keystore_manager.put_entries(
                 {
-                    "azure.client.default.account": payload["storage_account"],
-                    "azure.client.default.key": payload["secret-key"],
+                    "azure.client.default.account": secret_payload.get("storage_account", ""),
+                    "azure.client.default.key": secret_payload.get("secret-key", ""),
                 }
             )
             effective_cfg = ObjectStorageConfig.from_dict(
                 {
                     "azure": {
-                        "container": payload["container"],
-                        "base_path": payload["base_path"],
+                        "container": repo.get("container"),
+                        "base_path": repo.get("base_path"),
                         "credentials": {
-                            "storage-account": payload["storage_account"],
-                            "secret-key": payload["secret-key"],
+                            "storage-account": secret_payload.get("storage_account"),
+                            "secret-key": secret_payload.get("secret-key"),
                         },
                     }
                 }
@@ -538,10 +536,6 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.peers_data.delete(Scope.UNIT, OS_PEER_KEY_TYPE)
         except Exception:
             pass
-        try:
-            self.charm.peers_data.delete(Scope.UNIT, OS_PEER_KEY_REV)
-        except Exception:
-            pass
 
         logger.info(
             "Peer-cluster departed: cleared snapshot configuration for storage type %s",
@@ -561,7 +555,11 @@ class OpenSearchSnapshotsEvents(Object):
             else:
                 logger.debug("No keystore entries found to remove during cleanup.")
         except OpenSearchCmdError as e:
-            logger.warning("Failed to remove keystore entries during cleanup for %s: %s.", object_storage_type, e)
+            logger.warning(
+                "Failed to remove keystore entries during cleanup for %s: %s.",
+                object_storage_type,
+                e,
+            )
 
         try:
             self.charm.snapshots_manager.remove_repo(object_storage_type=object_storage_type)
@@ -816,7 +814,6 @@ class OpenSearchSnapshotsManager:
             alt_hosts=self.charm.alt_hosts,
             timeout=30,
         )
-
 
         logger.info(f"Snapshot request submitted with backup-id: {snapshot_id}")
         logger.debug(f"Create snapshot request with id: {snapshot_id} - response: {response}")
@@ -1106,8 +1103,9 @@ def _get_azure_repo_data(rel_data: AzureRelData) -> dict:
     }
 
 
-
-def _publish_data_to_peers_with_secret(charm, os_type: str, secret_data: dict, repo_data: dict) -> None:
+def _publish_data_to_peers_with_secret(
+    charm, os_type: str, secret_data: dict, repo_data: dict
+) -> None:
     """Create a new secret with payload, grant it to peer-cluster, and publish keys."""
     # best-effort delete old secret first
     if old_repo_data := charm.peers_data.get_object(Scope.APP, OS_PEER_KEY_REPO):
@@ -1147,7 +1145,6 @@ def _clear_data_from_peers_and_delete_secret(charm) -> None:
             sec.remove_all_revisions()
         except Exception:
             pass
-    new_rev = 0
     # clear type and secret, so non-orchestrators drop local state
     charm.peers_data.delete(Scope.APP, OS_PEER_KEY_TYPE)
     charm.peers_data.delete(Scope.APP, OS_PEER_KEY_REPO)
