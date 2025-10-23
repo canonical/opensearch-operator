@@ -155,6 +155,7 @@ def store_s3_ca(
     """Add new CA cert to trust store for S3."""
     tmpdir = os.path.dirname(store_path)
     certs = list(reversed(split_ca_chain(ca)))
+    _run(["chmod", "0664", store_path])
 
     for i, pem in enumerate(certs):
         ix_alias = f"{alias}-{i}"
@@ -205,12 +206,17 @@ def store_s3_ca(
                     store_pwd,
                 ]
             )
+
             logger.info("Stored CA cert using alias %s and stored to %s", ix_alias, store_path)
+            logger.debug("s3 ca storing return code %s", p.stdout)
+            logger.debug("s3 ca storing error %s", p.stderr)
 
             if p.returncode != 0:
                 listed = list_cas(store_pwd=store_pwd, store_path=store_path) or {}
                 if ix_alias not in listed:
+                    logger.info("S3 CA is not included in list")
                     return False
+                logger.info("S3 CA is included in list")
         finally:
             try:
                 os.remove(tmpfile)
@@ -218,7 +224,6 @@ def store_s3_ca(
                 pass
 
     _run(["chown", "snap_daemon:root", store_path])
-    _run(["chmod", "0644", store_path])
     return True
 
 

@@ -12,20 +12,14 @@ from charms.data_platform_libs.v0.azure_storage import (
     AzureStorageRequires,
 )
 from charms.data_platform_libs.v0.azure_storage import (
-    StorageConnectionInfoChangedEvent as StorageConnectionInfoChangedEventAzure,
-)
-from charms.data_platform_libs.v0.azure_storage import (
-    StorageConnectionInfoGoneEvent as StorageConnectionInfoGoneEventAzure,
+    StorageConnectionInfoChangedEvent,
+    StorageConnectionInfoGoneEvent,
 )
 from charms.data_platform_libs.v0.data_interfaces import Scope
 from charms.data_platform_libs.v0.s3 import (
-    S3Requires,
-)
-from charms.data_platform_libs.v0.s3 import (
-    StorageConnectionInfoChangedEvent as StorageConnectionInfoChangedEventS3,
-)
-from charms.data_platform_libs.v0.s3 import (
-    StorageConnectionInfoGoneEvent as StorageConnectionInfoGoneEventS3,
+    S3Requirer,
+    CredentialsChangedEvent,
+    CredentialsGoneEvent,
 )
 from charms.opensearch.v0.constants_charm import (
     AZURE_RELATION,
@@ -89,7 +83,6 @@ AZURE_REPOSITORY = "azure-repository"
 GCS_REPOSITORY = "gcs-repository"
 OS_PEER_KEY_TYPE = "snapshot-object-storage-type"
 OS_PEER_KEY_REPO = "snapshot-object-storage-repo"
-OS_PEER_KEY_REV = "snapshot-object-storage-data-revision"
 
 
 # System indices that should not be snapshotted
@@ -107,16 +100,16 @@ class OpenSearchSnapshotsEvents(Object):
         self.charm = charm
 
         # requirers
-        self.s3_requirer = S3Requires(charm, S3_RELATION)
+        self.s3_requirer = S3Requirer(charm, S3_RELATION)
         self.azure_requirer = AzureStorageRequires(charm, AZURE_RELATION)
         self.gcs_requirer = AzureStorageRequires(charm, GCS_RELATION)
 
         # simple deployments or main orchestrator
         self.framework.observe(
-            self.s3_requirer.on.s3_connection_info_changed, self._on_s3_credentials_changed
+            self.s3_requirer.on.credentials_changed, self._on_s3_credentials_changed
         )
         self.framework.observe(
-            self.s3_requirer.on.s3_connection_info_gone, self._on_s3_credentials_gone
+            self.s3_requirer.on.credentials_gone, self._on_s3_credentials_gone
         )
         self.framework.observe(
             self.azure_requirer.on.storage_connection_info_changed,
@@ -141,7 +134,7 @@ class OpenSearchSnapshotsEvents(Object):
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
 
-    def _on_s3_credentials_changed(self, event: StorageConnectionInfoChangedEventS3) -> None:
+    def _on_s3_credentials_changed(self, event: CredentialsChangedEvent) -> None:
         """Handler for s3 credentials changed event."""
         object_storage_type = self.object_storage_type or "s3"
         logger.info(f"S3 credentials changed for object storage type {object_storage_type}")
@@ -161,10 +154,11 @@ class OpenSearchSnapshotsEvents(Object):
             return
         logger.info("S3 object storage configuration: %s", self.object_storage_config.s3)
 
-        # publish secret + bump revision to peer-clusters
+        # publish secret to peer-clusters
         secret = _get_s3_secret_data(self.object_storage_config.s3)
         repo = _get_s3_repo_data(self.object_storage_config.s3)
-        _publish_to_peers_with_secret(self.charm, "s3", secret, repo)
+        _publish_data_to_peers_with_secret(self.charm, "s3", secret, repo)
+        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
         # apply locally (leader does cluster-level config)
         self.charm.keystore_manager.put_entries(
@@ -181,11 +175,13 @@ class OpenSearchSnapshotsEvents(Object):
         ):
             self.charm.snapshots_manager.store_s3_ca(self.object_storage_config.s3.tls_ca_chain)
             logger.info("S3 CA is stored.")
+            self.charm.request_opensearch_restart(reason="apply new object storage CA")
         else:
             # If a custom CA is currently stored but no longer required, drop it
             if self.charm.snapshots_manager.is_custom_s3_ca_stored():
                 self.charm.snapshots_manager.store_s3_ca(None)
                 logger.info("S3 CA is deleted.")
+                self.charm.request_opensearch_restart(reason="apply new object storage CA")
 
         need_restart = False
         try:
@@ -200,10 +196,9 @@ class OpenSearchSnapshotsEvents(Object):
 
         if need_restart:
             self.charm.request_opensearch_restart(reason="apply new object storage CA")
-            # defer only when we actually emitted the restart
         self._ensure_repository(object_storage_type, self.object_storage_config)
 
-    def _on_s3_credentials_gone(self, event: StorageConnectionInfoGoneEventS3) -> None:
+    def _on_s3_credentials_gone(self, event: CredentialsGoneEvent) -> None:
         """Handler for s3 credentials gone event."""
         if self.object_storage_type == "conflict":
             return
@@ -218,9 +213,10 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.request_opensearch_restart(reason="clean up the object storage CA")
 
         # publish deletion
-        _clear_from_peers_and_delete_secret(self.charm)
+        _clear_data_from_peers_and_delete_secret(self.charm)
+        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
-    def _on_azure_credentials_changed(self, event: StorageConnectionInfoChangedEventAzure) -> None:
+    def _on_azure_credentials_changed(self, event: StorageConnectionInfoChangedEvent) -> None:
         """Handler for azure credentials changed event."""
         object_storage_type = self.object_storage_type or "azure"
 
@@ -240,7 +236,8 @@ class OpenSearchSnapshotsEvents(Object):
 
         secret = _get_azure_secret_data(self.object_storage_config.azure)
         repo = _get_azure_repo_data(self.object_storage_config.azure)
-        _publish_to_peers_with_secret(self.charm, "azure", secret, repo)
+        _publish_data_to_peers_with_secret(self.charm, "azure", secret, repo)
+        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
         self.charm.keystore_manager.put_entries(
             {
@@ -251,7 +248,7 @@ class OpenSearchSnapshotsEvents(Object):
         self.charm.keystore_manager.reload()
         self._ensure_repository(object_storage_type, self.object_storage_config)
 
-    def _on_azure_credentials_gone(self, event: StorageConnectionInfoGoneEventAzure) -> None:
+    def _on_azure_credentials_gone(self, event: StorageConnectionInfoGoneEvent) -> None:
         """Handler for azure credentials gone event."""
         if self.object_storage_type == "conflict":
             return
@@ -260,7 +257,8 @@ class OpenSearchSnapshotsEvents(Object):
         if not self._cleanup(object_storage_type="azure", keystore_entries=keystore_entries):
             event.defer()
             return
-        _clear_from_peers_and_delete_secret(self.charm)
+        _clear_data_from_peers_and_delete_secret(self.charm)
+        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
         """Handler for s3 create backup action event."""
@@ -409,12 +407,6 @@ class OpenSearchSnapshotsEvents(Object):
         if not os_type or not repo or not repo.get("secret_id")or not rev:
             return
 
-        # keep last seen revision in unit-scope, if changed, re-read secret
-        last_rev = self.charm.peers_data.get(Scope.UNIT, OS_PEER_KEY_REV)
-        if last_rev == rev:
-            # nothing new
-            return
-
         try:
             sec = self.charm.model.get_secret(id=secret_id)
             payload = sec.get_content()
@@ -483,15 +475,9 @@ class OpenSearchSnapshotsEvents(Object):
 
         if need_restart:
             self.charm.request_opensearch_restart(reason="apply new object storage CA")
-            # record revision before leaving so we don't loop
-            self.charm.peers_data.put(Scope.UNIT, OS_PEER_KEY_REV, rev)
-            # defer only when we actually emitted the restart
 
         # ensure repository exists
         self._ensure_repository(os_type + "-pcluster", effective_cfg)
-
-        # mark that we consumed this revision
-        self.charm.peers_data.put(Scope.UNIT, OS_PEER_KEY_REV, rev)
 
     def _on_peer_clusters_relation_departed_for_snapshots(self, event):  # noqa C901
         """Cleanup snapshot config if the orchestrator we depended on is gone."""
@@ -1035,11 +1021,7 @@ class OpenSearchSnapshotsManager:
         if not s3_ca_chain:
             return stored_cacerts.get("s3-snapshots-gateway") is not None
 
-        def _normalize_pem(s: str) -> str:
-            return "\n".join([line.rstrip() for line in s.strip().splitlines()])
-
-        val = stored_cacerts.get("s3-snapshots-gateway")
-        return _normalize_pem(val) == _normalize_pem(s3_ca_chain) if val else False
+        return stored_cacerts.get("s3-snapshots-gateway") == s3_ca_chain
 
     def store_s3_ca(self, s3_tls_ca_chain: str | None) -> None:
         """Store or remove an S3 TLS CA chain on the cacerts trust store."""
@@ -1124,22 +1106,15 @@ def _get_azure_repo_data(rel_data: AzureRelData) -> dict:
     }
 
 
-def _bump_revision(cur: Optional[str]) -> int:
-    try:
-        return int(cur) + 1
-    except Exception:
-        return 1
 
-
-def _publish_to_peers_with_secret(charm, os_type: str, secret_data: dict, repo_data: dict) -> None:
-    """Create a new secret with payload, grant it to peer-cluster, and publish keys + revision."""
+def _publish_data_to_peers_with_secret(charm, os_type: str, secret_data: dict, repo_data: dict) -> None:
+    """Create a new secret with payload, grant it to peer-cluster, and publish keys."""
     # best-effort delete old secret first
     if old_repo_data := charm.peers_data.get_object(Scope.APP, OS_PEER_KEY_REPO):
         old_secret_id = old_repo_data.get("secret_id")
         if old_secret_id:
             try:
                 old_sec = charm.model.get_secret(id=old_secret_id)
-                # remove the whole secret so consumers can't fetch old revision
                 old_sec.remove_all_revisions()
             except Exception:
                 pass
@@ -1156,16 +1131,12 @@ def _publish_to_peers_with_secret(charm, os_type: str, secret_data: dict, repo_d
         except Exception:
             pass
     repo_data.update({"secret_id": secret_id})
-    # bump and publish revision
-    cur_rev = charm.peers_data.get(Scope.APP, OS_PEER_KEY_REV)
-    new_rev = _bump_revision(cur_rev)
 
     charm.peers_data.put_object(Scope.APP, OS_PEER_KEY_TYPE, os_type)
     charm.peers_data.put_object(Scope.APP, OS_PEER_KEY_REPO, repo_data)
-    charm.peers_data.put_object(Scope.APP, OS_PEER_KEY_REV, str(new_rev))
 
 
-def _clear_from_peers_and_delete_secret(charm) -> None:
+def _clear_data_from_peers_and_delete_secret(charm) -> None:
     repo_data = charm.peers_data.get_object(Scope.APP, OS_PEER_KEY_REPO)
     if not repo_data:
         return
@@ -1177,7 +1148,6 @@ def _clear_from_peers_and_delete_secret(charm) -> None:
         except Exception:
             pass
     new_rev = 0
-    # clear type and secret, set revision to 0 so non-orchestrators drop local state
+    # clear type and secret, so non-orchestrators drop local state
     charm.peers_data.delete(Scope.APP, OS_PEER_KEY_TYPE)
     charm.peers_data.delete(Scope.APP, OS_PEER_KEY_REPO)
-    charm.peers_data.put_object(Scope.APP, OS_PEER_KEY_REV, str(new_rev))

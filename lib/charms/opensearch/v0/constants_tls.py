@@ -25,7 +25,7 @@ class CertType(BaseStrEnum):
     # APP_CLIENT_HTTP = "app-client-http"  # external http clients (rest layer)
     UNIT_TRANSPORT = "unit-transport"  # internal node to node communication (transport layer)
     UNIT_HTTP = "unit-http"  # http for nodes (rest layer) - units act as servers
-    UNIT_S3 = "unit-s3"
+
 
 class TlsFileExt(BaseStrEnum):
     """Extensions of TLS generated files."""
