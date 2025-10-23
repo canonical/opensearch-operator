@@ -940,7 +940,7 @@ class OpenSearchSnapshotsManager:
         """List all snapshots in the current repository."""
         repo_name = self.repository_name(object_storage_type)
         response = self.opensearch.request(
-            "GET", f"_snapshot/{repo_name}_all?pretty", alt_hosts=self.charm.alt_hosts
+            "GET", f"_snapshot/{repo_name}/_all?pretty", alt_hosts=self.charm.alt_hosts
         )
         snapshots = {
             snapshot["snapshot"].upper(): {
