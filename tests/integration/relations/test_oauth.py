@@ -1,13 +1,16 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import asyncio
 import json
 import logging
 from asyncio import gather
 
 import pytest
 import requests
+from charms.opensearch.v0.constants_charm import OAuthRelationInvalid
 from integration.helpers import CONFIG_OPTS, get_leader_unit_ip
+from integration.helpers_deployments import wait_until
 from juju.client.client import Action
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
@@ -23,6 +26,13 @@ DATA_INTEGRATOR_CONFIG = {
 SECOND_DATA_INTEGRATOR_CONFIG = {
     "index-name": "dev-index",
 }
+MAIN_APP = "opensearch-main"
+FAILOVER_APP = "opensearch-failover"
+DATA_APP = "opensearch-data"
+CLUSTER_NAME = "log-app"
+REL_ORCHESTRATOR = "peer-cluster-orchestrator"
+REL_PEER = "peer-cluster"
+APP_UNITS = {MAIN_APP: 1, FAILOVER_APP: 1, DATA_APP: 3}
 
 logger = logging.getLogger(__name__)
 
@@ -230,3 +240,140 @@ async def test_oauth_access_cleanup(ops_test: OpsTest, microk8s_model: Model):
     )
     assert result.status_code == 200, "request for authinfo should success"
     assert result.json().get("roles") == ["own_index"], "all the mapped roles should be removed"
+
+
+@pytest.mark.abort_on_fail
+async def test_setup_large_cluster(ops_test: OpsTest, charm, series, microk8s_model: Model):
+    """Replace the Opensearch application with a large deployment cluster."""
+    logger.info("Remove Opensearch application")
+    await ops_test.model.remove_application("opensearch", block_until_done=True)
+    await ops_test.model.remove_application(SECOND_DATA_INTEGRATOR_NAME, block_until_done=True)
+
+    logger.info("Create large deployment cluster of Opensearch")
+    await asyncio.gather(
+        ops_test.model.deploy(
+            charm,
+            application_name=MAIN_APP,
+            num_units=APP_UNITS[MAIN_APP],
+            series=series,
+            config={"cluster_name": CLUSTER_NAME, "roles": "cluster_manager"} | CONFIG_OPTS,
+        ),
+        ops_test.model.deploy(
+            charm,
+            application_name=FAILOVER_APP,
+            num_units=APP_UNITS[FAILOVER_APP],
+            series=series,
+            config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "cluster_manager"}
+            | CONFIG_OPTS,
+        ),
+        ops_test.model.deploy(
+            charm,
+            application_name=DATA_APP,
+            num_units=APP_UNITS[DATA_APP],
+            series=series,
+            config={"cluster_name": CLUSTER_NAME, "init_hold": True, "roles": "data"}
+            | CONFIG_OPTS,
+        ),
+    )
+
+    # integrate TLS to all applications
+    for app in [MAIN_APP, FAILOVER_APP, DATA_APP]:
+        await ops_test.model.integrate(app, "certificates")
+
+    # integrate large deployment cluster
+    await ops_test.model.integrate(f"{DATA_APP}:{REL_PEER}", f"{MAIN_APP}:{REL_ORCHESTRATOR}")
+    await ops_test.model.integrate(f"{FAILOVER_APP}:{REL_PEER}", f"{MAIN_APP}:{REL_ORCHESTRATOR}")
+    await ops_test.model.integrate(f"{DATA_APP}:{REL_PEER}", f"{FAILOVER_APP}:{REL_ORCHESTRATOR}")
+
+    # integrate with Data integrator
+    await ops_test.model.integrate(
+        f"{DATA_APP}:opensearch-client", f"{DATA_INTEGRATOR_NAME}:opensearch"
+    )
+
+    await wait_until(
+        ops_test,
+        apps=[MAIN_APP, DATA_APP, FAILOVER_APP],
+        apps_full_statuses={
+            MAIN_APP: {"active": []},
+            DATA_APP: {"active": []},
+            FAILOVER_APP: {"active": []},
+        },
+        units_statuses=["active"],
+        wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
+    )
+
+
+@pytest.mark.abort_on_fail
+async def test_oauth_relation_restricted(ops_test: OpsTest, charm, series, microk8s_model: Model):
+    """Ensure OAuth cannot be enabled if related to non-main-orchestrator."""
+    logger.info(f"Integrating {DATA_APP} with OAuth - this will result in blocked status")
+    await ops_test.model.integrate(f"{DATA_APP}:oauth", "oauth")
+    await wait_until(
+        ops_test,
+        apps=[DATA_APP],
+        apps_full_statuses={
+            DATA_APP: {"blocked": [OAuthRelationInvalid]},
+        },
+        wait_for_exact_units={DATA_APP: 3},
+    )
+
+    logger.info("Verifying access is not possible")
+    opensearch_address = await get_leader_unit_ip(ops_test, DATA_APP)
+    opensearch_url = f"https://{opensearch_address}:9200/_cat/indices"
+    result = requests.get(
+        opensearch_url, headers={"Authorization": f"Bearer {oauth_access_token}"}, verify=False
+    )
+    assert result.status_code == 401, "`Unauthorized` error expected"
+    logger.info("Access with OAuth Token failed as expected")
+
+    logger.info(f"Remove relation with {DATA_APP}")
+    remove_relation_cmd = f"remove-relation {DATA_APP}:oauth oauth"
+    await ops_test.juju(*remove_relation_cmd.split(), check=True)
+
+    await wait_until(
+        ops_test,
+        apps=[DATA_APP],
+        apps_full_statuses={DATA_APP: {"active": []}},
+        units_statuses=["active"],
+        wait_for_exact_units={DATA_APP: 3},
+    )
+
+
+@pytest.mark.abort_on_fail
+async def test_oauth_access_large_cluster(ops_test: OpsTest, charm, series, microk8s_model: Model):
+    """Relate to main orchestrator and verify access with OAuth."""
+    logger.info(f"Integrating {MAIN_APP} with oauth")
+    await ops_test.model.integrate(f"{MAIN_APP}:oauth", "oauth")
+    await wait_until(
+        ops_test,
+        apps=[MAIN_APP, DATA_APP, FAILOVER_APP],
+        apps_full_statuses={
+            MAIN_APP: {"active": []},
+            DATA_APP: {"active": []},
+            FAILOVER_APP: {"active": []},
+        },
+        units_statuses=["active"],
+        wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
+    )
+
+    action = (
+        await ops_test.model.applications[DATA_INTEGRATOR_NAME]
+        .units[0]
+        .run_action("get-credentials")
+    )
+    await action.wait()
+    data_integrator_user = action.results.get("opensearch", {}).get("username")
+    assert data_integrator_user, "failed to retrieve data integrator user"
+
+    original_opensearch_config = await ops_test.model.applications[DATA_APP].get_config()
+    config_with_roles = original_opensearch_config.copy()
+    config_with_roles["roles_mapping"] = json.dumps({oauth_client_id: data_integrator_user})
+    await ops_test.model.applications[DATA_APP].set_config(config_with_roles)
+    await ops_test.model.wait_for_idle(status="active")
+
+    opensearch_address = await get_leader_unit_ip(ops_test, DATA_APP)
+    opensearch_url = f"https://{opensearch_address}:9200/_cat/indices"
+    result = requests.get(
+        opensearch_url, headers={"Authorization": f"Bearer {oauth_access_token}"}, verify=False
+    )
+    assert result.status_code == 200, "request expected to succeed with roles mapping"

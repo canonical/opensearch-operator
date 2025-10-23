@@ -7,12 +7,19 @@ import logging
 from typing import TYPE_CHECKING
 
 from charms.hydra.v0.oauth import ClientConfig, OAuthRequirer
-from charms.opensearch.v0.constants_charm import OAUTH_RELATION
+from charms.opensearch.v0.constants_charm import OAUTH_RELATION, OAuthRelationInvalid
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.models import DeploymentType, StartMode
+from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from ops import EventBase, Object, RelationBrokenEvent, RelationDepartedEvent
+from ops import (
+    BlockedStatus,
+    EventBase,
+    Object,
+    RelationBrokenEvent,
+    RelationCreatedEvent,
+    RelationDepartedEvent,
+)
 
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
@@ -46,6 +53,10 @@ class OAuthHandler(Object):
         )
         self.oauth = OAuthRequirer(self.charm, client_config, relation_name=OAUTH_RELATION)
         self.framework.observe(
+            self.charm.on[OAUTH_RELATION].relation_created,
+            self._on_oauth_relation_created,
+        )
+        self.framework.observe(
             self.charm.on[OAUTH_RELATION].relation_changed,
             self._on_oauth_relation_changed,
         )
@@ -58,11 +69,26 @@ class OAuthHandler(Object):
             self._on_oauth_relation_broken,
         )
 
+    def _on_oauth_relation_created(self, event: RelationCreatedEvent) -> None:
+        """Handler for `relation_created` event."""
+        if self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
+            # in large deployments, OAuth config must only be handled by the main orchestrator
+            # this is a safeguard to avoid different sources for applying security configuration
+            if self.charm.unit.is_leader():
+                self.charm.status.set(BlockedStatus(OAuthRelationInvalid), app=True)
+
     def _on_oauth_relation_changed(self, event: EventBase) -> None:
         """Handler for `_on_oauth_relation_changed` event.
 
         Updates the security config.yml with the OIDC info and update the cluster.
         """
+        if self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
+            # in large deployments, OAuth config must only be handled by the main orchestrator
+            # this is a safeguard to avoid different sources for applying security configuration
+            if self.charm.unit.is_leader():
+                self.charm.status.set(BlockedStatus(OAuthRelationInvalid), app=True)
+            return
+
         relation = self.model.get_relation(OAUTH_RELATION)
         if not relation.data[relation.app]:
             logger.debug("Oauth relation not yet set up")
@@ -77,7 +103,7 @@ class OAuthHandler(Object):
             openid_connect_url=f"{relation.data[relation.app].get('issuer_url')}/.well-known/openid-configuration"
         )
 
-        if not self.charm.unit.is_leader() or not self._is_admin_script_eligible():
+        if not self.charm.unit.is_leader():
             return
 
         if not (admin_secrets := self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)):
@@ -93,10 +119,17 @@ class OAuthHandler(Object):
             return
 
     def _on_oauth_relation_departed(self, event: RelationDepartedEvent) -> None:
+        """Handler for `relation_departed` event."""
         if event.departing_unit == self.charm.unit and self.charm.peers_data is not None:
             self.charm.peers_data.put(Scope.UNIT, "departing_oauth", True)
 
     def _on_oauth_relation_broken(self, event: RelationBrokenEvent) -> None:
+        """Handler for `relation_broken` event."""
+        if self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
+            if self.charm.unit.is_leader():
+                self.charm.status.clear(OAuthRelationInvalid, app=True)
+            return
+
         if (
             self.charm.peers_data is None
             or self.charm.peers_data.get(Scope.UNIT, "departing_oauth")
@@ -106,7 +139,7 @@ class OAuthHandler(Object):
 
         self.charm.opensearch_config.remove_oidc_auth()
 
-        if not self.charm.unit.is_leader() or not self._is_admin_script_eligible():
+        if not self.charm.unit.is_leader():
             return
 
         if not (admin_secrets := self.charm.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val)):
@@ -125,13 +158,3 @@ class OAuthHandler(Object):
         return bool(self.charm.opensearch_peer_cm.deployment_desc()) and bool(
             self.charm.peers_data.get(Scope.APP, "security_index_initialised")
         )
-
-    def _is_admin_script_eligible(self) -> bool:
-        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
-        return (
-            deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
-            and (
-                "data" in deployment_desc.config.roles
-                or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
-            )
-        ) or self.charm.opensearch_peer_cm.is_provider(typ="main")
