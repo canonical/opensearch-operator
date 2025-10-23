@@ -26,7 +26,7 @@ from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
     S3_RELATION,
     BackupInProgress,
-    PeerRelationName,
+    PeerClusterRelationName,
     RestoreInProgress,
 )
 from charms.opensearch.v0.helper_cluster import ClusterState
@@ -118,12 +118,12 @@ class OpenSearchSnapshotsEvents(Object):
 
         # large deployments with non-main orchestrator
         self.framework.observe(
-            charm.on[PeerRelationName].relation_changed,
-            self._on_peer_relation_changed_for_snapshots,
+            charm.on[PeerClusterRelationName].relation_changed,
+            self._on_peer_clusters_relation_changed_for_snapshots,
         )
         self.framework.observe(
-            charm.on[PeerRelationName].relation_departed,
-            self._on_peer_relation_departed_for_snapshots,
+            charm.on[PeerClusterRelationName].relation_departed,
+            self._on_peer_clusters_relation_departed_for_snapshots,
         )
 
         # actions
@@ -156,10 +156,13 @@ class OpenSearchSnapshotsEvents(Object):
         repo = _get_s3_repo_data(self.object_storage_config.s3)
         repo_data = self._prepare_repo_data(secret, repo)
 
-        self.charm.peers_data.put_object(Scope.APP, OS_PEER_KEY_TYPE, object_storage_type)
-        self.charm.peers_data.put_object(Scope.APP, OS_PEER_KEY_REPO, repo_data)
-        self.charm.peers_data.put_object(Scope.APP, "notify-epoch", str(int(time.time())))
-        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+        p_relation = self.charm.model.get_relation(PeerClusterRelationName)
+
+        if p_relation and self.charm.unit.is_leader():
+            p_relation.data[self.charm.app][OS_PEER_KEY_TYPE] = object_storage_type
+            p_relation.data[self.charm.app][OS_PEER_KEY_REPO] = json.dumps(repo_data)
+            p_relation.data[self.charm.app]["notify-epoch"] = str(int(time.time()))
+            self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
         # apply locally (leader does cluster-level config)
         self.charm.keystore_manager.put_entries(
@@ -218,8 +221,13 @@ class OpenSearchSnapshotsEvents(Object):
         # drop internal cache
         self.charm.peers_data.delete(Scope.APP, OS_PEER_KEY_TYPE)
         self.charm.peers_data.delete(Scope.APP, OS_PEER_KEY_REPO)
-        self.charm.peers_data.put_object(Scope.APP, "notify-epoch", str(int(time.time())))
-        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+
+        # update consumers using get relation-changed
+        for rel in self.model.relations.get(PeerClusterRelationName, []):
+            rel.data[self.app]["notify-epoch"] = str(int(time.time()))
+            rel.data[self.app]["object-storage-type"] = ""
+            rel.data[self.app]["object-storage-repo"] = ""
+            self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
     def _on_azure_credentials_changed(self, event: StorageConnectionInfoChangedEvent) -> None:
         """Handler for azure credentials changed event."""
@@ -243,10 +251,12 @@ class OpenSearchSnapshotsEvents(Object):
         repo = _get_azure_repo_data(self.object_storage_config.azure)
         repo_data = self._prepare_repo_data(secret, repo)
 
-        self.charm.peers_data.put_object(Scope.APP, OS_PEER_KEY_TYPE, object_storage_type)
-        self.charm.peers_data.put_object(Scope.APP, OS_PEER_KEY_REPO, repo_data)
-        self.charm.peers_data.put_object(Scope.APP, "notify-epoch", str(int(time.time())))
-        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+        p_relation = self.charm.model.get_relation(PeerClusterRelationName)
+        if p_relation and self.charm.unit.is_leader():
+            p_relation.data[self.charm.app][OS_PEER_KEY_TYPE] = object_storage_type
+            p_relation.data[self.charm.app][OS_PEER_KEY_REPO] = json.dumps(repo_data)
+            p_relation.data[self.charm.app]["notify-epoch"] = str(int(time.time()))
+            self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
         self.charm.keystore_manager.put_entries(
             {
@@ -272,8 +282,13 @@ class OpenSearchSnapshotsEvents(Object):
 
         self.charm.peers_data.delete(Scope.APP, OS_PEER_KEY_TYPE)
         self.charm.peers_data.delete(Scope.APP, OS_PEER_KEY_REPO)
-        self.charm.peers_data.put_object(Scope.APP, "notify-epoch", str(int(time.time())))
-        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+
+        # update consumers using get relation-changed
+        for rel in self.model.relations.get(PeerClusterRelationName, []):
+            rel.data[self.app]["notify-epoch"] = str(int(time.time()))
+            rel.data[self.app]["object-storage-type"] = ""
+            rel.data[self.app]["object-storage-repo"] = ""
+            self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
         """Handler for s3 create backup action event."""
@@ -399,7 +414,7 @@ class OpenSearchSnapshotsEvents(Object):
         finally:
             self.charm.status.clear(RestoreInProgress)
 
-    def _on_peer_relation_changed_for_snapshots(self, event):  # noqa C901
+    def _on_peer_clusters_relation_changed_for_snapshots(self, event):  # noqa C901
         """Apply snapshots config when the orchestrator broadcasts over peer-clusters."""
         # Only leaders perform cluster-level config
         if not self.charm.unit.is_leader():
@@ -496,7 +511,7 @@ class OpenSearchSnapshotsEvents(Object):
         # ensure repository exists
         self._ensure_repository(os_type + "-pcluster", effective_cfg)
 
-    def _on_peer_relation_departed_for_snapshots(self, event):  # noqa C901
+    def _on_peer_clusters_relation_departed_for_snapshots(self, event):  # noqa C901
         """Cleanup snapshot config if the orchestrator we depended on is gone."""
         if not self.charm.unit.is_leader():
             return
@@ -648,7 +663,7 @@ class OpenSearchSnapshotsEvents(Object):
         secret_id = sec.id
 
         # grant to peer-cluster relation
-        rel: Relation | None = self.charm.model.get_relation(PeerRelationName)
+        rel: Relation | None = self.charm.model.get_relation(PeerClusterRelationName)
         if rel:
             try:
                 sec.grant(relation=rel)
