@@ -5,6 +5,7 @@
 
 import json
 import logging
+import time
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal, Tuple
 
@@ -79,8 +80,8 @@ ObjectStorageType = Literal[
 S3_REPOSITORY = "s3-repository"
 AZURE_REPOSITORY = "azure-repository"
 GCS_REPOSITORY = "gcs-repository"
-OS_PEER_KEY_TYPE = "snapshot-object-storage-type"
-OS_PEER_KEY_REPO = "snapshot-object-storage-repo"
+OS_PEER_KEY_TYPE = "object-storage-type"
+OS_PEER_KEY_REPO = "object-storage-repo"
 
 
 # System indices that should not be snapshotted
@@ -153,8 +154,15 @@ class OpenSearchSnapshotsEvents(Object):
         # publish secret to peer-clusters
         secret = _get_s3_secret_data(self.object_storage_config.s3)
         repo = _get_s3_repo_data(self.object_storage_config.s3)
-        _publish_data_to_peers_with_secret(self.charm, "s3", secret, repo)
-        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+        repo_data = self._prepare_repo_data("s3", secret, repo)
+        # self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+
+        p_relation = self.charm.model.get_relation(PeerClusterRelationName)
+
+        if p_relation and self.charm.unit.is_leader():
+            p_relation.data[self.charm.app][OS_PEER_KEY_TYPE] = object_storage_type
+            p_relation.data[self.charm.app][OS_PEER_KEY_REPO] = json.dumps(repo_data)
+            p_relation.data[self.charm.app]["notify-epoch"] = str(int(time.time()))
 
         # apply locally (leader does cluster-level config)
         self.charm.keystore_manager.put_entries(
@@ -171,13 +179,12 @@ class OpenSearchSnapshotsEvents(Object):
         ):
             self.charm.snapshots_manager.store_s3_ca(self.object_storage_config.s3.tls_ca_chain)
             logger.info("S3 CA is stored.")
-            self.charm.request_opensearch_restart(reason="apply new object storage CA")
+
         else:
             # If a custom CA is currently stored but no longer required, drop it
             if self.charm.snapshots_manager.is_custom_s3_ca_stored():
                 self.charm.snapshots_manager.store_s3_ca(None)
                 logger.info("S3 CA is deleted.")
-                self.charm.request_opensearch_restart(reason="apply new object storage CA")
 
         need_restart = False
         try:
@@ -208,9 +215,20 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.snapshots_manager.store_s3_ca(None)
             self.charm.request_opensearch_restart(reason="clean up the object storage CA")
 
-        # publish deletion
-        _clear_data_from_peers_and_delete_secret(self.charm)
-        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+        # revoke secret and grants
+        self._remove_secret_and_unpublish()
+
+        # drop internal cache
+        self.charm.peers_data.delete(Scope.APP, OS_PEER_KEY_TYPE)
+        self.charm.peers_data.delete(Scope.APP, OS_PEER_KEY_REPO)
+
+        # update consumers using get relation-changed
+        for rel in self.model.relations.get(PeerClusterRelationName, []):
+            rel.data[self.app]["notify-epoch"] = str(int(time.time()))
+            rel.data[self.app]["object-storage-type"] = ""
+            rel.data[self.app]["object-storage-repo"] = ""
+
+            # self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
     def _on_azure_credentials_changed(self, event: StorageConnectionInfoChangedEvent) -> None:
         """Handler for azure credentials changed event."""
@@ -232,8 +250,13 @@ class OpenSearchSnapshotsEvents(Object):
 
         secret = _get_azure_secret_data(self.object_storage_config.azure)
         repo = _get_azure_repo_data(self.object_storage_config.azure)
-        _publish_data_to_peers_with_secret(self.charm, "azure", secret, repo)
-        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+        repo_data = self._prepare_repo_data("azure", secret, repo)
+
+        p_relation = self.charm.model.get_relation(PeerClusterRelationName)
+        if p_relation and self.charm.unit.is_leader():
+            p_relation.data[self.charm.app][OS_PEER_KEY_TYPE] = object_storage_type
+            p_relation.data[self.charm.app][OS_PEER_KEY_REPO] = json.dumps(repo_data)
+            p_relation.data[self.charm.app]["notify-epoch"] = str(int(time.time()))
 
         self.charm.keystore_manager.put_entries(
             {
@@ -253,8 +276,19 @@ class OpenSearchSnapshotsEvents(Object):
         if not self._cleanup(object_storage_type="azure", keystore_entries=keystore_entries):
             event.defer()
             return
-        _clear_data_from_peers_and_delete_secret(self.charm)
-        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+
+        # revoke secret (and revoke grants)
+        self._remove_secret_and_unpublish()
+
+        # drop internal cache
+        self.charm.peers_data.delete(Scope.APP, OS_PEER_KEY_TYPE)
+        self.charm.peers_data.delete(Scope.APP, OS_PEER_KEY_REPO)
+
+        # update consumers using get relation-changed
+        for rel in self.model.relations.get(PeerClusterRelationName, []):
+            rel.data[self.app]["notify-epoch"] = str(int(time.time()))
+            rel.data[self.app]["object-storage-type"] = ""
+            rel.data[self.app]["object-storage-repo"] = ""
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
         """Handler for s3 create backup action event."""
@@ -612,6 +646,66 @@ class OpenSearchSnapshotsEvents(Object):
 
         return None
 
+    def _prepare_repo_data(self, secret_data: dict, repo_data: dict) -> dict[str, Any]:
+        """Create a new secret with payload, grant it to peer-cluster, and publish keys."""
+        # best-effort delete old secret first
+        if old_repo_data := self.charm.peers_data.get_object(Scope.APP, OS_PEER_KEY_REPO):
+            old_secret_id = old_repo_data.get("secret_id")
+            if old_secret_id:
+                try:
+                    old_sec = self.charm.model.get_secret(id=old_secret_id)
+                    old_sec.remove_all_revisions()
+                except Exception:
+                    pass
+
+        # create a new secret
+        sec: Secret = self.charm.app.add_secret(secret_data)
+        secret_id = sec.id
+
+        # grant to peer-cluster relation
+        rel: Relation | None = self.charm.model.get_relation(PeerClusterRelationName)
+        if rel:
+            try:
+                sec.grant(relation=rel)
+            except Exception:
+                pass
+        repo_data.update({"secret_id": secret_id})
+        return repo_data
+
+    def _remove_secret_and_unpublish(self) -> None:  # noqa: C901
+        """Provider-side cleanup, revoke secret payload, drop peer keys, and notify peers."""
+        if not self.charm.unit.is_leader():
+            return False
+
+        ok = True
+
+        # best-effort revoke/delete the secret revisions
+        repo_data = self.charm.peers_data.get_object(Scope.APP, OS_PEER_KEY_REPO) or {}
+        secret_id = repo_data.get("secret_id")
+        if secret_id:
+            try:
+                sec = self.charm.model.get_secret(id=secret_id)
+                for rel in self.charm.model.relations.get(PeerClusterRelationName, []):
+                    try:
+                        sec.revoke(relation=rel)
+                    except Exception:
+                        pass
+
+                sec.remove_all_revisions()
+            except Exception as e:
+                ok = False
+                logger.debug("Secret cleanup skipped/failed (%s): %s", secret_id, e)
+
+        for key in (OS_PEER_KEY_TYPE, OS_PEER_KEY_REPO):
+            try:
+                self.charm.peers_data.delete(Scope.APP, key)
+            except Exception as e:
+                ok = False
+                logger.debug("peers_data.delete(%s) failed: %s", key, e)
+        if ok:
+            logger.info("Provider side secrets are removed successfully")
+        return None
+
     @property
     def object_storage_config(self) -> ObjectStorageConfig | None:
         """Fetch the object storage data depending on the relation."""
@@ -940,7 +1034,7 @@ class OpenSearchSnapshotsManager:
         """List all snapshots in the current repository."""
         repo_name = self.repository_name(object_storage_type)
         response = self.opensearch.request(
-            "GET", f"_snapshot/{repo_name}/_all?pretty", alt_hosts=self.charm.alt_hosts
+            "GET", f"_snapshot/{repo_name}/_all", alt_hosts=self.charm.alt_hosts
         )
         snapshots = {
             snapshot["snapshot"].upper(): {
@@ -1101,50 +1195,3 @@ def _get_azure_repo_data(rel_data: AzureRelData) -> dict:
         "base_path": rel_data.base_path,
         "storage_account": rel_data.credentials.storage_account,
     }
-
-
-def _publish_data_to_peers_with_secret(
-    charm, os_type: str, secret_data: dict, repo_data: dict
-) -> None:
-    """Create a new secret with payload, grant it to peer-cluster, and publish keys."""
-    # best-effort delete old secret first
-    if old_repo_data := charm.peers_data.get_object(Scope.APP, OS_PEER_KEY_REPO):
-        old_secret_id = old_repo_data.get("secret_id")
-        if old_secret_id:
-            try:
-                old_sec = charm.model.get_secret(id=old_secret_id)
-                old_sec.remove_all_revisions()
-            except Exception:
-                pass
-
-    # create a new secret
-    sec: Secret = charm.app.add_secret(secret_data)
-    secret_id = sec.id
-
-    # grant to peer-cluster relation
-    rel: Relation | None = charm.model.get_relation(PeerClusterRelationName)
-    if rel:
-        try:
-            sec.grant(relation=rel)
-        except Exception:
-            pass
-    repo_data.update({"secret_id": secret_id})
-
-    charm.peers_data.put_object(Scope.APP, OS_PEER_KEY_TYPE, os_type)
-    charm.peers_data.put_object(Scope.APP, OS_PEER_KEY_REPO, repo_data)
-
-
-def _clear_data_from_peers_and_delete_secret(charm) -> None:
-    repo_data = charm.peers_data.get_object(Scope.APP, OS_PEER_KEY_REPO)
-    if not repo_data:
-        return
-    old_secret_id = repo_data.get("secret_id")
-    if old_secret_id:
-        try:
-            sec = charm.model.get_secret(id=old_secret_id)
-            sec.remove_all_revisions()
-        except Exception:
-            pass
-    # clear type and secret, so non-orchestrators drop local state
-    charm.peers_data.delete(Scope.APP, OS_PEER_KEY_TYPE)
-    charm.peers_data.delete(Scope.APP, OS_PEER_KEY_REPO)
