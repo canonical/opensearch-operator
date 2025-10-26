@@ -281,7 +281,6 @@ class S3RelDataCredentials(Model):
     access_key: str = Field(alias="access-key", default=None)
     secret_key: str = Field(alias="secret-key", default=None)
 
-
     class Config:
         """Model config of this pydantic model."""
 

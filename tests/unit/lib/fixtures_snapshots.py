@@ -2,14 +2,13 @@
 # See LICENSE file for licensing details.
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import PropertyMock, patch
 
 import pytest
 from charms.opensearch.v0.constants_charm import AZURE_RELATION, S3_RELATION
 from charms.opensearch.v0.models import (
-    AzureRelData,
-    ObjectStorageConfig,
-    S3RelData,
+    DeploymentType,
 )
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_health import HealthColors
@@ -40,20 +39,11 @@ class SnapshotsUnitTestFixtures:
 
     patch_deployment_desc = patch(
         "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
-        return_value=object(),
+        return_value=SimpleNamespace(typ=DeploymentType.MAIN_ORCHESTRATOR),
     )
     patch_is_node_up = patch.object(OpenSearchDistribution, "is_node_up", return_value=True)
     patch_alt_hosts = patch(
         "src.charm.OpenSearchOperatorCharm.alt_hosts", new_callable=PropertyMock
-    )
-
-    patch_obj_type = patch(
-        "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_type",
-        new_callable=PropertyMock,
-    )
-    patch_obj_cfg = patch(
-        "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents.object_storage_config",
-        new_callable=PropertyMock,
     )
 
     patch_s3_conn = patch(
@@ -96,8 +86,6 @@ class SnapshotsUnitTestFixtures:
         self.mock_deployment_desc = self.patch_deployment_desc.start()
         self.mock_is_node_up = self.patch_is_node_up.start()
         self.mock_alt_hosts = self.patch_alt_hosts.start()
-        self.mock_obj_type = self.patch_obj_type.start()
-        self.mock_obj_cfg = self.patch_obj_cfg.start()
         self.mock_s3_conn = self.patch_s3_conn.start()
         self.mock_az_conn = self.patch_az_conn.start()
         self.mock_is_repo_created = self.patch_is_repo_created.start()
@@ -123,7 +111,6 @@ class SnapshotsUnitTestFixtures:
 
     def use_s3(self, *, ca: str | None = None, info: dict | None = None) -> None:
         """Configure fixture to behave as if S3 is connected, optionally inject a CA."""
-        self.mock_obj_type.return_value = "s3"
         info = info or DEFAULT_S3_INFO
         if ca is not None:
             info = dict(info)
@@ -131,39 +118,10 @@ class SnapshotsUnitTestFixtures:
 
         self.mock_s3_conn.return_value = info
 
-        s3_model = S3RelData.from_dict(
-            {
-                "bucket": info["bucket"],
-                "endpoint": info["endpoint"],
-                "region": info["region"],
-                "path": info.get("path"),
-                "tls-ca-chain": info.get("tls_ca_chain"),
-                "credentials": {
-                    "access-key": info["access-key"],
-                    "secret-key": info["secret-key"],
-                },
-                "s3-uri-style": info.get("s3-uri-style", False),
-            }
-        )
-        self.mock_obj_cfg.return_value = ObjectStorageConfig(s3=s3_model)
-
     def use_azure(self, info: dict | None = None) -> None:
         """Configure fixture to behave as if Azure is connected."""
-        self.mock_obj_type.return_value = "azure"
         info = info or DEFAULT_AZURE_INFO
         self.mock_az_conn.return_value = info
-
-        az_model = AzureRelData.from_dict(
-            {
-                "container": info["container"],
-                "path": info.get("path"),
-                "credentials": {
-                    "storage_account": info["storage_account"],
-                    "secret_key": info["secret_key"],
-                },
-            }
-        )
-        self.mock_obj_cfg.return_value = ObjectStorageConfig(azure=az_model)
 
     @staticmethod
     def s3_relation() -> testing.Relation:

@@ -482,7 +482,6 @@ class TestPrerequisites(SnapshotsUnitTestFixtures):
             "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
             lambda *_a, **_k: object(),
         )
-        self.mock_obj_type.return_value = None
 
         with pytest.raises(testing.ActionFailed) as err:
             self.ctx.run(self.ctx.on.action("create-backup"), st)
@@ -491,8 +490,6 @@ class TestPrerequisites(SnapshotsUnitTestFixtures):
 
     def test_prereq_when_conflict_detected_from_two_relations_then_action_fails(self, monkeypatch):
         st = testing.State(leader=True, relations={self.s3_relation(), self.azure_relation()})
-        self.mock_obj_type.return_value = "conflict"
-
         with pytest.raises(testing.ActionFailed) as err:
             self.ctx.run(self.ctx.on.action("create-backup"), st)
 

@@ -35,12 +35,13 @@ from charms.opensearch.v0.models import (
     PeerClusterRelData,
     PeerClusterRelDataCredentials,
     PeerClusterRelErrorData,
+    S3RelCaData,
     S3RelDataCredentials,
     StartMode,
 )
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
-from charms.opensearch.v0.opensearch_snapshots import ObjectStorageResolver
 from charms.opensearch.v0.opensearch_internal_data import Scope
+from charms.opensearch.v0.opensearch_snapshots import ObjectStorageResolver
 from ops import (
     BlockedStatus,
     EventBase,
@@ -53,8 +54,6 @@ from ops import (
     WaitingStatus,
 )
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
-
-from charms.opensearch.v0.models import S3RelCaData
 
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
@@ -651,9 +650,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             secret_key=self.charm.secrets.get(Scope.APP, "s3-secret-key"),
         )
 
-    def _s3_tls_ca(
-        self, deployment_desc: DeploymentDescription
-    ) -> Optional[S3RelCaData]:
+    def _s3_tls_ca(self, deployment_desc: DeploymentDescription) -> Optional[S3RelCaData]:
         """Retrieve S3 storage credentials."""
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             if not self.charm.model.get_relation(S3_RELATION):
@@ -677,7 +674,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         return S3RelCaData(
             s3_tls_ca_chain=self.charm.secrets.get(Scope.APP, "s3-tls-ca-chain"),
         )
-
 
     def _rel_data(
         self,
