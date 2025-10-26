@@ -39,6 +39,7 @@ from charms.opensearch.v0.models import (
     StartMode,
 )
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
+from charms.opensearch.v0.opensearch_snapshots import ObjectStorageResolver
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import (
     BlockedStatus,
@@ -52,6 +53,8 @@ from ops import (
     WaitingStatus,
 )
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
+
+from charms.opensearch.v0.models import S3RelCaData
 
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
@@ -145,6 +148,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             charm.on[self.relation_name].relation_departed,
             self._on_peer_cluster_relation_departed,
         )
+        self.resolver = ObjectStorageResolver(charm)
 
     def _on_peer_cluster_relation_joined(self, event: RelationJoinedEvent):
         """Received by all units in main/failover clusters when new sub-cluster joins the rel."""
@@ -587,62 +591,93 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
     def _azure_credentials(
         self, deployment_desc: DeploymentDescription
     ) -> Optional[AzureRelDataCredentials]:
-        """Retrieve Azure storage credentials from the azure-storage-integrator relation."""
-        rel = self.charm.model.get_relation(AZURE_RELATION)
+        """Retrieve Azure storage credentials."""
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
-            if not rel or not rel.app:
-                return None
-            rdata = dict(rel.data[rel.app])
-            storage_account = rdata.get("storage-account")
-            secret_key = rdata.get("secret-key")
-            if not (storage_account and secret_key):
+            if not self.charm.model.get_relation(AZURE_RELATION):
                 return None
 
-            # Persist for requirers via peer-clusters
+            azure_storage_conn_info = self.resolver.get_config("azure")
+            if not azure_storage_conn_info.azure.credentials.storage_account:
+                return None
+
+            # As the main orchestrator, this application must set the azure information.
+            storage_account = azure_storage_conn_info.azure.credentials.storage_account
+            secret_key = azure_storage_conn_info.azure.credentials.secret_key
+
+            # set the secrets in the charm
+            # TODO Move this to azure relation and include both in one secret
             self.charm.secrets.put(Scope.APP, "azure-storage-account", storage_account)
             self.charm.secrets.put(Scope.APP, "azure-secret-key", secret_key)
+
             return AzureRelDataCredentials(storage_account=storage_account, secret_key=secret_key)
 
-        # non-main orchestrators use what the provider already saved in secrets
         if not self.charm.secrets.get(Scope.APP, "azure-storage-account"):
             return None
+
+        # Return what we have received from the peer relation
         return AzureRelDataCredentials(
-            storage_account=self.charm.secrets.get(Scope.APP, "azure-storage-account"),
+            storage_account=self.charm.secrets.get(Scope.APP, "azure-access-key"),
             secret_key=self.charm.secrets.get(Scope.APP, "azure-secret-key"),
         )
 
     def _s3_credentials(
         self, deployment_desc: DeploymentDescription
     ) -> Optional[S3RelDataCredentials]:
-        """Retrieve S3 storage credentials from s3 integrator relation."""
-        rel = self.charm.model.get_relation(S3_RELATION)
+        """Retrieve S3 storage credentials."""
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
-            if not rel or not rel.app:
-                return None
-            # Read directly from the integrator app's databag
-            rdata = dict(rel.data[rel.app])
-            access_key = rdata.get("access-key")
-            secret_key = rdata.get("secret-key")
-            tls_ca_chain = rdata.get("tls-ca-chain")
-            if not (access_key and secret_key):
+            if not self.charm.model.get_relation(S3_RELATION):
                 return None
 
-            # Persist for requirers via peer-clusters
+            if not self.resolver.get_config("s3").s3.credentials.access_key:
+                return None
+
+            # As the main orchestrator, this application must set the S3 information.
+            access_key = self.resolver.get_config("s3").s3.credentials.access_key
+            secret_key = self.resolver.get_config("s3").s3.credentials.secret_key
+
+            # set the secrets in the charm
+            # TODO Move this to s3 relation and include both in one secret
             self.charm.secrets.put(Scope.APP, "s3-access-key", access_key)
             self.charm.secrets.put(Scope.APP, "s3-secret-key", secret_key)
-            return S3RelDataCredentials(
-                access_key=access_key,
-                secret_key=secret_key,
-                tls_ca_chain=tls_ca_chain,
-            )
 
-        # Non-main orchestrators use what the provider already saved in secrets
+            return S3RelDataCredentials(access_key=access_key, secret_key=secret_key)
+
         if not self.charm.secrets.get(Scope.APP, "s3-access-key"):
             return None
+
+        # Return what we have received from the peer relation
         return S3RelDataCredentials(
             access_key=self.charm.secrets.get(Scope.APP, "s3-access-key"),
             secret_key=self.charm.secrets.get(Scope.APP, "s3-secret-key"),
         )
+
+    def _s3_tls_ca(
+        self, deployment_desc: DeploymentDescription
+    ) -> Optional[S3RelCaData]:
+        """Retrieve S3 storage credentials."""
+        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+            if not self.charm.model.get_relation(S3_RELATION):
+                return None
+
+            if not self.resolver.get_config("s3").s3.tls_ca_chain:
+                return None
+
+            # As the main orchestrator, this application must set the S3 tls ca chain.
+            tls_ca_chain = self.self.resolver.get_config("s3").s3.tls_ca_chain
+
+            # set the secrets in the charm
+            self.charm.secrets.put(Scope.APP, "s3-tls-ca-chain", tls_ca_chain)
+
+            return S3RelCaData(s3_tls_ca_chain=tls_ca_chain)
+
+        if not self.charm.secrets.get(Scope.APP, "s3-tls-ca-chain"):
+            return None
+
+        # Return what we have received from the peer relation
+        return S3RelCaData(
+            s3_tls_ca_chain=self.charm.secrets.get(Scope.APP, "s3-tls-ca-chain"),
+        )
+
 
     def _rel_data(
         self,
@@ -694,6 +729,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 admin_tls=self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val),
                 s3=self._s3_credentials(deployment_desc),
                 azure=self._azure_credentials(deployment_desc),
+                s3_tls_ca_chain=self._s3_tls_ca(deployment_desc),
             )
         return None
 
@@ -1374,8 +1410,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 data={"cluster_fleet_apps": json.dumps(cluster_fleet_apps)},
                 rel_id=rel_id,
             )
-
-    # delete  self.charm.opensearch_peer_cm.get(Scope.UNIT, "snapshot-object-storage-type")
 
     def _cm_nodes(self, orchestrators: PeerClusterOrchestrators) -> List[Node]:
         """Fetch the cm nodes passed from the peer cluster relation not api call."""

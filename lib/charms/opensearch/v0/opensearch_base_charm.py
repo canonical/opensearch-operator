@@ -287,7 +287,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # in the deferred event queue
         self._is_peer_rel_changed_deferred = False
 
-        self.snapshots_events = OpenSearchSnapshotsEvents(self)
+        self.snapshot_events = OpenSearchSnapshotsEvents(self)
 
     @property
     @abc.abstractmethod

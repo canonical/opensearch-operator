@@ -3,11 +3,9 @@
 
 """OpenSearch Snapshots."""
 
-import json
 import logging
-import time
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Literal, Tuple
+from typing import TYPE_CHECKING, Any, Tuple
 
 from charms.data_platform_libs.v0.azure_storage import (
     AzureStorageRequires,
@@ -54,6 +52,23 @@ from ops import (
     Secret,
 )
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
+from typing import Optional
+from charms.data_platform_libs.v0.data_interfaces import Scope
+from charms.opensearch.v0.models import (
+    ObjectStorageConfig, S3RelData, AzureRelData, GcsRelData, DeploymentType,
+)
+from charms.opensearch.v0.constants_charm import S3_RELATION, AZURE_RELATION, GCS_RELATION, PeerClusterRelationName
+from charms.opensearch.v0.helper_storage import ObjectStorageResolver, ObjectStorageType
+
+from charms.opensearch.v0.constants_charm import (
+    PeerClusterOrchestratorRelationName,
+)
+
+from ops.framework import EventBase, EventSource
+import time, json
+
+from ops import Secret
+from charms.opensearch.v0.constants_charm import PeerClusterRelationName
 
 # The unique Charmhub library identifier, never change it
 LIBID = "89db18e639c64a6ea223c63172c04dc6."
@@ -71,11 +86,6 @@ if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 
-# Object storage types
-ObjectStorageType = Literal[
-    "s3", "azure", "gcs", "s3-pcluster", "azure-pcluster", "gcs-pcluster", "conflict"
-]
-
 # OpenSearch Backups
 S3_REPOSITORY = "s3-repository"
 AZURE_REPOSITORY = "azure-repository"
@@ -91,12 +101,29 @@ SYSTEM_INDICES = {
 }
 
 
+class _ObjectStorageEvent(EventBase):
+    def __init__(self, handle, *, kind: str, action: str):
+        super().__init__(handle)
+        self.kind = kind      # "s3" | "azure"
+        self.action = action  # "changed" | "gone"
+    def snapshot(self):
+        return {"kind": self.kind, "action": self.action}
+    def restore(self, snap):
+        self.kind = snap["kind"]; self.action = snap["action"]
+
+class _ObjectStorageChanged(_ObjectStorageEvent): pass
+class _ObjectStorageGone(_ObjectStorageEvent): pass
+
+
 class OpenSearchSnapshotsEvents(Object):
     """Events class for Backups (snapshots)."""
+    object_storage_changed = EventSource(_ObjectStorageChanged)
+    object_storage_gone    = EventSource(_ObjectStorageGone)
 
-    def __init__(self, charm: "OpenSearchBaseCharm"):
+    def __init__(self, charm: "OpenSearchBaseCharm", resolver: ObjectStorageResolver | None = None):
         super().__init__(charm, key="backups")
         self.charm = charm
+        self._resolver = resolver or ObjectStorageResolver(charm)
 
         # requirers
         self.s3_requirer = S3Requirer(charm, S3_RELATION)
@@ -125,6 +152,8 @@ class OpenSearchSnapshotsEvents(Object):
             charm.on[PeerClusterRelationName].relation_departed,
             self._on_peer_clusters_relation_departed_for_snapshots,
         )
+        self.framework.observe(self.object_storage_changed, self._on_object_storage_changed_on_peers)
+        self.framework.observe(self.object_storage_gone, self._on_object_storage_gone_on_peers)
 
         # actions
         self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
@@ -133,7 +162,7 @@ class OpenSearchSnapshotsEvents(Object):
 
     def _on_s3_credentials_changed(self, event: CredentialsChangedEvent) -> None:
         """Handler for s3 credentials changed event."""
-        object_storage_type = self.object_storage_type or "s3"
+        object_storage_type = self._resolver.get_type() or "s3"
         logger.info(f"S3 credentials changed for object storage type {object_storage_type}")
 
         if object_storage_type == "conflict":
@@ -144,40 +173,26 @@ class OpenSearchSnapshotsEvents(Object):
         # handle case where this was deferred in the above case, then the s3 relation was severed
         if (
             object_storage_type != "s3"
-            or not self.object_storage_config.s3
-            or not self.object_storage_config.s3.credentials
+            or not self._resolver.get_config("s3")
+            or not self._resolver.get_config("s3").s3.credentials
         ):
             logger.warning("No S3 object storage configuration.")
             return
-        logger.info("S3 object storage configuration: %s", self.object_storage_config.s3)
-
-        # publish secret to peer-clusters
-        secret = _get_s3_secret_data(self.object_storage_config.s3)
-        repo = _get_s3_repo_data(self.object_storage_config.s3)
-        repo_data = self._prepare_repo_data(secret, repo)
-
-        p_relation = self.charm.model.get_relation(PeerClusterRelationName)
-
-        if p_relation and self.charm.unit.is_leader():
-            p_relation.data[self.charm.app][OS_PEER_KEY_TYPE] = object_storage_type
-            p_relation.data[self.charm.app][OS_PEER_KEY_REPO] = json.dumps(repo_data)
-            p_relation.data[self.charm.app]["notify-epoch"] = str(int(time.time()))
-            self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
         # apply locally (leader does cluster-level config)
         self.charm.keystore_manager.put_entries(
             {
-                "s3.client.default.access_key": self.object_storage_config.s3.credentials.access_key,
-                "s3.client.default.secret_key": self.object_storage_config.s3.credentials.secret_key,
+                "s3.client.default.access_key": self._resolver.get_config("s3").s3.credentials.access_key,
+                "s3.client.default.secret_key": self._resolver.get_config("s3").s3.credentials.secret_key,
             }
         )
         logger.info("S3 credentials are added to keystore.")
         self.charm.keystore_manager.reload()
 
         if self.charm.snapshots_manager.requires_custom_s3_ca(
-            object_storage_type, self.object_storage_config
+            object_storage_type, self._resolver.get_config("s3")
         ):
-            self.charm.snapshots_manager.store_s3_ca(self.object_storage_config.s3.tls_ca_chain)
+            self.charm.snapshots_manager.store_s3_ca(self._resolver.get_config("s3").s3.tls_ca_chain)
             logger.info("S3 CA is stored.")
 
         else:
@@ -190,7 +205,7 @@ class OpenSearchSnapshotsEvents(Object):
         try:
             need_restart = self.charm.snapshots_manager.should_restart_for_full_setup(
                 object_storage_type="s3",
-                object_storage_config=self.object_storage_config,
+                object_storage_config=self._resolver.get_config("s3"),
             )
             logger.info("service should be restarted")
         except OpenSearchHttpError as e:
@@ -199,11 +214,12 @@ class OpenSearchSnapshotsEvents(Object):
 
         if need_restart:
             self.charm.request_opensearch_restart(reason="apply new object storage CA")
-        self._ensure_repository(object_storage_type, self.object_storage_config)
+        self._ensure_repository(object_storage_type, self._resolver.get_config("s3"))
+        self._broadcast_storage_trigger(kind="s3", action="changed")
 
     def _on_s3_credentials_gone(self, event: CredentialsGoneEvent) -> None:
         """Handler for s3 credentials gone event."""
-        if self.object_storage_type == "conflict":
+        if  self._resolver.get_type() == "conflict":
             return
 
         keystore_entries = ["s3.client.default.access_key", "s3.client.default.secret_key"]
@@ -214,81 +230,211 @@ class OpenSearchSnapshotsEvents(Object):
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.store_s3_ca(None)
             self.charm.request_opensearch_restart(reason="clean up the object storage CA")
+        self._broadcast_storage_trigger(kind="s3", action="gone")
 
-        # revoke secret and grants
-        self._remove_secret_and_unpublish()
-
-        # drop internal cache
-        self.charm.peers_data.delete(Scope.APP, OS_PEER_KEY_TYPE)
-        self.charm.peers_data.delete(Scope.APP, OS_PEER_KEY_REPO)
-
-        # update consumers using get relation-changed
-        for rel in self.model.relations.get(PeerClusterRelationName, []):
-            rel.data[self.app]["notify-epoch"] = str(int(time.time()))
-            rel.data[self.app]["object-storage-type"] = ""
-            rel.data[self.app]["object-storage-repo"] = ""
-            self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
     def _on_azure_credentials_changed(self, event: StorageConnectionInfoChangedEvent) -> None:
         """Handler for azure credentials changed event."""
-        object_storage_type = self.object_storage_type or "azure"
+        object_storage_type = self._resolver.get_type() or "azure"
 
         if object_storage_type == "conflict":
             self.charm.status.set(BlockedStatus("More than 1 object storage relation."))
             event.defer()
             return
 
-        # handle the case where this was deferred in case of multiple object storage relations
-        # then azure relation severed
         if (
-            not self.object_storage_config
-            or not self.object_storage_config.azure
-            or not self.object_storage_config.azure.credentials
+            object_storage_type != "azure"
+            or not self._resolver.get_config("azure")
+            or not self._resolver.get_config("azure").azure.credentials
         ):
+            logger.warning("No Azure object storage configuration.")
             return
-
-        secret = _get_azure_secret_data(self.object_storage_config.azure)
-        repo = _get_azure_repo_data(self.object_storage_config.azure)
-        repo_data = self._prepare_repo_data(secret, repo)
-
-        p_relation = self.charm.model.get_relation(PeerClusterRelationName)
-        if p_relation and self.charm.unit.is_leader():
-            p_relation.data[self.charm.app][OS_PEER_KEY_TYPE] = object_storage_type
-            p_relation.data[self.charm.app][OS_PEER_KEY_REPO] = json.dumps(repo_data)
-            p_relation.data[self.charm.app]["notify-epoch"] = str(int(time.time()))
-            self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
         self.charm.keystore_manager.put_entries(
             {
-                "azure.client.default.account": self.object_storage_config.azure.credentials.storage_account,
-                "azure.client.default.key": self.object_storage_config.azure.credentials.secret_key,
+                "azure.client.default.account": self._resolver.get_config("azure").azure.credentials.storage_account,
+                "azure.client.default.key": self._resolver.get_config("azure").azure.credentials.secret_key,
             }
         )
         self.charm.keystore_manager.reload()
-        self._ensure_repository(object_storage_type, self.object_storage_config)
+        self._ensure_repository(object_storage_type, self._resolver.get_config())
+        self._broadcast_storage_trigger(kind="azure", action="changed")
 
     def _on_azure_credentials_gone(self, event: StorageConnectionInfoGoneEvent) -> None:
         """Handler for azure credentials gone event."""
-        if self.object_storage_type == "conflict":
+        if self._resolver.get_type() == "conflict":
             return
 
         keystore_entries = ["azure.client.default.account", "azure.client.default.key"]
         if not self._cleanup(object_storage_type="azure", keystore_entries=keystore_entries):
             event.defer()
             return
+        self._broadcast_storage_trigger(kind="azure", action="gone")
 
-        # revoke secret (and revoke grants)
-        self._remove_secret_and_unpublish()
+    def _broadcast_storage_trigger(self, kind: str, action: str) -> None:
+        payload = json.dumps({"kind": kind, "action": action, "seq": int(time.time())})
+        for rel in self.charm.model.relations.get(PeerClusterOrchestratorRelationName, []):
+            rel.data[self.charm.app]["storage_trigger"] = payload
 
-        self.charm.peers_data.delete(Scope.APP, OS_PEER_KEY_TYPE)
-        self.charm.peers_data.delete(Scope.APP, OS_PEER_KEY_REPO)
+    def _on_object_storage_changed_on_peers(self, event: _ObjectStorageChanged) -> None:
+        if event.kind == "s3":
+            info = self._read_s3_from_peer()
+            if not (info and info["access_key"] and info["secret_key"]):
+                return
 
-        # update consumers using get relation-changed
-        for rel in self.model.relations.get(PeerClusterRelationName, []):
-            rel.data[self.app]["notify-epoch"] = str(int(time.time()))
-            rel.data[self.app]["object-storage-type"] = ""
-            rel.data[self.app]["object-storage-repo"] = ""
-            self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+            self.charm.keystore_manager.put_entries({
+                "s3.client.default.access_key": info["access_key"],
+                "s3.client.default.secret_key": info["secret_key"],
+            })
+            self.charm.keystore_manager.reload()
+
+            # Optional CA chain
+            if info.get("tls_ca_chain"):
+                self.charm.snapshots_manager.store_s3_ca(info["tls_ca_chain"])
+                try:
+                    if self.charm.snapshots_manager.should_restart_for_full_setup("s3", object_storage_config=None):
+                        self.charm.request_opensearch_restart("apply new object storage CA")
+                except OpenSearchHttpError:
+                    pass
+            else:
+                if self.charm.snapshots_manager.is_custom_s3_ca_stored():
+                    self.charm.snapshots_manager.store_s3_ca(None)
+
+            try:
+                if not self.charm.snapshots_manager.is_repository_created("s3"):
+                    self.charm.snapshots_manager.create_repo("s3", object_storage_config=self.get_object_storage_config(
+                        "s3") or self.get_object_storage_config())
+            except Exception as e:
+                logger.warning("ensure s3 repo failed: %s", e)
+
+        elif event.kind == "azure":
+            info = self._read_azure_from_peer()
+            if not (info and info["storage_account"] and info["secret_key"]):
+                return
+
+            self.charm.keystore_manager.put_entries({
+                "azure.client.default.account": info["storage_account"],
+                "azure.client.default.key": info["secret_key"],
+            })
+            self.charm.keystore_manager.reload()
+
+            try:
+                if not self.charm.snapshots_manager.is_repository_created("azure"):
+                    self.charm.snapshots_manager.create_repo("azure",
+                                                             object_storage_config=self.get_object_storage_config(
+                                                                 "azure") or self.get_object_storage_config())
+            except Exception as e:
+                logger.warning("ensure azure repo failed: %s", e)
+
+    def _on_object_storage_gone_on_peers(self, event: _ObjectStorageGone) -> None:
+        if event.kind == "s3":
+            if self._cleanup("s3", ["s3.client.default.access_key", "s3.client.default.secret_key"]):
+                if self.charm.snapshots_manager.is_custom_s3_ca_stored():
+                    self.charm.snapshots_manager.store_s3_ca(None)
+                    self.charm.request_opensearch_restart("clean up the object storage CA")
+        elif event.kind == "azure":
+            self._cleanup("azure", ["azure.client.default.account", "azure.client.default.key"])
+
+    def _maybe_emit_local_storage_event(self, trigger: dict) -> bool:
+        seq = int(trigger.get("seq", 0))
+        kind = trigger.get("kind")
+        action = trigger.get("action")
+        if kind not in {"s3", "azure"} or action not in {"changed", "gone"}:
+            return False
+
+        last_seq = int(self.charm.peers_data.get(Scope.APP, "snapshots_last_storage_seq", 0))
+        if seq <= last_seq:  # stale/replayed
+            return False
+
+        # watermark first to avoid double work on retries
+        self.charm.peers_data.put(Scope.APP, "snapshots_last_storage_seq", seq)
+
+        if action == "changed":
+            self.object_storage_changed.emit(kind=kind, action=action)
+        else:
+            self.object_storage_gone.emit(kind=kind, action=action)
+        return True
+
+    def _first_provider_rel_with_data(self):
+        for rel in self.charm.model.relations.get(PeerClusterRelationName, []):
+            appbag = rel.data.get(rel.app, {})
+            if appbag.get("data"):
+                return rel
+        return None
+
+    def _provider_rel_payload(self) -> dict | None:
+        rel = self._first_provider_rel_with_data()
+        if not rel:
+            return None
+        try:
+            return json.loads(rel.data[rel.app]["data"])
+        except Exception:
+            return None
+
+    def _secret_value_from_id(self, secret_uri: str) -> str | None:
+        try:
+            s: Secret = self.charm.model.get_secret(id=secret_uri)
+            content = s.get_content(refresh=True)
+            return next(iter(content.values())) if content else None
+        except Exception:
+            return None
+
+    def _read_s3_from_peer(self):
+        payload = self._provider_rel_payload()
+        if not payload:
+            return None
+        creds = ((payload.get("credentials") or {}).get("s3") or {})
+        if not creds:
+            return None
+        ak_id = creds.get("access-key")
+        sk_id = creds.get("secret-key")
+        if not (ak_id and sk_id):
+            return None
+
+        access_key = self._secret_value_from_id(ak_id)
+        secret_key = self._secret_value_from_id(sk_id)
+
+        # CA chain may be published separately
+        tls_chain = None
+        s3_ca = (payload.get("credentials") or {}).get("s3_tls_ca_chain")
+        if isinstance(s3_ca, str) and s3_ca.startswith("secret://"):
+            tls_chain = self._secret_value_from_id(s3_ca)
+
+        return {"access_key": access_key, "secret_key": secret_key, "tls_ca_chain": tls_chain}
+
+    def _read_azure_from_peer(self):
+        payload = self._provider_rel_payload()
+        if not payload:
+            return None
+        creds = ((payload.get("credentials") or {}).get("azure") or {})
+        if not creds:
+            return None
+        sa_id = creds.get("storage-account")
+        sk_id = creds.get("secret-key")
+        if not (sa_id and sk_id):
+            return None
+
+        storage_account = self._secret_value_from_id(sa_id)
+        secret_key = self._secret_value_from_id(sk_id)
+        return {"storage_account": storage_account, "secret_key": secret_key}
+
+    def get_active_storage_type(self) -> Optional[ObjectStorageType]:
+        return self._resolver.get_type()
+
+    def get_object_storage_config(self, forced_type: ObjectStorageType | None = None) -> Optional[ObjectStorageConfig]:
+        return self._resolver.get_config(forced_type)
+
+    def get_s3_info(self) -> Optional[S3RelData]:
+        cfg = self.get_object_storage_config("s3") if self.get_active_storage_type() in {"s3","s3-pcluster"} else self.get_object_storage_config()
+        return cfg.s3 if cfg and cfg.s3 else None
+
+    def get_azure_info(self) -> Optional[AzureRelData]:
+        cfg = self.get_object_storage_config("azure") if self.get_active_storage_type() in {"azure","azure-pcluster"} else self.get_object_storage_config()
+        return cfg.azure if cfg and cfg.azure else None
+
+    def get_gcs_info(self) -> Optional[GcsRelData]:
+        cfg = self.get_object_storage_config("gcs") if self.get_active_storage_type() in {"gcs","gcs-pcluster"} else self.get_object_storage_config()
+        return cfg.gcs if cfg and cfg.gcs else None
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
         """Handler for s3 create backup action event."""
@@ -296,10 +442,11 @@ class OpenSearchSnapshotsEvents(Object):
             event.fail(error_message)
             return
 
+        object_storage_type = self._effective_type()
         # Create a new snapshot
         try:
             snapshot_id = self.charm.snapshots_manager.create_snapshot(
-                object_storage_type=self.object_storage_type
+                object_storage_type=object_storage_type,
             )
         except OpenSearchHttpError as e:
             logger.error("Could not create a new snapshot: %s", e)
@@ -310,7 +457,7 @@ class OpenSearchSnapshotsEvents(Object):
         self.charm.status.set(MaintenanceStatus(BackupInProgress))
         try:
             snapshot = self.charm.snapshots_manager.get_snapshot(
-                object_storage_type=self.object_storage_type, snapshot_id=snapshot_id
+                object_storage_type=object_storage_type, snapshot_id=snapshot_id
             )
             event.set_results({"backup-id": snapshot_id, "status": snapshot["state"]})
         except OpenSearchHttpError as e:
@@ -330,7 +477,8 @@ class OpenSearchSnapshotsEvents(Object):
             return
 
         try:
-            snapshots = self.charm.snapshots_manager.list_snapshots(self.object_storage_type)
+            object_storage_type = self._effective_type()
+            snapshots = self.charm.snapshots_manager.list_snapshots(object_storage_type=object_storage_type)
         except OpenSearchHttpError as e:
             logger.error("Could not fetch the list of snapshots: %s", e)
             event.fail(f"Backup request failed with: {str(e)}")
@@ -360,11 +508,13 @@ class OpenSearchSnapshotsEvents(Object):
             event.fail(error_message)
             return
 
+        object_storage_type = self._effective_type()
+
         # Fetch the snapshot with the corresponding ID
         try:
             if not (
                 snapshot := self.charm.snapshots_manager.get_snapshot(
-                    self.object_storage_type, snapshot_id
+                    object_storage_type, snapshot_id
                 )
             ):
                 logger.error("Backup %s not found", snapshot_id)
@@ -394,7 +544,7 @@ class OpenSearchSnapshotsEvents(Object):
         logger.info("Starting restore of snapshot %s.", snapshot_id)
         try:
             non_restored_indices = self.charm.snapshots_manager.restore_snapshot(
-                object_storage_type=self.object_storage_type, snapshot=snapshot
+                object_storage_type=object_storage_type, snapshot=snapshot
             )
             if not non_restored_indices:
                 self.charm.health.apply(wait_for_green_first=True, app=self.charm.unit.is_leader())
@@ -425,91 +575,18 @@ class OpenSearchSnapshotsEvents(Object):
             event.defer()
             return
 
-        # When it is the main orchestrator, it is same with single cluster
-        # so we don't need to apply cluster-level config.
         if dep.typ == DeploymentType.MAIN_ORCHESTRATOR:
             return
 
-        # read the effective storage type/config coming from peer-clusters
-        os_type = self.charm.peers_data.get(Scope.APP, OS_PEER_KEY_TYPE)
-        repo = self.charm.peers_data.get_object(Scope.APP, OS_PEER_KEY_REPO)
-        if not os_type or not repo or not repo.get("secret_id"):
-            return
-
-        secret_id = repo.get("secret_id")
-        secret_payload = {}
-        if secret_id:
+        trigger_raw = event.relation.data.get(event.app, {}).get("storage_trigger")
+        if trigger_raw:
             try:
-                secret = self.charm.model.get_secret(id=secret_id)
-                secret_payload = secret.get_content()
-            except Exception as e:
-                logger.error("Failed to read object-storage secret %s: %s", secret_id, e)
-                event.defer()
-                return
+                trigger = json.loads(trigger_raw)
+            except json.JSONDecodeError:
+                trigger = None
 
-        if repo and repo.get("type") == "s3":
-            self.charm.snapshots_manager.store_s3_ca(repo.get("tls_ca_chain") or None)
-            self.charm.keystore_manager.put_entries(
-                {
-                    "s3.client.default.access_key": secret_payload.get("access-key", ""),
-                    "s3.client.default.secret_key": secret_payload.grt("secret-key", ""),
-                }
-            )
-            effective_cfg = ObjectStorageConfig.from_dict(
-                {
-                    "s3": {
-                        "endpoint": repo.get("endpoint"),
-                        "bucket": repo.get("bucket"),
-                        "base_path": repo.get("base_path"),
-                        "region": repo.get("region"),
-                        "credentials": {
-                            "access-key": secret_payload.get("access-key"),
-                            "secret-key": secret_payload.get("secret-key"),
-                        },
-                        "tls-ca-chain": repo.get("tls_ca_chain", ""),
-                    }
-                }
-            )
-        elif repo and repo.get("type") == "azure":
-            self.charm.keystore_manager.put_entries(
-                {
-                    "azure.client.default.account": secret_payload.get("storage_account", ""),
-                    "azure.client.default.key": secret_payload.get("secret-key", ""),
-                }
-            )
-            effective_cfg = ObjectStorageConfig.from_dict(
-                {
-                    "azure": {
-                        "container": repo.get("container"),
-                        "base_path": repo.get("base_path"),
-                        "credentials": {
-                            "storage-account": secret_payload.get("storage_account"),
-                            "secret-key": secret_payload.get("secret-key"),
-                        },
-                    }
-                }
-            )
-        else:
-            # gcs branch
-            return
-
-        self.charm.keystore_manager.reload()
-
-        need_restart = False
-        try:
-            need_restart = self.charm.snapshots_manager.should_restart_for_full_setup(
-                object_storage_type=os_type + "-pcluster",
-                object_storage_config=effective_cfg,
-            )
-        except OpenSearchHttpError as e:
-            logger.warning("Skip restart precheck (OpenSearch not ready?): %s", e)
-            need_restart = False
-
-        if need_restart:
-            self.charm.request_opensearch_restart(reason="apply new object storage CA")
-
-        # ensure repository exists
-        self._ensure_repository(os_type + "-pcluster", effective_cfg)
+            if trigger and self._maybe_emit_local_storage_event(trigger):
+                pass
 
     def _on_peer_clusters_relation_departed_for_snapshots(self, event):  # noqa C901
         """Cleanup snapshot config if the orchestrator we depended on is gone."""
@@ -523,58 +600,15 @@ class OpenSearchSnapshotsEvents(Object):
         if dep.typ == DeploymentType.MAIN_ORCHESTRATOR:
             return
 
-        rel_payload = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)
-        typ_from_peer = None
-        if rel_payload and getattr(rel_payload, "credentials", None):
-            creds = rel_payload.credentials
-            if getattr(creds, "s3", None):
-                typ_from_peer = "s3-pcluster"
-            elif getattr(creds, "azure", None):
-                typ_from_peer = "azure-pcluster"
-            elif getattr(creds, "gcs", None):
-                typ_from_peer = "gcs-pcluster"
+        trigger_raw = event.relation.data.get(event.app, {}).get("storage_trigger")
+        if trigger_raw:
+            try:
+                trigger = json.loads(trigger_raw)
+            except json.JSONDecodeError:
+                trigger = None
 
-        if not typ_from_peer:
-            typ_from_peer = self.charm.peers_data.get(Scope.UNIT, OS_PEER_KEY_TYPE)
-            if not typ_from_peer:
-                return
-
-        if typ_from_peer == "s3-pcluster":
-            keystore_entries = [
-                "s3.client.default.access_key",
-                "s3.client.default.secret_key",
-            ]
-        elif typ_from_peer == "azure-pcluster":
-            keystore_entries = [
-                "azure.client.default.account",
-                "azure.client.default.key",
-            ]
-        else:  # gcs-pcluster: currently no keystore entries
-            keystore_entries = []
-
-        if not self._cleanup(
-            object_storage_type=typ_from_peer,
-            keystore_entries=keystore_entries,
-        ):
-            event.defer()
-            return
-
-        if (
-            typ_from_peer == "s3-pcluster"
-            and self.charm.snapshots_manager.is_custom_s3_ca_stored()
-        ):
-            self.charm.snapshots_manager.store_s3_ca(s3_tls_ca_chain=None)
-            self.charm.request_opensearch_restart(reason="clean up the object storage CA")
-
-        try:
-            self.charm.peers_data.delete(Scope.UNIT, OS_PEER_KEY_TYPE)
-        except Exception:
-            pass
-
-        logger.info(
-            "Peer-cluster departed: cleared snapshot configuration for storage type %s",
-            typ_from_peer,
-        )
+            if trigger and self._maybe_emit_local_storage_event(trigger):
+                pass
 
     def _cleanup(
         self, object_storage_type: ObjectStorageType | None, keystore_entries: list[str]
@@ -598,156 +632,34 @@ class OpenSearchSnapshotsEvents(Object):
         try:
             self.charm.snapshots_manager.remove_repo(object_storage_type=object_storage_type)
             self.charm.keystore_manager.reload()
-            self.charm.peers_data.delete(Scope.UNIT, OS_PEER_KEY_TYPE)
             return True
         except OpenSearchHttpError as e:
             logger.error("Cleanup of the %s cluster config failed: %s", object_storage_type, e)
             return False
 
-    @property
-    def object_storage_type(self) -> ObjectStorageType | None:  # noqa C901
-        """Get the current object storage type."""
-        dep = self.charm.opensearch_peer_cm.deployment_desc()
-        if not dep or dep.typ in {DeploymentType.MAIN_ORCHESTRATOR}:
-            active_rels = [
-                rel
-                for rel in [
-                    self.charm.model.get_relation(S3_RELATION),
-                    self.charm.model.get_relation(AZURE_RELATION),
-                    self.charm.model.get_relation(GCS_RELATION),
-                ]
-                if rel
-            ]
-            if len(active_rels) > 1:
-                return "conflict"
-            if self.charm.model.get_relation(S3_RELATION):
-                return "s3"
-            if self.charm.model.get_relation(AZURE_RELATION):
-                return "azure"
-            if self.charm.model.get_relation(GCS_RELATION):
-                return "gcs"
-            if typ := self.charm.peers_data.get(Scope.UNIT, OS_PEER_KEY_TYPE):
-                return typ
-            return None
-
-        pcluster_rel_data = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)
-        if not pcluster_rel_data or not pcluster_rel_data.credentials:
-            return None
-
-        if pcluster_rel_data.credentials.s3:
+    def _peer_storage_kind(self) -> str | None:
+        payload = self._provider_rel_payload() or {}
+        creds = (payload.get("credentials") or {})
+        if "s3" in creds and creds["s3"]:
             return "s3-pcluster"
-        if pcluster_rel_data.credentials.azure:
+        if "azure" in creds and creds["azure"]:
             return "azure-pcluster"
-        if pcluster_rel_data.credentials.gcs:
+        if "gcs" in creds and creds["gcs"]:
             return "gcs-pcluster"
-
-        if typ := self.charm.peers_data.get(Scope.UNIT, OS_PEER_KEY_TYPE):
-            return typ
-
         return None
 
-    def _prepare_repo_data(self, secret_data: dict, repo_data: dict) -> dict[str, Any]:
-        """Create a new secret with payload, grant it to peer-cluster, and publish keys."""
-        # best-effort delete old secret first
-        if old_repo_data := self.charm.peers_data.get_object(Scope.APP, OS_PEER_KEY_REPO):
-            old_secret_id = old_repo_data.get("secret_id")
-            if old_secret_id:
-                try:
-                    old_sec = self.charm.model.get_secret(id=old_secret_id)
-                    old_sec.remove_all_revisions()
-                except Exception:
-                    pass
+    def _effective_type(self, forced_kind: str | None = None) -> str | None:
+        """Decide the storage type in this unit’s context."""
+        if forced_kind in {"s3", "azure", "gcs"}:
+            return forced_kind + "-pcluster"
+        typ = self._resolver.get_type()
+        return typ or self._peer_storage_kind()
 
-        # create a new secret
-        sec: Secret = self.charm.app.add_secret(secret_data)
-        secret_id = sec.id
-
-        # grant to peer-cluster relation
-        rel: Relation | None = self.charm.model.get_relation(PeerClusterRelationName)
-        if rel:
-            try:
-                sec.grant(relation=rel)
-            except Exception:
-                pass
-        repo_data.update({"secret_id": secret_id})
-        return repo_data
-
-    def _remove_secret_and_unpublish(self) -> None:  # noqa: C901
-        """Provider-side cleanup, revoke secret payload, drop peer keys, and notify peers."""
-        if not self.charm.unit.is_leader():
-            return False
-
-        ok = True
-
-        # best-effort revoke/delete the secret revisions
-        repo_data = self.charm.peers_data.get_object(Scope.APP, OS_PEER_KEY_REPO) or {}
-        secret_id = repo_data.get("secret_id")
-        if secret_id:
-            try:
-                sec = self.charm.model.get_secret(id=secret_id)
-                for rel in self.charm.model.relations.get(PeerClusterRelationName, []):
-                    try:
-                        sec.revoke(relation=rel)
-                    except Exception:
-                        pass
-
-                sec.remove_all_revisions()
-            except Exception as e:
-                ok = False
-                logger.debug("Secret cleanup skipped/failed (%s): %s", secret_id, e)
-
-        for key in (OS_PEER_KEY_TYPE, OS_PEER_KEY_REPO):
-            try:
-                self.charm.peers_data.delete(Scope.APP, key)
-            except Exception as e:
-                ok = False
-                logger.debug("peers_data.delete(%s) failed: %s", key, e)
-        if ok:
-            logger.info("Provider side secrets are removed successfully")
-        return None
-
-    @property
-    def object_storage_config(self) -> ObjectStorageConfig | None:
-        """Fetch the object storage data depending on the relation."""
-        if not (object_storage_type := self.object_storage_type):
-            return None
-
-        if object_storage_type == "conflict":
-            return None
-
-        if object_storage_type == "s3":
-            return ObjectStorageConfig(
-                s3=S3RelData.from_relation(self.s3_requirer.get_s3_connection_info())
-            )
-
-        if object_storage_type == "azure":
-            return ObjectStorageConfig(
-                azure=AzureRelData.from_relation(
-                    self.azure_requirer.get_azure_storage_connection_info()
-                )
-            )
-
-        if object_storage_type == "gcs":
-            gcs_rel = self.charm.model.get_relation(GCS_RELATION)
-            if not gcs_rel or not gcs_rel.app:
-                return None
-
-        pcluster_rel_data = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)
-        if object_storage_type == "s3-pcluster":
-            data = S3RelData.from_dict(
-                {
-                    "credentials": pcluster_rel_data.credentials.s3,
-                    "tls-ca-chain": pcluster_rel_data.s3_tls_ca_chain,
-                }
-            )
-            return ObjectStorageConfig(s3=data)
-
-        if object_storage_type == "azure-pcluster":
-            data = AzureRelData.from_dict({"credentials": pcluster_rel_data.credentials.azure})
-            return ObjectStorageConfig(azure=data)
-
-        data = GcsRelData.from_dict({"credentials": pcluster_rel_data.credentials.gcs})
-        return ObjectStorageConfig(gcs=data)
+    def _effective_config(self, typ: str | None):
+        """Return an ObjectStorageConfig if we’re the main (resolver knows all repo settings)."""
+        if typ in {"s3", "azure", "gcs"}:
+            return self._resolver.get_config(typ)
+        return None  # sub-cluster doesn’t try to create repo, just manage keystore/CA
 
     def _action_missing_pre_requisites(  # noqa C901
         self, report_running_operations: bool = True
@@ -763,7 +675,7 @@ class OpenSearchSnapshotsEvents(Object):
         if self.charm.upgrade_in_progress:
             return "Backup/Restore operations not supported while upgrade in-progress."
 
-        ost = self.object_storage_type
+        ost = self._effective_type()
         if not ost:
             return "Missing relation with an object storage integrator."
 
@@ -780,9 +692,11 @@ class OpenSearchSnapshotsEvents(Object):
 
         try:
             if not self.charm.snapshots_manager.is_repository_created(ost):
-                osc = self.object_storage_config
+                osc = self._effective_config(ost)
                 if not osc:
                     return "Object storage configuration not ready."
+                if ost == "s3-pcluster" or ost == "azure-pcluster":
+                    return "Repository should be created by main orchestrator."
                 logger.info(f"[snapshots] repo {repo_name} missing; attempting create.")
                 self.charm.snapshots_manager.create_repo(ost, osc)
                 if not self.charm.snapshots_manager.is_repository_created(ost):
@@ -844,7 +758,7 @@ class OpenSearchSnapshotsManager:
         """Create an opensearch 'repository' for storing backups."""
         repo_name = name or self.repository_name(object_storage_type)
         settings = {}
-        if object_storage_type in {"s3", "s3-pcluster"}:
+        if object_storage_type == "s3":
             settings = {
                 "bucket": object_storage_config.s3.bucket,
                 "base_path": object_storage_config.s3.base_path,
@@ -852,12 +766,12 @@ class OpenSearchSnapshotsManager:
                 "endpoint": object_storage_config.s3.endpoint,
             }
 
-        elif object_storage_type in {"azure", "azure-pcluster"}:
+        elif object_storage_type == "azure":
             settings = {
                 "container": object_storage_config.azure.container,
                 "base_path": object_storage_config.azure.base_path,
             }
-        elif object_storage_type in {"gcs", "gcs-pcluster"}:
+        elif object_storage_type == "gcs":
             settings = {
                 "bucket": object_storage_config.gcs.bucket,
                 "base_path": object_storage_config.gcs.base_path,
@@ -929,21 +843,19 @@ class OpenSearchSnapshotsManager:
         """Restore an OpenSearch snapshot."""
         repo_name = self.repository_name(object_storage_type)
         snapshot_id = snapshot.get("snapshot")
+        ignore = [f"-{idx}" for idx in SYSTEM_INDICES]
+        indices_clause = ",".join(["*"] + ignore)
 
-        # This is not necessary if our charm performed the backup itself, but we add this
-        # as a safeguard against manually run backups (through direct calls to the rest api)
-        indices_to_ignore = "-,".join(
-            SYSTEM_INDICES
-        )  # the prefix dash ensures opensearch discards it
+        payload = {
+            "indices": indices_clause,
+            "ignore_unavailable": True,
+            "include_global_state": False,
+        }
 
-        restore_id = f"restore:{datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT).lower()}-snapshot:{snapshot_id}"
-
-        # restore
         restore_resp = self.opensearch.request(
             "POST",
             f"_snapshot/{repo_name}/{snapshot_id}/_restore?wait_for_completion=true",
-            headers={"X-Opaque-Id": restore_id},
-            payload={"indices": f"*,-{indices_to_ignore}"},
+            payload=payload,
             alt_hosts=self.charm.alt_hosts,
         )
         logger.info("Restore of snapshot '%s' response: %s", snapshot_id, restore_resp)
@@ -1003,13 +915,16 @@ class OpenSearchSnapshotsManager:
     def _get_snapshot_indices_open_in_cluster(self, snapshot: dict[str, Any]) -> list[str]:
         """Fetch the current open indices in the current cluster."""
         current_indices = ClusterState.indices(self.opensearch)
+
+        def _is_open(meta: dict) -> bool:
+            return meta.get("state", "") == "open"
+
         return sorted(
-            [
-                index
-                for index in snapshot.get("indices", [])
-                if index in current_indices
-                and index not in SYSTEM_INDICES
-                and current_indices[index]["state"] == "open"
+             [
+                idx for idx in snapshot.get("indices", [])
+                if idx in current_indices
+                and idx not in SYSTEM_INDICES
+                and _is_open(current_indices[idx])
             ]
         )
 
@@ -1037,7 +952,7 @@ class OpenSearchSnapshotsManager:
             "GET", f"_snapshot/{repo_name}/_all", alt_hosts=self.charm.alt_hosts
         )
         snapshots = {
-            snapshot["snapshot"].upper(): {
+            snapshot["snapshot"]: {
                 "state": snapshot["state"].lower(),
                 "indices": snapshot.get("indices", []),
             }
@@ -1162,36 +1077,3 @@ class OpenSearchSnapshotsManager:
         if object_storage_type in {"gcs", "gcs-pcluster"}:
             return "gcs"
 
-
-# helpers
-def _get_s3_secret_data(rel_data: S3RelData) -> dict:
-    return {
-        "access-key": rel_data.credentials.access_key,
-        "secret-key": rel_data.credentials.secret_key,
-    }
-
-
-def _get_s3_repo_data(rel_data: S3RelData) -> dict:
-    return {
-        "type": "s3",
-        "endpoint": rel_data.endpoint,
-        "bucket": rel_data.bucket,
-        "base_path": rel_data.base_path,
-        "region": rel_data.region,
-        "tls_ca_chain": rel_data.tls_ca_chain or "",
-    }
-
-
-def _get_azure_secret_data(rel_data: AzureRelData) -> dict:
-    return {
-        "secret-key": rel_data.credentials.secret_key,
-    }
-
-
-def _get_azure_repo_data(rel_data: AzureRelData) -> dict:
-    return {
-        "type": "azure",
-        "container": rel_data.container,
-        "base_path": rel_data.base_path,
-        "storage_account": rel_data.credentials.storage_account,
-    }

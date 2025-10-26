@@ -281,6 +281,18 @@ class S3RelDataCredentials(Model):
     access_key: str = Field(alias="access-key", default=None)
     secret_key: str = Field(alias="secret-key", default=None)
 
+
+    class Config:
+        """Model config of this pydantic model."""
+
+        allow_population_by_field_name = True
+
+
+class S3RelCaData(Model):
+    """Model class for credentials passed on the PCluster relation."""
+
+    s3_tls_ca_chain: str = Field(alias="s3-tls-ca-chain", default=None)
+
     class Config:
         """Model config of this pydantic model."""
 

@@ -233,7 +233,6 @@ class OpenSearchDistribution(ABC):
         ignore_retry_on: Optional[List] = None,
         timeout: int = 5,
         cert_files: Optional[Tuple[str]] = None,
-        headers: Optional[Dict[str, str]] = None,
     ) -> Union[Dict[str, any], List[any], int]:
         """Make an HTTP request.
 
@@ -282,7 +281,6 @@ class OpenSearchDistribution(ABC):
                         "headers": {
                             "Accept": "application/json",
                             "Content-Type": "application/json",
-                            **(headers or {}),
                         },
                         "timeout": (timeout, timeout),
                     }
