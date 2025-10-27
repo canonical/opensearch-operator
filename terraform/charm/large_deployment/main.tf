@@ -6,7 +6,7 @@ locals {
     for app in concat(var.apps != null ? var.apps : []) : app if app != null
   ]
 
-  # Guard the failover model name when failover is null
+  # guard the failover model name when failover is null
   _failover_model = var.failover != null ? var.failover.model : ""
 
   apps_not_in_main_model = [
@@ -26,7 +26,7 @@ locals {
   ))
 }
 
-# Look up UUIDs for every model we might touch
+# look up UUIDs
 data "juju_model" "models" {
   for_each = toset(local.all_models)
   name     = each.key

@@ -62,15 +62,15 @@ resource "juju_application" "self_signed_certificates" {
 
   charm {
     name     = "self-signed-certificates"
-    channel  = var.self_signed_certificates.channel
-    revision = var.self_signed_certificates.revision
-    base     = var.self_signed_certificates.base
+    channel  = var.self-signed-certificates.channel
+    revision = var.self-signed-certificates.revision
+    base     = var.self-signed-certificates.base
   }
 
   name         = "self-signed-certificates"
-  config       = var.self_signed_certificates.config
+  config       = var.self-signed-certificates.config
   units       = 1
-  constraints = var.self_signed_certificates.constraints
+  constraints = var.self-signed-certificates.constraints
 
 }
 
@@ -92,7 +92,7 @@ resource "juju_integration" "tls-opensearch-same-model_integration" {
   }
 
   depends_on = [
-    juju_application.self_signed_certificates,
+    juju_application.self-signed-certificates,
     juju_application.opensearch,
   ]
 }
