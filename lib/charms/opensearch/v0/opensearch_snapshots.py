@@ -913,7 +913,7 @@ class OpenSearchSnapshotsManager:
             )
         ]
         restored_indices = set(
-            [recovery["index"] for recovery in snapshot_recoveries if recovery["status"] == "done"]
+            [recovery["index"] for recovery in snapshot_recoveries if recovery["state"] == "done"]
         )
         expected_indices = set(snapshot.get("indices", []))
         return expected_indices - restored_indices
@@ -953,7 +953,7 @@ class OpenSearchSnapshotsManager:
         current_indices = ClusterState.indices(self.opensearch)
 
         def _is_open(meta: dict) -> bool:
-            return meta.get("status", "") == "open"
+            return meta.get("state", "") == "open"
 
         return sorted(
             [
