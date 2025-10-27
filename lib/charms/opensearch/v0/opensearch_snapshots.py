@@ -499,24 +499,14 @@ class OpenSearchSnapshotsEvents(Object):
 
         # Fetch the new snapshot for sanity check
         self.charm.status.set(MaintenanceStatus(BackupInProgress))
-
         try:
-            try:
-                snap = self.charm.snapshots_manager.get_snapshot(
-                    object_storage_type=object_storage_type,
-                    snapshot_id=snapshot_id,
-                )
-                if snap:
-                    logger.info(
-                        "Created snapshot %s, initial state: %s",
-                        snapshot_id,
-                        snap.get("state"),
-                    )
-                else:
-                    logger.info("Created snapshot %s; state not yet indexed.", snapshot_id)
-            except OpenSearchHttpError as e:
-                logger.warning("Snapshot state check skipped for %s: %s", snapshot_id, e)
-                event.set_results({"backup-id": snapshot_id, "status": "Backup is running."})
+            snapshot = self.charm.snapshots_manager.get_snapshot(
+                object_storage_type=object_storage_type, snapshot_id=snapshot_id
+            )
+            event.set_results({"backup-id": snapshot_id, "status": snapshot["state"]})
+        except OpenSearchHttpError as e:
+            logger.error("Unknown state for snapshot %s: %s", snapshot_id, e)
+            event.fail(f"Unknown state for backup {snapshot_id}: {str(e)}")
         finally:
             self.charm.status.clear(BackupInProgress)
 
