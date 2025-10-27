@@ -543,7 +543,7 @@ class PeerClusterRelDataCredentials(Model):
     monitor_password: Optional[str]
     admin_tls: Optional[Dict[str, Optional[str]]]
     s3: Optional[S3RelDataCredentials]
-    s3_tls_ca_chain: Optional[str]
+    s3_tls_ca_chain: Optional[S3RelCaData]
     azure: Optional[AzureRelDataCredentials]
     gcs: Optional[GcsRelData]
 
