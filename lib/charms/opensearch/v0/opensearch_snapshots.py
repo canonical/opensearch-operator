@@ -503,8 +503,8 @@ class OpenSearchSnapshotsEvents(Object):
         try:
             try:
                 snap = self.charm.snapshots_manager.get_snapshot(
-                    object_storage_type = object_storage_type,
-                    snapshot_id = snapshot_id,
+                    object_storage_type=object_storage_type,
+                    snapshot_id=snapshot_id,
                 )
                 if snap:
                     logger.info(
