@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """OpenSearch StorageResolver."""
+import logging
 from typing import Literal, Optional
 
 from charms.data_platform_libs.v0.data_interfaces import Scope
@@ -17,10 +18,13 @@ from charms.opensearch.v0.models import (
     ObjectStorageConfig,
     S3RelData,
 )
+from pydantic import ValidationError
 
 ObjectStorageType = Literal[
     "s3", "azure", "gcs", "s3-pcluster", "azure-pcluster", "gcs-pcluster", "conflict"
 ]
+
+logger = logging.getLogger(__name__)
 
 
 class ObjectStorageResolver:
@@ -30,7 +34,7 @@ class ObjectStorageResolver:
         """Initialize the object storage resolver object."""
         self.charm = charm
 
-    def get_type(self) -> Optional[ObjectStorageType]:  # noqa: C901
+    def get_storage_type(self) -> Optional[ObjectStorageType]:  # noqa: C901
         """Get the active object storage type from relations/peer-cluster."""
         dep = self.charm.opensearch_peer_cm.deployment_desc()
         dep_typ = getattr(dep, "typ", DeploymentType.MAIN_ORCHESTRATOR)
@@ -70,42 +74,67 @@ class ObjectStorageResolver:
             return typ
         return None
 
-    def get_config(
+    def get_storage_config(  # noqa: C901
         self, forced_type: Optional[ObjectStorageType] = None
     ) -> Optional[ObjectStorageConfig]:
         """Get the active object storage config from relations/peer-cluster."""
-        ost = forced_type or self.get_type()
-        if not ost or ost == "conflict":
+        object_storage_type = forced_type or self.get_storage_type()
+        if not object_storage_type or object_storage_type == "conflict":
             return None
 
-        if ost == "s3":
+        if object_storage_type == "s3":
             info = self.charm.snapshot_events.s3_requirer.get_s3_connection_info()
-            return ObjectStorageConfig(s3=S3RelData.from_relation(info))
 
-        if ost == "azure":
+            try:
+                s3 = S3RelData.from_relation(info) if info else None
+            except ValidationError as e:
+                logger.warning("validation error while building s3 payload: %s", e)
+                s3 = None
+            return ObjectStorageConfig(s3=s3) if s3 else None
+
+        if object_storage_type == "azure":
             info = self.charm.snapshot_events.azure_requirer.get_azure_storage_connection_info()
-            return ObjectStorageConfig(azure=AzureRelData.from_relation(info))
+            try:
+                azure = AzureRelData.from_relation(info) if info else None
+            except ValidationError as e:
+                logger.warning("validation error while building azure payload: %s", e)
+                azure = None
+            return ObjectStorageConfig(azure=azure) if azure else None
 
-        if ost == "gcs":
+        if object_storage_type == "gcs":
             gcs_rel = self.charm.model.get_relation(GCS_RELATION)
             if not gcs_rel or not gcs_rel.app:
                 return None
             return None
 
         p = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)
-        if ost == "s3-pcluster":
-            data = S3RelData.from_dict(
-                {
-                    "credentials": p.credentials.s3,
-                    "tls-ca-chain": p.credentials.s3_tls_ca_chain,
-                }
-            )
-            return ObjectStorageConfig(s3=data)
-        if ost == "azure-pcluster":
-            data = AzureRelData.from_dict({"credentials": p.credentials.azure})
-            return ObjectStorageConfig(azure=data)
-        if ost == "gcs-pcluster":
-            data = GcsRelData.from_dict({"credentials": p.credentials.gcs})
-            return ObjectStorageConfig(gcs=data)
+        if object_storage_type == "s3-pcluster":
+            try:
+                data = S3RelData.from_dict(
+                    {
+                        "credentials": p.credentials.s3,
+                        "tls-ca-chain": p.credentials.s3_tls_ca_chain,
+                    }
+                )
+            except ValidationError as e:
+                logger.warning("validation error while building s3-pcluster payload: %s", e)
+                data = None
+            return ObjectStorageConfig(s3=data) if data else None
+
+        if object_storage_type == "azure-pcluster":
+            try:
+                data = AzureRelData.from_dict({"credentials": p.credentials.azure})
+            except ValidationError as e:
+                logger.warning("validation error while building azure-pcluster payload: %s", e)
+                data = None
+            return ObjectStorageConfig(azure=data) if data else None
+
+        if object_storage_type == "gcs-pcluster":
+            try:
+                data = GcsRelData.from_dict({"credentials": p.credentials.gcs})
+            except ValidationError as e:
+                logger.warning("validation error while building gcs-pcluster payload: %s", e)
+                data = None
+            return ObjectStorageConfig(gcs=data) if data else None
 
         return None

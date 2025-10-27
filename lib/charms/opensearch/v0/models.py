@@ -287,17 +287,6 @@ class S3RelDataCredentials(Model):
         allow_population_by_field_name = True
 
 
-class S3RelCaData(Model):
-    """Model class for credentials passed on the PCluster relation."""
-
-    s3_tls_ca_chain: str = Field(alias="s3-tls-ca-chain", default=None)
-
-    class Config:
-        """Model config of this pydantic model."""
-
-        allow_population_by_field_name = True
-
-
 class JWTAuthConfiguration(Model):
     """Model class for the configuration parameters of JWT authentication."""
 
@@ -324,7 +313,7 @@ class S3RelData(Model):
     protocol: Optional[str] = None
     storage_class: Optional[str] = Field(alias="storage-class", default=None)
     tls_ca_chain: Optional[str] = Field(alias="tls-ca-chain", default=None)
-    credentials: S3RelDataCredentials = Field(alias=S3_CREDENTIALS, default=S3RelDataCredentials())
+    credentials: S3RelDataCredentials = Field(alias=S3_CREDENTIALS)
     path_style_access: bool = Field(alias="s3-uri-style", default=False)
 
     class Config:
@@ -360,14 +349,17 @@ class S3RelData(Model):
         return values
 
     @root_validator(pre=True)
-    def _normalize_tls_chain(cls, values: Dict[str, Any]) -> Dict[str, Any]:  # noqa: N805
+    def _normalize(cls, values: Dict[str, Any]) -> Dict[str, Any]:  # noqa: N805
         t = values.get("tls-ca-chain")
         if isinstance(t, list):
             values["tls-ca-chain"] = "\n".join(s.strip() for s in t if s)
-        elif t is None:
-            pass
-        elif not isinstance(t, str):
-            values["tls-ca-chain"] = str(t)
+        if isinstance(values.get("path"), str):
+            import re
+
+            p = re.sub(r"/+", "/", values["path"]).strip().strip("/")
+            values["path"] = p or None
+        end_point = values.get("endpoint") or ""
+        values["protocol"] = "http" if end_point.startswith("http://") else "https"
         return values
 
     @validator("path_style_access", pre=True)
@@ -410,7 +402,7 @@ class S3RelData(Model):
         This method creates a nested S3RelDataCredentials object from the input dict.
         """
         if not input_dict:
-            return cls()
+            return None
 
         creds = S3RelDataCredentials(**input_dict)
         protocol = S3RelData.get_endpoint_protocol(input_dict.get("endpoint"))
@@ -490,7 +482,7 @@ class AzureRelData(Model):
         This method creates a nested AzureRelDataCredentials object from the input dict.
         """
         if not input_dict:
-            return cls()
+            return None
 
         creds = AzureRelDataCredentials(**input_dict)
         return cls.from_dict(dict(input_dict) | {AZURE_CREDENTIALS: creds.dict()})
@@ -543,7 +535,7 @@ class PeerClusterRelDataCredentials(Model):
     monitor_password: Optional[str]
     admin_tls: Optional[Dict[str, Optional[str]]]
     s3: Optional[S3RelDataCredentials]
-    s3_tls_ca_chain: Optional[S3RelCaData]
+    s3_tls_ca_chain: Optional[str] = None
     azure: Optional[AzureRelDataCredentials]
     gcs: Optional[GcsRelData]
 

@@ -30,12 +30,12 @@ from charms.opensearch.v0.models import (
     DeploymentType,
     Directive,
     Node,
+    ObjectStorageConfig,
     PeerClusterApp,
     PeerClusterOrchestrators,
     PeerClusterRelData,
     PeerClusterRelDataCredentials,
     PeerClusterRelErrorData,
-    S3RelCaData,
     S3RelDataCredentials,
     StartMode,
 )
@@ -595,13 +595,14 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(AZURE_RELATION):
                 return None
 
-            azure_storage_conn_info = self.resolver.get_config("azure")
-            if not azure_storage_conn_info.azure.credentials.storage_account:
+            cfg = self.resolver.get_storage_config("azure") or ObjectStorageConfig()
+            azure = getattr(cfg, "azure", None)
+            if not (azure and azure.credentials and azure.credentials.storage_account):
                 return None
 
             # As the main orchestrator, this application must set the azure information.
-            storage_account = azure_storage_conn_info.azure.credentials.storage_account
-            secret_key = azure_storage_conn_info.azure.credentials.secret_key
+            storage_account = azure.credentials.storage_account
+            secret_key = azure.credentials.secret_key
 
             # set the secrets in the charm
             # TODO Move this to azure relation and include both in one secret
@@ -626,13 +627,16 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             if not self.charm.model.get_relation(S3_RELATION):
                 return None
-
-            if not self.resolver.get_config("s3").s3.credentials.access_key:
+            cfg = self.resolver.get_storage_config("s3") or ObjectStorageConfig()
+            s3 = getattr(cfg, "s3", None)
+            if not (
+                s3 and s3.credentials and s3.credentials.access_key and s3.credentials.secret_key
+            ):
                 return None
 
             # As the main orchestrator, this application must set the S3 information.
-            access_key = self.resolver.get_config("s3").s3.credentials.access_key
-            secret_key = self.resolver.get_config("s3").s3.credentials.secret_key
+            access_key = s3.credentials.access_key
+            secret_key = s3.credentials.secret_key
 
             # set the secrets in the charm
             # TODO Move this to s3 relation and include both in one secret
@@ -650,30 +654,20 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             secret_key=self.charm.secrets.get(Scope.APP, "s3-secret-key"),
         )
 
-    def _s3_tls_ca(self, deployment_desc: DeploymentDescription) -> Optional[S3RelCaData]:
+    def _s3_tls_ca(self, deployment_desc: DeploymentDescription) -> Optional[str]:
         """Retrieve S3 storage credentials."""
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             if not self.charm.model.get_relation(S3_RELATION):
                 return None
-
-            if not self.resolver.get_config("s3").s3.tls_ca_chain:
+            cfg = self.resolver.get_storage_config("s3") or ObjectStorageConfig()
+            s3 = getattr(cfg, "s3", None)
+            ca = getattr(s3, "tls_ca_chain", None) if s3 else None
+            if not ca:
                 return None
 
-            # As the main orchestrator, this application must set the S3 tls ca chain.
-            tls_ca_chain = self.resolver.get_config("s3").s3.tls_ca_chain
-
-            # set the secrets in the charm
-            self.charm.secrets.put(Scope.APP, "s3-tls-ca-chain", tls_ca_chain)
-
-            return S3RelCaData(s3_tls_ca_chain=tls_ca_chain)
-
-        if not self.charm.secrets.get(Scope.APP, "s3-tls-ca-chain"):
-            return None
-
-        # Return what we have received from the peer relation
-        return S3RelCaData(
-            s3_tls_ca_chain=self.charm.secrets.get(Scope.APP, "s3-tls-ca-chain"),
-        )
+            self.charm.secrets.put(Scope.APP, "s3-tls-ca-chain", ca)
+            return ca
+        return self.charm.secrets.get(Scope.APP, "s3-tls-ca-chain") or None
 
     def _rel_data(
         self,

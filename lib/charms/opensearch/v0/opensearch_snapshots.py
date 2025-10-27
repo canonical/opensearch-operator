@@ -162,7 +162,7 @@ class OpenSearchSnapshotsEvents(Object):
 
     def _on_s3_credentials_changed(self, event: CredentialsChangedEvent) -> None:
         """Handler for s3 credentials changed event."""
-        object_storage_type = self._resolver.get_type() or "s3"
+        object_storage_type = self._resolver.get_storage_type() or "s3"
         logger.info(f"S3 credentials changed for object storage type {object_storage_type}")
 
         if object_storage_type == "conflict":
@@ -173,8 +173,8 @@ class OpenSearchSnapshotsEvents(Object):
         # handle case where this was deferred in the above case, then the s3 relation was severed
         if (
             object_storage_type != "s3"
-            or not self._resolver.get_config("s3")
-            or not self._resolver.get_config("s3").s3.credentials
+            or not self._resolver.get_storage_config("s3")
+            or not self._resolver.get_storage_config("s3").s3.credentials
         ):
             logger.warning("No S3 object storage configuration.")
             return
@@ -182,10 +182,10 @@ class OpenSearchSnapshotsEvents(Object):
         # apply locally (leader does cluster-level config)
         self.charm.keystore_manager.put_entries(
             {
-                "s3.client.default.access_key": self._resolver.get_config(
+                "s3.client.default.access_key": self._resolver.get_storage_config(
                     "s3"
                 ).s3.credentials.access_key,
-                "s3.client.default.secret_key": self._resolver.get_config(
+                "s3.client.default.secret_key": self._resolver.get_storage_config(
                     "s3"
                 ).s3.credentials.secret_key,
             }
@@ -194,10 +194,10 @@ class OpenSearchSnapshotsEvents(Object):
         self.charm.keystore_manager.reload()
 
         if self.charm.snapshots_manager.requires_custom_s3_ca(
-            object_storage_type, self._resolver.get_config("s3")
+            object_storage_type, self._resolver.get_storage_config("s3")
         ):
             self.charm.snapshots_manager.store_s3_ca(
-                self._resolver.get_config("s3").s3.tls_ca_chain
+                self._resolver.get_storage_config("s3").s3.tls_ca_chain
             )
             logger.info("S3 CA is stored.")
 
@@ -211,7 +211,7 @@ class OpenSearchSnapshotsEvents(Object):
         try:
             need_restart = self.charm.snapshots_manager.should_restart_for_full_setup(
                 object_storage_type="s3",
-                object_storage_config=self._resolver.get_config("s3"),
+                object_storage_config=self._resolver.get_storage_config("s3"),
             )
             logger.info("service should be restarted")
         except OpenSearchHttpError as e:
@@ -220,17 +220,16 @@ class OpenSearchSnapshotsEvents(Object):
 
         if need_restart:
             self.charm.request_opensearch_restart(reason="apply new object storage CA")
-        self._ensure_repository(object_storage_type, self._resolver.get_config("s3"))
+        self._ensure_repository(object_storage_type, self._resolver.get_storage_config("s3"))
         self._broadcast_storage_trigger(kind="s3", action="changed")
 
     def _on_s3_credentials_gone(self, event: CredentialsGoneEvent) -> None:
         """Handler for s3 credentials gone event."""
-        if self._resolver.get_type() == "conflict":
+        if self._resolver.get_storage_type() == "conflict":
             return
 
         keystore_entries = ["s3.client.default.access_key", "s3.client.default.secret_key"]
         if not self._cleanup(object_storage_type="s3", keystore_entries=keystore_entries):
-            event.defer()
             return
 
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
@@ -240,7 +239,7 @@ class OpenSearchSnapshotsEvents(Object):
 
     def _on_azure_credentials_changed(self, event: StorageConnectionInfoChangedEvent) -> None:
         """Handler for azure credentials changed event."""
-        object_storage_type = self._resolver.get_type() or "azure"
+        object_storage_type = self._resolver.get_storage_type() or "azure"
 
         if object_storage_type == "conflict":
             self.charm.status.set(BlockedStatus("More than 1 object storage relation."))
@@ -249,34 +248,33 @@ class OpenSearchSnapshotsEvents(Object):
 
         if (
             object_storage_type != "azure"
-            or not self._resolver.get_config("azure")
-            or not self._resolver.get_config("azure").azure.credentials
+            or not self._resolver.get_storage_config("azure")
+            or not self._resolver.get_storage_config("azure").azure.credentials
         ):
             logger.warning("No Azure object storage configuration.")
             return
 
         self.charm.keystore_manager.put_entries(
             {
-                "azure.client.default.account": self._resolver.get_config(
+                "azure.client.default.account": self._resolver.get_storage_config(
                     "azure"
                 ).azure.credentials.storage_account,
-                "azure.client.default.key": self._resolver.get_config(
+                "azure.client.default.key": self._resolver.get_storage_config(
                     "azure"
                 ).azure.credentials.secret_key,
             }
         )
         self.charm.keystore_manager.reload()
-        self._ensure_repository(object_storage_type, self._resolver.get_config("azure"))
+        self._ensure_repository(object_storage_type, self._resolver.get_storage_config("azure"))
         self._broadcast_storage_trigger(kind="azure", action="changed")
 
     def _on_azure_credentials_gone(self, event: StorageConnectionInfoGoneEvent) -> None:
         """Handler for azure credentials gone event."""
-        if self._resolver.get_type() == "conflict":
+        if self._resolver.get_storage_type() == "conflict":
             return
 
         keystore_entries = ["azure.client.default.account", "azure.client.default.key"]
         if not self._cleanup(object_storage_type="azure", keystore_entries=keystore_entries):
-            event.defer()
             return
         self._broadcast_storage_trigger(kind="azure", action="gone")
 
@@ -425,13 +423,13 @@ class OpenSearchSnapshotsEvents(Object):
 
     def get_active_storage_type(self) -> Optional[ObjectStorageType]:
         """Get the active storage type."""
-        return self._resolver.get_type()
+        return self._resolver.get_storage_type()
 
     def get_object_storage_config(
         self, forced_type: ObjectStorageType | None = None
     ) -> Optional[ObjectStorageConfig]:
         """Get the object storage config."""
-        return self._resolver.get_config(forced_type)
+        return self._resolver.get_storage_config(forced_type)
 
     def get_s3_info(self) -> Optional[S3RelData]:
         """Get the s3 info."""
@@ -637,32 +635,45 @@ class OpenSearchSnapshotsEvents(Object):
             if trigger and self._maybe_emit_local_storage_event(trigger):
                 pass
 
-    def _cleanup(
-        self, object_storage_type: ObjectStorageType | None, keystore_entries: list[str]
-    ) -> bool:
-        """Cleanup the object storage stored configuration."""
+    def _cleanup(self, object_storage_type, keystore_entries):
+        """Cleanup object storage config with 3 retries using tenacity."""
         if not object_storage_type:
             return True
 
-        try:
-            if keystore_entries:
+        if keystore_entries:
+            try:
                 self.charm.keystore_manager.remove_entries(keystore_entries)
-            else:
-                logger.debug("No keystore entries found to remove during cleanup.")
-        except OpenSearchCmdError as e:
-            logger.warning(
-                "Failed to remove keystore entries during cleanup for %s: %s.",
-                object_storage_type,
-                e,
-            )
+                self.charm.keystore_manager.reload()
+                logger.info("Removed keystore entries for %s", object_storage_type)
+            except OpenSearchCmdError as e:
+                msg = f"{getattr(e, 'stdout', '')}{getattr(e, 'stderr', '')}"
+                if "does not exist" in msg:
+                    logger.info("Keystore entries already absent for %s.", object_storage_type)
+                else:
+                    logger.warning("Keystore cleanup error for %s: %s", object_storage_type, e)
 
         try:
-            self.charm.snapshots_manager.remove_repo(object_storage_type=object_storage_type)
-            self.charm.keystore_manager.reload()
+            self._remove_repo_with_retry(object_storage_type)
             return True
-        except OpenSearchHttpError as e:
-            logger.error("Cleanup of the %s cluster config failed: %s", object_storage_type, e)
+        except Exception as e:
+            logger.error("Repo cleanup for %s failed after 3 attempts: %s", object_storage_type, e)
             return False
+
+    @retry(stop=stop_after_attempt(2), wait=wait_fixed(2), reraise=True)
+    def _remove_repo_with_retry(self, object_storage_type):
+        """Try to remove snapshot repo up to 2 times."""
+        try:
+            status = self.charm.health.get(wait_for_green_first=False)
+            if status not in {HealthColors.YELLOW, HealthColors.GREEN}:
+                raise RuntimeError(f"Cluster health is {status}")
+            self.charm.snapshots_manager.remove_repo(object_storage_type=object_storage_type)
+            logger.info("Removed repo for %s", object_storage_type)
+        except OpenSearchHttpError as e:
+            body = e.response_body or ""
+            if "repository_missing_exception" in str(body):
+                logger.info("Repo for %s already absent", object_storage_type)
+                return
+            raise
 
     def _peer_storage_kind(self) -> str | None:
         payload = self._provider_rel_payload() or {}
@@ -679,13 +690,13 @@ class OpenSearchSnapshotsEvents(Object):
         """Decide the storage type in this unit’s context."""
         if forced_kind in {"s3", "azure", "gcs"}:
             return forced_kind + "-pcluster"
-        typ = self._resolver.get_type()
+        typ = self._resolver.get_storage_type()
         return typ or self._peer_storage_kind()
 
     def _effective_config(self, typ: str | None):
         """Return an ObjectStorageConfig if we’re the main (resolver knows all repo settings)."""
         if typ in {"s3", "azure", "gcs"}:
-            return self._resolver.get_config(typ)
+            return self._resolver.get_storage_config(typ)
         return None  # sub-cluster doesn’t try to create repo, just manage keystore/CA
 
     def _action_missing_pre_requisites(  # noqa C901
@@ -913,7 +924,7 @@ class OpenSearchSnapshotsManager:
             )
         ]
         restored_indices = set(
-            [recovery["index"] for recovery in snapshot_recoveries if recovery["state"] == "done"]
+            [recovery["index"] for recovery in snapshot_recoveries if recovery["stage"] == "done"]
         )
         expected_indices = set(snapshot.get("indices", []))
         return expected_indices - restored_indices
@@ -953,7 +964,7 @@ class OpenSearchSnapshotsManager:
         current_indices = ClusterState.indices(self.opensearch)
 
         def _is_open(meta: dict) -> bool:
-            return meta.get("state", "") == "open"
+            return meta.get("status", "") == "open"
 
         return sorted(
             [
