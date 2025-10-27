@@ -266,7 +266,7 @@ class OpenSearchSnapshotsEvents(Object):
             }
         )
         self.charm.keystore_manager.reload()
-        self._ensure_repository(object_storage_type, self._resolver.get_config())
+        self._ensure_repository(object_storage_type, self._resolver.get_config("azure"))
         self._broadcast_storage_trigger(kind="azure", action="changed")
 
     def _on_azure_credentials_gone(self, event: StorageConnectionInfoGoneEvent) -> None:
@@ -316,16 +316,6 @@ class OpenSearchSnapshotsEvents(Object):
                 if self.charm.snapshots_manager.is_custom_s3_ca_stored():
                     self.charm.snapshots_manager.store_s3_ca(None)
 
-            try:
-                if not self.charm.snapshots_manager.is_repository_created("s3"):
-                    self.charm.snapshots_manager.create_repo(
-                        "s3",
-                        object_storage_config=self.get_object_storage_config("s3")
-                        or self.get_object_storage_config(),
-                    )
-            except Exception as e:
-                logger.warning("ensure s3 repo failed: %s", e)
-
         elif event.kind == "azure":
             info = self._read_azure_from_peer()
             if not (info and info["storage_account"] and info["secret_key"]):
@@ -338,16 +328,6 @@ class OpenSearchSnapshotsEvents(Object):
                 }
             )
             self.charm.keystore_manager.reload()
-
-            try:
-                if not self.charm.snapshots_manager.is_repository_created("azure"):
-                    self.charm.snapshots_manager.create_repo(
-                        "azure",
-                        object_storage_config=self.get_object_storage_config("azure")
-                        or self.get_object_storage_config(),
-                    )
-            except Exception as e:
-                logger.warning("ensure azure repo failed: %s", e)
 
     def _on_object_storage_gone_on_peers(self, event: _ObjectStorageGone) -> None:
         if event.kind == "s3":
@@ -908,7 +888,16 @@ class OpenSearchSnapshotsManager:
         logger.info("Restore of snapshot '%s' response: %s", snapshot_id, restore_resp)
 
         # this only serves as documentation and should always be true if no previous HTTP error
-        assert restore_resp["snapshot"] == snapshot_id
+        if "accepted" in restore_resp:
+            pass
+        else:
+            snap_field = restore_resp.get("snapshot")
+            if isinstance(snap_field, dict):
+                assert snap_field.get("snapshot") == snapshot_id
+            elif isinstance(snap_field, str):
+                assert snap_field == snapshot_id
+            else:
+                logger.warning("Unexpected restore response shape: %r", snap_field)
 
         # sanity check on the restore success
         recovery_resp: list[dict[str, str]] = self.opensearch.request(
