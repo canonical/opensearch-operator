@@ -660,7 +660,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 return None
 
             # As the main orchestrator, this application must set the S3 tls ca chain.
-            tls_ca_chain = self.self.resolver.get_config("s3").s3.tls_ca_chain
+            tls_ca_chain = self.resolver.get_config("s3").s3.tls_ca_chain
 
             # set the secrets in the charm
             self.charm.secrets.put(Scope.APP, "s3-tls-ca-chain", tls_ca_chain)
