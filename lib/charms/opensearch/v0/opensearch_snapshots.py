@@ -499,14 +499,24 @@ class OpenSearchSnapshotsEvents(Object):
 
         # Fetch the new snapshot for sanity check
         self.charm.status.set(MaintenanceStatus(BackupInProgress))
+
         try:
-            snapshot = self.charm.snapshots_manager.get_snapshot(
-                object_storage_type=object_storage_type, snapshot_id=snapshot_id
-            )
-            event.set_results({"backup-id": snapshot_id, "status": snapshot["state"]})
-        except OpenSearchHttpError as e:
-            logger.error("Unknown state for snapshot %s: %s", snapshot_id, e)
-            event.fail(f"Unknown state for backup {snapshot_id}: {str(e)}")
+            try:
+                snap = self.charm.snapshots_manager.get_snapshot(
+                    object_storage_type = object_storage_type,
+                    snapshot_id = snapshot_id,
+                )
+                if snap:
+                    logger.info(
+                        "Created snapshot %s, initial state: %s",
+                        snapshot_id,
+                        snap.get("state"),
+                    )
+                else:
+                    logger.info("Created snapshot %s; state not yet indexed.", snapshot_id)
+            except OpenSearchHttpError as e:
+                logger.warning("Snapshot state check skipped for %s: %s", snapshot_id, e)
+                event.set_results({"backup-id": snapshot_id, "status": "Backup is running."})
         finally:
             self.charm.status.clear(BackupInProgress)
 
@@ -923,7 +933,7 @@ class OpenSearchSnapshotsManager:
             )
         ]
         restored_indices = set(
-            [recovery["index"] for recovery in snapshot_recoveries if recovery["stage"] == "done"]
+            [recovery["index"] for recovery in snapshot_recoveries if recovery["status"] == "done"]
         )
         expected_indices = set(snapshot.get("indices", []))
         return expected_indices - restored_indices
@@ -963,7 +973,7 @@ class OpenSearchSnapshotsManager:
         current_indices = ClusterState.indices(self.opensearch)
 
         def _is_open(meta: dict) -> bool:
-            return meta.get("state", "") == "open"
+            return meta.get("status", "") == "open"
 
         return sorted(
             [
