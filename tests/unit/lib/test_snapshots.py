@@ -66,7 +66,7 @@ class TestCreateBackup(SnapshotsUnitTestFixtures):
 
         assert self.ctx.action_results == {
             "backup-id": "2025-01-01T10:00:00Z",
-            "status": "SUCCESS",
+            "status": "success",
         }
 
     def test_create_backup_when_s3_repo_missing_and_ca_present_then_ca_forwarded_to_manager(
@@ -89,7 +89,7 @@ class TestCreateBackup(SnapshotsUnitTestFixtures):
         self.ctx.run(self.ctx.on.action("create-backup"), st)
         assert self.ctx.action_results == {
             "backup-id": "2025-01-01T10:00:00Z",
-            "status": "SUCCESS",
+            "status": "success",
         }
 
     def test_create_backup_when_s3_has_no_ca_then_operations_still_succeed(self):
@@ -101,7 +101,7 @@ class TestCreateBackup(SnapshotsUnitTestFixtures):
 
         assert self.ctx.action_results == {
             "backup-id": "2025-01-01T10:00:00Z",
-            "status": "SUCCESS",
+            "status": "success",
         }
 
 

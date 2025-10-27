@@ -503,7 +503,8 @@ class OpenSearchSnapshotsEvents(Object):
             snapshot = self.charm.snapshots_manager.get_snapshot(
                 object_storage_type=object_storage_type, snapshot_id=snapshot_id
             )
-            event.set_results({"backup-id": snapshot_id, "status": snapshot["state"]})
+            status = str(snapshot.get("state", "unknown")).lower()
+            event.set_results({"backup-id": snapshot_id, "status": status})
         except OpenSearchHttpError as e:
             logger.error("Unknown state for snapshot %s: %s", snapshot_id, e)
             event.fail(f"Unknown state for backup {snapshot_id}: {str(e)}")

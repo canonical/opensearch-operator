@@ -77,7 +77,7 @@ class SnapshotsUnitTestFixtures:
     )
     patch_get_snapshot = patch(
         "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.get_snapshot",
-        return_value={"snapshot": "2025-01-01T10:00:00Z", "state": "SUCCESS"},
+        return_value={"snapshot": "2025-01-01T10:00:00Z", "state": "success"},
     )
 
     @pytest.fixture(autouse=True)

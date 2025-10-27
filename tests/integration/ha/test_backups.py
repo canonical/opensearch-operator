@@ -121,8 +121,7 @@ async def force_clear_cwrites_index():
 def cloud_configs(storage_config: Dict[str, str]) -> Dict[str, Dict[str, str]]:
     # Figure out the address of the LXD host itself, where tests are executed
     # this is where microceph will be installed.
-    results = {}
-    results["microceph"] = storage_config
+    results: Dict[str, Dict[str, str]] = {"microceph": storage_config}
     if os.environ["AWS_ACCESS_KEY"]:
         results["aws"] = {
             "endpoint": "https://s3.amazonaws.com",
