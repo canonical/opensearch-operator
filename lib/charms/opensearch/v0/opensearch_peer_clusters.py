@@ -549,8 +549,6 @@ class OpenSearchPeerClustersManager:
         rel = self._charm.model.get_relation(
             PeerClusterOrchestratorRelationName, orchestrators.main_rel_id
         )
-        if not rel or rel.data:
-            return None
         if not (data := rel.data[rel.app].get("data")):
             return None
 
