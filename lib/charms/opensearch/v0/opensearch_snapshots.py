@@ -81,16 +81,14 @@ OS_PEER_KEY_TYPE = "object-storage-type"
 OS_PEER_KEY_REPO = "object-storage-repo"
 
 
-# System indices that should not be snapshotted
+# System indices that should not be snapshotted/restored
 SYSTEM_INDICES = {
-    ".opendistro_security",
-    OpenSearchNodeLock.OPENSEARCH_INDEX,
-}
-
-SKIP_ON_RESTORE = {
     ".plugins-ml-config",
     ".opensearch-sap-log-types-config",
-    "top-queries",
+    ".opendistro_security",
+    ".opensearch-observability",
+    "top_queries-*",
+    OpenSearchNodeLock.OPENSEARCH_INDEX,
 }
 
 
@@ -533,39 +531,6 @@ class OpenSearchSnapshotsEvents(Object):
 
         event.set_results({"backups": "\n".join(table_output)})
 
-    def _snapshot_index_names(self, snapshot: Any) -> List[str]:
-        """Return list of index names from various snapshot shapes.
-
-        Accepts dicts ({"indices": [...]}) or objects with .indices (list[str]/list[dict]).
-        """
-        # get raw indices container
-        if isinstance(snapshot, dict):
-            raw = snapshot.get("indices") or snapshot.get("index_names") or []
-        else:
-            raw = getattr(snapshot, "indices", [])
-
-        # normalize to list[str]
-        names: List[str] = []
-        if isinstance(raw, list):
-            for it in raw:
-                if isinstance(it, str):
-                    names.append(it)
-                elif isinstance(it, dict):
-                    names.append(it.get("index") or it.get("name"))
-        elif isinstance(raw, dict):
-            for k, v in raw.items():
-                if isinstance(v, dict) and ("index" in v or "name" in v):
-                    names.append(v.get("index") or v.get("name"))
-                else:
-                    names.append(k)
-
-        return [n for n in names if n]
-
-    def _indices_to_restore(self, snapshot: Any) -> list[str]:
-        """Indices we will actually restore (skipping known noisy/system ones)."""
-        names = self._snapshot_index_names(snapshot)
-        return [n for n in names if n not in SKIP_ON_RESTORE]
-
     def _on_restore_action(self, event: ActionEvent) -> None:  # noqa C901
         """Handler for the restore action."""
         snapshot_id = event.params.get("backup-id")
@@ -592,11 +557,8 @@ class OpenSearchSnapshotsEvents(Object):
 
         # close indices that were snapshotted if they still exist, so they can be restored
         try:
-            to_restore = self._indices_to_restore(snapshot)
             closed_indices, indices_failed_to_close = (
-                self.charm.snapshots_manager.close_snapshot_indices_open_in_cluster(
-                    snapshot, only_indices=to_restore
-                )
+                self.charm.snapshots_manager.close_snapshot_indices_open_in_cluster(snapshot)
             )
             if indices_failed_to_close:
                 event.fail(
@@ -612,12 +574,7 @@ class OpenSearchSnapshotsEvents(Object):
         logger.info("Starting restore of snapshot %s.", snapshot_id)
         try:
             non_restored_indices = self.charm.snapshots_manager.restore_snapshot(
-                object_storage_type=object_storage_type,
-                snapshot=snapshot,
-                only_indices=to_restore,
-                include_global_state=False,
-                ignore_unavailable=True,
-                partial=True,
+                object_storage_type=object_storage_type, snapshot=snapshot
             )
             if not non_restored_indices:
                 self.charm.health.apply(wait_for_green_first=True, app=self.charm.unit.is_leader())
@@ -904,7 +861,7 @@ class OpenSearchSnapshotsManager:
         response = self.opensearch.request(
             "PUT",
             f"_snapshot/{repo_name}/{snapshot_id}?wait_for_completion=false",
-            payload={"indices": indices_clause, "ignore_unavailable": True},
+            payload={"indices": indices_clause, "ignore_unavailable": True, "include_global_state": False},
             alt_hosts=self.charm.alt_hosts,
             timeout=30,
         )
@@ -924,13 +881,7 @@ class OpenSearchSnapshotsManager:
         reraise=True,
     )
     def restore_snapshot(
-        self,
-        object_storage_type: ObjectStorageType,
-        snapshot,
-        only_indices=None,
-        include_global_state=False,
-        ignore_unavailable=True,
-        partial=True,
+        self, object_storage_type: ObjectStorageType, snapshot: dict[str, Any]
     ) -> set[str]:
         """Restore an OpenSearch snapshot."""
         repo_name = self.repository_name(object_storage_type)
@@ -940,12 +891,10 @@ class OpenSearchSnapshotsManager:
 
         payload = {
             "indices": indices_clause,
-            "include_global_state": include_global_state,
-            "ignore_unavailable": ignore_unavailable,
-            "partial": partial,
+            "ignore_unavailable": True,
+            "include_global_state": False,
         }
-        if only_indices:
-            payload["indices"] = ",".join(only_indices)
+
         restore_resp = self.opensearch.request(
             "POST",
             f"_snapshot/{repo_name}/{snapshot_id}/_restore?wait_for_completion=true",
@@ -987,51 +936,31 @@ class OpenSearchSnapshotsManager:
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def close_snapshot_indices_open_in_cluster(
-        self,
-        snapshot: dict[str, Any],
-        *,
-        only_indices: Optional[Iterable[str]] = None,
+        self, snapshot: dict[str, Any]
     ) -> Tuple[list[str] | None, dict[str, Any] | None]:
-        """Close the non-system indices included in a given snapshot.
-
-        Args:
-            snapshot: Snapshot dict (from GET _snapshot/<repo>/<id>).
-            only_indices: If set, close only these indices.
-
-        Returns:
-            (closed_indices, indices_failed_to_close), either may be None when nothing to do.
-        """
-        all_open = self._get_snapshot_indices_open_in_cluster(snapshot)
-        if not all_open:
+        """Close the non-system indices included in a given snapshot."""
+        if not (indices_to_close := self._get_snapshot_indices_open_in_cluster(snapshot)):
             logger.info("No indices to close.")
             return None, None
-
-        if only_indices is not None:
-            allow = set(only_indices)
-            indices_to_close = [i for i in all_open if i in allow]
-            if not indices_to_close:
-                logger.info("No matching indices to close after filtering by only_indices.")
-                return None, None
-        else:
-            # close all open (non-system) indices from the snapshot
-            indices_to_close = all_open
 
         logger.info("Attempting closing the indices: %s", indices_to_close)
         response = self.opensearch.request("POST", f"{','.join(indices_to_close)}/_close")
 
-        if response.get("acknowledged") and response.get("shards_acknowledged"):
+        # verify that the relevant indices are closed
+        if response["acknowledged"] and response["shards_acknowledged"]:
             logger.info("Successfully closed all indices: %s.", indices_to_close)
             return indices_to_close, None
 
         indices_failed_to_close = {
             index: payload
-            for index, payload in (response.get("indices") or {}).items()
-            if not payload.get("closed")
+            for index, payload in response["indices"].items()
+            if not payload["closed"]
         }
-        closed_indices = [i for i in indices_to_close if i not in indices_failed_to_close]
+        closed_indices = [
+            index for index in indices_to_close if index not in indices_failed_to_close
+        ]
 
-        if indices_failed_to_close:
-            logger.error("Failed to close some indices: %s", indices_failed_to_close)
+        logger.error("Failed to close some indices: \n%s", indices_failed_to_close)
         return closed_indices, indices_failed_to_close
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
@@ -1040,7 +969,7 @@ class OpenSearchSnapshotsManager:
         current_indices = ClusterState.indices(self.opensearch)
 
         def _is_open(meta: dict) -> bool:
-            return meta.get("status", "") == "open"
+            return meta["status"] == "open"
 
         return sorted(
             [
