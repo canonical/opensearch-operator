@@ -1,6 +1,8 @@
 (how-to-guides-back-up-and-restore-index)=
 # Back up and restore
 
+For guidance on how to manage backups, see the following pages:
+
 ```{toctree}
 :titlesonly:
 

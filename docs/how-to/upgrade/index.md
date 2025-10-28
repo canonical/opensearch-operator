@@ -1,6 +1,8 @@
 (how-to-guides-upgrade-index)=
 # Upgrade
 
+For instructions on performing version upgrades, see the following guides:
+
 ```{toctree}
 :titlesonly:
 
