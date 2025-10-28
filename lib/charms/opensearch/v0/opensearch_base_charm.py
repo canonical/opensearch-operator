@@ -690,13 +690,17 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     self.peer_cluster_provider.clean_all_relation_data()
                 elif self.opensearch_peer_cm.is_consumer():
                     self.peer_cluster_requirer.refresh_requirer_relation_data()
-                
+
             # No cluster managers left in the cluster fleet
             # raise so we do not lose the cluster state
-            if len(self.opensearch_peer_cm.apps_in_fleet()) > 0 and not self.opensearch_peer_cm.does_cluster_have_cm_up():
-                logger.error("No cluster managers left in the cluster fleet. Please scale up your cluster manager units.")
+            if (
+                len(self.opensearch_peer_cm.apps_in_fleet()) > 0
+                and not self.opensearch_peer_cm.does_cluster_have_cm_up()
+            ):
+                logger.error(
+                    "No cluster managers left in the cluster fleet. Please scale up your cluster manager units."
+                )
                 raise OpenSearchNoClusterManagersError()
-                
 
         # we attempt to flush the translog to disk
         if self.opensearch.is_node_up():
