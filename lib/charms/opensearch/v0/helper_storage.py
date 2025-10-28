@@ -58,21 +58,21 @@ class ObjectStorageResolver:
                 return "gcs"
             if typ := self.charm.peers_data.get(Scope.UNIT, "object-storage-type"):
                 return typ  # last known type
-            return None
+            return
 
         # non-main orchestrator
-        p = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)
-        if not p or not p.credentials:
-            return None
-        if p.credentials.s3:
+        peer_data = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)
+        if not peer_data or not peer_data.credentials:
+            return
+        if peer_data.credentials.s3:
             return "s3-pcluster"
-        if p.credentials.azure:
+        if peer_data.credentials.azure:
             return "azure-pcluster"
-        if p.credentials.gcs:
+        if peer_data.credentials.gcs:
             return "gcs-pcluster"
         if typ := self.charm.peers_data.get(Scope.UNIT, "object-storage-type"):
             return typ
-        return None
+        return
 
     def get_storage_config(  # noqa: C901
         self, forced_type: Optional[ObjectStorageType] = None
@@ -80,7 +80,7 @@ class ObjectStorageResolver:
         """Get the active object storage config from relations/peer-cluster."""
         object_storage_type = forced_type or self.get_storage_type()
         if not object_storage_type or object_storage_type == "conflict":
-            return None
+            return
 
         if object_storage_type == "s3":
             info = self.charm.snapshot_events.s3_requirer.get_s3_connection_info()
@@ -104,8 +104,8 @@ class ObjectStorageResolver:
         if object_storage_type == "gcs":
             gcs_rel = self.charm.model.get_relation(GCS_RELATION)
             if not gcs_rel or not gcs_rel.app:
-                return None
-            return None
+                return
+            return
 
         p = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)
         if object_storage_type == "s3-pcluster":
@@ -137,4 +137,4 @@ class ObjectStorageResolver:
                 data = None
             return ObjectStorageConfig(gcs=data) if data else None
 
-        return None
+        return

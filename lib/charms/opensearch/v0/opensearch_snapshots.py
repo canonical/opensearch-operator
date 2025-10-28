@@ -97,8 +97,8 @@ SKIP_ON_RESTORE = {
 class _ObjectStorageEvent(EventBase):
     def __init__(self, handle, *, kind: str, action: str):
         super().__init__(handle)
-        self.kind = kind  # "s3" | "azure"
-        self.action = action  # "changed" | "gone"
+        self.kind = kind
+        self.action = action
 
     def snapshot(self):
         return {"kind": self.kind, "action": self.action}
@@ -219,12 +219,13 @@ class OpenSearchSnapshotsEvents(Object):
                 object_storage_type="s3",
                 object_storage_config=self._resolver.get_storage_config("s3"),
             )
-            logger.info("service should be restarted")
+
         except OpenSearchHttpError as e:
             logger.warning("Skip restart precheck (OpenSearch not ready?): %s", e)
             need_restart = False
 
         if need_restart:
+            logger.info("service should be restarted")
             self.charm.request_opensearch_restart(reason="apply new object storage CA")
         self._ensure_repository(object_storage_type, self._resolver.get_storage_config("s3"))
         self._broadcast_storage_trigger(kind="s3", action="changed")
@@ -369,16 +370,16 @@ class OpenSearchSnapshotsEvents(Object):
             appbag = rel.data.get(rel.app, {})
             if appbag.get("data"):
                 return rel
-        return None
+        return
 
     def _provider_rel_payload(self) -> dict | None:
         rel = self._first_provider_rel_with_data()
         if not rel:
-            return None
+            return
         try:
             return json.loads(rel.data[rel.app]["data"])
         except Exception:
-            return None
+            return
 
     def _secret_value_from_id(self, secret_uri: str) -> str | None:
         try:
@@ -386,19 +387,19 @@ class OpenSearchSnapshotsEvents(Object):
             content = s.get_content(refresh=True)
             return next(iter(content.values())) if content else None
         except Exception:
-            return None
+            return
 
     def _read_s3_from_peer(self):
         payload = self._provider_rel_payload()
         if not payload:
-            return None
+            return
         creds = (payload.get("credentials") or {}).get("s3") or {}
         if not creds:
-            return None
+            return
         ak_id = creds.get("access-key")
         sk_id = creds.get("secret-key")
         if not (ak_id and sk_id):
-            return None
+            return
 
         access_key = self._secret_value_from_id(ak_id)
         secret_key = self._secret_value_from_id(sk_id)
@@ -414,14 +415,14 @@ class OpenSearchSnapshotsEvents(Object):
     def _read_azure_from_peer(self):
         payload = self._provider_rel_payload()
         if not payload:
-            return None
+            return
         creds = (payload.get("credentials") or {}).get("azure") or {}
         if not creds:
-            return None
+            return
         sa_id = creds.get("storage-account")
         sk_id = creds.get("secret-key")
         if not (sa_id and sk_id):
-            return None
+            return
 
         storage_account = self._secret_value_from_id(sa_id)
         secret_key = self._secret_value_from_id(sk_id)
@@ -731,7 +732,7 @@ class OpenSearchSnapshotsEvents(Object):
             return "azure-pcluster"
         if "gcs" in creds and creds["gcs"]:
             return "gcs-pcluster"
-        return None
+        return
 
     def _effective_type(self, forced_kind: str | None = None) -> str | None:
         """Decide the storage type in this unit’s context."""
@@ -744,7 +745,7 @@ class OpenSearchSnapshotsEvents(Object):
         """Return an ObjectStorageConfig if we’re the main (resolver knows all repo settings)."""
         if typ in {"s3", "azure", "gcs"}:
             return self._resolver.get_storage_config(typ)
-        return None  # sub-cluster doesn’t try to create repo, just manage keystore/CA
+        return
 
     def _action_missing_pre_requisites(  # noqa C901
         self, report_running_operations: bool = True
@@ -790,7 +791,7 @@ class OpenSearchSnapshotsEvents(Object):
             return f"Action failed with: {str(e)}."
 
         if not report_running_operations:
-            return None
+            return
 
         match self.charm.health.get(wait_for_green_first=True):
             case HealthColors.RED:
@@ -809,7 +810,7 @@ class OpenSearchSnapshotsEvents(Object):
         except OpenSearchHttpError as e:
             return f"Action failed with: {str(e)}."
 
-        return None
+        return
 
     def _ensure_repository(self, obj_type, obj_cfg) -> None:
         """Create the repository if we have a storage type/config and it doesn't exist yet."""
@@ -988,22 +989,32 @@ class OpenSearchSnapshotsManager:
     def close_snapshot_indices_open_in_cluster(
         self,
         snapshot: dict[str, Any],
-        skip: Optional[Iterable[str]] = None,
+        *,
+        only_indices: Optional[Iterable[str]] = None,
     ) -> Tuple[list[str] | None, dict[str, Any] | None]:
         """Close the non-system indices included in a given snapshot.
 
-        `skip` contains index names that must NOT be closed (e.g., ML/config indices).
+        Args:
+            snapshot: Snapshot dict (from GET _snapshot/<repo>/<id>).
+            only_indices: If set, close only these indices.
+
+        Returns:
+            (closed_indices, indices_failed_to_close), either may be None when nothing to do.
         """
         all_open = self._get_snapshot_indices_open_in_cluster(snapshot)
         if not all_open:
             logger.info("No indices to close.")
             return None, None
 
-        skip = set(skip or ())
-        indices_to_close = [i for i in all_open if i not in skip]
-        if not indices_to_close:
-            logger.info("No indices to close after filtering (all were skipped).")
-            return None, None
+        if only_indices is not None:
+            allow = set(only_indices)
+            indices_to_close = [i for i in all_open if i in allow]
+            if not indices_to_close:
+                logger.info("No matching indices to close after filtering by only_indices.")
+                return None, None
+        else:
+            # close all open (non-system) indices from the snapshot
+            indices_to_close = all_open
 
         logger.info("Attempting closing the indices: %s", indices_to_close)
         response = self.opensearch.request("POST", f"{','.join(indices_to_close)}/_close")
@@ -1054,7 +1065,7 @@ class OpenSearchSnapshotsManager:
             return response["snapshots"][0]
         except OpenSearchHttpError as e:
             if e.response_body.get("error", {}).get("type") == "snapshot_missing_exception":
-                return None
+                return
             raise
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
