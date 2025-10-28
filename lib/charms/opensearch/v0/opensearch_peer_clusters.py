@@ -677,6 +677,13 @@ class OpenSearchPeerClustersManager:
                 .peek_content()
                 .get("s3-secret-key")
             )
+
+        if "s3_tls_ca_chain" in credentials:
+            credentials["s3_tls_ca_chain"] = (
+                self._charm.model.get_secret(id=credentials["s3_tls_ca_chain"])
+                .peek_content()
+                .get("s3-tls-ca-chain")
+            )
         if (
             "azure" in credentials
             and credentials["azure"].get("storage-account")
@@ -754,6 +761,11 @@ class OpenSearchPeerClustersManager:
             )
             credentials["s3"]["secret-key"] = self._resolve_credential(
                 credentials["s3"]["secret-key"], content_key="s3-secret-key"
+            )
+
+        if credentials.get("s3_tls_ca_chain"):
+            credentials["s3_tls_ca_chain"] = self._resolve_credential(
+                credentials["s3_tls_ca_chain"], content_key="s3-tls-ca-chain"
             )
         if (
             credentials.get("azure")

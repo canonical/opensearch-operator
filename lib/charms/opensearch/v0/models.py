@@ -8,7 +8,7 @@ import re
 from abc import ABC
 from datetime import datetime
 from hashlib import md5
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from charms.opensearch.v0.constants_secrets import (
     AZURE_CREDENTIALS,
@@ -312,7 +312,7 @@ class S3RelData(Model):
     base_path: Optional[str] = Field(alias="path", default=None)
     protocol: Optional[str] = None
     storage_class: Optional[str] = Field(alias="storage-class", default=None)
-    tls_ca_chain: Optional[str] = Field(alias="tls-ca-chain", default=None)
+    tls_ca_chain: Optional[Union[str, List[str]]] = Field(default=None, alias="tls-ca-chain")
     credentials: S3RelDataCredentials = Field(alias=S3_CREDENTIALS)
     path_style_access: bool = Field(alias="s3-uri-style", default=False)
 
@@ -348,19 +348,22 @@ class S3RelData(Model):
 
         return values
 
-    @root_validator(pre=True)
-    def _normalize(cls, values: Dict[str, Any]) -> Dict[str, Any]:  # noqa: N805
-        t = values.get("tls-ca-chain")
-        if isinstance(t, list):
-            values["tls-ca-chain"] = "\n".join(s.strip() for s in t if s)
-        if isinstance(values.get("path"), str):
-            import re
+    @validator("tls_ca_chain", pre=True)
+    def _normalize_ca_chain(cls, v):  # noqa: N805
+        if v is None:
+            return None
+        if isinstance(v, (bytes, bytearray)):
+            v = v.decode()
+        if isinstance(v, list):
+            return "\n".join(s.strip() for s in v if s)
+        if isinstance(v, dict):
+            chain = v.get("chain")
+            if isinstance(chain, list):
+                return "\n".join(s.strip() for s in chain if s)
+            import json
 
-            p = re.sub(r"/+", "/", values["path"]).strip().strip("/")
-            values["path"] = p or None
-        end_point = values.get("endpoint") or ""
-        values["protocol"] = "http" if end_point.startswith("http://") else "https"
-        return values
+            return json.dumps(v)
+        return str(v)
 
     @validator("path_style_access", pre=True)
     def change_path_style_type(cls, value) -> bool:  # noqa: N805
@@ -402,7 +405,7 @@ class S3RelData(Model):
         This method creates a nested S3RelDataCredentials object from the input dict.
         """
         if not input_dict:
-            return None
+            return cls()
 
         creds = S3RelDataCredentials(**input_dict)
         protocol = S3RelData.get_endpoint_protocol(input_dict.get("endpoint"))
@@ -482,7 +485,7 @@ class AzureRelData(Model):
         This method creates a nested AzureRelDataCredentials object from the input dict.
         """
         if not input_dict:
-            return None
+            return cls()
 
         creds = AzureRelDataCredentials(**input_dict)
         return cls.from_dict(dict(input_dict) | {AZURE_CREDENTIALS: creds.dict()})

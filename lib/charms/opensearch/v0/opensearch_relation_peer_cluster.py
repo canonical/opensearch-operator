@@ -616,7 +616,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         # Return what we have received from the peer relation
         return AzureRelDataCredentials(
-            storage_account=self.charm.secrets.get(Scope.APP, "azure-access-key"),
+            storage_account=self.charm.secrets.get(Scope.APP, "azure-storage-account"),
             secret_key=self.charm.secrets.get(Scope.APP, "azure-secret-key"),
         )
 
@@ -660,12 +660,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(S3_RELATION):
                 return None
             cfg = self.resolver.get_storage_config("s3") or ObjectStorageConfig()
-            s3 = getattr(cfg, "s3", None)
-            ca = getattr(s3, "tls_ca_chain", None) if s3 else None
+            s3 = cfg.s3
+            ca = s3.tls_ca_chain if s3 else None
             if not ca:
-                return None
+                return
 
             self.charm.secrets.put(Scope.APP, "s3-tls-ca-chain", ca)
+            logger.debug("Secret created for TLS CA chain.")
             return ca
         return self.charm.secrets.get(Scope.APP, "s3-tls-ca-chain") or None
 
@@ -877,6 +878,12 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 "access-key": self.secrets.get_secret_id(Scope.APP, "s3-access-key"),
                 "secret-key": self.secrets.get_secret_id(Scope.APP, "s3-secret-key"),
             }
+
+        if rel_data.credentials and rel_data.credentials.s3_tls_ca_chain:
+            sid = self.secrets.get_secret_id(Scope.APP, "s3-tls-ca-chain")
+            if sid:
+                redacted_dict["credentials"]["s3_tls_ca_chain"] = sid
+
         if (
             rel_data.credentials.azure
             and rel_data.credentials.azure.storage_account
@@ -924,6 +931,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                             self.secrets.grant_secret_to_relation(
                                 secret_id["secret-key"], relation
                             )
+                    elif key == "s3_tls_ca_chain":
+                        if secret_id:
+                            self.secrets.grant_secret_to_relation(secret_id, relation)
                     else:
                         self.secrets.grant_secret_to_relation(secret_id, relation)
 

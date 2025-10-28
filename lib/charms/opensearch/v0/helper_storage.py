@@ -107,15 +107,16 @@ class ObjectStorageResolver:
                 return
             return
 
-        p = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)
+        peer_data = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)
         if object_storage_type == "s3-pcluster":
             try:
                 data = S3RelData.from_dict(
                     {
-                        "credentials": p.credentials.s3,
-                        "tls-ca-chain": p.credentials.s3_tls_ca_chain,
+                        "credentials": peer_data.credentials.s3,
+                        "tls-ca-chain": peer_data.credentials.s3_tls_ca_chain,
                     }
                 )
+
             except ValidationError as e:
                 logger.warning("validation error while building s3-pcluster payload: %s", e)
                 data = None
@@ -123,7 +124,7 @@ class ObjectStorageResolver:
 
         if object_storage_type == "azure-pcluster":
             try:
-                data = AzureRelData.from_dict({"credentials": p.credentials.azure})
+                data = AzureRelData.from_dict({"credentials": peer_data.credentials.azure})
             except ValidationError as e:
                 logger.warning("validation error while building azure-pcluster payload: %s", e)
                 data = None
@@ -131,7 +132,7 @@ class ObjectStorageResolver:
 
         if object_storage_type == "gcs-pcluster":
             try:
-                data = GcsRelData.from_dict({"credentials": p.credentials.gcs})
+                data = GcsRelData.from_dict({"credentials": peer_data.credentials.gcs})
             except ValidationError as e:
                 logger.warning("validation error while building gcs-pcluster payload: %s", e)
                 data = None
