@@ -694,7 +694,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # No cluster managers left in the cluster fleet
             # raise so we do not lose the cluster state
             if (
-                len(self.opensearch_peer_cm.apps_in_fleet()) > 0
+                len(
+                    [
+                        app
+                        for app in self.opensearch_peer_cm.apps_in_fleet()
+                        if app.app.id != self.state.app.deployment_description.app.id
+                    ]
+                )
+                > 0
                 and not self.opensearch_peer_cm.does_cluster_have_cm_up()
             ):
                 logger.error(
