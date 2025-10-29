@@ -223,6 +223,7 @@ class OpenSearchSnapshotsEvents(Object):
             logger.info("service should be restarted")
             self.charm.request_opensearch_restart(reason="apply new object storage CA")
         self._ensure_repository(object_storage_type, self._resolver.get_storage_config("s3"))
+        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="s3", action="changed")
 
     def _on_s3_credentials_gone(self, event: CredentialsGoneEvent) -> None:
@@ -239,6 +240,7 @@ class OpenSearchSnapshotsEvents(Object):
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.store_s3_ca(None)
             self.charm.request_opensearch_restart(reason="clean up the object storage CA")
+        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="s3", action="gone")
 
     def _on_azure_credentials_changed(self, event: StorageConnectionInfoChangedEvent) -> None:
@@ -270,6 +272,7 @@ class OpenSearchSnapshotsEvents(Object):
         )
         self.charm.keystore_manager.reload()
         self._ensure_repository(object_storage_type, self._resolver.get_storage_config("azure"))
+        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="azure", action="changed")
 
     def _on_azure_credentials_gone(self, event: StorageConnectionInfoGoneEvent) -> None:
@@ -282,6 +285,7 @@ class OpenSearchSnapshotsEvents(Object):
             object_storage_type="azure", keystore_entries=keystore_entries, remove_repo=True
         ):
             return
+        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="azure", action="gone")
 
     def _broadcast_storage_trigger(self, kind: str, action: str) -> None:
