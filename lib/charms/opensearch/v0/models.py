@@ -349,7 +349,7 @@ class S3RelData(Model):
         return values
 
     @validator("tls_ca_chain", pre=True)
-    def _normalize_ca_chain(cls, v):  # noqa: N805
+    def _tls_chain(cls, v):  # noqa: N805
         if v is None:
             return None
         if isinstance(v, (bytes, bytearray)):
