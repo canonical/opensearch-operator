@@ -178,9 +178,9 @@ def _store_ca_chain(  # noqa: C901
                     return False
 
         # import the cert
-        file, tmpfile = tempfile.mkstemp(dir=tmpdir)
+        fd, tmpfile = tempfile.mkstemp(dir=tmpdir)
         try:
-            with os.fdopen(file, "w", encoding="utf-8", errors="replace") as f:
+            with os.fdopen(fd, "w", encoding="utf-8", errors="replace") as f:
                 f.write(pem)
 
             try:
