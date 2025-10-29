@@ -84,6 +84,7 @@ OS_PEER_KEY_REPO = "object-storage-repo"
 # System indices that should not be snapshotted/restored
 SYSTEM_INDICES = {
     ".opendistro_security",
+    ".opensearch-sap-log-types-config",
     OpenSearchNodeLock.OPENSEARCH_INDEX,
 }
 
@@ -924,6 +925,7 @@ class OpenSearchSnapshotsManager:
             f"_snapshot/{repo_name}/{snapshot_id}/_restore?wait_for_completion=true",
             payload=payload,
             alt_hosts=self.charm.alt_hosts,
+            timeout=60,
         )
         logger.info("Restore of snapshot '%s' response: %s", snapshot_id, restore_resp)
 
@@ -1026,7 +1028,7 @@ class OpenSearchSnapshotsManager:
         """List all snapshots in the current repository."""
         repo_name = self.repository_name(object_storage_type)
         response = self.opensearch.request(
-            "GET", f"_snapshot/{repo_name}/_all", alt_hosts=self.charm.alt_hosts
+            "GET", f"_snapshot/{repo_name}/_all", alt_hosts=self.charm.alt_hosts, timeout=30,
         )
         snapshots = {
             snapshot["snapshot"]: {
