@@ -22,7 +22,6 @@ from charms.data_platform_libs.v0.s3 import (
 )
 from charms.opensearch.v0.constants_charm import (
     AZURE_RELATION,
-    GCS_RELATION,
     OPENSEARCH_BACKUP_ID_FORMAT,
     S3_RELATION,
     BackupInProgress,
@@ -52,6 +51,7 @@ from ops import (
     BlockedStatus,
     MaintenanceStatus,
     Object,
+    Relation,
     Secret,
 )
 from ops.framework import EventBase, EventSource
@@ -127,7 +127,6 @@ class OpenSearchSnapshotsEvents(Object):
         # requirers
         self.s3_requirer = S3Requirer(charm, S3_RELATION)
         self.azure_requirer = AzureStorageRequires(charm, AZURE_RELATION)
-        self.gcs_requirer = AzureStorageRequires(charm, GCS_RELATION)
 
         # simple deployments or main orchestrator
         self.framework.observe(
@@ -376,15 +375,25 @@ class OpenSearchSnapshotsEvents(Object):
             self.object_storage_gone.emit(kind=kind, action=action)
         return True
 
-    def _get_data_from_provider_relation(self):
-        for rel in self.charm.model.relations.get(PeerClusterRelationName, []):
-            appbag = rel.data.get(rel.app, {})
-            if appbag.get("data"):
-                return rel
-        return
+    def _find_provider_relation_with_data(self) -> Relation | None:
+        """Return the first PeerCluster provider relation that already carries data.
 
-    def _provider_rel_payload(self) -> dict | None:
-        rel = self._get_data_from_provider_relation()
+        Looks through all active peer-cluster provider relations and returns the first
+        relation whose remote app databag contains the key data. If none are
+        found, returns None.
+
+        Returns:
+            Relation: The relation whose remote app databag has data,
+             else None if no such relation exists.
+        """
+        for rel in self.charm.model.relations.get(PeerClusterRelationName, []):
+            app_bag = rel.data.get(rel.app, {})
+            if app_bag.get("data"):
+                return rel
+        return None
+
+    def _get_provider_rel_payload(self) -> dict | None:
+        rel = self._find_provider_relation_with_data()
         if not rel:
             logger.info("no rel payload found")
             return
@@ -405,7 +414,7 @@ class OpenSearchSnapshotsEvents(Object):
             return
 
     def _read_s3_from_peer(self) -> dict[str, str] | None:
-        payload = self._provider_rel_payload()
+        payload = self._get_provider_rel_payload()
         if not payload:
             return
         creds = (payload.get("credentials") or {}).get("s3") or {}
@@ -429,7 +438,7 @@ class OpenSearchSnapshotsEvents(Object):
         return {"access_key": access_key, "secret_key": secret_key, "s3_tls_ca_chain": tls_chain}
 
     def _read_azure_from_peer(self) -> dict[str, str] | None:
-        payload = self._provider_rel_payload()
+        payload = self._get_provider_rel_payload()
         if not payload:
             return
         creds = (payload.get("credentials") or {}).get("azure") or {}
@@ -446,7 +455,7 @@ class OpenSearchSnapshotsEvents(Object):
         secret_key = self._secret_value_from_id(secret_key_secret_id)
         return {"storage_account": storage_account, "secret_key": secret_key}
 
-    def get_active_storage_type(self) -> Optional[ObjectStorageType]:
+    def get_active_storage_type(self) -> ObjectStorageType | None:
         """Get the active storage type."""
         return self._resolver.get_storage_type()
 
@@ -564,7 +573,7 @@ class OpenSearchSnapshotsEvents(Object):
         try:
             if not (
                 snapshot := self.charm.snapshots_manager.get_snapshot(
-                    object_storage_type, snapshot_id
+                    object_storage_type, snapshot_id.lower()
                 )
             ):
                 logger.error("Backup %s not found", snapshot_id)
@@ -597,7 +606,19 @@ class OpenSearchSnapshotsEvents(Object):
                 object_storage_type=object_storage_type, snapshot=snapshot
             )
             if not non_restored_indices:
-                self.charm.health.apply(wait_for_green_first=True, app=self.charm.unit.is_leader())
+                final_status = self.charm.health.apply(
+                    wait_for_green_first=True, app=self.charm.unit.is_leader()
+                )
+                if final_status == "green":
+                    event.set_results({"restored-backup-id": snapshot_id, "status": "success"})
+                else:
+                    event.set_results(
+                        {
+                            "restored-backup-id": snapshot_id,
+                            "status": "success_with_warning",
+                            "note": "restore completed; cluster didn't reach GREEN within 30s",
+                        }
+                    )
                 return
 
             logger.error(
@@ -614,7 +635,7 @@ class OpenSearchSnapshotsEvents(Object):
         finally:
             self.charm.status.clear(RestoreInProgress)
 
-    def _on_peer_clusters_relation_changed_for_snapshots(self, event):  # noqa C901
+    def _on_peer_clusters_relation_changed_for_snapshots(self, event) -> None:  # noqa C901
         """Apply snapshots config when the orchestrator broadcasts over peer-clusters."""
         # Only leaders perform cluster-level config
         if not self.charm.unit.is_leader():
@@ -638,7 +659,7 @@ class OpenSearchSnapshotsEvents(Object):
             if trigger and self._maybe_emit_local_storage_event(trigger):
                 pass
 
-    def _on_peer_clusters_relation_departed_for_snapshots(self, event):  # noqa C901
+    def _on_peer_clusters_relation_departed_for_snapshots(self, event) -> None:  # noqa C901
         """Cleanup snapshot config if the orchestrator we depended on is gone."""
         if not self.charm.unit.is_leader():
             return
@@ -660,7 +681,7 @@ class OpenSearchSnapshotsEvents(Object):
             if trigger and self._maybe_emit_local_storage_event(trigger):
                 pass
 
-    def _cleanup(self, object_storage_type, keystore_entries, remove_repo=False):
+    def _cleanup(self, object_storage_type, keystore_entries, remove_repo=False) -> bool:
         """Cleanup object storage config with 3 retries using tenacity."""
         if not object_storage_type:
             return True
@@ -679,7 +700,9 @@ class OpenSearchSnapshotsEvents(Object):
 
         if remove_repo:
             try:
-                self._remove_repo_with_retry(object_storage_type)
+                self.charm.snapshots_manager.remove_repo(
+                    object_storage_type=object_storage_type, require_healthy=True
+                )
             except Exception as e:
                 logger.error(
                     "Repo cleanup for %s failed after 3 attempts: %s", object_storage_type, e
@@ -687,24 +710,8 @@ class OpenSearchSnapshotsEvents(Object):
                 return False
         return True
 
-    @retry(stop=stop_after_attempt(2), wait=wait_fixed(2), reraise=True)
-    def _remove_repo_with_retry(self, object_storage_type):
-        """Try to remove snapshot repo up to 2 times."""
-        try:
-            status = self.charm.health.get(wait_for_green_first=False)
-            if status not in {HealthColors.YELLOW, HealthColors.GREEN}:
-                raise RuntimeError(f"Cluster health is {status}")
-            self.charm.snapshots_manager.remove_repo(object_storage_type=object_storage_type)
-            logger.info("Removed repo for %s", object_storage_type)
-        except OpenSearchHttpError as e:
-            body = e.response_body or ""
-            if "repository_missing_exception" in str(body):
-                logger.info("Repo for %s already absent", object_storage_type)
-                return
-            raise
-
     def _peer_storage_kind(self) -> str | None:
-        payload = self._provider_rel_payload() or {}
+        payload = self._get_provider_rel_payload() or {}
         creds = payload.get("credentials") or {}
         if "s3" in creds and creds["s3"]:
             return "s3-pcluster"
@@ -794,17 +801,19 @@ class OpenSearchSnapshotsEvents(Object):
 
         return
 
-    def _ensure_repository(self, obj_type, obj_cfg) -> None:
+    def _ensure_repository(
+        self, storage_type: ObjectStorageType, storage_cfg: ObjectStorageConfig
+    ) -> None:
         """Create the repository if we have a storage type/config and it doesn't exist yet."""
-        if not obj_type or not obj_cfg or obj_type == "conflict":
+        if not storage_type or not storage_cfg or storage_type == "conflict":
             return
         try:
-            if not self.charm.snapshots_manager.is_repository_created(obj_type):
+            if not self.charm.snapshots_manager.is_repository_created(storage_type):
                 self.charm.snapshots_manager.create_repo(
-                    object_storage_type=obj_type,
-                    object_storage_config=obj_cfg,
+                    object_storage_type=storage_type,
+                    object_storage_config=storage_cfg,
                 )
-                logger.info("Created snapshot repository for %s", obj_type)
+                logger.info("Created snapshot repository for %s", storage_type)
         except OpenSearchHttpError as e:
             logger.error("ensure_repository failed: %s", e)
 
@@ -857,20 +866,39 @@ class OpenSearchSnapshotsManager:
         return repo_name
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
-    def remove_repo(self, object_storage_type: ObjectStorageType, name: str = None) -> None:
-        """Remove the current repository."""
+    def remove_repo(
+        self,
+        object_storage_type: ObjectStorageType,
+        name: str | None = None,
+        *,
+        require_healthy: bool = True,
+    ) -> None:
+        """Remove the snapshot repository with retries and optional health gating.
+
+        Args:
+            object_storage_type: Object storage type to use
+            name: Name of the repository to remove
+            require_healthy: Requires that cluster state is healthy.
+                        by default requires YELLOW/GREEN; set require_healthy=False to skip.
+
+        """
         repo_name = name or self.repository_name(object_storage_type)
+        if require_healthy:
+            status = self.charm.health.get(wait_for_green_first=False)
+            if status not in {HealthColors.YELLOW, HealthColors.GREEN}:
+                raise RuntimeError(f"Cluster health is {status}, will retry repo removal")
+
         try:
-            response = self.opensearch.request(
+            resp = self.opensearch.request(
                 "DELETE", f"_snapshot/{repo_name}", alt_hosts=self.charm.alt_hosts
             )
-            logger.debug("Snapshot repository creation response: %s", response)
-
-            # This should always pass and is set for documentation purposes
-            assert response.get("acknowledged") is True
+            assert resp.get("acknowledged") is True
         except OpenSearchHttpError as e:
-            # we might be attempting to delete a nonexisting repository
-            if e.response_body.get("error", {}).get("type") == "repository_missing_exception":
+            body = e.response_body or {}
+            err_type = (
+                (body.get("error") or {}).get("type") if isinstance(body, dict) else str(body)
+            )
+            if "repository_missing_exception" in str(err_type):
                 return
             raise
 
@@ -914,7 +942,7 @@ class OpenSearchSnapshotsManager:
     ) -> set[str]:
         """Restore an OpenSearch snapshot."""
         repo_name = self.repository_name(object_storage_type)
-        snapshot_id = snapshot.get("snapshot")
+        snapshot_id = snapshot.get("snapshot").lower()
         ignore = [f"-{idx}" for idx in SYSTEM_INDICES]
         indices_clause = ",".join(["*"] + ignore)
 
@@ -1038,7 +1066,7 @@ class OpenSearchSnapshotsManager:
             timeout=30,
         )
         snapshots = {
-            snapshot["snapshot"]: {
+            snapshot["snapshot"].upper(): {
                 "state": snapshot["state"].lower(),
                 "indices": snapshot.get("indices", []),
             }
@@ -1145,7 +1173,7 @@ class OpenSearchSnapshotsManager:
             self.create_repo(object_storage_type, object_storage_config, name=test_repo)
             # best effort clean up
             try:
-                self.remove_repo(test_repo, object_storage_type)
+                self.remove_repo(object_storage_type, name=test_repo, require_healthy=False)
             except Exception:
                 pass
             # creation succeeded, no restart needed

@@ -136,147 +136,122 @@ def split_ca_chain(pem_content: str) -> list[str]:
     return [f"{part}\n{end_cert_marker}" for part in parts]
 
 
-def _run(cmd: list[str]):
-    return subprocess.run(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        timeout=30,
-        env=os.environ,
-    )
-
-
-def store_s3_ca(
-    alias: str, store_pwd: str, store_path: str, ca: str, keep_previous: bool = True
+def _store_ca_chain(  # noqa: C901
+    *,
+    alias_base: str,
+    store_pwd: str,
+    store_path: str,
+    ca: str,
+    keep_previous: bool,
+    pre_chmod_existing: str | None = None,
+    owner: str | None = None,
+    final_mode: str | None = None,
+    add_read_perm: bool = False,
+    tolerate_import_if_listed: bool = False,
 ) -> bool:
-    """Add new CA cert to trust store for S3."""
+    """Common implementation to store a CA chain into a PKCS12 keystore."""
     tmpdir = os.path.dirname(store_path)
+    # import root first, then intermediates
     certs = list(reversed(split_ca_chain(ca)))
-    _run(["chmod", "0664", store_path])
+    if pre_chmod_existing and os.path.exists(store_path):
+        try:
+            run_cmd(f"sudo chmod {pre_chmod_existing} {store_path}")
+        except OpenSearchCmdError:
+            pass
 
     for i, pem in enumerate(certs):
-        ix_alias = f"{alias}-{i}"
-        old_alias = f"old-{alias}-{i}"
+        ix_alias = f"{alias_base}-{i}"
+        old_alias = f"old-{alias_base}-{i}"
 
-        # rename old alias
+        # rename existing alias to old-<alias>-<i> if requested
         if keep_previous:
-            p = _run(
-                [
-                    "opensearch.keytool",
-                    "-changealias",
-                    "-alias",
-                    ix_alias,
-                    "-destalias",
-                    old_alias,
-                    "-keystore",
-                    store_path,
-                    "-storetype",
-                    "PKCS12",
-                    "-storepass",
-                    store_pwd,
-                ]
-            )
-            if p.returncode != 0:
-                msg = (p.stdout or "") + (p.stderr or "")
-                if "does not exist" not in msg and "Keystore file does not exist" not in msg:
+            try:
+                run_cmd(
+                    f"{KEYTOOL} -changealias "
+                    f"-alias {ix_alias} -destalias {old_alias} "
+                    f"-keystore {store_path} -storetype PKCS12",
+                    f"-storepass {store_pwd}",
+                )
+            except OpenSearchCmdError as e:
+                msg = (e.out or "") + (e.err or "")
+                if ("does not exist" not in msg) and ("Keystore file does not exist" not in msg):
                     return False
 
-        fd, tmpfile = tempfile.mkstemp(dir=tmpdir)
+        # import the cert
+        file, tmpfile = tempfile.mkstemp(dir=tmpdir)
         try:
-            with os.fdopen(fd, "w") as f:
+            with os.fdopen(file, "w", encoding="utf-8", errors="replace") as f:
                 f.write(pem)
 
-            p = _run(
-                [
-                    "opensearch.keytool",
-                    "-importcert",
-                    "-noprompt",
-                    "-alias",
-                    ix_alias,
-                    "-keystore",
-                    store_path,
-                    "-file",
-                    tmpfile,
-                    "-storetype",
-                    "PKCS12",
-                    "-storepass",
-                    store_pwd,
-                ]
-            )
-
-            logger.info("Stored CA cert using alias %s and stored to %s", ix_alias, store_path)
-            logger.debug("s3 ca storing return code %s", p.stdout)
-            logger.debug("s3 ca storing error %s", p.stderr)
-
-            if p.returncode != 0:
-                listed = list_cas(store_pwd=store_pwd, store_path=store_path) or {}
-                if ix_alias not in listed:
-                    logger.info("S3 CA is not included in list")
+            try:
+                run_cmd(
+                    f"{KEYTOOL} -importcert -noprompt "
+                    f"-alias {ix_alias} -keystore {store_path} -file {tmpfile} -storetype PKCS12",
+                    f"-storepass {store_pwd}",
+                )
+            except OpenSearchCmdError:
+                if tolerate_import_if_listed:
+                    listed = list_cas(store_pwd=store_pwd, store_path=store_path) or {}
+                    if ix_alias in listed:
+                        pass
+                    else:
+                        return False
+                else:
                     return False
-                logger.info("S3 CA is included in list")
         finally:
             try:
                 os.remove(tmpfile)
             except FileNotFoundError:
                 pass
 
-    _run(["chown", "snap_daemon:root", store_path])
+    # post-actions
+    try:
+        if owner:
+            run_cmd(f"sudo chown {owner} {store_path}")
+        if final_mode:
+            run_cmd(f"sudo chmod {final_mode} {store_path}")
+        if add_read_perm:
+            run_cmd(f"sudo chmod +r {store_path}")
+    except OpenSearchCmdError:
+        pass
+
     return True
+
+
+def store_s3_ca(
+    alias: str, store_pwd: str, store_path: str, ca: str, keep_previous: bool = True
+) -> bool:
+    """Add new CA cert(s) to the PKCS12 trust store for S3."""
+    return _store_ca_chain(
+        alias_base=alias,
+        store_pwd=store_pwd,
+        store_path=store_path,
+        ca=ca,
+        keep_previous=keep_previous,
+        pre_chmod_existing="0664",
+        owner="snap_daemon:root",
+        final_mode="0640",
+        add_read_perm=False,
+        tolerate_import_if_listed=True,  # keep your graceful fallback
+    )
 
 
 def store_ca(
     alias: str, store_pwd: str, store_path: str, ca: str, keep_previous: bool = True
 ) -> bool:
-    """Add new CA cert to trust store."""
-    # This loop and split are to handle when the CA is a chain with intermediate certs
-    certs = list(reversed(split_ca_chain(ca)))
-
-    for index in range(len(certs)):
-        if keep_previous:
-            cmd = f"{KEYTOOL} -changealias -alias {alias}-{index} -destalias {OLD_CA_PREFIX}{alias}-{index} -keystore {store_path} -storetype PKCS12"
-            args = f"-storepass {store_pwd}"
-            try:
-                run_cmd(cmd, args)
-                logger.info(
-                    f"Current CA {alias}-{index} was renamed to {OLD_CA_PREFIX}{alias}-{index}."
-                )
-            except OpenSearchCmdError as e:
-                # This message means there was no "ca" alias or store before, if it happens ignore
-                if not (
-                    e.out is not None
-                    and (
-                        f"Alias <{alias}-{index}> does not exist" in e.out
-                        or "Keystore file does not exist" in e.out
-                    )
-                ):
-                    raise
-
-        with tempfile.NamedTemporaryFile(
-            mode="w+t", dir=os.path.dirname(store_path)
-        ) as ca_tmp_file:
-            ca_tmp_file.write(certs[index])
-            ca_tmp_file.flush()
-            try:
-                run_cmd(
-                    f"""{KEYTOOL} -importcert \
-                    -noprompt \
-                    -alias {alias}-{index} \
-                    -keystore {store_path} \
-                    -file {ca_tmp_file.name} \
-                    -storetype PKCS12
-                    """,
-                    f"-storepass {store_pwd}",
-                )
-                run_cmd(f"sudo chmod +r {store_path}")
-                logger.info("New CA was added to truststore.")
-            except OpenSearchCmdError as e:
-                logger.error("Error storing the ca-cert: %s", e)
-                return False
-
-    return True
+    """Add new CA cert(s) to a PKCS12 trust store (generic)."""
+    return _store_ca_chain(
+        alias_base=alias,
+        store_pwd=store_pwd,
+        store_path=store_path,
+        ca=ca,
+        keep_previous=keep_previous,
+        pre_chmod_existing=None,
+        owner=None,
+        final_mode=None,
+        add_read_perm=True,
+        tolerate_import_if_listed=False,
+    )
 
 
 def list_aliases(store_pwd: str, store_path: str) -> Optional[list[str]]:
