@@ -288,9 +288,24 @@ class OpenSearchSnapshotsEvents(Object):
         self._broadcast_storage_trigger(kind="azure", action="gone")
 
     def _broadcast_storage_trigger(self, kind: str, action: str) -> None:
+        """Broadcast a storage change/gone trigger to peer orchestrators.
+
+        Only the leader may write to the application databag.
+        """
+        if not self.charm.unit.is_leader():
+            logger.debug("Skipping storage trigger broadcast: not leader")
+            return
         payload = json.dumps({"kind": kind, "action": action, "seq": int(time.time())})
-        for rel in self.charm.model.relations.get(PeerClusterOrchestratorRelationName, []):
-            rel.data[self.charm.app]["storage_trigger"] = payload
+        rels = self.charm.model.relations.get(PeerClusterOrchestratorRelationName, [])
+        if not rels:
+            logger.debug("No peer-orchestrator relations, nothing to broadcast")
+            return
+
+        for rel in rels:
+            try:
+                rel.data[self.charm.app]["storage_trigger"] = payload
+            except Exception as e:
+                logger.warning("Failed to write storage_trigger to relation %s: %s", rel.id, e)
 
     def _on_object_storage_changed_on_peers(  # noqa: C901
         self, event: _ObjectStorageChanged
