@@ -290,6 +290,10 @@ class OpenSearchSnapshotsEvents(Object):
     def _broadcast_storage_trigger(self, kind: str, action: str) -> None:
         """Broadcast a storage change/gone trigger to peer orchestrators.
 
+        Args:
+            kind (str): kind of storage type
+            action (str): action (change/gone.
+
         Only the leader may write to the application databag.
         """
         if not self.charm.unit.is_leader():
