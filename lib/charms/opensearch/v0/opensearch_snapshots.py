@@ -206,6 +206,10 @@ class OpenSearchSnapshotsEvents(Object):
             if self.charm.snapshots_manager.is_custom_s3_ca_stored():
                 self.charm.snapshots_manager.store_s3_ca(None)
                 logger.info("S3 CA is deleted.")
+                try:
+                    self.charm.request_opensearch_restart(reason="remove object storage CA")
+                except OpenSearchHttpError:
+                    pass
 
         need_restart = False
         try:
@@ -381,12 +385,12 @@ class OpenSearchSnapshotsEvents(Object):
         if kind not in {"s3", "azure"} or action not in {"changed", "gone"}:
             return False
 
-        last_seq = int(self.charm.peers_data.get(Scope.APP, "snapshots_last_storage_seq", 0))
-        if seq <= last_seq:  # stale/replayed
+        scope = Scope.APP if self.charm.unit.is_leader() else Scope.UNIT
+        last_seq = int(self.charm.peers_data.get(scope, "snapshots_last_storage_seq", 0))
+        if seq <= last_seq:
             return False
-
         # watermark first to avoid double work on retries
-        self.charm.peers_data.put(Scope.APP, "snapshots_last_storage_seq", seq)
+        self.charm.peers_data.put(scope, "snapshots_last_storage_seq", seq)
 
         if action == "changed":
             self.object_storage_changed.emit(kind=kind, action=action)
@@ -657,8 +661,6 @@ class OpenSearchSnapshotsEvents(Object):
     def _on_peer_clusters_relation_changed_for_snapshots(self, event) -> None:  # noqa C901
         """Apply snapshots config when the orchestrator broadcasts over peer-clusters."""
         # Only leaders perform cluster-level config
-        if not self.charm.unit.is_leader():
-            return
 
         dep = self.charm.opensearch_peer_cm.deployment_desc()
         if not dep:
@@ -680,9 +682,6 @@ class OpenSearchSnapshotsEvents(Object):
 
     def _on_peer_clusters_relation_departed_for_snapshots(self, event) -> None:  # noqa C901
         """Cleanup snapshot config if the orchestrator we depended on is gone."""
-        if not self.charm.unit.is_leader():
-            return
-
         dep = self.charm.opensearch_peer_cm.deployment_desc()
         if not dep:
             return
