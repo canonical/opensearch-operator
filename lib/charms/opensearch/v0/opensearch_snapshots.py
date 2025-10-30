@@ -573,7 +573,7 @@ class OpenSearchSnapshotsEvents(Object):
         try:
             if not (
                 snapshot := self.charm.snapshots_manager.get_snapshot(
-                    object_storage_type, snapshot_id.lower()
+                    object_storage_type, snapshot_id
                 )
             ):
                 logger.error("Backup %s not found", snapshot_id)
@@ -942,7 +942,7 @@ class OpenSearchSnapshotsManager:
     ) -> set[str]:
         """Restore an OpenSearch snapshot."""
         repo_name = self.repository_name(object_storage_type)
-        snapshot_id = snapshot.get("snapshot").lower()
+        snapshot_id = snapshot.get("snapshot")
         ignore = [f"-{idx}" for idx in SYSTEM_INDICES]
         indices_clause = ",".join(["*"] + ignore)
 
@@ -1066,7 +1066,7 @@ class OpenSearchSnapshotsManager:
             timeout=30,
         )
         snapshots = {
-            snapshot["snapshot"].upper(): {
+            snapshot["snapshot"]: {
                 "state": snapshot["state"].lower(),
                 "indices": snapshot.get("indices", []),
             }
