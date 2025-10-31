@@ -24,7 +24,6 @@ from charms.opensearch.v0.constants_charm import (
     AZURE_RELATION,
     OPENSEARCH_BACKUP_ID_FORMAT,
     S3_RELATION,
-    BackupConfigureStart,
     BackupInProgress,
     BackupRelConflict,
     BackupRelDataIncomplete,
@@ -33,7 +32,13 @@ from charms.opensearch.v0.constants_charm import (
     RestoreInProgress,
 )
 from charms.opensearch.v0.helper_cluster import ClusterState
-from charms.opensearch.v0.helper_security import list_cas, remove_ca, store_s3_ca
+from charms.opensearch.v0.helper_security import (
+    _hash,
+    _normalize_chain,
+    list_cas,
+    remove_ca,
+    store_s3_ca,
+)
 from charms.opensearch.v0.helper_storage import ObjectStorageResolver, ObjectStorageType
 from charms.opensearch.v0.models import (
     AzureRelData,
@@ -51,7 +56,6 @@ from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from ops import (
     ActionEvent,
-    ActiveStatus,
     BlockedStatus,
     MaintenanceStatus,
     Object,
@@ -184,8 +188,6 @@ class OpenSearchSnapshotsEvents(Object):
 
         self._clear_status_both(BackupRelDataIncomplete)
 
-        self._set_status_both(MaintenanceStatus(BackupConfigureStart))
-
         # apply locally (leader does cluster-level config)
         self.charm.keystore_manager.put_entries(
             {
@@ -234,10 +236,8 @@ class OpenSearchSnapshotsEvents(Object):
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="s3", action="changed")
 
-        self._clear_status_both(BackupConfigureStart)
         self._clear_status_both(BackupRelDataIncomplete)
         self._clear_status_both(BackupRelConflict)
-        self._set_status_both(ActiveStatus())
 
     def _on_s3_credentials_gone(self, event: CredentialsGoneEvent) -> None:
         """Handler for s3 credentials gone event."""
@@ -275,8 +275,6 @@ class OpenSearchSnapshotsEvents(Object):
             return
         self._clear_status_both(BackupRelDataIncomplete)
 
-        self._clear_status_both(MaintenanceStatus(BackupConfigureStart))
-
         self.charm.keystore_manager.put_entries(
             {
                 "azure.client.default.account": self._resolver.get_storage_config(
@@ -306,10 +304,8 @@ class OpenSearchSnapshotsEvents(Object):
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="azure", action="changed")
 
-        self._clear_status_both(BackupConfigureStart)
         self._clear_status_both(BackupRelDataIncomplete)
         self._clear_status_both(BackupRelConflict)
-        self._set_status_both(ActiveStatus())
 
     def _on_azure_credentials_gone(self, event: StorageConnectionInfoGoneEvent) -> None:
         """Handler for azure credentials gone event."""
@@ -433,9 +429,9 @@ class OpenSearchSnapshotsEvents(Object):
             return ""
 
     def _ca_changed(self, new_chain: str | None) -> bool:
-        current_norm = self._normalize_chain(self._current_s3_ca_chain())
-        new_norm = self._normalize_chain(new_chain)
-        return self._hash(current_norm) != self._hash(new_norm)
+        current_norm = _normalize_chain(self._current_s3_ca_chain())
+        new_norm = _normalize_chain(new_chain)
+        return _hash(current_norm) != _hash(new_norm)
 
     def _restart_for_ca(self, new_chain: str | None, *, reason: str) -> bool:
         """Request restart iff the installed CA differs from new_chain.
