@@ -48,6 +48,7 @@ from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from ops import (
     ActionEvent,
+    ActiveStatus,
     BlockedStatus,
     MaintenanceStatus,
     Object,
@@ -160,24 +161,39 @@ class OpenSearchSnapshotsEvents(Object):
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
 
-    def _on_s3_credentials_changed(self, event: CredentialsChangedEvent) -> None:
+    def _set_status(self, status):
+        self.charm.status.set(status)
+        if self.charm.unit.is_leader():
+            self.charm.app.status = status
+
+    def _on_s3_credentials_changed(self, event: CredentialsChangedEvent) -> None:  # noqa: C901
         """Handler for s3 credentials changed event."""
         object_storage_type = self._resolver.get_storage_type() or "s3"
         logger.info(f"S3 credentials changed for object storage type {object_storage_type}")
 
         if object_storage_type == "conflict":
-            self.charm.status.set(BlockedStatus("More than 1 object storage relation"))
+            self._set_status(BlockedStatus("More than 1 object storage relation"))
             event.defer()
             return
 
+        cfg = self._resolver.get_storage_config("s3")
+        creds = getattr(getattr(cfg, "s3", None), "credentials", None)
         # handle case where this was deferred in the above case, then the s3 relation was severed
-        if (
-            object_storage_type != "s3"
-            or not self._resolver.get_storage_config("s3")
-            or not self._resolver.get_storage_config("s3").s3.credentials
-        ):
+        if object_storage_type != "s3" or not cfg or not creds:
             logger.warning("No S3 object storage configuration.")
+            self._set_status(BlockedStatus("Waiting for S3 credentials"))
             return
+
+        missing = [
+            k for k in ("access_key", "secret_key", "bucket") if not getattr(creds, k, None)
+        ]
+        if missing:
+            self.charm.status.set(
+                BlockedStatus(f"S3 credentials incomplete: {', '.join(missing)}")
+            )
+            return
+
+        self._set_status(MaintenanceStatus("Applying S3 credentials"))
 
         # apply locally (leader does cluster-level config)
         self.charm.keystore_manager.put_entries(
@@ -206,10 +222,6 @@ class OpenSearchSnapshotsEvents(Object):
             if self.charm.snapshots_manager.is_custom_s3_ca_stored():
                 self.charm.snapshots_manager.store_s3_ca(None)
                 logger.info("S3 CA is deleted.")
-                try:
-                    self.charm.request_opensearch_restart(reason="remove object storage CA")
-                except OpenSearchHttpError:
-                    pass
 
         need_restart = False
         try:
@@ -228,6 +240,7 @@ class OpenSearchSnapshotsEvents(Object):
         self._ensure_repository(object_storage_type, self._resolver.get_storage_config("s3"))
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="s3", action="changed")
+        self._set_status(ActiveStatus())
 
     def _on_s3_credentials_gone(self, event: CredentialsGoneEvent) -> None:
         """Handler for s3 credentials gone event."""
@@ -251,17 +264,26 @@ class OpenSearchSnapshotsEvents(Object):
         object_storage_type = self._resolver.get_storage_type() or "azure"
 
         if object_storage_type == "conflict":
-            self.charm.status.set(BlockedStatus("More than 1 object storage relation."))
+            self._set_status(BlockedStatus("More than 1 object storage relation"))
             event.defer()
             return
+        cfg = self._resolver.get_storage_config("azure")
+        creds = getattr(getattr(cfg, "azure", None), "credentials", None)
 
-        if (
-            object_storage_type != "azure"
-            or not self._resolver.get_storage_config("azure")
-            or not self._resolver.get_storage_config("azure").azure.credentials
-        ):
+        if object_storage_type != "azure" or not cfg or not creds:
             logger.warning("No Azure object storage configuration.")
             return
+
+        missing = [
+            name
+            for name in ("storage_account", "secret_key", "container")
+            if not getattr(creds, name, None)
+        ]
+        if missing:
+            self._set_status(BlockedStatus(f"Azure credentials incomplete: {', '.join(missing)}"))
+            return
+
+        self._set_status(MaintenanceStatus("Applying Azure credentials"))
 
         self.charm.keystore_manager.put_entries(
             {
@@ -277,6 +299,7 @@ class OpenSearchSnapshotsEvents(Object):
         self._ensure_repository(object_storage_type, self._resolver.get_storage_config("azure"))
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="azure", action="changed")
+        self._set_status(ActiveStatus())
 
     def _on_azure_credentials_gone(self, event: StorageConnectionInfoGoneEvent) -> None:
         """Handler for azure credentials gone event."""
@@ -373,6 +396,10 @@ class OpenSearchSnapshotsEvents(Object):
 
     def _maybe_emit_local_storage_event(self, trigger: dict) -> bool:
         """Checks trigger dict coming from the peer cluster relation databag.
+
+        Args:
+            trigger: a dict written taken from peer relation data used
+                    to judge to emit a custom event or not
 
         Trigger provides 3 keys: action, kind and seq keys
         Action can be changed or gone meaning relation changed or gone.
@@ -689,18 +716,27 @@ class OpenSearchSnapshotsEvents(Object):
         if dep.typ == DeploymentType.MAIN_ORCHESTRATOR:
             return
 
-        trigger_raw = event.relation.data.get(event.app, {}).get("storage_trigger")
-        if trigger_raw:
+        trigger_raw_data = event.relation.data.get(event.app, {}).get("storage_trigger")
+        if trigger_raw_data:
             try:
-                trigger = json.loads(trigger_raw)
+                trigger_data = json.loads(trigger_raw_data)
             except json.JSONDecodeError:
-                trigger = None
+                trigger_data = None
 
-            if trigger and self._maybe_emit_local_storage_event(trigger):
+            if trigger_data and self._maybe_emit_local_storage_event(trigger_data):
                 pass
 
     def _cleanup(self, object_storage_type, keystore_entries, remove_repo=False) -> bool:
-        """Cleanup object storage config with 3 retries using tenacity."""
+        """Cleanup object storage config.
+
+        Args:
+            object_storage_type (str): Object storage type
+            keystore_entries (list): List of keystore entries
+            remove_repo (bool, optional): Remove repo entries. Defaults to False.
+
+        Returns:
+            True if all the cleanup is successful, False otherwise
+        """
         if not object_storage_type:
             return True
 
@@ -729,6 +765,7 @@ class OpenSearchSnapshotsEvents(Object):
         return True
 
     def _peer_storage_kind(self) -> str | None:
+        """Return the kind of storage type for peers."""
         payload = self._get_provider_rel_payload() or {}
         creds = payload.get("credentials") or {}
         if "s3" in creds and creds["s3"]:
@@ -740,14 +777,28 @@ class OpenSearchSnapshotsEvents(Object):
         return
 
     def _effective_type(self, forced_kind: str | None = None) -> str | None:
-        """Decide the storage type in this unit’s context."""
+        """Decide the storage type in this unit’s context.
+
+        Args:
+            forced_kind (str | None): The kind of storage type to return.
+
+        Returns:
+            storage type if there is else None
+        """
         if forced_kind in {"s3", "azure", "gcs"}:
             return forced_kind + "-pcluster"
         typ = self._resolver.get_storage_type()
         return typ or self._peer_storage_kind()
 
-    def _effective_config(self, typ: str | None):
-        """Return an ObjectStorageConfig if we’re the main (resolver knows all repo settings)."""
+    def _effective_config(self, typ: str | None) -> str | None:
+        """Return an ObjectStorageConfig if we’re the main (resolver knows all repo settings).
+
+        Args:
+            typ (str | None): The kind of storage type to return.
+
+        Returns:
+            storage type if there is else None
+        """
         if typ in {"s3", "azure", "gcs"}:
             return self._resolver.get_storage_config(typ)
         return
@@ -755,7 +806,14 @@ class OpenSearchSnapshotsEvents(Object):
     def _action_missing_pre_requisites(  # noqa C901
         self, report_running_operations: bool = True
     ) -> str | None:
-        """Compute the missing prerequisites for running a snapshot/restore action."""
+        """Compute the missing prerequisites for running a snapshot/restore action.
+
+        Args:
+            report_running_operations (bool): Whether to report running operations.
+
+        Returns:
+            A string representing the missing prerequisites.
+        """
         if not self.charm.unit.is_leader():
             return "Backup/Restore related actions must be run on the juju leader unit."
 
@@ -822,7 +880,15 @@ class OpenSearchSnapshotsEvents(Object):
     def _ensure_repository(
         self, storage_type: ObjectStorageType, storage_cfg: ObjectStorageConfig
     ) -> None:
-        """Create the repository if we have a storage type/config and it doesn't exist yet."""
+        """Create the repository if we have a storage type/config and it doesn't exist yet.
+
+        Args:
+            storage_type (ObjectStorageType): Object storage type
+            storage_cfg (ObjectStorageConfig): Object storage config
+
+        Raises:
+            OpenSearchHttpError i repository does not exist
+        """
         if not storage_type or not storage_cfg or storage_type == "conflict":
             return
         try:
@@ -850,7 +916,16 @@ class OpenSearchSnapshotsManager:
         object_storage_config: ObjectStorageConfig,
         name: str | None = None,
     ) -> str:
-        """Create an opensearch 'repository' for storing backups."""
+        """Create an opensearch 'repository' for storing backups.
+
+        Args:
+            object_storage_type (ObjectStorageType): Object storage type
+            object_storage_config (ObjectStorageConfig): Object storage config
+            name (str, optional): Name of the repository. Defaults to None.
+
+        Returns:
+            str: Repository name
+        """
         repo_name = name or self.repository_name(object_storage_type)
         settings = {}
         if object_storage_type == "s3":
@@ -922,7 +997,14 @@ class OpenSearchSnapshotsManager:
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def create_snapshot(self, object_storage_type: ObjectStorageType) -> str:
-        """Create an OpenSearch snapshot."""
+        """Create an OpenSearch snapshot.
+
+        Args:
+            object_storage_type: Object storage type to use
+
+        Returns:
+            snapshot_id: Snapshot ID
+        """
         repo_name = self.repository_name(object_storage_type)
         snapshot_id = datetime.now().strftime(OPENSEARCH_BACKUP_ID_FORMAT).lower()
         ignore = [f"-{idx}" for idx in SYSTEM_INDICES]
@@ -958,7 +1040,15 @@ class OpenSearchSnapshotsManager:
     def restore_snapshot(
         self, object_storage_type: ObjectStorageType, snapshot: dict[str, Any]
     ) -> set[str]:
-        """Restore an OpenSearch snapshot."""
+        """Restore an OpenSearch snapshot.
+
+        Args:
+            object_storage_type: Object storage type to use
+            snapshot: Snapshot to restore
+
+        Returns:
+            Empty set if snapshot was restored else set includes not restored indices
+        """
         repo_name = self.repository_name(object_storage_type)
         snapshot_id = snapshot.get("snapshot")
         ignore = [f"-{idx}" for idx in SYSTEM_INDICES]
@@ -1014,7 +1104,14 @@ class OpenSearchSnapshotsManager:
     def close_snapshot_indices_open_in_cluster(
         self, snapshot: dict[str, Any]
     ) -> Tuple[list[str] | None, dict[str, Any] | None]:
-        """Close the non-system indices included in a given snapshot."""
+        """Close the non-system indices included in a given snapshot.
+
+        Args:
+            snapshot (dict): Snapshot to close.
+
+        Returns:
+            Tuple: closed_indices, failed_to_closed_indices
+        """
         if not (indices_to_close := self._get_snapshot_indices_open_in_cluster(snapshot)):
             logger.info("No indices to close.")
             return None, None
@@ -1041,7 +1138,14 @@ class OpenSearchSnapshotsManager:
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def _get_snapshot_indices_open_in_cluster(self, snapshot: dict[str, Any]) -> list[str]:
-        """Fetch the current open indices in the current cluster."""
+        """Fetch the current open indices in the current cluster.
+
+        Args:
+            snapshot (dict): Snapshot information
+
+        Returns:
+            list[str] | None: List of indices which are open
+        """
         current_indices = ClusterState.indices(self.opensearch)
 
         def _is_open(meta: dict) -> bool:
@@ -1061,7 +1165,15 @@ class OpenSearchSnapshotsManager:
     def get_snapshot(
         self, object_storage_type: ObjectStorageType, snapshot_id: str
     ) -> dict[str, Any] | None:
-        """Fetch a snapshot by id."""
+        """Fetch a snapshot by id.
+
+        Args:
+            object_storage_type (ObjectStorageType): Object storage type.
+            snapshot_id (str): Snapshot id.
+
+        Returns:
+            dict[str, Any] | None: Snapshot information.
+        """
         repo_name = self.repository_name(object_storage_type)
         try:
             response = self.opensearch.request(
@@ -1075,7 +1187,14 @@ class OpenSearchSnapshotsManager:
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def list_snapshots(self, object_storage_type: ObjectStorageType) -> dict[Any, dict[str, Any]]:
-        """List all snapshots in the current repository."""
+        """List all snapshots in the current repository.
+
+        Args:
+            object_storage_type (ObjectStorageType): Object storage type.
+
+        Returns:
+            dict: Snapshot information.
+        """
         repo_name = self.repository_name(object_storage_type)
         response = self.opensearch.request(
             "GET",
@@ -1096,7 +1215,15 @@ class OpenSearchSnapshotsManager:
     def is_repository_created(
         self, object_storage_type: ObjectStorageType, repository: str = None
     ) -> bool:
-        """Check if a repository is created."""
+        """Check if a repository is created.
+
+        Args:
+            object_storage_type (ObjectStorageType): Object storage type.
+            repository (str): The name of the repository to check.
+
+        Returns:
+            True if repository is created else False
+        """
         repo_name = repository or self.repository_name(object_storage_type)
         try:
             response = self.opensearch.request(
@@ -1110,7 +1237,11 @@ class OpenSearchSnapshotsManager:
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def is_snapshot_running(self) -> bool:
-        """Check if a snapshot is running."""
+        """Check if a snapshot is running.
+
+        Returns:
+            True if snapshot is running else False
+        """
         response = self.opensearch.request(
             "GET", "_snapshot/_status", alt_hosts=self.charm.alt_hosts
         )
@@ -1118,7 +1249,11 @@ class OpenSearchSnapshotsManager:
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def is_restore_running(self) -> bool:
-        """Check if a restore operation is running."""
+        """Check if a restore operation is running.
+
+        Returns:
+            True if restore operation is running else False
+        """
         response: list[dict[str, str]] = self.opensearch.request(
             "GET", "/_cat/recovery?format=json&h=type,stage", alt_hosts=self.charm.alt_hosts
         )
@@ -1128,7 +1263,14 @@ class OpenSearchSnapshotsManager:
         return False
 
     def repository_name(self, object_storage_type: ObjectStorageType) -> str | None:
-        """Get the repository name for a given storage type."""
+        """Get the repository name for a given storage type.
+
+        Args:
+            object_storage_type: Object storage type
+
+        Returns:
+            repository name
+        """
         if object_storage_type in {"s3", "s3-pcluster"}:
             return "s3-repository"
 
@@ -1140,7 +1282,15 @@ class OpenSearchSnapshotsManager:
     def requires_custom_s3_ca(
         self, object_storage_type: ObjectStorageType, object_storage_config: ObjectStorageConfig
     ) -> bool:
-        """Check if the current object storage setup requires the use of a custom CA."""
+        """Check if the current object storage setup requires the use of a custom CA.
+
+        Args:
+            object_storage_type: Object storage type
+            object_storage_config: Object storage config
+
+        Returns:
+            True if the current object storage setup requires the use of a custom CA, else False
+        """
         if object_storage_type not in {"s3", "s3-pcluster"}:
             return False
         chain = (object_storage_config.s3 and object_storage_config.s3.tls_ca_chain) or None
@@ -1151,7 +1301,14 @@ class OpenSearchSnapshotsManager:
         return True
 
     def is_custom_s3_ca_stored(self, s3_ca_chain: str | None = None) -> bool:
-        """Check if a custom CA for the object storage is stored in the cacerts trust store."""
+        """Check if a custom CA for the object storage is stored in the cacerts trust store.
+
+        Args:
+            s3_ca_chain: CA chain which will be detected in the stored cacerts
+
+        Returns:
+            True if the given CA chain is stored in the stored cacerts, else False
+        """
         stored_cacerts = (
             list_cas(store_pwd="changeit", store_path=f"{self.opensearch.paths.certs}/cacerts.p12")
             or {}
@@ -1162,7 +1319,13 @@ class OpenSearchSnapshotsManager:
         return stored_cacerts.get("s3-snapshots-gateway") == s3_ca_chain
 
     def store_s3_ca(self, s3_tls_ca_chain: str | None) -> None:
-        """Store or remove an S3 TLS CA chain on the cacerts trust store."""
+        """Store or remove an S3 TLS CA chain on the cacerts trust store.
+
+        Args:
+            s3_tls_ca_chain: S3 TLS CA chain to store or remove
+
+        If the there is s3_tls_ca_chain, the old CA will be removed.
+        """
         if s3_tls_ca_chain:
             store_s3_ca(
                 store_pwd="changeit",
@@ -1182,7 +1345,15 @@ class OpenSearchSnapshotsManager:
     def should_restart_for_full_setup(
         self, object_storage_type: ObjectStorageType, object_storage_config: ObjectStorageConfig
     ) -> bool:
-        """Check if a restart is needed for full setup."""
+        """Check if a restart is needed for full setup.
+
+        Args:
+            object_storage_type (ObjectStorageType): The object storage type to check.
+            object_storage_config (ObjectStorageConfig): The object storage configuration.
+
+        Returns:
+            True if the restart is needed for full setup, else False
+        """
         if not self.opensearch.is_started():
             raise OpenSearchHttpError("node unavailable")
 
@@ -1201,7 +1372,15 @@ class OpenSearchSnapshotsManager:
                 return True
             raise
 
-    def _repo_type(self, object_storage_type: ObjectStorageType) -> str:
+    def _repo_type(self, object_storage_type: ObjectStorageType) -> str | None:
+        """Return the repository type for a given object storage type.
+
+        Args:
+            object_storage_type (ObjectStorageType): The object storage type.
+
+        Returns:
+            repository_type
+        """
         if object_storage_type in {"s3", "s3-pcluster"}:
             return "s3"
         if object_storage_type in {"azure", "azure-pcluster"}:
