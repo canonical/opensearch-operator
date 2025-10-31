@@ -202,6 +202,18 @@ class OpenSearchSnapshotsEvents(Object):
         logger.info("S3 credentials are added to keystore.")
         self.charm.keystore_manager.reload()
 
+        self._ensure_repository(object_storage_type, self._resolver.get_storage_config("s3"))
+
+        try:
+            self.charm.snapshots_manager.verify_repository("s3")
+        except OpenSearchHttpError:
+            self._set_status_both(
+                BlockedStatus(
+                    "S3 repository not reachable: bad credentials or permissions. See unit logs."
+                )
+            )
+            return
+
         if self.charm.snapshots_manager.requires_custom_s3_ca(
             object_storage_type, self._resolver.get_storage_config("s3")
         ):
@@ -230,8 +242,6 @@ class OpenSearchSnapshotsEvents(Object):
         if need_restart:
             logger.info("service should be restarted")
             self.charm.request_opensearch_restart(reason="apply new object storage CA")
-
-        self._ensure_repository(object_storage_type, self._resolver.get_storage_config("s3"))
 
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="s3", action="changed")
@@ -301,6 +311,17 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.request_opensearch_restart(reason="apply new object storage CA")
 
         self._ensure_repository(object_storage_type, self._resolver.get_storage_config("azure"))
+
+        try:
+            self.charm.snapshots_manager.verify_repository("azure")
+        except OpenSearchHttpError:
+            self._set_status_both(
+                BlockedStatus(
+                    "Azure repository not reachable: bad credentials or permissions. See unit logs."
+                )
+            )
+            return
+
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="azure", action="changed")
 
@@ -409,10 +430,10 @@ class OpenSearchSnapshotsEvents(Object):
         if self.charm.unit.is_leader():
             self.charm.status.set(status, app=True)
 
-    def _clear_status_both(self, status):
-        self.charm.status.clear(status)
+    def _clear_status_both(self, status_key: str):
+        self.charm.status.clear(status_key)
         if self.charm.unit.is_leader():
-            self.charm.status.clear(status, app=True)
+            self.charm.status.clear(status_key, app=True)
 
     def _current_s3_ca_chain(self) -> str:
         """Return the currently stored S3 CA chain (string) from cacerts, or ''."""
@@ -1475,3 +1496,19 @@ class OpenSearchSnapshotsManager:
             return "azure"
         if object_storage_type in {"gcs", "gcs-pcluster"}:
             return "gcs"
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
+    def verify_repository(self, object_storage_type: ObjectStorageType) -> None:
+        """Verify repo by listing snapshots.
+
+        Args:
+            object_storage_type (ObjectStorageType): Object storage type
+
+        Raises:
+            OpenSearchHttpError if there are any backend issues such as auth/perm errors
+        """
+        repo = self.repository_name(object_storage_type)
+        # If creds/endpoint/perm are wrong, this call raises OpenSearchHttpError with a 500.
+        _ = self.opensearch.request(
+            "GET", f"_snapshot/{repo}/_all", alt_hosts=self.charm.alt_hosts, timeout=30
+        )
