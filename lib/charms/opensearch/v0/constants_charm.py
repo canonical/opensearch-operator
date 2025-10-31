@@ -70,6 +70,7 @@ PluginConfigError = "Unexpected error during plugin configuration, check the log
 BackupSetupFailed = "Backup setup failed, check logs for details"
 BackupRelShouldNotExist = "This unit should not be related to backup relation"
 BackupRelDataIncomplete = "Backup relation data missing or incomplete."
+BackupRelConflict = "More than 1 object storage relation"
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
 SecretAccessError = "Failed to access secret, please check permissions."
 JWTAuthConfigInvalid = (

@@ -291,9 +291,14 @@ class Upgrade(abc.ABC):
             ):
                 raise PrecheckFailed("Not all units are online for the current app.")
 
-            if self._charm.snapshots_manager.is_repository_created() and (
-                self._charm.snapshots_manager.is_restore_running()
-                or self._charm.snapshots_manager.is_snapshot_running()
+            typ = self._charm.snapshot_events.get_active_storage_type()
+            if (
+                typ
+                and self._charm.snapshots_manager.is_repository_created(typ)
+                and (
+                    self._charm.snapshots_manager.is_restore_running()
+                    or self._charm.snapshots_manager.is_snapshot_running()
+                )
             ):
                 raise PrecheckFailed("Backup or restore is in progress")
 

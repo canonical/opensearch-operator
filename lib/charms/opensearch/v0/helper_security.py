@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Helpers for security related operations, such as password generation etc."""
+import hashlib
 import logging
 import math
 import os
@@ -443,3 +444,22 @@ def get_cert_issuer_from_keystore(store_pwd: str, store_path: str) -> Optional[s
     except AttributeError as e:
         logger.error("Error reading secret: %s", e)
         return None
+
+
+def _normalize_chain(text: Optional[str]) -> str:
+    """Normalize a PEM chain string before hashing.
+
+    Args:
+        text (Optional[str]): PEM chain string to be normalized.
+
+    Returns:
+        str: Normalized PEM chain string.
+    """
+    if not text:
+        return ""
+    return "\n".join(line.strip() for line in text.strip().splitlines() if line.strip())
+
+
+def _hash(text: str) -> str:
+    """Hash a PEM chain string."""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
