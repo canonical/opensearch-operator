@@ -258,7 +258,8 @@ class OpenSearchSnapshotsEvents(Object):
                 )
             return
 
-        self.charm.status.clear(BackupCredentialsIncorrect, app=True)
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupCredentialsIncorrect, app=True)
 
         self._publish_credentials_to_subclusters()
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
@@ -354,7 +355,8 @@ class OpenSearchSnapshotsEvents(Object):
                     app=True,
                 )
             return
-        self.charm.status.clear(BackupCredentialsIncorrect, app=True)
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupCredentialsIncorrect, app=True)
 
         self._publish_credentials_to_subclusters()
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
