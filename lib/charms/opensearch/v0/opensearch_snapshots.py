@@ -24,6 +24,7 @@ from charms.opensearch.v0.constants_charm import (
     AZURE_RELATION,
     OPENSEARCH_BACKUP_ID_FORMAT,
     S3_RELATION,
+    BackupCredentialsIncorrect,
     BackupInProgress,
     BackupRelConflict,
     BackupRelDataIncomplete,
@@ -252,12 +253,12 @@ class OpenSearchSnapshotsEvents(Object):
         except OpenSearchHttpError:
             if self.charm.unit.is_leader():
                 self.charm.status.set(
-                    BlockedStatus(
-                        "S3 repository not reachable: bad credentials or permissions. See unit logs."
-                    ),
+                    BlockedStatus(BackupCredentialsIncorrect),
                     app=True,
                 )
             return
+
+        self.charm.status.clear(BackupCredentialsIncorrect, app=True)
 
         self._publish_credentials_to_subclusters()
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
@@ -349,12 +350,11 @@ class OpenSearchSnapshotsEvents(Object):
         except OpenSearchHttpError:
             if self.charm.unit.is_leader():
                 self.charm.status.set(
-                    BlockedStatus(
-                        "Azure repository not reachable: bad credentials or permissions. See unit logs."
-                    ),
+                    BlockedStatus(BackupCredentialsIncorrect, app=True),
                     app=True,
                 )
             return
+        self.charm.status.clear(BackupCredentialsIncorrect, app=True)
 
         self._publish_credentials_to_subclusters()
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
