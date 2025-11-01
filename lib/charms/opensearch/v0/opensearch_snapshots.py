@@ -173,12 +173,12 @@ class OpenSearchSnapshotsEvents(Object):
         object_storage_type = self._resolver.get_storage_type() or "s3"
         logger.info(f"S3 credentials changed for object storage type {object_storage_type}")
         if object_storage_type == "conflict":
-            if self.unit.is_leader():
+            if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelConflict), app=True)
             event.defer()
             return
 
-        if self.unit.is_leader():
+        if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelConflict, app=True)
 
         cfg = self._resolver.get_storage_config("s3")
@@ -186,7 +186,7 @@ class OpenSearchSnapshotsEvents(Object):
         # handle case where this was deferred in the above case, then the s3 relation was severed
         if object_storage_type != "s3" or not cfg or not creds:
             logger.warning("No S3 object storage configuration.")
-            if self.unit.is_leader():
+            if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelDataIncomplete), app=True)
             return
 
@@ -241,7 +241,7 @@ class OpenSearchSnapshotsEvents(Object):
         try:
             self.charm.snapshots_manager.verify_repository("s3")
         except OpenSearchHttpError:
-            if self.unit.is_leader():
+            if self.charm.unit.is_leader():
                 self.charm.status.set(
                     BlockedStatus(
                         "S3 repository not reachable: bad credentials or permissions. See unit logs."
@@ -283,11 +283,11 @@ class OpenSearchSnapshotsEvents(Object):
         object_storage_type = self._resolver.get_storage_type() or "azure"
 
         if object_storage_type == "conflict":
-            if self.unit.is_leader():
+            if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelConflict), app=True)
                 event.defer()
                 return
-        if self.unit.is_leader():
+        if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelConflict, app=True)
 
         cfg = self._resolver.get_storage_config("azure")
@@ -329,7 +329,7 @@ class OpenSearchSnapshotsEvents(Object):
         try:
             self.charm.snapshots_manager.verify_repository("azure")
         except OpenSearchHttpError:
-            if self.unit.is_leader():
+            if self.charm.unit.is_leader():
                 self.charm.status.set(
                     BlockedStatus(
                         "Azure repository not reachable: bad credentials or permissions. See unit logs."
@@ -343,7 +343,7 @@ class OpenSearchSnapshotsEvents(Object):
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="azure", action="changed")
 
-        if self.unit.is_leader():
+        if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelDataIncomplete, app=True)
             self.charm.status.clear(BackupRelConflict, app=True)
 
