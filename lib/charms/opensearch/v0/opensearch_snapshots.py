@@ -175,7 +175,7 @@ class OpenSearchSnapshotsEvents(Object):
         if object_storage_type == "conflict":
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelConflict), app=True)
-            event.defer()
+                event.defer()
             return
 
         if self.charm.unit.is_leader():
@@ -248,16 +248,11 @@ class OpenSearchSnapshotsEvents(Object):
                     ),
                     app=True,
                 )
-                return
+            return
 
         self._publish_credentials_to_subclusters()
-
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="s3", action="changed")
-
-        if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupRelDataIncomplete, app=True)
-            self.charm.status.clear(BackupRelConflict, app=True)
 
     def _on_s3_credentials_gone(self, event: CredentialsGoneEvent) -> None:
         """Handler for s3 credentials gone event."""
@@ -286,7 +281,8 @@ class OpenSearchSnapshotsEvents(Object):
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelConflict), app=True)
                 event.defer()
-                return
+            return
+
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelConflict, app=True)
 
@@ -295,9 +291,12 @@ class OpenSearchSnapshotsEvents(Object):
 
         if object_storage_type != "azure" or not cfg or not creds:
             logger.warning("No Azure object storage configuration.")
-            self.charm.status.set(BlockedStatus(BackupRelDataIncomplete), app=True)
+            if self.charm.unit.is_leader():
+                self.charm.status.set(BlockedStatus(BackupRelDataIncomplete), app=True)
             return
-        self.charm.status.clear(BackupRelDataIncomplete, app=True)
+
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupRelDataIncomplete, app=True)
 
         self.charm.keystore_manager.put_entries(
             {
@@ -336,16 +335,11 @@ class OpenSearchSnapshotsEvents(Object):
                     ),
                     app=True,
                 )
-                return
+            return
 
         self._publish_credentials_to_subclusters()
-
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="azure", action="changed")
-
-        if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupRelDataIncomplete, app=True)
-            self.charm.status.clear(BackupRelConflict, app=True)
 
     def _on_azure_credentials_gone(self, event: StorageConnectionInfoGoneEvent) -> None:
         """Handler for azure credentials gone event."""
