@@ -342,7 +342,7 @@ class OpenSearchSnapshotsEvents(Object):
 
         if need_restart:
             logger.info("service should be restarted")
-            self.charm.request_opensearch_restart(reason="apply new object storage CA")
+            self.charm.request_opensearch_restart(reason="service should be restarted")
 
         self._ensure_repository(object_storage_type, self._resolver.get_storage_config("azure"))
 
@@ -351,7 +351,7 @@ class OpenSearchSnapshotsEvents(Object):
         except OpenSearchHttpError:
             if self.charm.unit.is_leader():
                 self.charm.status.set(
-                    BlockedStatus(BackupCredentialsIncorrect, app=True),
+                    BlockedStatus(BackupCredentialsIncorrect),
                     app=True,
                 )
             return
