@@ -27,6 +27,7 @@ from charms.opensearch.v0.constants_charm import (
     BackupInProgress,
     BackupRelConflict,
     BackupRelDataIncomplete,
+    BackupRelShouldNotExist,
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
     RestoreInProgress,
@@ -171,6 +172,13 @@ class OpenSearchSnapshotsEvents(Object):
 
     def _on_s3_credentials_changed(self, event: CredentialsChangedEvent) -> None:  # noqa: C901
         """Handler for s3 credentials changed event."""
+        dep = self.charm.opensearch_peer_cm.deployment_desc()
+        # block non-main orchestrators only when they are in a multi-app topology.
+        if dep and dep.typ != DeploymentType.MAIN_ORCHESTRATOR and self._has_peer_topology():
+            if self.charm.unit.is_leader():
+                self.charm.status.set(BlockedStatus(BackupRelShouldNotExist), app=True)
+            return
+
         object_storage_type = self._resolver.get_storage_type() or "s3"
         logger.info(f"S3 credentials changed for object storage type {object_storage_type}")
         if object_storage_type == "conflict":
@@ -257,6 +265,9 @@ class OpenSearchSnapshotsEvents(Object):
 
     def _on_s3_credentials_gone(self, event: CredentialsGoneEvent) -> None:
         """Handler for s3 credentials gone event."""
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupRelShouldNotExist, app=True)
+
         if self._resolver.get_storage_type() == "conflict":
             return
 
@@ -276,6 +287,13 @@ class OpenSearchSnapshotsEvents(Object):
         self, event: StorageConnectionInfoChangedEvent
     ) -> None:
         """Handler for azure credentials changed event."""
+        dep = self.charm.opensearch_peer_cm.deployment_desc()
+        # block non-main orchestrators only when they are in a multi-app topology.
+        if dep and dep.typ != DeploymentType.MAIN_ORCHESTRATOR and self._has_peer_topology():
+            if self.charm.unit.is_leader():
+                self.charm.status.set(BlockedStatus(BackupRelShouldNotExist), app=True)
+            return
+
         object_storage_type = self._resolver.get_storage_type() or "azure"
 
         if object_storage_type == "conflict":
@@ -344,6 +362,9 @@ class OpenSearchSnapshotsEvents(Object):
 
     def _on_azure_credentials_gone(self, event: StorageConnectionInfoGoneEvent) -> None:
         """Handler for azure credentials gone event."""
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupRelShouldNotExist, app=True)
+
         if self._resolver.get_storage_type() == "conflict":
             return
 
@@ -1096,6 +1117,12 @@ class OpenSearchSnapshotsEvents(Object):
                     logger.warning("Failed to grant secret to rel %s: %s", rel.id, e)
         except Exception as e:
             logger.warning("Granting secret to peer relations failed: %s", e)
+
+    def _has_peer_topology(self) -> bool:
+        """Return True if this app participates in a multi-app topology (main/failover/data)."""
+        return bool(
+            self.charm.model.relations.get(PeerClusterOrchestratorRelationName, [])
+        ) or bool(self.charm.model.relations.get(PeerClusterRelationName, []))
 
 
 class OpenSearchSnapshotsManager:
