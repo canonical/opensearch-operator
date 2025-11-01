@@ -34,6 +34,7 @@ from charms.opensearch.v0.constants_charm import (
 from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.helper_security import (
     _hash,
+    _jsonify_secrets,
     _normalize_chain,
     list_cas,
     remove_ca,
@@ -175,7 +176,7 @@ class OpenSearchSnapshotsEvents(Object):
         if object_storage_type == "conflict":
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelConflict), app=True)
-                event.defer()
+            event.defer()
             return
 
         if self.charm.unit.is_leader():
@@ -280,7 +281,7 @@ class OpenSearchSnapshotsEvents(Object):
         if object_storage_type == "conflict":
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelConflict), app=True)
-                event.defer()
+            event.defer()
             return
 
         if self.charm.unit.is_leader():
@@ -368,26 +369,49 @@ class OpenSearchSnapshotsEvents(Object):
             cfg = self._resolver.get_storage_config("azure")
             if not cfg or not cfg.azure or not cfg.azure.credentials:
                 return
+
+            # Create two single-key secrets so the consumer can resolve them
+            sa_sec = self.charm.model.app.add_secret(
+                {"storage-account": cfg.azure.credentials.storage_account}
+            )
+            key_sec = self.charm.model.app.add_secret(
+                {"secret-key": cfg.azure.credentials.secret_key}
+            )
+
+            # Grant read to subclusters
+            self._grant_secret_to_peer_relations(sa_sec)
+            self._grant_secret_to_peer_relations(key_sec)
+
+            # Put Secret objects into the payload
             payload["credentials"]["azure"] = {
-                "storage-account": cfg.azure.credentials.storage_account,
-                "secret-key": cfg.azure.credentials.secret_key,
+                "storage-account": sa_sec,
+                "secret-key": key_sec,
             }
 
         elif typ == "s3":
             cfg = self._resolver.get_storage_config("s3")
             if not cfg or not cfg.s3 or not cfg.s3.credentials:
                 return
-            payload["credentials"]["s3"] = {
-                "access-key": cfg.s3.credentials.access_key,
-                "secret-key": cfg.s3.credentials.secret_key,
-            }
-            if getattr(cfg.s3, "tls_ca_chain", None):
-                ca_secret = self.charm.model.app.add_secret(
-                    {"s3-tls-ca-chain": cfg.s3.tls_ca_chain}
-                )
-                payload["credentials"]["s3_tls_ca_chain"] = ca_secret
 
-        raw = json.dumps(payload)
+            ak_sec = self.charm.model.app.add_secret({"access-key": cfg.s3.credentials.access_key})
+            sk_sec = self.charm.model.app.add_secret({"secret-key": cfg.s3.credentials.secret_key})
+
+            self._grant_secret_to_peer_relations(ak_sec)
+            self._grant_secret_to_peer_relations(sk_sec)
+
+            payload["credentials"]["s3"] = {
+                "access-key": ak_sec,
+                "secret-key": sk_sec,
+            }
+
+            # CA chain is optional
+            if getattr(cfg.s3, "tls_ca_chain", None):
+                ca_sec = self.charm.model.app.add_secret({"s3-tls-ca-chain": cfg.s3.tls_ca_chain})
+                self._grant_secret_to_peer_relations(ca_sec)
+                payload["credentials"]["s3_tls_ca_chain"] = ca_sec
+
+        # Serialize with Secret to ID conversion
+        raw = json.dumps(_jsonify_secrets(payload))
         now = int(time.time())
 
         # write data and trigger to all provider relations
@@ -1061,6 +1085,17 @@ class OpenSearchSnapshotsEvents(Object):
                 logger.info("Created snapshot repository for %s", storage_type)
         except OpenSearchHttpError as e:
             logger.error("ensure_repository failed: %s", e)
+
+    def _grant_secret_to_peer_relations(self, secret: Secret) -> None:
+        """Grant a secret to all provider peer-cluster relations (subclusters)."""
+        try:
+            for rel in self.charm.model.relations.get(PeerClusterRelationName, []):
+                try:
+                    secret.grant(rel)
+                except Exception as e:
+                    logger.warning("Failed to grant secret to rel %s: %s", rel.id, e)
+        except Exception as e:
+            logger.warning("Granting secret to peer relations failed: %s", e)
 
 
 class OpenSearchSnapshotsManager:

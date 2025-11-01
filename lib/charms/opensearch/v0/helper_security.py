@@ -12,12 +12,13 @@ import subprocess
 import tempfile
 from datetime import datetime
 from os.path import exists
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 import bcrypt
 from charms.opensearch.v0.helper_charm import run_cmd
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from cryptography import x509
+from ops.model import Secret, SecretInfo
 
 # The unique Charmhub library identifier, never change it
 LIBID = "224ce9884b0d47b997357fec522f11c7"
@@ -463,3 +464,15 @@ def _normalize_chain(text: Optional[str]) -> str:
 def _hash(text: str) -> str:
     """Hash a PEM chain string."""
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _jsonify_secrets(obj: Any) -> Any:
+    """Return JSON-serializable copy where Secret/SecretInfo become their string ids."""
+    if isinstance(obj, (Secret, SecretInfo)):
+        return obj.id
+    if isinstance(obj, dict):
+        return {k: _jsonify_secrets(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        t = type(obj)
+        return t(_jsonify_secrets(v) for v in obj)
+    return obj
