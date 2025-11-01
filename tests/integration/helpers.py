@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 import json
 import logging
-import random
 import shlex
 import subprocess
 import tempfile
@@ -107,29 +106,44 @@ async def run_action(
     Returns:
         A SimpleNamespace with "status, response (results)"
     """
-    if unit_id is None:
-        online_units = []
-        for unit in await get_application_units(ops_test, app):
-            if unit.workload_status.value != "active":
-                continue
+    units = await get_application_units(ops_test, app)
 
-            ping = subprocess.call(
-                f"nc -zv {unit.ip} 22".split(),
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            if ping == 0:
-                online_units.append(unit)
+    target_unit = None
 
-        unit_id = random.choice(online_units).id
+    if unit_id is not None:
+        suffix = f"/{unit_id}"
+        target_unit = next((u for u in units if u.name.endswith(suffix)), None)
 
-    unit_name = [
-        unit.name
-        for unit in ops_test.model.applications[app].units
-        if unit.name.endswith(f"/{unit_id}")
-    ][0]
+    if target_unit is None:
+        reachable = []
+        for u in units:
+            # best-effort TCP 22 check
+            try:
+                rc = subprocess.call(
+                    ["nc", "-zv", u.ip, "22"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except Exception:
+                rc = 1
+            if rc == 0:
+                reachable.append(u)
 
-    action = await ops_test.model.units.get(unit_name).run_action(action_name, **(params or {}))
+        pool = reachable or units
+        # Prefer leader if attribute exists
+        target_unit = (
+            next((u for u in pool if getattr(u, "is_leader", False)), None)
+            or next((u for u in pool if getattr(u, "leader", False)), None)
+            or next((u for u in pool if u.name.endswith("/0")), None)
+            or (pool[0] if pool else None)
+        )
+
+    if target_unit is None:
+        raise RuntimeError("No units available to run the action on.")
+
+    action = await ops_test.model.units.get(target_unit.name).run_action(
+        action_name, **(params or {})
+    )
     action = await action.wait()
 
     return SimpleNamespace(status=action.status or "completed", response=action.results)
