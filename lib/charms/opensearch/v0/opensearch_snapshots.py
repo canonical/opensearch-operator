@@ -173,20 +173,25 @@ class OpenSearchSnapshotsEvents(Object):
         object_storage_type = self._resolver.get_storage_type() or "s3"
         logger.info(f"S3 credentials changed for object storage type {object_storage_type}")
         if object_storage_type == "conflict":
-            self.charm.status.set(BlockedStatus(BackupRelConflict), app=True)
+            if self.unit.is_leader():
+                self.charm.status.set(BlockedStatus(BackupRelConflict), app=True)
             event.defer()
             return
-        self.charm.status.clear(BackupRelConflict, app=True)
+
+        if self.unit.is_leader():
+            self.charm.status.clear(BackupRelConflict, app=True)
 
         cfg = self._resolver.get_storage_config("s3")
         creds = getattr(getattr(cfg, "s3", None), "credentials", None)
         # handle case where this was deferred in the above case, then the s3 relation was severed
         if object_storage_type != "s3" or not cfg or not creds:
             logger.warning("No S3 object storage configuration.")
-            self.charm.status.set(BlockedStatus(BackupRelDataIncomplete), app=True)
+            if self.unit.is_leader():
+                self.charm.status.set(BlockedStatus(BackupRelDataIncomplete), app=True)
             return
 
-        self.charm.status.clear(BackupRelDataIncomplete, app=True)
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupRelDataIncomplete, app=True)
 
         # apply locally (leader does cluster-level config)
         self.charm.keystore_manager.put_entries(
@@ -236,21 +241,23 @@ class OpenSearchSnapshotsEvents(Object):
         try:
             self.charm.snapshots_manager.verify_repository("s3")
         except OpenSearchHttpError:
-            self.charm.status.set(
-                BlockedStatus(
-                    "S3 repository not reachable: bad credentials or permissions. See unit logs."
-                ),
-                app=True,
-            )
-            return
+            if self.unit.is_leader():
+                self.charm.status.set(
+                    BlockedStatus(
+                        "S3 repository not reachable: bad credentials or permissions. See unit logs."
+                    ),
+                    app=True,
+                )
+                return
 
         self._publish_credentials_to_subclusters()
 
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="s3", action="changed")
 
-        self.charm.status.clear(BackupRelDataIncomplete, app=True)
-        self.charm.status.clear(BackupRelConflict, app=True)
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupRelDataIncomplete, app=True)
+            self.charm.status.clear(BackupRelConflict, app=True)
 
     def _on_s3_credentials_gone(self, event: CredentialsGoneEvent) -> None:
         """Handler for s3 credentials gone event."""
@@ -269,15 +276,19 @@ class OpenSearchSnapshotsEvents(Object):
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="s3", action="gone")
 
-    def _on_azure_credentials_changed(self, event: StorageConnectionInfoChangedEvent) -> None:
+    def _on_azure_credentials_changed(  # noqa: C901
+        self, event: StorageConnectionInfoChangedEvent
+    ) -> None:
         """Handler for azure credentials changed event."""
         object_storage_type = self._resolver.get_storage_type() or "azure"
 
         if object_storage_type == "conflict":
-            self.charm.status.set(BlockedStatus(BackupRelConflict), app=True)
-            event.defer()
-            return
-        self.charm.status.clear(BackupRelConflict, app=True)
+            if self.unit.is_leader():
+                self.charm.status.set(BlockedStatus(BackupRelConflict), app=True)
+                event.defer()
+                return
+        if self.unit.is_leader():
+            self.charm.status.clear(BackupRelConflict, app=True)
 
         cfg = self._resolver.get_storage_config("azure")
         creds = getattr(getattr(cfg, "azure", None), "credentials", None)
@@ -318,21 +329,23 @@ class OpenSearchSnapshotsEvents(Object):
         try:
             self.charm.snapshots_manager.verify_repository("azure")
         except OpenSearchHttpError:
-            self.charm.status.set(
-                BlockedStatus(
-                    "Azure repository not reachable: bad credentials or permissions. See unit logs."
-                ),
-                app=True,
-            )
-            return
+            if self.unit.is_leader():
+                self.charm.status.set(
+                    BlockedStatus(
+                        "Azure repository not reachable: bad credentials or permissions. See unit logs."
+                    ),
+                    app=True,
+                )
+                return
 
         self._publish_credentials_to_subclusters()
 
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="azure", action="changed")
 
-        self.charm.status.clear(BackupRelDataIncomplete, app=True)
-        self.charm.status.clear(BackupRelConflict, app=True)
+        if self.unit.is_leader():
+            self.charm.status.clear(BackupRelDataIncomplete, app=True)
+            self.charm.status.clear(BackupRelConflict, app=True)
 
     def _on_azure_credentials_gone(self, event: StorageConnectionInfoGoneEvent) -> None:
         """Handler for azure credentials gone event."""
