@@ -202,18 +202,6 @@ class OpenSearchSnapshotsEvents(Object):
         logger.info("S3 credentials are added to keystore.")
         self.charm.keystore_manager.reload()
 
-        self._ensure_repository(object_storage_type, self._resolver.get_storage_config("s3"))
-
-        try:
-            self.charm.snapshots_manager.verify_repository("s3")
-        except OpenSearchHttpError:
-            self._set_status_both(
-                BlockedStatus(
-                    "S3 repository not reachable: bad credentials or permissions. See unit logs."
-                )
-            )
-            return
-
         if self.charm.snapshots_manager.requires_custom_s3_ca(
             object_storage_type, self._resolver.get_storage_config("s3")
         ):
@@ -242,6 +230,20 @@ class OpenSearchSnapshotsEvents(Object):
         if need_restart:
             logger.info("service should be restarted")
             self.charm.request_opensearch_restart(reason="apply new object storage CA")
+
+        self._ensure_repository(object_storage_type, self._resolver.get_storage_config("s3"))
+
+        try:
+            self.charm.snapshots_manager.verify_repository("s3")
+        except OpenSearchHttpError:
+            self._set_status_both(
+                BlockedStatus(
+                    "S3 repository not reachable: bad credentials or permissions. See unit logs."
+                )
+            )
+            return
+
+        self._publish_credentials_to_subclusters()
 
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="s3", action="changed")
@@ -322,6 +324,8 @@ class OpenSearchSnapshotsEvents(Object):
             )
             return
 
+        self._publish_credentials_to_subclusters()
+
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="azure", action="changed")
 
@@ -340,6 +344,49 @@ class OpenSearchSnapshotsEvents(Object):
             return
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="azure", action="gone")
+
+    def _publish_credentials_to_subclusters(self) -> None:
+        if not self.charm.unit.is_leader():
+            return
+
+        typ = self._resolver.get_storage_type()
+        if typ not in {"azure", "s3"}:
+            return
+
+        payload = {"credentials": {}}
+
+        if typ == "azure":
+            cfg = self._resolver.get_storage_config("azure")
+            if not cfg or not cfg.azure or not cfg.azure.credentials:
+                return
+            payload["credentials"]["azure"] = {
+                "storage-account": cfg.azure.credentials.storage_account,
+                "secret-key": cfg.azure.credentials.secret_key,
+            }
+
+        elif typ == "s3":
+            cfg = self._resolver.get_storage_config("s3")
+            if not cfg or not cfg.s3 or not cfg.s3.credentials:
+                return
+            payload["credentials"]["s3"] = {
+                "access-key": cfg.s3.credentials.access_key,
+                "secret-key": cfg.s3.credentials.secret_key,
+            }
+            if getattr(cfg.s3, "tls_ca_chain", None):
+                ca_secret = self.charm.model.app.add_secret(
+                    {"s3-tls-ca-chain": cfg.s3.tls_ca_chain}
+                )
+                payload["credentials"]["s3_tls_ca_chain"] = ca_secret
+
+        raw = json.dumps(payload)
+        now = int(time.time())
+
+        # write data and trigger to all provider relations
+        for rel in self.charm.model.relations.get(PeerClusterRelationName, []):
+            rel.data[self.charm.app]["data"] = raw
+            rel.data[self.charm.app]["storage_trigger"] = json.dumps(
+                {"kind": "azure" if typ == "azure" else "s3", "action": "changed", "seq": now}
+            )
 
     def _broadcast_storage_trigger(self, kind: str, action: str) -> None:
         """Broadcast a storage change/gone trigger to peer orchestrators.
@@ -809,10 +856,13 @@ class OpenSearchSnapshotsEvents(Object):
             except json.JSONDecodeError:
                 trigger_data = None
 
-            if trigger_data and self._emit_local_storage_event(
-                trigger_data, relation=event.relation
-            ):
-                pass
+            if not trigger_data:
+                return
+
+            # If emit returns False, payload not ready yet, defer
+            if not self._emit_local_storage_event(trigger_data, relation=event.relation):
+                event.defer()
+                return
 
     def _on_peer_clusters_relation_departed_for_snapshots(self, event) -> None:  # noqa C901
         """Cleanup snapshot config if the orchestrator we depended on is gone."""
@@ -830,10 +880,13 @@ class OpenSearchSnapshotsEvents(Object):
             except json.JSONDecodeError:
                 trigger_data = None
 
-            if trigger_data and self._emit_local_storage_event(
-                trigger_data, relation=event.relation
-            ):
-                pass
+            if not trigger_data:
+                return
+
+            # If emit returns False, payload not ready yet, defer
+            if not self._emit_local_storage_event(trigger_data, relation=event.relation):
+                event.defer()
+                return
 
     def _cleanup(self, object_storage_type, keystore_entries, remove_repo=False) -> bool:
         """Cleanup object storage config.
