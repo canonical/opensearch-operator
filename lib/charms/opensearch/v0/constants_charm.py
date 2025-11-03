@@ -70,7 +70,12 @@ PluginConfigError = "Unexpected error during plugin configuration, check the log
 BackupSetupFailed = "Backup setup failed, check logs for details"
 BackupRelShouldNotExist = "This unit should not be related to backup relation"
 BackupRelDataIncomplete = "Backup relation data missing or incomplete."
-BackupCredentialsIncorrect = "Repository not reachable: bad credentials or permissions."
+BackupCredentialKeysIncorrect = (
+    "Repository not reachable: bad credentials or permissions: fix keystore keys."
+)
+BackupCredentialCAIncorrect = (
+    "Repository not reachable: bad credentials or permissions, fix the CA."
+)
 BackupRelConflict = "More than 1 object storage relation"
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
 SecretAccessError = "Failed to access secret, please check permissions."
