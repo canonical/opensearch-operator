@@ -110,6 +110,11 @@ CA_ERRORS = (
     "unable to find valid",
 )
 
+_CONFLICT_FLAG = {
+    "s3": "snapshots_publish_after_conflict_s3",
+    "azure": "snapshots_publish_after_conflict_azure",
+}
+
 
 class _ObjectStorageEvent(EventBase):
     def __init__(self, handle, *, kind: str, action: str):
@@ -196,6 +201,7 @@ class OpenSearchSnapshotsEvents(Object):
         if object_storage_type == "conflict":
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelConflict), app=True)
+                self._mark_conflict("s3")
             event.defer()
             return
 
@@ -254,7 +260,8 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.status.clear(BackupCredentialKeysIncorrect, app=True)
             self.charm.status.clear(BackupCredentialCAIncorrect, app=True)
 
-        self._publish_credentials_to_subclusters()
+        if self._resolve_conflict("s3"):
+            self._publish_credentials_to_subclusters()
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="s3", action="changed")
 
@@ -275,6 +282,7 @@ class OpenSearchSnapshotsEvents(Object):
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.store_s3_ca(None)
             self._restart_for_ca(None, reason="clean up the object storage CA")
+
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="s3", action="gone")
 
@@ -294,6 +302,7 @@ class OpenSearchSnapshotsEvents(Object):
         if object_storage_type == "conflict":
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelConflict), app=True)
+                self._mark_conflict("azure")
             event.defer()
             return
 
@@ -336,7 +345,8 @@ class OpenSearchSnapshotsEvents(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupCredentialKeysIncorrect, app=True)
 
-        self._publish_credentials_to_subclusters()
+        if self._resolve_conflict("azure"):
+            self._publish_credentials_to_subclusters()
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="azure", action="changed")
 
@@ -1122,6 +1132,32 @@ class OpenSearchSnapshotsEvents(Object):
         return bool(
             self.charm.model.relations.get(PeerClusterOrchestratorRelationName, [])
         ) or bool(self.charm.model.relations.get(PeerClusterRelationName, []))
+
+    def _mark_conflict(self, kind: str) -> None:
+        """Mark that a storage-type conflict occurred and a one time publish is required.
+
+        Args:
+            kind: Storage kind identifier.
+        """
+        if self.charm.unit.is_leader():
+            self.charm.peers_data.put(Scope.APP, _CONFLICT_FLAG[kind], True)
+
+    def _resolve_conflict(self, kind: str) -> bool:
+        """Read and clear the post-conflict publish flag for the given kind.
+
+        Args:
+            kind: Storage kind identifier
+
+        Returns:
+            True if a publish-after-conflict is pending (and the flag was cleared),
+            False otherwise.
+        """
+        if not self.charm.unit.is_leader():
+            return False
+        pending = bool(self.charm.peers_data.get(Scope.APP, _CONFLICT_FLAG[kind], False))
+        if pending:
+            self.charm.peers_data.put(Scope.APP, _CONFLICT_FLAG[kind], False)
+        return pending
 
 
 class OpenSearchSnapshotsManager:

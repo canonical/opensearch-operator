@@ -30,6 +30,7 @@ import pytest
 from azure.storage.blob import BlobServiceClient
 from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
+    BackupCredentialCAIncorrect,
     BackupRelShouldNotExist,
     BackupSetupFailed,
 )
@@ -797,6 +798,41 @@ async def test_wrong_s3_credentials(ops_test: OpsTest) -> None:
     assert resp["status"] == 500
     assert "repository_exception" in resp["error"]["type"]
     assert "Could not determine repository generation from root blobs" in resp["error"]["reason"]
+
+
+@pytest.mark.group(id="all")
+@pytest.mark.abort_on_fail
+async def test_wrong_s3_ca_blocked(
+    ops_test: OpsTest,
+    cloud_configs: Dict[str, Dict[str, str]],
+    cloud_credentials: Dict[str, Dict[str, str]],
+) -> None:
+    """Verify the charm detects a CA failure (wrong tls-ca-chain) as a blocked status."""
+    # We need an S3 endpoint that uses a custom CA
+    if "microceph" not in cloud_configs or "tls-ca-chain" not in cloud_configs["microceph"]:
+        pytest.skip("No custom CA chain available in test config (microceph not set up).")
+
+    app = (await app_name(ops_test)) or APP_NAME
+
+    good_cfg = dict(cloud_configs["microceph"])
+    good_creds = dict(cloud_credentials["microceph"])
+
+    # Corrupt the CA chain
+    bad_cfg = dict(good_cfg)
+    bad_cfg["tls-ca-chain"] = good_cfg["tls-ca-chain"].replace(
+        "BEGIN CERTIFICATE", "BEGIN OOPS", 1
+    )
+
+    # Apply the broken CA
+    await _configure_s3(ops_test, bad_cfg, good_creds, app)
+
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["blocked"],
+        apps_full_statuses={app: {"blocked": [BackupCredentialCAIncorrect]}},
+        idle_period=IDLE_PERIOD,
+    )
 
 
 @pytest.mark.group(id="all")
