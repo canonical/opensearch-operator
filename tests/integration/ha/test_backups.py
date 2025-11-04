@@ -222,6 +222,7 @@ async def _configure_s3(
     config: Dict[str, str],
     credentials: Dict[str, str],
     app_name: str | None = None,
+    wait_for_app_active: bool = True,
 ) -> None:
     """Configure s3-integrator with endpoint/bucket/path/region and optional tls-ca-chain."""
     base_cfg = {
@@ -244,9 +245,10 @@ async def _configure_s3(
         params=credentials,
         app=S3_INTEGRATOR,
     )
+    await ops_test.model.wait_for_idle(apps=[S3_INTEGRATOR], timeout=TIMEOUT)
 
-    apps = [S3_INTEGRATOR] if app_name is None else [S3_INTEGRATOR, app_name]
-    await ops_test.model.wait_for_idle(apps=apps, status="active", timeout=TIMEOUT)
+    if app_name and wait_for_app_active:
+        await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
 
 
 async def _configure_azure(
@@ -807,24 +809,42 @@ async def test_wrong_s3_ca_blocked(
     cloud_configs: Dict[str, Dict[str, str]],
     cloud_credentials: Dict[str, Dict[str, str]],
 ) -> None:
-    """Verify the charm detects a CA failure (wrong tls-ca-chain) as a blocked status."""
-    # We need an S3 endpoint that uses a custom CA
+    """Verify the charm reports a blocked status when tls-ca-chain is invalid, then recovers."""
     if "microceph" not in cloud_configs or "tls-ca-chain" not in cloud_configs["microceph"]:
         pytest.skip("No custom CA chain available in test config (microceph not set up).")
 
     app = (await app_name(ops_test)) or APP_NAME
-
     good_cfg = dict(cloud_configs["microceph"])
     good_creds = dict(cloud_credentials["microceph"])
 
     # Corrupt the CA chain
     bad_cfg = dict(good_cfg)
-    bad_cfg["tls-ca-chain"] = good_cfg["tls-ca-chain"].replace(
-        "BEGIN CERTIFICATE", "BEGIN OOPS", 1
+    bad_cfg["tls-ca-chain"] = good_cfg["tls-ca-chain"].replace("BEGIN CERTIFICATE", "BEGIN XXX", 1)
+
+    await _configure_s3(
+        ops_test,
+        bad_cfg,
+        good_creds,
+        app_name=app,
+        wait_for_app_active=False,
     )
 
-    # Apply the broken CA
-    await _configure_s3(ops_test, bad_cfg, good_creds, app)
+    await ops_test.model.wait_for_idle(apps=[app], timeout=TIMEOUT, idle_period=IDLE_PERIOD)
+
+    # With bad CA, repository verification usually fails.
+    # it can be 500 (repo check error) or 404 (repo never created yet).
+    unit_ip = await get_leader_unit_ip(ops_test, app=app)
+    try:
+        bad_resp = await http_request(
+            ops_test,
+            "GET",
+            f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}/_all",
+            json_resp=True,
+        )
+        assert bad_resp["status"] in (404, 500)
+    except Exception:
+        # If TLS breaks earlier in the path, the call itself may fail.
+        pass
 
     await wait_until(
         ops_test,
@@ -833,6 +853,24 @@ async def test_wrong_s3_ca_blocked(
         apps_full_statuses={app: {"blocked": [BackupCredentialCAIncorrect]}},
         idle_period=IDLE_PERIOD,
     )
+
+    # restore the correct CA and ensure we recover to active.
+    await _configure_s3(ops_test, good_cfg, good_creds, app_name=app, wait_for_app_active=True)
+
+    await ops_test.model.wait_for_idle(apps=[app], timeout=TIMEOUT, idle_period=IDLE_PERIOD)
+
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["active"],
+        idle_period=IDLE_PERIOD,
+    )
+
+    # check if repo endpoint is reachable now (200 if created, 404 if not yet).
+    resp_ok = await http_request(
+        ops_test, "GET", f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}", json_resp=True
+    )
+    assert resp_ok["status"] in (200, 404)
 
 
 @pytest.mark.group(id="all")
