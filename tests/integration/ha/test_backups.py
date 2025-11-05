@@ -22,6 +22,7 @@ import random
 import string
 import time
 import uuid
+from copy import deepcopy
 from datetime import datetime
 from typing import Dict
 
@@ -818,7 +819,7 @@ async def test_wrong_s3_ca_blocked(
     good_creds = dict(cloud_credentials["microceph"])
 
     # Corrupt the CA chain
-    bad_cfg = dict(good_cfg)
+    bad_cfg = deepcopy(good_cfg)
     bad_cfg["tls-ca-chain"] = good_cfg["tls-ca-chain"].replace("BEGIN CERTIFICATE", "BEGIN XXX", 1)
 
     await _configure_s3(
