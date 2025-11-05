@@ -92,7 +92,7 @@ AZURE_INTEGRATOR = "azure-storage-integrator"
 AZURE_INTEGRATOR_CHANNEL = "latest/edge"
 AZURE_RELATION = "azure-credentials"
 
-TIMEOUT = 20 * 60
+TIMEOUT = 40 * 60
 BackupsPath = f"opensearch/{uuid.uuid4()}"
 
 
