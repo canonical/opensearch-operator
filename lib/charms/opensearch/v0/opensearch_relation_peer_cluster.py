@@ -41,7 +41,6 @@ from charms.opensearch.v0.models import (
 )
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from charms.opensearch.v0.opensearch_snapshots import ObjectStorageResolver
 from ops import (
     BlockedStatus,
     EventBase,
@@ -147,7 +146,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             charm.on[self.relation_name].relation_departed,
             self._on_peer_cluster_relation_departed,
         )
-        self.resolver = ObjectStorageResolver(charm)
 
     def _on_peer_cluster_relation_joined(self, event: RelationJoinedEvent):
         """Received by all units in main/failover clusters when new sub-cluster joins the rel."""
@@ -595,7 +593,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(AZURE_RELATION):
                 return None
 
-            cfg = self.resolver.get_storage_config("azure") or ObjectStorageConfig()
+            cfg = (
+                self.charm.snapshot_events.resolver.get_storage_config("azure")
+                or ObjectStorageConfig()
+            )
             azure = getattr(cfg, "azure", None)
             if not (azure and azure.credentials and azure.credentials.storage_account):
                 return None
@@ -627,7 +628,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             if not self.charm.model.get_relation(S3_RELATION):
                 return None
-            cfg = self.resolver.get_storage_config("s3") or ObjectStorageConfig()
+            cfg = (
+                self.charm.snapshot_events.resolver.get_storage_config("s3")
+                or ObjectStorageConfig()
+            )
             s3 = getattr(cfg, "s3", None)
             if not (
                 s3 and s3.credentials and s3.credentials.access_key and s3.credentials.secret_key
@@ -659,7 +663,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             if not self.charm.model.get_relation(S3_RELATION):
                 return None
-            cfg = self.resolver.get_storage_config("s3") or ObjectStorageConfig()
+            cfg = (
+                self.charm.snapshot_events.resolver.get_storage_config("s3")
+                or ObjectStorageConfig()
+            )
             s3 = cfg.s3
             ca = s3.tls_ca_chain if s3 else None
             if not ca:

@@ -1,7 +1,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 import shutil
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Callable
@@ -70,7 +70,7 @@ def create_x509_resources(expiring_in_days: int = 1) -> SimpleNamespace:
         ]
     )
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     expiration = now + timedelta(days=expiring_in_days)
     cert_builder = (
         x509.CertificateBuilder(

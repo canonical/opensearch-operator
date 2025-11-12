@@ -230,7 +230,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.plugin_manager = OpenSearchPluginManager(self)
         self.snapshots_manager = OpenSearchSnapshotsManager(self, self.opensearch)
-
+        self.snapshot_events = OpenSearchSnapshotsEvents(self)
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
         self.peer_cluster_provider = OpenSearchPeerClusterProvider(self)
@@ -286,8 +286,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # Ensure that only one instance of the `_on_peer_relation_changed` handler exists
         # in the deferred event queue
         self._is_peer_rel_changed_deferred = False
-
-        self.snapshot_events = OpenSearchSnapshotsEvents(self)
 
     @property
     @abc.abstractmethod

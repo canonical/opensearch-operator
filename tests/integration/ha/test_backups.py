@@ -23,7 +23,7 @@ import string
 import time
 import uuid
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict
 
 import boto3
@@ -93,7 +93,7 @@ AZURE_INTEGRATOR = "azure-storage-integrator"
 AZURE_INTEGRATOR_CHANNEL = "latest/edge"
 AZURE_RELATION = "azure-credentials"
 
-TIMEOUT = 40 * 60
+TIMEOUT = 20 * 60
 BackupsPath = f"opensearch/{uuid.uuid4()}"
 
 
@@ -163,7 +163,6 @@ def remove_backups(  # noqa C901
     cloud_credentials: Dict[str, Dict[str, str]],
 ):
     """Remove previously created backups from cloud buckets/containers."""
-    """Remove previously created backups from the cloud-corresponding bucket."""
     yield
 
     logger.info("Cleaning backups from cloud buckets")
@@ -246,7 +245,6 @@ async def _configure_s3(
         params=credentials,
         app=S3_INTEGRATOR,
     )
-    await ops_test.model.wait_for_idle(apps=[S3_INTEGRATOR], timeout=TIMEOUT)
 
     if app_name and wait_for_app_active:
         await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
@@ -505,7 +503,7 @@ async def test_create_backup_and_restore(
     else:
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
-    date_before_backup = datetime.utcnow()
+    date_before_backup = datetime.now(timezone.utc)
 
     # Wait, we want to make sure the timestamps are different
     await asyncio.sleep(5)
@@ -572,7 +570,7 @@ async def test_remove_and_readd_backup_relation(
     else:
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
-    date_before_backup = datetime.utcnow()
+    date_before_backup = datetime.now(timezone.utc)
 
     # Wait, we want to make sure the timestamps are different
     await asyncio.sleep(5)
@@ -689,7 +687,7 @@ async def test_restore_to_new_cluster(
 
     await writer.start()
     time.sleep(10)
-    date_before_backup = datetime.utcnow()
+    date_before_backup = datetime.now(timezone.utc)
 
     # Wait, we want to make sure the timestamps are different
     await asyncio.sleep(5)
@@ -830,8 +828,6 @@ async def test_wrong_s3_ca_blocked(
         wait_for_app_active=False,
     )
 
-    await ops_test.model.wait_for_idle(apps=[app], timeout=TIMEOUT, idle_period=IDLE_PERIOD)
-
     # With bad CA, repository verification usually fails.
     # it can be 500 (repo check error) or 404 (repo never created yet).
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
@@ -857,8 +853,6 @@ async def test_wrong_s3_ca_blocked(
 
     # restore the correct CA and ensure we recover to active.
     await _configure_s3(ops_test, good_cfg, good_creds, app_name=app, wait_for_app_active=True)
-
-    await ops_test.model.wait_for_idle(apps=[app], timeout=TIMEOUT, idle_period=IDLE_PERIOD)
 
     await wait_until(
         ops_test,
@@ -910,7 +904,7 @@ async def test_change_config_and_backup_restore(
         config: Dict[str, str] = cloud_configs[cloud_name]
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
-        date_before_backup = datetime.utcnow()
+        date_before_backup = datetime.now(timezone.utc)
 
         # Wait, we want to make sure the timestamps are different
         await asyncio.sleep(5)

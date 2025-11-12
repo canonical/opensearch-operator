@@ -5,7 +5,7 @@ import asyncio
 import json
 import logging
 import subprocess
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from hashlib import md5
 from typing import Any, Dict, List, Optional, Union
 from uuid import uuid4
@@ -75,7 +75,7 @@ def get_raw_application(ops_test: OpsTest, app: str) -> Dict[str, Any]:
 
 def now() -> str:
     """Print date."""
-    return datetime.now().strftime("%H:%M:%S")
+    return datetime.now(timezone.utc).strftime("%H:%M:%S")
 
 
 def _dump_juju_logs(model: str, unit: Optional[str] = None, lines: int = 500) -> None:
