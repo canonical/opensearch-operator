@@ -288,6 +288,10 @@ class OpenSearchSnapshotsEvents(Object):
             logger.info("Restarting Opensearch for CA cleanup.")
             self._restart_for_ca(None, reason="clean up the object storage CA")
 
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupCredentialKeysIncorrect, app=True)
+            self.charm.status.clear(BackupCredentialCAIncorrect, app=True)
+
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="s3", action="gone")
 
@@ -365,20 +369,22 @@ class OpenSearchSnapshotsEvents(Object):
             object_storage_type="azure", keystore_entries=keystore_entries, remove_repo=True
         ):
             return
+
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupCredentialKeysIncorrect, app=True)
+
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="azure", action="gone")
 
     @staticmethod
     def classify_os_repo_errors(err: "OpenSearchHttpError") -> str:
         """Detect the CA or key related errors."""
-        body = getattr(err, "response_body", None)
-        text = (
-            json.dumps(body, ensure_ascii=False, default=str)
-            if isinstance(body, dict)
-            else str(body or "")
-        )
-        text = text.lower()
-        return "CA" if any(failure in text for failure in CA_ERRORS) else "KEYS"
+        text = json.dumps(
+            getattr(err, "response_body", {}), ensure_ascii=False, default=str
+        ).lower()
+        if "imds" in text or "failed to load credentials" in text:
+            return "KEYS"
+        return "CA" if any(f in text for f in CA_ERRORS) else "KEYS"
 
     def _set_app_to_blocked(self, kind: str) -> None:
         """Set one of two Blocked statuses on the app."""
@@ -560,7 +566,7 @@ class OpenSearchSnapshotsEvents(Object):
 
         scope = Scope.APP if self.charm.unit.is_leader() else Scope.UNIT
 
-        # Use per-kind watermarks to avoid cross-kind masking
+        # Use watermarks to avoid cross-kind masking
         key = "snapshots_last_storage_seq"
         last_seq = int(self.charm.peers_data.get(scope, key, 0))
         if seq <= last_seq:
@@ -1087,32 +1093,6 @@ class OpenSearchSnapshotsEvents(Object):
         return bool(
             self.charm.model.relations.get(PeerClusterOrchestratorRelationName, [])
         ) or bool(self.charm.model.relations.get(PeerClusterRelationName, []))
-
-    def _mark_conflict(self, kind: str) -> None:
-        """Mark that a storage-type conflict occurred and a one time publish is required.
-
-        Args:
-            kind: Storage kind identifier.
-        """
-        if self.charm.unit.is_leader():
-            self.charm.peers_data.put(Scope.APP, _CONFLICT_FLAG[kind], True)
-
-    def _resolve_conflict(self, kind: str) -> bool:
-        """Read and clear the post-conflict publish flag for the given kind.
-
-        Args:
-            kind: Storage kind identifier
-
-        Returns:
-            True if a publish-after-conflict is pending (and the flag was cleared),
-            False otherwise.
-        """
-        if not self.charm.unit.is_leader():
-            return False
-        pending = bool(self.charm.peers_data.get(Scope.APP, _CONFLICT_FLAG[kind], False))
-        if pending:
-            self.charm.peers_data.put(Scope.APP, _CONFLICT_FLAG[kind], False)
-        return pending
 
 
 class OpenSearchSnapshotsManager:

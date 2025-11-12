@@ -272,13 +272,16 @@ async def _configure_azure(
         f"Juju secret for secret-key config option for azure-storage-integrator added. Secret URI: {credentials_secret_uri}"
     )
 
-    configuration_parameters = {
-        "storage-account": credentials["storage-account"],
-        "credentials": credentials_secret_uri,
-    }
+    full_cfg = dict(config)
+    full_cfg.update(
+        {
+            "storage-account": credentials["storage-account"],
+            "credentials": credentials_secret_uri,
+        }
+    )
     # apply new configuration options
     logger.info("Setting up configuration for azure-storage-integrator charm...")
-    await ops_test.model.applications[AZURE_INTEGRATOR].set_config(configuration_parameters)
+    await ops_test.model.applications[AZURE_INTEGRATOR].set_config(full_cfg)
 
     apps = [AZURE_INTEGRATOR] if app_name is None else [AZURE_INTEGRATOR, app_name]
     await ops_test.model.wait_for_idle(
@@ -819,7 +822,7 @@ async def test_wrong_s3_ca_blocked(
 
     # Corrupt the CA chain
     bad_cfg = deepcopy(good_cfg)
-    bad_cfg["tls-ca-chain"] = good_cfg["tls-ca-chain"].replace("BEGIN CERTIFICATE", "BEGIN XXX", 1)
+    bad_cfg["tls-ca-chain"] = bad_cfg["tls-ca-chain"].replace("BEGIN CERTIFICATE", "BEGIN XXX", 1)
 
     await _configure_s3(
         ops_test,
@@ -844,13 +847,14 @@ async def test_wrong_s3_ca_blocked(
         assert bad_resp["status"] in (404, 500)
     except Exception:
         # If TLS breaks earlier in the path, the call itself may fail.
+        logger.info("Repository verification failed.")
         pass
 
     await wait_until(
         ops_test,
         apps=[app],
         apps_statuses=["blocked"],
-        apps_full_statuses={app: {"blocked": [BackupCredentialCAIncorrect]}},
+        apps_full_statuses={"main": {"blocked": [BackupCredentialCAIncorrect]}},
         idle_period=IDLE_PERIOD,
     )
 
