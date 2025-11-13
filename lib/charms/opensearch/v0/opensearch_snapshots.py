@@ -198,6 +198,7 @@ class OpenSearchSnapshotsEvents(Object):
         if dep and dep.typ != DeploymentType.MAIN_ORCHESTRATOR and self._has_peer_topology():
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelShouldNotExist), app=True)
+                self.charm.status.set(BlockedStatus(BackupRelShouldNotExist))
             return
 
         object_storage_type = self.resolver.get_storage_type() or "s3"
@@ -205,11 +206,13 @@ class OpenSearchSnapshotsEvents(Object):
         if object_storage_type == "conflict":
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelConflict), app=True)
+                self.charm.status.set(BlockedStatus(BackupRelConflict))
             event.defer()
             return
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelConflict, app=True)
+            self.charm.status.clear(BackupRelConflict)
 
         cfg = self.resolver.get_storage_config("s3")
         creds = getattr(getattr(cfg, "s3", None), "credentials", None)
@@ -218,10 +221,12 @@ class OpenSearchSnapshotsEvents(Object):
             logger.warning("No S3 object storage configuration.")
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelDataIncomplete), app=True)
+                self.charm.status.set(BlockedStatus(BackupRelDataIncomplete))
             return
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelDataIncomplete, app=True)
+            self.charm.status.clear(BackupRelDataIncomplete)
 
         # apply locally (leader does cluster-level config)
         self.charm.keystore_manager.put_entries(
@@ -262,7 +267,9 @@ class OpenSearchSnapshotsEvents(Object):
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupCredentialKeysIncorrect, app=True)
+            self.charm.status.clear(BackupCredentialKeysIncorrect)
             self.charm.status.clear(BackupCredentialCAIncorrect, app=True)
+            self.charm.status.clear(BackupCredentialCAIncorrect)
 
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="s3", action="changed")
@@ -271,6 +278,7 @@ class OpenSearchSnapshotsEvents(Object):
         """Handler for s3 credentials gone event."""
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelShouldNotExist, app=True)
+            self.charm.status.clear(BackupRelShouldNotExist)
 
         if self.resolver.get_storage_type() == "conflict":
             return
@@ -288,7 +296,9 @@ class OpenSearchSnapshotsEvents(Object):
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupCredentialKeysIncorrect, app=True)
+            self.charm.status.clear(BackupCredentialKeysIncorrect)
             self.charm.status.clear(BackupCredentialCAIncorrect, app=True)
+            self.charm.status.clear(BackupCredentialCAIncorrect)
 
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="s3", action="gone")
@@ -302,6 +312,7 @@ class OpenSearchSnapshotsEvents(Object):
         if dep and dep.typ != DeploymentType.MAIN_ORCHESTRATOR and self._has_peer_topology():
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelShouldNotExist), app=True)
+                self.charm.status.set(BlockedStatus(BackupRelShouldNotExist))
             return
 
         object_storage_type = self.resolver.get_storage_type() or "azure"
@@ -309,11 +320,13 @@ class OpenSearchSnapshotsEvents(Object):
         if object_storage_type == "conflict":
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelConflict), app=True)
+                self.charm.status.set(BlockedStatus(BackupRelConflict))
             event.defer()
             return
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelConflict, app=True)
+            self.charm.status.clear(BackupRelConflict)
 
         cfg = self.resolver.get_storage_config("azure")
         creds = getattr(getattr(cfg, "azure", None), "credentials", None)
@@ -322,10 +335,12 @@ class OpenSearchSnapshotsEvents(Object):
             logger.warning("No Azure object storage configuration.")
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelDataIncomplete), app=True)
+                self.charm.status.set(BlockedStatus(BackupRelDataIncomplete))
             return
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelDataIncomplete, app=True)
+            self.charm.status.clear(BackupRelDataIncomplete)
 
         self.charm.keystore_manager.put_entries(
             {
@@ -347,9 +362,13 @@ class OpenSearchSnapshotsEvents(Object):
                     BlockedStatus(BackupCredentialKeysIncorrect),
                     app=True,
                 )
+                self.charm.status.set(
+                    BlockedStatus(BackupCredentialKeysIncorrect),
+                )
             return
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupCredentialKeysIncorrect, app=True)
+            self.charm.status.clear(BackupCredentialKeysIncorrect)
 
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="azure", action="changed")
@@ -358,6 +377,7 @@ class OpenSearchSnapshotsEvents(Object):
         """Handler for azure credentials gone event."""
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelShouldNotExist, app=True)
+            self.charm.status.clear(BackupRelShouldNotExist)
 
         if self.resolver.get_storage_type() == "conflict":
             return
@@ -370,6 +390,7 @@ class OpenSearchSnapshotsEvents(Object):
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupCredentialKeysIncorrect, app=True)
+            self.charm.status.clear(BackupCredentialKeysIncorrect)
 
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
         self._broadcast_storage_trigger(kind="azure", action="gone")
@@ -388,8 +409,10 @@ class OpenSearchSnapshotsEvents(Object):
         """Set one of two Blocked statuses on the app."""
         if kind == "CA":
             self.charm.status.set(BlockedStatus(BackupCredentialCAIncorrect), app=True)
+            self.charm.status.set(BlockedStatus(BackupCredentialCAIncorrect))
         else:
             self.charm.status.set(BlockedStatus(BackupCredentialKeysIncorrect), app=True)
+            self.charm.status.set(BlockedStatus(BackupCredentialKeysIncorrect))
 
     def _broadcast_storage_trigger(self, kind: str, action: str) -> None:
         """Broadcast a storage change/gone trigger to peer orchestrators.
