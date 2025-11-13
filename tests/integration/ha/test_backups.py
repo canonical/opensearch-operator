@@ -775,16 +775,27 @@ async def test_repo_missing_message(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(id="all")
 @pytest.mark.abort_on_fail
-async def test_wrong_s3_credentials(ops_test: OpsTest) -> None:
+async def test_wrong_s3_credentials(
+    ops_test: OpsTest,
+    cloud_configs: Dict[str, Dict[str, str]],
+    cloud_credentials: Dict[str, Dict[str, str]],
+) -> None:
     """Verify blocked status and error from OpenSearch when S3 creds are wrong."""
+    if "aws" not in cloud_configs or "aws" not in cloud_credentials:
+        pytest.skip("AWS config/credentials not available for S3 integrator tests.")
+
     app = (await app_name(ops_test)) or APP_NAME
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
-    config = {"endpoint": "http://localhost", "bucket": "error", "path": "/", "region": "default"}
-    credentials = {"access-key": "error", "secret-key": "error"}
-
-    await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
-    await run_action(ops_test, 0, "sync-s3-credentials", params=credentials, app=S3_INTEGRATOR)
+    bad_config = {
+        "endpoint": "http://localhost",
+        "bucket": "error",
+        "path": "/",
+        "region": "default",
+    }
+    bad_credentials = {"access-key": "error", "secret-key": "error"}
+    await ops_test.model.applications[S3_INTEGRATOR].set_config(bad_config)
+    await run_action(ops_test, 0, "sync-s3-credentials", params=bad_credentials, app=S3_INTEGRATOR)
     await ops_test.model.wait_for_idle(apps=[S3_INTEGRATOR], status="active", timeout=TIMEOUT)
     await wait_until(
         ops_test,
@@ -803,6 +814,40 @@ async def test_wrong_s3_credentials(ops_test: OpsTest) -> None:
     assert "repository_exception" in resp["error"]["type"]
     assert "Could not determine repository generation from root blobs" in resp["error"]["reason"]
 
+    # revert back to normal state
+    good_config = dict(cloud_configs["aws"])
+    good_credentials = dict(cloud_credentials["aws"])
+
+    await ops_test.model.applications[S3_INTEGRATOR].set_config(good_config)
+    await run_action(
+        ops_test,
+        0,
+        "sync-s3-credentials",
+        params=good_credentials,
+        app=S3_INTEGRATOR,
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[S3_INTEGRATOR],
+        status="active",
+        timeout=TIMEOUT,
+    )
+
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=3,
+        idle_period=30,
+    )
+    resp_ok = await http_request(
+        ops_test,
+        "GET",
+        f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}",
+        json_resp=True,
+    )
+    assert resp_ok["status"] in (200, 404)
+
 
 @pytest.mark.group(id="all")
 @pytest.mark.abort_on_fail
@@ -819,9 +864,11 @@ async def test_wrong_s3_ca_blocked(
     good_cfg = dict(cloud_configs["microceph"])
     good_creds = dict(cloud_credentials["microceph"])
 
-    # Corrupt the CA chain
+    # Wrong CA chain
     bad_cfg = deepcopy(good_cfg)
-    bad_cfg["tls-ca-chain"] = bad_cfg["tls-ca-chain"].replace("BEGIN CERTIFICATE", "BEGIN XXX", 1)
+    bad_cfg["tls-ca-chain"] = (
+        "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZJakNDQXdxZ0F3SUJBZ0lVRGVIRm9EbVlYTW5iRVdFd0VMN3lrL1dDbGVvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0dERVdNQlFHQTFVRUF3d05NVEF1TWpVMUxqY3lMakkwTlRBZUZ3MHlOVEV4TVRNd09ESTJNVE5hRncweQpOakV4TVRNd09ESTJNVE5hTUJneEZqQVVCZ05WQkFNTURURXdMakkxTlM0M01pNHlORFV3Z2dJaU1BMEdDU3FHClNJYjNEUUVCQVFVQUE0SUNEd0F3Z2dJS0FvSUNBUUNTTDcyMGZxNHhydGR2UHJVK3lUbzlMakF2Y0NPem5yWWQKaUMzK2ZHaFQzYmkwZCtKSitKWm5IZTR6SUM4Ti9qa3RNUjhVdk8ya2V3SnRCZ1FxbmZuZEd5cjlTd0c3OU1VaQp2WnZySHlibS9oNXd6RGo1bWxmdGpaZDRTSnNWdXJNdjlHd3VQUEg5blhQTjVjRk0rQytnVThTczdwb21XUFNIClRVL2dKQkxoNHlidVBtQW9zeVNpTnVEa29QbkJtaUtuMEQyaDViTGp5WGhSL296Yy9xdklVZ3J1a09rSTgxcGIKTmNQbzdwbHZwT25GeURydFBiMEpGak1yWWJZWmhhMk9YL3JwV0hJUWt6NjUrK3RESk5uT2JaeVAvb3NhWjR0bgpTa1pVM2U2MTNzeWFiTjdvRHp1QWxjRGVGS2N5NkRiQXp5ZGJKREdDN2xlRFQrK0JHMGNsUlFveGowUFVEck41Clg3RHVud0Z0czN0TG8vZHJIdXYvaEpZWWxucjQzU0ZEcjBybnhQK2YwZWp4SUFaR2hjYXpKalFKcHVaYlhYSjEKUVQzdEJiREM1RjM1MHZLWnJpME94UnVITTQ3bEMva3krbHpNUjlOSWxEVmVIVTM5Q3ZTUExuOU9mN3JJZFBCOQpaUzhKcTh0RlNjTWZwVzhUdmZpTktEV0RCbndEUVVYQ0d6Nk9rWkpta0g3UVdvRHJSK24rajRPcjdzQ2g1L2ljCld3TENvbjgvU3l4SVNScEJpZDN5QkVNR29NZHZrWlVXY1hheDRzN2FUMkh1cHRwT2JHa0Q2Vno4Y2tJc0ZUV3oKYThZdHNOdXRWbGZpUmgrZ0Jjc3EwRjdEWVJCK2MrdElVRzBkcHlXb2owdmp5cTAxcmlIVDFaMmhjSVFDU29QTwpza01LTXl4ck93SURBUUFCbzJRd1lqQWRCZ05WSFE0RUZnUVVCempKbm54Sy83MDYyUitkOUZ5QTlNT0ZZL2t3Ckh3WURWUjBqQkJnd0ZvQVVCempKbm54Sy83MDYyUitkOUZ5QTlNT0ZZL2t3RHdZRFZSMFRBUUgvQkFVd0F3RUIKL3pBUEJnTlZIUkVFQ0RBR2h3UUsvMGoxTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElDQVFCZUZoUHRxMnRCTUdKSgp4alhRalR1eEl1UVE3NXBmK2FxQkRvaHY0MnUwcVNCTkUyYnBVaFN5RUpIckFXNFplQVpFeVN1NlhEd1NYbnVhCnVzNWhOdklhcXhEUlV4ZXhQekE0RUR3emRCcHhpNDN4YzJObHFWaEtBQ3l6NlphSXBoN2R6VTdtUXJYZzNKbWIKVlEweGloNzkvaXFNdnNpejlKdG9ObXFpejdJdGxWeUhCVzF5T3hUdDUxNzNudFZBSzY0RnN2M0NXYWFwaFA3awpidHZDaFVnaDRHaEx5LzdScUJoZnhrb21CekZyRy82VnZKMDM1cnZzT1VHU2hSVUh2VXF5U3lhemRmejdDaUUzCnFCVVYzaUFyMkNBY3lCakQ3Mkx2UjJxd1JrZUpLN3QrdWZtc2M5bDBWNDgzVXdCbC9IWHRXZDljcm8vczExS3cKaS9CWHdsMWFsaStmYURNUkFucG56WUI3blJHUnVmZFNQUUp3anpNdGNERW84Y29ybHd0M2pPRExKK1RybjhGNQpjVDlldWM0Y2dBWXIrL2U4VXo1Mkd0V2VlOXZzZ3dlZVJkZy8rNTVhQ2VFd21oN3g5a0lmR3VicVRkT0dGa0dTCjlFdDN4Mi9YdnNlbnNwbnpDNTQ5ZmVubG1hcHRuelRpMHhkZk03bnNnQTJFQ2NQcUNwakVWZm52ZFZaa0ZnS1cKVzhlaGFQZ1ZmQnNLUDRDcmNXVnFxYXU2ZWFaU0FEOTYvYk4vZDJ5M3hyM1lIcWtBQktmYjBESE1hU2pzRkZFWQprR21TQ0FLaEtzNTBKd2dVYWsvdGxjcFBlUGp0N3JwMjYweTh5VFQ0VEZnOEVrQStpRGFOMUovZGdaL1VqVlFxCi9EeVUyN2Rrb0J5T0dQQTdNWE10cnpaQTI1MFo1QT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
+    )
 
     await _configure_s3(
         ops_test,
