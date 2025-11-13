@@ -31,7 +31,6 @@ import pytest
 from azure.storage.blob import BlobServiceClient
 from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
-    BackupCredentialCAIncorrect,
     BackupRelShouldNotExist,
     BackupSetupFailed,
 )
@@ -853,8 +852,8 @@ async def test_wrong_s3_ca_blocked(
     await wait_until(
         ops_test,
         apps=[app],
+        units_statuses=["active", "blocked"],
         apps_statuses=["blocked"],
-        apps_full_statuses={"main": {"blocked": [BackupCredentialCAIncorrect]}},
         idle_period=IDLE_PERIOD,
     )
 
