@@ -105,7 +105,7 @@ CA_ERRORS = (
     "valid certification path",
     "self signed certificate",
     "sslhandshakeexception",
-    "validator.exception",
+    "validator_exception",
     "unable to find valid",
 )
 
@@ -237,26 +237,27 @@ class OpenSearchSnapshotsEvents(Object):
         logger.info("S3 credentials are added to keystore.")
         self.charm.keystore_manager.reload()
 
-        if self.charm.snapshots_manager.requires_custom_s3_ca(
-            object_storage_type, self.resolver.get_storage_config("s3")
-        ):
-            s3_ca = self.resolver.get_storage_config("s3").s3.tls_ca_chain
-            self.charm.snapshots_manager.store_s3_ca(s3_ca)
-            self._restart_for_ca(s3_ca, reason="apply new object storage CA")
-            logger.info("S3 CA is stored.")
+        need_custom_ca = self.charm.snapshots_manager.requires_custom_s3_ca(
+            object_storage_type, cfg
+        )
+        new_chain = cfg.s3.tls_ca_chain if need_custom_ca else None
 
+        if new_chain:
+            self.charm.snapshots_manager.store_s3_ca(new_chain)
+            logger.info("S3 CA stored.")
         else:
-            # If a custom CA is currently stored but no longer required, drop it
             if self.charm.snapshots_manager.is_custom_s3_ca_stored():
                 self.charm.snapshots_manager.store_s3_ca(None)
-                self._restart_for_ca(None, reason="clean up the object storage CA")
-                logger.info("S3 CA is deleted.")
+                logger.info("S3 CA removed.")
+
+        self._restart_for_ca(new_chain, reason="apply object storage CA change")
 
         try:
             self._ensure_repository(object_storage_type, cfg)
             self.charm.snapshots_manager.verify_repository("s3")
         except OpenSearchHttpError as e:
-            self._set_app_to_blocked(self.classify_os_repo_errors(e))
+            if self.charm.unit.is_leader():
+                self._set_app_to_blocked(self.classify_os_repo_errors(e))
             return
 
         if self.charm.unit.is_leader():
@@ -385,8 +386,6 @@ class OpenSearchSnapshotsEvents(Object):
 
     def _set_app_to_blocked(self, kind: str) -> None:
         """Set one of two Blocked statuses on the app."""
-        if not self.charm.unit.is_leader():
-            return
         if kind == "CA":
             self.charm.status.set(BlockedStatus(BackupCredentialCAIncorrect), app=True)
         else:
@@ -850,7 +849,6 @@ class OpenSearchSnapshotsEvents(Object):
     def _on_peer_clusters_relation_changed_for_snapshots(self, event) -> None:  # noqa C901
         """Apply snapshots config when the orchestrator broadcasts over peer-clusters."""
         # Only leaders perform cluster-level config
-
         dep = self.charm.opensearch_peer_cm.deployment_desc()
         if not dep:
             event.defer()
@@ -1064,23 +1062,15 @@ class OpenSearchSnapshotsEvents(Object):
         if not storage_type or not storage_cfg or storage_type == "conflict":
             return
 
+        if not self.charm.unit.is_leader():
+            return
+
         if not self.charm.snapshots_manager.is_repository_created(storage_type):
             self.charm.snapshots_manager.create_repo(
                 object_storage_type=storage_type,
                 object_storage_config=storage_cfg,
             )
             logger.info("Created snapshot repository for %s", storage_type)
-
-    def _grant_secret_to_peer_relations(self, secret: Secret) -> None:
-        """Grant a secret to all provider peer-cluster relations (subclusters)."""
-        try:
-            for rel in self.charm.model.relations.get(PeerClusterRelationName, []):
-                try:
-                    secret.grant(rel)
-                except Exception as e:
-                    logger.warning("Failed to grant secret to rel %s: %s", rel.id, e)
-        except Exception as e:
-            logger.warning("Granting secret to peer relations failed: %s", e)
 
     def _has_peer_topology(self) -> bool:
         """Return True if this app participates in a multi-app topology (main/failover/data)."""
@@ -1103,7 +1093,7 @@ class OpenSearchSnapshotsManager:
         object_storage_config: ObjectStorageConfig,
         name: str | None = None,
     ) -> str:
-        """Create an opensearch 'repository' for storing backups.
+        """Create an opensearch repository for storing backups.
 
         Args:
             object_storage_type (ObjectStorageType): Object storage type
@@ -1162,6 +1152,8 @@ class OpenSearchSnapshotsManager:
                         by default requires YELLOW/GREEN; set require_healthy=False to skip.
 
         """
+        if not self.charm.unit.is_leader():
+            return
         repo_name = name or self.repository_name(object_storage_type)
         if require_healthy:
             status = self.charm.health.get(wait_for_green_first=False)
@@ -1449,7 +1441,8 @@ class OpenSearchSnapshotsManager:
                 return True
         return False
 
-    def repository_name(self, object_storage_type: ObjectStorageType) -> str | None:
+    @staticmethod
+    def repository_name(object_storage_type: ObjectStorageType) -> str | None:
         """Get the repository name for a given storage type.
 
         Args:
@@ -1466,8 +1459,9 @@ class OpenSearchSnapshotsManager:
 
         return GCS_REPOSITORY
 
+    @staticmethod
     def requires_custom_s3_ca(
-        self, object_storage_type: ObjectStorageType, object_storage_config: ObjectStorageConfig
+        object_storage_type: ObjectStorageType, object_storage_config: ObjectStorageConfig
     ) -> bool:
         """Check if the current object storage setup requires the use of a custom CA.
 
@@ -1487,6 +1481,28 @@ class OpenSearchSnapshotsManager:
         logger.info("S3 CA is required.")
         return True
 
+    def _find_s3_chain_in_store(self) -> str:
+        """Return the currently stored S3 CA chain from cacerts, or ''.
+
+        Returns:
+            Stored CA chain if found, else ''.
+        """
+        stored_cacerts = (
+            list_cas(
+                store_pwd="changeit",
+                store_path=f"{self.opensearch.paths.certs}/cacerts.p12",
+            )
+            or {}
+        )
+        if not stored_cacerts:
+            return ""
+
+        # list_cas returns aliases such as "s3-snapshots-gateway-0", "s3-snapshots-gateway-1"
+        for alias, chain in stored_cacerts.items():
+            if alias == S3_CA_ALIAS or alias.startswith(f"{S3_CA_ALIAS}-"):
+                return chain or ""
+        return ""
+
     def is_custom_s3_ca_stored(self, s3_ca_chain: str | None = None) -> bool:
         """Check if a custom CA for the object storage is stored in the cacerts trust store.
 
@@ -1496,14 +1512,16 @@ class OpenSearchSnapshotsManager:
         Returns:
             True if the given CA chain is stored in the stored cacerts, else False
         """
-        stored_cacerts = (
-            list_cas(store_pwd="changeit", store_path=f"{self.opensearch.paths.certs}/cacerts.p12")
-            or {}
-        )
-        if not s3_ca_chain:
-            return stored_cacerts.get("s3-snapshots-gateway") is not None
+        current_chain = self._find_s3_chain_in_store()
+        if not current_chain:
+            # nothing stored
+            return False
 
-        return stored_cacerts.get("s3-snapshots-gateway") == s3_ca_chain
+        if not s3_ca_chain:
+            return True
+
+        # Normalize both sides in case of whitespace/ordering differences
+        return _normalize_chain(current_chain) == _normalize_chain(s3_ca_chain)
 
     def store_s3_ca(self, s3_tls_ca_chain: str | None) -> None:
         """Store or remove an S3 TLS CA chain on the cacerts trust store.
@@ -1513,22 +1531,41 @@ class OpenSearchSnapshotsManager:
 
         If the there is s3_tls_ca_chain, the old CA will be removed.
         """
-        if s3_tls_ca_chain:
-            store_s3_ca(
-                store_pwd="changeit",
-                store_path=f"{self.opensearch.paths.certs}/cacerts.p12",
-                alias="s3-snapshots-gateway",
-                ca=s3_tls_ca_chain,
-                keep_previous=False,
-            )
-        else:
+        store_path = f"{self.opensearch.paths.certs}/cacerts.p12"
+        # Drop the CA entirely
+        if not s3_tls_ca_chain:
             remove_ca(
-                alias="s3-snapshots-gateway",
+                alias=S3_CA_ALIAS,
                 store_pwd="changeit",
-                store_path=f"{self.opensearch.paths.certs}/cacerts.p12",
+                store_path=store_path,
             )
+            return
 
-    def _repo_type(self, object_storage_type: ObjectStorageType) -> str | None:
+        # If we already have the same CA, skip re-import
+        current_chain = self._find_s3_chain_in_store()
+        if current_chain and _normalize_chain(current_chain) == _normalize_chain(s3_tls_ca_chain):
+            logger.info("S3 CA unchanged; skipping re-import.")
+            return
+
+        # Chain changed: ensure we remove the old alias family first
+        # to avoid keytool already exists error
+        remove_ca(
+            alias=S3_CA_ALIAS,
+            store_pwd="changeit",
+            store_path=store_path,
+        )
+
+        # Import fresh CA
+        store_s3_ca(
+            store_pwd="changeit",
+            store_path=store_path,
+            alias=S3_CA_ALIAS,
+            ca=s3_tls_ca_chain,
+            keep_previous=False,
+        )
+
+    @staticmethod
+    def _repo_type(object_storage_type: ObjectStorageType) -> str | None:
         """Return the repository type for a given object storage type.
 
         Args:
