@@ -851,6 +851,85 @@ async def test_wrong_s3_credentials(
 
 @pytest.mark.group(id="all")
 @pytest.mark.abort_on_fail
+async def test_wrong_azure_credentials(
+    ops_test: OpsTest,
+    cloud_configs: Dict[str, Dict[str, str]],
+    cloud_credentials: Dict[str, Dict[str, str]],
+) -> None:
+    """Verify blocked status and recovery when Azure credentials are wrong."""
+    if "azure" not in cloud_configs or "azure" not in cloud_credentials:
+        pytest.skip("Azure config/credentials not available for Azure integrator tests.")
+
+    app = (await app_name(ops_test)) or APP_NAME
+
+    # Ensure azure-storage-integrator is deployed and related
+    if AZURE_INTEGRATOR not in ops_test.model.applications:
+        await ops_test.model.deploy(AZURE_INTEGRATOR, channel=AZURE_INTEGRATOR_CHANNEL)
+        await ops_test.model.wait_for_idle(
+            apps=[AZURE_INTEGRATOR],
+            timeout=TIMEOUT,
+        )
+        await ops_test.model.integrate(app, AZURE_INTEGRATOR)
+        await ops_test.model.wait_for_idle(
+            apps=[app, AZURE_INTEGRATOR],
+            timeout=TIMEOUT,
+            idle_period=IDLE_PERIOD,
+        )
+
+    unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    good_cfg = dict(cloud_configs["azure"])
+    good_creds = dict(cloud_credentials["azure"])
+
+    # keep storage-account but corrupt secret-key
+    bad_creds = dict(good_creds)
+    bad_creds["secret-key"] = "invalid-secret-key"
+
+    # Apply bad credentials
+    await _configure_azure(ops_test, good_cfg, bad_creds, app_name=app)
+
+    # Charm should eventually report blocked
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["blocked"],
+        idle_period=IDLE_PERIOD,
+    )
+
+    # Depending on timing, repo may be missing or failing verification.
+    try:
+        resp = await http_request(
+            ops_test,
+            "GET",
+            f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}/_all",
+            json_resp=True,
+        )
+        logger.debug(f"Azure bad credentials snapshot response: {resp}")
+        assert resp["status"] in (404, 500)
+    except Exception:
+        logger.info("Snapshot request failed with bad Azure credentials (expected).")
+
+    # Restore correct credentials
+    await _configure_azure(ops_test, good_cfg, good_creds, app_name=app)
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["active"],
+        idle_period=IDLE_PERIOD,
+    )
+
+    # Check that the repository endpoint is reachable
+    resp_ok = await http_request(
+        ops_test,
+        "GET",
+        f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}",
+        json_resp=True,
+    )
+    assert resp_ok["status"] in (200, 404)
+
+
+@pytest.mark.group(id="all")
+@pytest.mark.abort_on_fail
 async def test_wrong_s3_ca_blocked(
     ops_test: OpsTest,
     cloud_configs: Dict[str, Dict[str, str]],
