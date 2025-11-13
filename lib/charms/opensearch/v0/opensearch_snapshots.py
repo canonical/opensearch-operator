@@ -242,7 +242,6 @@ class OpenSearchSnapshotsEvents(Object):
         ):
             s3_ca = self.resolver.get_storage_config("s3").s3.tls_ca_chain
             self.charm.snapshots_manager.store_s3_ca(s3_ca)
-            logger.info("Restarting Opensearch for new CA.")
             self._restart_for_ca(s3_ca, reason="apply new object storage CA")
             logger.info("S3 CA is stored.")
 
@@ -250,7 +249,6 @@ class OpenSearchSnapshotsEvents(Object):
             # If a custom CA is currently stored but no longer required, drop it
             if self.charm.snapshots_manager.is_custom_s3_ca_stored():
                 self.charm.snapshots_manager.store_s3_ca(None)
-                logger.info("Restarting Opensearch for CA cleanup.")
                 self._restart_for_ca(None, reason="clean up the object storage CA")
                 logger.info("S3 CA is deleted.")
 
@@ -285,7 +283,6 @@ class OpenSearchSnapshotsEvents(Object):
 
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.store_s3_ca(None)
-            logger.info("Restarting Opensearch for CA cleanup.")
             self._restart_for_ca(None, reason="clean up the object storage CA")
 
         if self.charm.unit.is_leader():
@@ -445,13 +442,11 @@ class OpenSearchSnapshotsEvents(Object):
             if info.get("s3_tls_ca_chain"):
                 logger.info("S3 TLS CA Chain detected.")
                 self.charm.snapshots_manager.store_s3_ca(info["s3_tls_ca_chain"])
-                logger.info("Restarting Opensearch for new CA.")
                 self._restart_for_ca(info["s3_tls_ca_chain"], reason="apply new object storage CA")
 
             else:
                 if self.charm.snapshots_manager.is_custom_s3_ca_stored():
                     self.charm.snapshots_manager.store_s3_ca(None)
-                    logger.info("Restarting Opensearch for CA cleanup.")
                     self._restart_for_ca(None, reason="clean up the object storage CA")
 
         elif event.kind == "azure":
@@ -477,7 +472,6 @@ class OpenSearchSnapshotsEvents(Object):
             ):
                 if self.charm.snapshots_manager.is_custom_s3_ca_stored():
                     self.charm.snapshots_manager.store_s3_ca(None)
-                    logger.info("Restarting Opensearch for CA cleanup.")
                     self._restart_for_ca(None, reason="clean up the object storage CA")
         elif event.kind == "azure":
             self._cleanup("azure", ["azure.client.default.account", "azure.client.default.key"])
