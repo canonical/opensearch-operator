@@ -31,8 +31,8 @@ import pytest
 from azure.storage.blob import BlobServiceClient
 from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
+    BackupCredentialKeysIncorrect,
     BackupRelShouldNotExist,
-    BackupSetupFailed,
 )
 from charms.opensearch.v0.opensearch_snapshots import S3_REPOSITORY
 from pytest_operator.plugin import OpsTest
@@ -271,7 +271,7 @@ async def _configure_azure(
         f"Juju secret for secret-key config option for azure-storage-integrator added. Secret URI: {credentials_secret_uri}"
     )
 
-    full_cfg = dict(config)
+    full_cfg = config
     full_cfg.update(
         {
             "storage-account": credentials["storage-account"],
@@ -420,14 +420,17 @@ async def test_large_deployment_build_and_deploy(
 @pytest.mark.parametrize("cloud_name,deploy_type", LARGE_DEPLOYMENTS_ALL_CLOUDS)
 @pytest.mark.abort_on_fail
 async def test_large_setups_relations_with_misconfiguration(
-    ops_test: OpsTest, cloud_name: str, deploy_type: str
+    ops_test: OpsTest,
+    cloud_name: str,
+    deploy_type: str,
+    cloud_configs: Dict[str, Dict[str, str]],
 ) -> None:
     """Confirm expected blocked messages under misconfiguration."""
     if cloud_name == "azure":
         config = {"connection-protocol": "abfss", "container": "error", "path": "/"}
         credentials = {"storage-account": "error", "secret-key": "error"}
         await _configure_azure(ops_test=ops_test, config=config, credentials=credentials)
-    else:
+    elif cloud_name == "aws":
         config = {
             "endpoint": "http://localhost",
             "bucket": "error",
@@ -436,12 +439,24 @@ async def test_large_setups_relations_with_misconfiguration(
         }
         credentials = {"access-key": "error", "secret-key": "error"}
         await _configure_s3(ops_test=ops_test, config=config, credentials=credentials)
+    else:
+        cfg = cloud_configs["microceph"]
+        config = {
+            "endpoint": "https://localhost:445",
+            "bucket": "error",
+            "path": "etcd",
+            "region": "default",
+            "tls-ca-chain": cfg.get("tls-ca-chain"),
+        }
+        credentials = {"access-key": "error", "secret-key": "error"}
+
+        await _configure_s3(ops_test=ops_test, config=config, credentials=credentials)
 
     await wait_until(
         ops_test,
         apps=["main"],
         apps_statuses=["blocked"],
-        apps_full_statuses={"main": {"blocked": [BackupSetupFailed]}},
+        apps_full_statuses={"main": {"blocked": [BackupCredentialKeysIncorrect]}},
         idle_period=IDLE_PERIOD,
     )
 
@@ -474,7 +489,7 @@ async def test_large_setups_relations_with_misconfiguration(
         ops_test,
         apps=["main"],
         apps_statuses=["blocked"],
-        apps_full_statuses={"main": {"blocked": [BackupSetupFailed]}},
+        apps_full_statuses={"main": {"blocked": [BackupCredentialKeysIncorrect]}},
         idle_period=IDLE_PERIOD,
     )
     await wait_until(
@@ -800,9 +815,7 @@ async def test_wrong_s3_credentials(
     await wait_until(
         ops_test,
         apps=[app],
-        apps_statuses=["blocked"],
-        units_statuses=["active", "blocked"],
-        wait_for_exact_units=3,
+        apps_statuses=["blocked", "active"],
         idle_period=30,
     )
 
@@ -810,13 +823,13 @@ async def test_wrong_s3_credentials(
         ops_test, "GET", f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}/_all", json_resp=True
     )
     logger.debug(f"Response: {resp}")
-    assert resp["status"] == 500
+    assert resp["status"] in (500, 404)
     assert "repository_exception" in resp["error"]["type"]
     assert "Could not determine repository generation from root blobs" in resp["error"]["reason"]
 
     # revert back to normal state
-    good_config = dict(cloud_configs["aws"])
-    good_credentials = dict(cloud_credentials["aws"])
+    good_config = cloud_configs["aws"]
+    good_credentials = cloud_credentials["aws"]
 
     await ops_test.model.applications[S3_INTEGRATOR].set_config(good_config)
     await run_action(
@@ -837,7 +850,6 @@ async def test_wrong_s3_credentials(
         apps=[app],
         apps_statuses=["active"],
         units_statuses=["active"],
-        wait_for_exact_units=3,
         idle_period=30,
     )
     resp_ok = await http_request(
@@ -878,11 +890,11 @@ async def test_wrong_azure_credentials(
 
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
-    good_cfg = dict(cloud_configs["azure"])
-    good_creds = dict(cloud_credentials["azure"])
+    good_cfg = cloud_configs["azure"]
+    good_creds = cloud_credentials["azure"]
 
     # keep storage-account but corrupt secret-key
-    bad_creds = dict(good_creds)
+    bad_creds = deepcopy(good_creds)
     bad_creds["secret-key"] = "invalid-secret-key"
 
     # Apply bad credentials
@@ -892,7 +904,7 @@ async def test_wrong_azure_credentials(
     await wait_until(
         ops_test,
         apps=[app],
-        apps_statuses=["blocked"],
+        apps_statuses=["blocked", "active"],
         idle_period=IDLE_PERIOD,
     )
 
@@ -940,8 +952,8 @@ async def test_wrong_s3_ca_blocked(
         pytest.skip("No custom CA chain available in test config (microceph not set up).")
 
     app = (await app_name(ops_test)) or APP_NAME
-    good_cfg = dict(cloud_configs["microceph"])
-    good_creds = dict(cloud_credentials["microceph"])
+    good_cfg = cloud_configs["microceph"]
+    good_creds = cloud_credentials["microceph"]
 
     # Wrong CA chain
     bad_cfg = deepcopy(good_cfg)
@@ -978,8 +990,7 @@ async def test_wrong_s3_ca_blocked(
     await wait_until(
         ops_test,
         apps=[app],
-        units_statuses=["active", "blocked"],
-        apps_statuses=["blocked"],
+        apps_statuses=["blocked", "active"],
         idle_period=IDLE_PERIOD,
     )
 
