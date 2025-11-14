@@ -255,6 +255,7 @@ async def _configure_azure(
     config: Dict[str, str],
     credentials: Dict[str, str],
     app_name: str = None,
+    wait_for_app_active: bool = True,
 ) -> None:
     await ops_test.model.applications[AZURE_INTEGRATOR].set_config(config)
     logger.info("Adding Juju secret for secret-key config option for azure-storage-integrator")
@@ -282,12 +283,10 @@ async def _configure_azure(
     logger.info("Setting up configuration for azure-storage-integrator charm...")
     await ops_test.model.applications[AZURE_INTEGRATOR].set_config(full_cfg)
 
-    apps = [AZURE_INTEGRATOR] if app_name is None else [AZURE_INTEGRATOR, app_name]
-    await ops_test.model.wait_for_idle(
-        apps=apps,
-        status="active",
-        timeout=TIMEOUT,
-    )
+    await ops_test.model.wait_for_idle(apps=[AZURE_INTEGRATOR], timeout=TIMEOUT)
+
+    if app_name and wait_for_app_active:
+        await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
 
 
 @pytest.mark.parametrize("cloud_name,deploy_type", SMALL_DEPLOYMENTS_ALL_CLOUDS)
@@ -429,7 +428,9 @@ async def test_large_setups_relations_with_misconfiguration(
     if cloud_name == "azure":
         config = {"connection-protocol": "abfss", "container": "error", "path": "/"}
         credentials = {"storage-account": "error", "secret-key": "error"}
-        await _configure_azure(ops_test=ops_test, config=config, credentials=credentials)
+        await _configure_azure(
+            ops_test=ops_test, config=config, credentials=credentials, wait_for_app_active=False
+        )
     elif cloud_name == "aws":
         config = {
             "endpoint": "http://localhost",
@@ -438,7 +439,9 @@ async def test_large_setups_relations_with_misconfiguration(
             "region": "default",
         }
         credentials = {"access-key": "error", "secret-key": "error"}
-        await _configure_s3(ops_test=ops_test, config=config, credentials=credentials)
+        await _configure_s3(
+            ops_test=ops_test, config=config, credentials=credentials, wait_for_app_active=False
+        )
     else:
         cfg = cloud_configs["microceph"]
         config = {
@@ -450,11 +453,14 @@ async def test_large_setups_relations_with_misconfiguration(
         }
         credentials = {"access-key": "error", "secret-key": "error"}
 
-        await _configure_s3(ops_test=ops_test, config=config, credentials=credentials)
+        await _configure_s3(
+            ops_test=ops_test, config=config, credentials=credentials, wait_for_app_active=False
+        )
 
     await wait_until(
         ops_test,
         apps=["main"],
+        units_statuses=["blocked"],
         apps_statuses=["blocked"],
         apps_full_statuses={"main": {"blocked": [BackupCredentialKeysIncorrect]}},
         idle_period=IDLE_PERIOD,
@@ -470,6 +476,7 @@ async def test_large_setups_relations_with_misconfiguration(
         ops_test,
         apps=["failover", APP_NAME],
         apps_statuses=["blocked"],
+        units_statuses=["blocked"],
         apps_full_statuses={
             "failover": {"blocked": [BackupRelShouldNotExist]},
             APP_NAME: {"blocked": [BackupRelShouldNotExist]},
@@ -488,6 +495,7 @@ async def test_large_setups_relations_with_misconfiguration(
     await wait_until(
         ops_test,
         apps=["main"],
+        units_statuses=["blocked"],
         apps_statuses=["blocked"],
         apps_full_statuses={"main": {"blocked": [BackupCredentialKeysIncorrect]}},
         idle_period=IDLE_PERIOD,
@@ -796,28 +804,29 @@ async def test_wrong_s3_credentials(
     cloud_credentials: Dict[str, Dict[str, str]],
 ) -> None:
     """Verify blocked status and error from OpenSearch when S3 creds are wrong."""
-    if "aws" not in cloud_configs or "aws" not in cloud_credentials:
-        pytest.skip("AWS config/credentials not available for S3 integrator tests.")
+    if "azure" in cloud_configs or "azure" in cloud_credentials:
+        pytest.skip("AWS/Microceph config/credentials not available for S3 integrator tests.")
+
+    provider = "aws" if cloud_configs["aws"] else "microceph"
 
     app = (await app_name(ops_test)) or APP_NAME
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
-    bad_config = {
-        "endpoint": "http://localhost",
-        "bucket": "error",
-        "path": "/",
-        "region": "default",
-    }
+    good_config = cloud_configs[provider]
     bad_credentials = {"access-key": "error", "secret-key": "error"}
-    await ops_test.model.applications[S3_INTEGRATOR].set_config(bad_config)
-    await run_action(ops_test, 0, "sync-s3-credentials", params=bad_credentials, app=S3_INTEGRATOR)
-    await ops_test.model.wait_for_idle(apps=[S3_INTEGRATOR], status="active", timeout=TIMEOUT)
+
+    await _configure_s3(
+        ops_test, good_config, bad_credentials, app_name=app, wait_for_app_active=False
+    )
     await wait_until(
         ops_test,
         apps=[app],
-        apps_statuses=["blocked", "active"],
+        units_statuses=["blocked"],
+        apps_statuses=["blocked"],
         idle_period=30,
+        wait_for_exact_units=1,
     )
+    logger.info("Opensearch 1 app and unit is blocked because of S3 bad credentials.")
 
     resp = await http_request(
         ops_test, "GET", f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}/_all", json_resp=True
@@ -828,29 +837,18 @@ async def test_wrong_s3_credentials(
     assert "Could not determine repository generation from root blobs" in resp["error"]["reason"]
 
     # revert back to normal state
-    good_config = cloud_configs["aws"]
-    good_credentials = cloud_credentials["aws"]
-
-    await ops_test.model.applications[S3_INTEGRATOR].set_config(good_config)
-    await run_action(
-        ops_test,
-        0,
-        "sync-s3-credentials",
-        params=good_credentials,
-        app=S3_INTEGRATOR,
-    )
-    await ops_test.model.wait_for_idle(
-        apps=[S3_INTEGRATOR],
-        status="active",
-        timeout=TIMEOUT,
-    )
-
+    good_credentials = cloud_credentials[provider]
+    await _configure_s3(ops_test, good_config, good_credentials, app_name=app)
     await wait_until(
         ops_test,
         apps=[app],
         apps_statuses=["active"],
         units_statuses=["active"],
         idle_period=30,
+        wait_for_exact_units=3,
+    )
+    logger.info(
+        "Opensearch all apps and units become active after providing valid S3 credentials."
     )
     resp_ok = await http_request(
         ops_test,
@@ -898,16 +896,18 @@ async def test_wrong_azure_credentials(
     bad_creds["secret-key"] = "invalid-secret-key"
 
     # Apply bad credentials
-    await _configure_azure(ops_test, good_cfg, bad_creds, app_name=app)
+    await _configure_azure(ops_test, good_cfg, bad_creds, app_name=app, wait_for_app_active=False)
 
     # Charm should eventually report blocked
     await wait_until(
         ops_test,
         apps=[app],
-        apps_statuses=["blocked", "active"],
+        units_statuses=["blocked"],
+        apps_statuses=["blocked"],
         idle_period=IDLE_PERIOD,
+        wait_for_exact_units=1,
     )
-
+    logger.info("Opensearch 1 app and unit is blocked because of Azure bad credentials.")
     # Depending on timing, repo may be missing or failing verification.
     try:
         resp = await http_request(
@@ -926,10 +926,14 @@ async def test_wrong_azure_credentials(
     await wait_until(
         ops_test,
         apps=[app],
+        units_statuses=["active"],
         apps_statuses=["active"],
         idle_period=IDLE_PERIOD,
+        wait_for_exact_units=3,
     )
-
+    logger.info(
+        "Opensearch all apps and units become active after providing valid Azure credentials."
+    )
     # Check that the repository endpoint is reachable
     resp_ok = await http_request(
         ops_test,
@@ -969,8 +973,6 @@ async def test_wrong_s3_ca_blocked(
         wait_for_app_active=False,
     )
 
-    await ops_test.model.wait_for_idle(apps=[app], timeout=TIMEOUT, idle_period=IDLE_PERIOD)
-
     # With bad CA, repository verification usually fails.
     # it can be 500 (repo check error) or 404 (repo never created yet).
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
@@ -990,21 +992,23 @@ async def test_wrong_s3_ca_blocked(
     await wait_until(
         ops_test,
         apps=[app],
-        apps_statuses=["blocked", "active"],
+        units_statuses=["blocked"],
+        apps_statuses=["blocked"],
         idle_period=IDLE_PERIOD,
+        wait_for_exact_units=1,
     )
-
+    logger.info("Opensearch 1 app and unit is blocked because of S3 bad CA.")
     # restore the correct CA and ensure we recover to active.
-    await _configure_s3(ops_test, good_cfg, good_creds, app_name=app, wait_for_app_active=True)
-
-    await ops_test.model.wait_for_idle(apps=[app], timeout=TIMEOUT, idle_period=IDLE_PERIOD)
+    await _configure_s3(ops_test, good_cfg, good_creds, app_name=app)
     await wait_until(
         ops_test,
         apps=[app],
+        units_statuses=["active"],
         apps_statuses=["active"],
         idle_period=IDLE_PERIOD,
+        wait_for_exact_units=3,
     )
-
+    logger.info("Opensearch all apps and units become active after providing valid S3 CA.")
     # check if repo endpoint is reachable now (200 if created, 404 if not yet).
     resp_ok = await http_request(
         ops_test, "GET", f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}", json_resp=True
