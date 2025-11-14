@@ -702,7 +702,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     ]
                 )
                 > 0
-                and not self.opensearch_peer_cm.does_cluster_have_cm_up()
+                and not self.opensearch_peer_cm.is_any_cm_node_up_in_cluster()
             ):
                 logger.error(
                     "No cluster managers left in the cluster fleet. Please scale up your cluster manager units."

@@ -769,7 +769,7 @@ class OpenSearchPeerClustersManager:
 
         return PeerClusterRelData.from_dict(content)
 
-    def does_cluster_have_cm_up(self) -> bool:
+    def is_any_cm_node_up_in_cluster(self) -> bool:
         """Check whether there is at least one cluster manager unit up in the fleet."""
         nodes = ClusterTopology.nodes(self._charm.opensearch, True, self._charm.alt_hosts)
         for node in nodes:
