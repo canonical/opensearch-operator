@@ -1,0 +1,43 @@
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.11   unsupported  01:42:46Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+application                        active       1  application                                0  no       
+opensearch                         active       3  opensearch                                 0  no       
+opensearch-dashboards              blocked      1  opensearch-dashboards     2/edge          57  no       Opensearch connection is missing
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+application/0*               active    idle       2        10.151.246.99             
+opensearch-dashboards/0*     blocked   executing  1        10.151.246.74   5601/tcp  Opensearch connection is missing
+opensearch/0*                active    executing  3        10.151.246.112  9200/tcp  
+opensearch/1                 active    executing  4        10.151.246.94   9200/tcp  
+opensearch/2                 active    idle       5        10.151.246.252  9200/tcp  
+self-signed-certificates/0*  active    idle       0        10.151.246.39             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.151.246.39   juju-6810d6-0  ubuntu@22.04  github-runner  Running
+1        started  10.151.246.74   juju-6810d6-1  ubuntu@22.04  github-runner  Running
+2        started  10.151.246.99   juju-6810d6-2  ubuntu@22.04  github-runner  Running
+3        started  10.151.246.112  juju-6810d6-3  ubuntu@24.04  github-runner  Running
+4        started  10.151.246.94   juju-6810d6-4  ubuntu@24.04  github-runner  Running
+5        started  10.151.246.252  juju-6810d6-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:42:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-dashboards - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: Opensearch connection is missing
+		opensearch-dashboards-0.497* -- (10.151.246.74) -- [executing (since: 01:42:51)] blocked: Opensearch connection is missing
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:43:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 01:43:07 -- Waiting for model: complete.
