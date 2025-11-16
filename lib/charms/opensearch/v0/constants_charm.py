@@ -76,7 +76,7 @@ BackupCredentialKeysIncorrect = (
 BackupCredentialCAIncorrect = (
     "Repository not reachable: bad credentials or permissions, fix the CA."
 )
-BackupRelConflict = "More than 1 object storage relation"
+BackupRelConflict = "Too many object storage relations. Only one is supported."
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
 SecretAccessError = "Failed to access secret, please check permissions."
 JWTAuthConfigInvalid = (
