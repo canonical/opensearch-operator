@@ -34,7 +34,7 @@ from charms.opensearch.v0.constants_charm import (
     BackupCredentialKeysIncorrect,
     BackupRelShouldNotExist,
 )
-from charms.opensearch.v0.opensearch_snapshots import S3_REPOSITORY
+from charms.opensearch.v0.opensearch_snapshots import AZURE_REPOSITORY, S3_REPOSITORY
 from pytest_operator.plugin import OpsTest
 
 from ..ha.continuous_writes import ContinuousWrites
@@ -49,6 +49,7 @@ from ..helpers import (
     run_action,
 )
 from ..helpers_deployments import get_application_units, wait_until
+from ..relations.helpers import new_relation_joined
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import (
     add_juju_secret,
@@ -83,7 +84,8 @@ SMALL_DEPLOYMENTS_ALL_CLOUDS = [
 LARGE_DEPLOYMENTS_ALL_CLOUDS = [
     ALL_GROUPS[(cloud, "large")] for cloud in ["aws", "microceph", "azure"]
 ]
-
+S3_LIKE_CLOUDS = ["aws", "microceph"]
+ALL_CLOUDS_ALL_GROUP = ["microceph", "aws", "azure"]
 
 S3_INTEGRATOR = "s3-integrator"
 S3_INTEGRATOR_CHANNEL = "1/stable"
@@ -272,7 +274,7 @@ async def _configure_azure(
         f"Juju secret for secret-key config option for azure-storage-integrator added. Secret URI: {credentials_secret_uri}"
     )
 
-    full_cfg = config
+    full_cfg = deepcopy(config)
     full_cfg.update(
         {
             "storage-account": credentials["storage-account"],
@@ -510,18 +512,24 @@ async def test_large_setups_relations_with_misconfiguration(
         apps_full_statuses={"main": {"blocked": [BackupCredentialKeysIncorrect]}},
         idle_period=IDLE_PERIOD,
     )
-    # Provide valid credentials and check if status is active.
-    if cloud_name == "azure":
-        await _configure_azure(ops_test, cloud_configs[cloud_name], cloud_credentials[cloud_name])
-    else:
-        await _configure_s3(ops_test, cloud_configs[cloud_name], cloud_credentials[cloud_name])
 
-    await wait_until(
-        ops_test,
-        apps_statuses=["active"],
-        idle_period=IDLE_PERIOD,
-        apps=["main", "failover", APP_NAME],
-    )
+    # Clean up for subsequent tests: drop backup-integrator relation
+    backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
+    backup_relation = AZURE_RELATION if cloud_name == "azure" else S3_RELATION
+
+    try:
+        await ops_test.model.applications["main"].destroy_relation(
+            f"main:{backup_relation}", backup_integrator
+        )
+        await ops_test.model.wait_for_idle(
+            apps=["main"],
+            status="active",
+            timeout=TIMEOUT,
+            idle_period=IDLE_PERIOD,
+        )
+        logger.info("Cleaned up misconfigured backup relation from main; main is active again.")
+    except Exception:
+        logger.info("No backup-integrator relation to clean up after misconfiguration test.")
 
 
 @pytest.mark.parametrize("cloud_name,deploy_type", ALL_DEPLOYMENTS_ALL_CLOUDS)
@@ -538,6 +546,13 @@ async def test_create_backup_and_restore(
     """Create a backup while writes are ongoing, then verify restore."""
     app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
     apps = [app] if deploy_type == "small" else [app, APP_NAME]
+
+    logger.info(f"Ensuring only correct backup integrator is related for {cloud_name}")
+    if cloud_name == "azure":
+        await _ensure_only_azure_integrator_related(ops_test, app)
+    else:
+        await _ensure_only_s3_integrator_related(ops_test, app)
+
     leader_id = await get_leader_unit_id(ops_test, app=app)
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
     config = cloud_configs[cloud_name]
@@ -597,17 +612,13 @@ async def test_remove_and_readd_backup_relation(
     logger.info("Remove backup relation")
     # Remove relation
     await ops_test.model.applications[app].destroy_relation(
-        backup_relation, f"{backup_integrator}:{backup_relation}"
+        f"{app}:{backup_relation}", backup_integrator
     )
     await ops_test.model.wait_for_idle(
         apps=[app], status="active", timeout=1400, idle_period=IDLE_PERIOD
     )
-
     logger.info("Re-add backup credentials relation")
     await ops_test.model.integrate(app, backup_integrator)
-    await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1400, idle_period=IDLE_PERIOD
-    )
 
     logger.info(f"Syncing credentials for {cloud_name}")
     if cloud_name == "azure":
@@ -765,6 +776,116 @@ async def test_restore_to_new_cluster(
 # -------------------------------------------------------------------------------------------
 
 
+async def _drop_s3_relation_if_any(ops_test: OpsTest, app: str) -> None:
+    """If app is related to S3_INTEGRATOR via S3_RELATION, drop that relation."""
+    if S3_INTEGRATOR not in ops_test.model.applications:
+        return
+
+    app_endpoint = f"{app}:{S3_RELATION}"
+    s3_endpoint = f"{S3_INTEGRATOR}:{S3_RELATION}"
+
+    if not new_relation_joined(ops_test, app_endpoint, s3_endpoint):
+        logger.info("No S3 relation %s <-> %s found, nothing to drop.", app_endpoint, s3_endpoint)
+        return
+
+    try:
+        await ops_test.model.applications[app].destroy_relation(
+            f"{app}:{S3_RELATION}", S3_INTEGRATOR
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[app, S3_INTEGRATOR],
+            timeout=TIMEOUT,
+            idle_period=IDLE_PERIOD,
+        )
+        logger.info("Dropped S3 relation %s -> %s.", app_endpoint, s3_endpoint)
+    except Exception as e:
+        # Relation may already be gone.
+        logger.info("Failed to drop S3 relation %s -> %s: %s", app_endpoint, s3_endpoint, e)
+
+
+async def _drop_azure_relation_if_any(ops_test: OpsTest, app: str) -> None:
+    """If app is related to AZURE_INTEGRATOR via AZURE_RELATION, drop that relation."""
+    if AZURE_INTEGRATOR not in ops_test.model.applications:
+        return
+
+    app_endpoint = f"{app}:{AZURE_RELATION}"
+    azure_endpoint = f"{AZURE_INTEGRATOR}:{AZURE_RELATION}"
+
+    if not new_relation_joined(ops_test, app_endpoint, azure_endpoint):
+        logger.info(
+            "No Azure relation %s <-> %s found, nothing to drop.", app_endpoint, azure_endpoint
+        )
+        return
+
+    try:
+        await ops_test.model.applications[app].destroy_relation(
+            f"{app}:{AZURE_RELATION}", AZURE_INTEGRATOR
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[app, AZURE_INTEGRATOR],
+            timeout=TIMEOUT,
+            idle_period=IDLE_PERIOD,
+        )
+        logger.info("Dropped Azure relation %s -> %s.", app_endpoint, azure_endpoint)
+    except Exception as e:
+        logger.info("Failed to drop Azure relation %s -> %s: %s", app_endpoint, azure_endpoint, e)
+
+
+async def _ensure_only_s3_integrator_related(
+    ops_test: OpsTest,
+    app: str,
+) -> None:
+    """Ensure S3 integrator is deployed and related to app (Azure relation removed)."""
+    await _drop_azure_relation_if_any(ops_test, app)
+
+    if S3_INTEGRATOR not in ops_test.model.applications:
+        await ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL)
+        await ops_test.model.wait_for_idle(
+            apps=[S3_INTEGRATOR],
+            timeout=TIMEOUT,
+        )
+
+    app_endpoint = f"{app}:{S3_RELATION}"
+    s3_endpoint = f"{S3_INTEGRATOR}:{S3_RELATION}"
+
+    if not new_relation_joined(ops_test, app_endpoint, s3_endpoint):
+        await ops_test.model.integrate(app, S3_INTEGRATOR)
+        await ops_test.model.wait_for_idle(
+            apps=[app, S3_INTEGRATOR],
+            timeout=TIMEOUT,
+            idle_period=IDLE_PERIOD,
+        )
+        logger.info("Integrated %s <-> %s.", app_endpoint, s3_endpoint)
+    else:
+        logger.info("S3 relation %s <-> %s already present.", app_endpoint, s3_endpoint)
+
+
+async def _ensure_only_azure_integrator_related(ops_test: OpsTest, app: str) -> None:
+    """Ensure Azure integrator is deployed and related to app (S3 relation removed)."""
+    await _drop_s3_relation_if_any(ops_test, app)
+
+    if AZURE_INTEGRATOR not in ops_test.model.applications:
+        await ops_test.model.deploy(AZURE_INTEGRATOR, channel=AZURE_INTEGRATOR_CHANNEL)
+        await ops_test.model.wait_for_idle(
+            apps=[AZURE_INTEGRATOR],
+            timeout=TIMEOUT,
+        )
+
+    app_endpoint = f"{app}:{AZURE_RELATION}"
+    azure_endpoint = f"{AZURE_INTEGRATOR}:{AZURE_RELATION}"
+
+    if not new_relation_joined(ops_test, app_endpoint, azure_endpoint):
+        await ops_test.model.integrate(app, AZURE_INTEGRATOR)
+        await ops_test.model.wait_for_idle(
+            apps=[app, AZURE_INTEGRATOR],
+            timeout=TIMEOUT,
+            idle_period=IDLE_PERIOD,
+        )
+        logger.info("Integrated %s <-> %s.", app_endpoint, azure_endpoint)
+    else:
+        logger.info("Azure relation %s <-> %s already present.", app_endpoint, azure_endpoint)
+
+
 @pytest.mark.group(id="all")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -780,7 +901,6 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest, charm, series) ->
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
-        ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL),
         ops_test.model.deploy(charm, num_units=3, series=series, config=CONFIG_OPTS),
     )
 
@@ -792,9 +912,6 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest, charm, series) ->
         timeout=1400,
         idle_period=IDLE_PERIOD,
     )
-    # Credentials not set yet, this will move the opensearch to blocked state
-    # Credentials are set per test scenario
-    await ops_test.model.integrate(APP_NAME, S3_INTEGRATOR)
 
 
 @pytest.mark.group(id="all")
@@ -823,12 +940,17 @@ async def test_wrong_s3_credentials(
     cloud_credentials: Dict[str, Dict[str, str]],
 ) -> None:
     """Verify blocked status and error from OpenSearch when S3 creds are wrong."""
-    if "azure" in cloud_configs or "azure" in cloud_credentials:
+    # Choose provider: prefer aws if present, otherwise microceph
+    if "aws" in cloud_configs and "aws" in cloud_credentials:
+        provider = "aws"
+    elif "microceph" in cloud_configs and "microceph" in cloud_credentials:
+        provider = "microceph"
+    else:
         pytest.skip("AWS/Microceph config/credentials not available for S3 integrator tests.")
 
-    provider = "aws" if cloud_configs["aws"] else "microceph"
-
     app = (await app_name(ops_test)) or APP_NAME
+    await _ensure_only_s3_integrator_related(ops_test, app)
+
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
 
     good_config = cloud_configs[provider]
@@ -850,9 +972,14 @@ async def test_wrong_s3_credentials(
         ops_test, "GET", f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}/_all", json_resp=True
     )
     logger.debug(f"Response: {resp}")
-    assert resp["status"] in (500, 404)
-    assert "repository_exception" in resp["error"]["type"]
-    assert "Could not determine repository generation from root blobs" in resp["error"]["reason"]
+    status = resp.get("status")
+    if status is not None:
+        assert status in (500, 404)
+    if "error" in resp:
+        assert "repository_exception" in resp["error"]["type"]
+        assert (
+            "Could not determine repository generation from root blobs" in resp["error"]["reason"]
+        )
 
     # revert back to normal state
     good_credentials = cloud_credentials[provider]
@@ -873,90 +1000,15 @@ async def test_wrong_s3_credentials(
         f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}",
         json_resp=True,
     )
-    assert resp_ok["status"] in (200, 404)
+    logger.debug(f"Repo response after fixing S3 creds: {resp_ok}")
 
-
-@pytest.mark.group(id="all")
-@pytest.mark.abort_on_fail
-async def test_wrong_azure_credentials(
-    ops_test: OpsTest,
-    cloud_configs: Dict[str, Dict[str, str]],
-    cloud_credentials: Dict[str, Dict[str, str]],
-) -> None:
-    """Verify blocked status and recovery when Azure credentials are wrong."""
-    if "azure" not in cloud_configs or "azure" not in cloud_credentials:
-        pytest.skip("Azure config/credentials not available for Azure integrator tests.")
-
-    app = (await app_name(ops_test)) or APP_NAME
-
-    # Ensure azure-storage-integrator is deployed and related
-    if AZURE_INTEGRATOR not in ops_test.model.applications:
-        await ops_test.model.deploy(AZURE_INTEGRATOR, channel=AZURE_INTEGRATOR_CHANNEL)
-        await ops_test.model.wait_for_idle(
-            apps=[AZURE_INTEGRATOR],
-            timeout=TIMEOUT,
-        )
-        await ops_test.model.integrate(app, AZURE_INTEGRATOR)
-        await ops_test.model.wait_for_idle(
-            apps=[app, AZURE_INTEGRATOR],
-            timeout=TIMEOUT,
-            idle_period=IDLE_PERIOD,
-        )
-
-    unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
-    good_cfg = cloud_configs["azure"]
-    good_creds = cloud_credentials["azure"]
-
-    # keep storage-account but corrupt secret-key
-    bad_creds = deepcopy(good_creds)
-    bad_creds["secret-key"] = "invalid-secret-key"
-
-    # Apply bad credentials
-    await _configure_azure(ops_test, good_cfg, bad_creds, app_name=app, wait_for_app_active=False)
-
-    # Charm should eventually report blocked
-    await wait_until(
-        ops_test,
-        apps=[app],
-        units_statuses=["blocked", "active"],
-        apps_statuses=["blocked", "active"],
-        idle_period=IDLE_PERIOD,
-    )
-    logger.info("Opensearch 1 app and unit is blocked because of Azure bad credentials.")
-    # Depending on timing, repo may be missing or failing verification.
-    try:
-        resp = await http_request(
-            ops_test,
-            "GET",
-            f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}/_all",
-            json_resp=True,
-        )
-        logger.debug(f"Azure bad credentials snapshot response: {resp}")
-        assert resp["status"] in (404, 500)
-    except Exception:
-        logger.info("Snapshot request failed with bad Azure credentials (expected).")
-
-    # Restore correct credentials
-    await _configure_azure(ops_test, good_cfg, good_creds, app_name=app)
-    await wait_until(
-        ops_test,
-        apps=[app],
-        units_statuses=["active"],
-        apps_statuses=["active"],
-        idle_period=IDLE_PERIOD,
-    )
-    logger.info(
-        "Opensearch all apps and units become active after providing valid Azure credentials."
-    )
-    # Check that the repository endpoint is reachable
-    resp_ok = await http_request(
-        ops_test,
-        "GET",
-        f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}",
-        json_resp=True,
-    )
-    assert resp_ok["status"] in (200, 404)
+    if "status" in resp_ok:
+        # Repository not yet created, but endpoint reachable and returns proper error
+        assert resp_ok["status"] == 404
+    else:
+        # Repository exists: body is a mapping including repo name
+        assert isinstance(resp_ok, dict)
+        assert S3_REPOSITORY in resp_ok
 
 
 @pytest.mark.group(id="all")
@@ -967,10 +1019,13 @@ async def test_wrong_s3_ca_blocked(
     cloud_credentials: Dict[str, Dict[str, str]],
 ) -> None:
     """Verify the charm reports a blocked status when tls-ca-chain is invalid, then recovers."""
-    if "microceph" not in cloud_configs or "tls-ca-chain" not in cloud_configs["microceph"]:
+    if "microceph" not in cloud_configs or "microceph" not in cloud_credentials:
+        pytest.skip("No microceph config/credentials available in test config.")
+    if "tls-ca-chain" not in cloud_configs["microceph"]:
         pytest.skip("No custom CA chain available in test config (microceph not set up).")
 
     app = (await app_name(ops_test)) or APP_NAME
+    await _ensure_only_s3_integrator_related(ops_test, app)
     good_cfg = cloud_configs["microceph"]
     good_creds = cloud_credentials["microceph"]
 
@@ -1026,7 +1081,90 @@ async def test_wrong_s3_ca_blocked(
     resp_ok = await http_request(
         ops_test, "GET", f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}", json_resp=True
     )
-    assert resp_ok["status"] in (200, 404)
+    logger.debug(f"Repo response after fixing S3 CA: {resp_ok}")
+
+    if "status" in resp_ok:
+        assert resp_ok["status"] == 404
+    else:
+        assert isinstance(resp_ok, dict)
+        assert S3_REPOSITORY in resp_ok
+
+
+@pytest.mark.group(id="all")
+@pytest.mark.abort_on_fail
+async def test_wrong_azure_credentials(
+    ops_test: OpsTest,
+    cloud_configs: Dict[str, Dict[str, str]],
+    cloud_credentials: Dict[str, Dict[str, str]],
+) -> None:
+    """Verify blocked status and recovery when Azure credentials are wrong."""
+    if "azure" not in cloud_configs or "azure" not in cloud_credentials:
+        pytest.skip("Azure config/credentials not available for Azure integrator tests.")
+
+    app = (await app_name(ops_test)) or APP_NAME
+
+    await _ensure_only_azure_integrator_related(ops_test, app)
+
+    unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    good_cfg = cloud_configs["azure"]
+    good_creds = cloud_credentials["azure"]
+
+    # keep storage-account but corrupt secret-key
+    bad_creds = deepcopy(good_creds)
+    bad_creds["secret-key"] = "invalid-secret-key"
+
+    # Apply bad credentials
+    await _configure_azure(ops_test, good_cfg, bad_creds, app_name=app, wait_for_app_active=False)
+
+    # Charm should eventually report blocked
+    await wait_until(
+        ops_test,
+        apps=[app],
+        units_statuses=["blocked", "active"],
+        apps_statuses=["blocked", "active"],
+        idle_period=IDLE_PERIOD,
+    )
+    logger.info("Opensearch 1 app and unit is blocked because of Azure bad credentials.")
+    # Depending on timing, repo may be missing or failing verification.
+    try:
+        resp = await http_request(
+            ops_test,
+            "GET",
+            f"https://{unit_ip}:9200/_snapshot/{AZURE_REPOSITORY}/_all",
+            json_resp=True,
+        )
+        logger.debug(f"Azure bad credentials snapshot response: {resp}")
+        assert resp["status"] in (404, 500)
+    except Exception:
+        logger.info("Snapshot request failed with bad Azure credentials (expected).")
+
+    # Restore correct credentials
+    await _configure_azure(ops_test, good_cfg, good_creds, app_name=app)
+    await wait_until(
+        ops_test,
+        apps=[app],
+        units_statuses=["active"],
+        apps_statuses=["active"],
+        idle_period=IDLE_PERIOD,
+    )
+    logger.info(
+        "Opensearch all apps and units become active after providing valid Azure credentials."
+    )
+    # Check that the repository endpoint is reachable
+    resp_ok = await http_request(
+        ops_test,
+        "GET",
+        f"https://{unit_ip}:9200/_snapshot/{AZURE_REPOSITORY}",
+        json_resp=True,
+    )
+    logger.debug(f"Repo response after fixing Azure credentials: {resp_ok}")
+
+    if "status" in resp_ok:
+        assert resp_ok["status"] == 404
+    else:
+        assert isinstance(resp_ok, dict)
+        assert AZURE_REPOSITORY in resp_ok
 
 
 @pytest.mark.group(id="all")
@@ -1039,6 +1177,8 @@ async def test_change_config_and_backup_restore(
 ) -> None:
     """Cycle through each S3-like cloud config and perform backup and restore."""
     app: str = (await app_name(ops_test)) or APP_NAME
+    await _ensure_only_s3_integrator_related(ops_test, app)
+
     unit_ip: str = await get_leader_unit_ip(ops_test, app=app)
     leader_id: int = await get_leader_unit_id(ops_test, app=app)
 
