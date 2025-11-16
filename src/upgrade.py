@@ -291,7 +291,7 @@ class Upgrade(abc.ABC):
             ):
                 raise PrecheckFailed("Not all units are online for the current app.")
 
-            typ = self._charm.snapshot_events.get_active_storage_type()
+            typ = self._charm.snapshots_manager.get_active_storage_type()
             if (
                 typ
                 and self._charm.snapshots_manager.is_repository_created(typ)

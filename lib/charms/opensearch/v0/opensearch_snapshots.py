@@ -144,11 +144,11 @@ class OpenSearchSnapshotsEvents(Object):
     object_storage_gone = EventSource(_ObjectStorageGone)
 
     def __init__(
-        self, charm: "OpenSearchBaseCharm", resolver: ObjectStorageResolver | None = None
+        self,
+        charm: "OpenSearchBaseCharm",
     ):
         super().__init__(charm, key="backups")
         self.charm = charm
-        self._resolver = resolver or ObjectStorageResolver(charm)
 
         # requirers
         self.s3_requirer = S3Requirer(charm, S3_RELATION)
@@ -186,11 +186,6 @@ class OpenSearchSnapshotsEvents(Object):
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
 
-    @property
-    def resolver(self) -> ObjectStorageResolver:
-        """Resolve object storage."""
-        return self._resolver
-
     def _on_s3_credentials_changed(self, event: CredentialsChangedEvent) -> None:  # noqa: C901
         """Handler for s3 credentials changed event."""
         dep = self.charm.opensearch_peer_cm.deployment_desc()
@@ -201,7 +196,7 @@ class OpenSearchSnapshotsEvents(Object):
                 self.charm.status.set(BlockedStatus(BackupRelShouldNotExist))
             return
 
-        object_storage_type = self.resolver.get_storage_type() or "s3"
+        object_storage_type = self.charm.snapshots_manager.resolver.get_storage_type() or "s3"
         logger.info(f"S3 credentials changed for object storage type {object_storage_type}")
         if object_storage_type == "conflict":
             if self.charm.unit.is_leader():
@@ -214,7 +209,7 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.status.clear(BackupRelConflict, app=True)
             self.charm.status.clear(BackupRelConflict)
 
-        cfg = self.resolver.get_storage_config("s3")
+        cfg = self.charm.snapshots_manager.resolver.get_storage_config("s3")
         creds = getattr(getattr(cfg, "s3", None), "credentials", None)
         # handle case where this was deferred in the above case, then the s3 relation was severed
         if object_storage_type != "s3" or not cfg or not creds:
@@ -231,10 +226,10 @@ class OpenSearchSnapshotsEvents(Object):
         # apply locally (leader does cluster-level config)
         self.charm.keystore_manager.put_entries(
             {
-                "s3.client.default.access_key": self.resolver.get_storage_config(
+                "s3.client.default.access_key": self.charm.snapshots_manager.resolver.get_storage_config(
                     "s3"
                 ).s3.credentials.access_key,
-                "s3.client.default.secret_key": self.resolver.get_storage_config(
+                "s3.client.default.secret_key": self.charm.snapshots_manager.resolver.get_storage_config(
                     "s3"
                 ).s3.credentials.secret_key,
             }
@@ -280,7 +275,7 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.status.clear(BackupRelShouldNotExist, app=True)
             self.charm.status.clear(BackupRelShouldNotExist)
 
-        if self.resolver.get_storage_type() == "conflict":
+        if self.charm.snapshots_manager.resolver.get_storage_type() == "conflict":
             return
 
         keystore_entries = ["s3.client.default.access_key", "s3.client.default.secret_key"]
@@ -315,7 +310,7 @@ class OpenSearchSnapshotsEvents(Object):
                 self.charm.status.set(BlockedStatus(BackupRelShouldNotExist))
             return
 
-        object_storage_type = self.resolver.get_storage_type() or "azure"
+        object_storage_type = self.charm.snapshots_manager.resolver.get_storage_type() or "azure"
 
         if object_storage_type == "conflict":
             if self.charm.unit.is_leader():
@@ -328,7 +323,7 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.status.clear(BackupRelConflict, app=True)
             self.charm.status.clear(BackupRelConflict)
 
-        cfg = self.resolver.get_storage_config("azure")
+        cfg = self.charm.snapshots_manager.resolver.get_storage_config("azure")
         creds = getattr(getattr(cfg, "azure", None), "credentials", None)
 
         if object_storage_type != "azure" or not cfg or not creds:
@@ -344,10 +339,10 @@ class OpenSearchSnapshotsEvents(Object):
 
         self.charm.keystore_manager.put_entries(
             {
-                "azure.client.default.account": self.resolver.get_storage_config(
+                "azure.client.default.account": self.charm.snapshots_manager.resolver.get_storage_config(
                     "azure"
                 ).azure.credentials.storage_account,
-                "azure.client.default.key": self.resolver.get_storage_config(
+                "azure.client.default.key": self.charm.snapshots_manager.resolver.get_storage_config(
                     "azure"
                 ).azure.credentials.secret_key,
             }
@@ -379,7 +374,7 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.status.clear(BackupRelShouldNotExist, app=True)
             self.charm.status.clear(BackupRelShouldNotExist)
 
-        if self.resolver.get_storage_type() == "conflict":
+        if self.charm.snapshots_manager.resolver.get_storage_type() == "conflict":
             return
 
         keystore_entries = ["azure.client.default.account", "azure.client.default.key"]
@@ -689,40 +684,31 @@ class OpenSearchSnapshotsEvents(Object):
         secret_key = self._secret_value_from_id(secret_key_secret_id)
         return {"storage_account": storage_account, "secret_key": secret_key}
 
-    def get_active_storage_type(self) -> ObjectStorageType | None:
-        """Get the active storage type."""
-        return self.resolver.get_storage_type()
-
-    def get_object_storage_config(
-        self, forced_type: ObjectStorageType | None = None
-    ) -> ObjectStorageConfig | None:
-        """Get the object storage config."""
-        return self.resolver.get_storage_config(forced_type)
-
     def get_s3_info(self) -> Optional[S3RelData]:
         """Get the s3 info."""
         cfg = (
-            self.get_object_storage_config("s3")
-            if self.get_active_storage_type() in {"s3", "s3-pcluster"}
-            else self.get_object_storage_config()
+            self.charm.snapshots_manager.get_object_storage_config("s3")
+            if self.charm.snapshots_manager.get_active_storage_type() in {"s3", "s3-pcluster"}
+            else self.charm.snapshots_manager.get_object_storage_config()
         )
         return cfg.s3 if cfg and cfg.s3 else None
 
     def get_azure_info(self) -> AzureRelData | None:
         """Get the azure info."""
         cfg = (
-            self.get_object_storage_config("azure")
-            if self.get_active_storage_type() in {"azure", "azure-pcluster"}
-            else self.get_object_storage_config()
+            self.charm.snapshots_manager.get_object_storage_config("azure")
+            if self.charm.snapshots_manager.get_active_storage_type()
+            in {"azure", "azure-pcluster"}
+            else self.charm.snapshots_manager.get_object_storage_config()
         )
         return cfg.azure if cfg and cfg.azure else None
 
     def get_gcs_info(self) -> GcsRelData | None:
         """Get the gcs info."""
         cfg = (
-            self.get_object_storage_config("gcs")
-            if self.get_active_storage_type() in {"gcs", "gcs-pcluster"}
-            else self.get_object_storage_config()
+            self.charm.snapshots_manager.get_object_storage_config("gcs")
+            if self.charm.snapshots_manager.get_active_storage_type() in {"gcs", "gcs-pcluster"}
+            else self.charm.snapshots_manager.get_object_storage_config()
         )
         return cfg.gcs if cfg and cfg.gcs else None
 
@@ -980,7 +966,7 @@ class OpenSearchSnapshotsEvents(Object):
         """
         if forced_kind in {"s3", "azure", "gcs"}:
             return forced_kind + "-pcluster"
-        typ = self.resolver.get_storage_type()
+        typ = self.charm.snapshots_manager.resolver.get_storage_type()
         return typ or self._peer_storage_kind()
 
     def _effective_config(self, typ: str | None) -> ObjectStorageConfig | None:
@@ -993,7 +979,7 @@ class OpenSearchSnapshotsEvents(Object):
             storage type if there is else None
         """
         if typ in {"s3", "azure", "gcs"}:
-            return self.resolver.get_storage_config(typ)
+            return self.charm.snapshots_manager.resolver.get_storage_config(typ)
         return
 
     def _action_missing_pre_requisites(  # noqa C901
@@ -1108,6 +1094,22 @@ class OpenSearchSnapshotsManager:
     def __init__(self, charm: "OpenSearchBaseCharm", opensearch: "OpenSearchDistribution"):
         self.charm = charm  # todo this will need to be replaced by the clusterState
         self.opensearch = opensearch
+        self._resolver = ObjectStorageResolver(charm)
+
+    @property
+    def resolver(self) -> ObjectStorageResolver:
+        """Resolve object storage."""
+        return self._resolver
+
+    def get_active_storage_type(self) -> ObjectStorageType | None:
+        """Get the active storage type."""
+        return self.charm.snapshots_manager.resolver.get_storage_type()
+
+    def get_object_storage_config(
+        self, forced_type: ObjectStorageType | None = None
+    ) -> ObjectStorageConfig | None:
+        """Get the object storage config."""
+        return self.charm.snapshots_manager.resolver.get_storage_config(forced_type)
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def create_repo(
