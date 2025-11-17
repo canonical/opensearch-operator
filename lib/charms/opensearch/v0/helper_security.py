@@ -444,7 +444,7 @@ def _remove_ca_aliases(alias_base: str, store_pwd: str, store_path: str) -> None
 
 
 def remove_s3_ca(alias: str, store_pwd: str, store_path: str) -> None:
-    """Remove S3 CA cert(s) from trust store."""
+    """Remove S3 CA cert(s) from the truststore."""
     if not alias:
         logger.debug("remove_s3_ca called with empty alias, nothing to do.")
         return

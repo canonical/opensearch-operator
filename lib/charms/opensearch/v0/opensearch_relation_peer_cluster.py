@@ -15,6 +15,7 @@ from charms.opensearch.v0.constants_charm import (
     COSUser,
     KibanaserverUser,
     PClusterMainIsRequirer,
+    PClusterMissingStorageRelations,
     PClusterOrchestratorsRemoved,
     PClusterWaitingForFailoverPromotion,
     PeerClusterOrchestratorRelationName,
@@ -24,6 +25,7 @@ from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENT
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology
+from charms.opensearch.v0.helper_storage import ObjectStorageType
 from charms.opensearch.v0.models import (
     AzureRelDataCredentials,
     DeploymentDescription,
@@ -53,8 +55,6 @@ from ops import (
     WaitingStatus,
 )
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
-
-from lib.charms.opensearch.v0.helper_storage import ObjectStorageType
 
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
@@ -393,8 +393,15 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if self._has_secret_and_no_relation(info["key"], info["relation_name"])
         ]
         if should_block:
-            message = f"Found credentials with missing relations. Add relation with {', '.join(should_block)} and any client applications."
-            self.charm.status.set(BlockedStatus(message), app=True)
+            logger.warning(
+                "%s Missing relations for: %s",
+                PClusterMissingStorageRelations,
+                ", ".join(should_block),
+            )
+            self.charm.status.set(BlockedStatus(PClusterMissingStorageRelations), app=True)
+            return
+
+        self.charm.status.clear(PClusterMissingStorageRelations, app=True)
 
     def _has_secret_and_no_relation(self, key: str, relation_name: str) -> bool:
         """Checks if the relation data has credentials for a non-related app"""
