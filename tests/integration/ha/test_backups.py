@@ -83,8 +83,8 @@ SMALL_DEPLOYMENTS_ALL_CLOUDS = [
 LARGE_DEPLOYMENTS_ALL_CLOUDS = [
     ALL_GROUPS[(cloud, "large")] for cloud in ["aws", "microceph", "azure"]
 ]
-S3_LIKE_CLOUDS = ["aws", "microceph"]
-ALL_CLOUDS_ALL_GROUP = ["microceph", "aws", "azure"]
+ALL_S3_GROUP = "all-s3"
+ALL_AZURE_GROUP = "all-azure"
 
 S3_INTEGRATOR = "s3-integrator"
 S3_INTEGRATOR_CHANNEL = "1/stable"
@@ -779,17 +779,19 @@ async def _has_relation(
     ops_test: OpsTest,
     app: str,
     endpoint: str,
-    other_app: str,
+    related_app: str,
 ) -> bool:
-    """Return True if app:endpoint is related to other_app."""
-    app_obj = ops_test.model.applications.get(app)
-    if not app_obj:
+    """Return True if app_name:endpoint is integrated to related_app."""
+    status = await ops_test.model.get_status()
+    app_status = status["applications"].get(app)
+    if not app_status:
         return False
 
-    # app_obj.relations is a dict: {endpoint_name: [Relation, ...]}
-    for rel in app_obj.relations.get(endpoint, []):
-        if rel.application.name == other_app:
+    # app_status["relations"] is a dict: {endpoint: [ { "related-application": ... }, ... ]}
+    for rel in app_status.get("relations", {}).get(endpoint, []):
+        if rel.get("related-application") == related_app:
             return True
+
     return False
 
 
@@ -800,10 +802,6 @@ async def _drop_s3_relation_if_any(ops_test: OpsTest, app: str) -> None:
 
     app_endpoint = f"{app}:{S3_RELATION}"
     s3_endpoint = f"{S3_INTEGRATOR}:{S3_RELATION}"
-
-    if not await _has_relation(ops_test, app, S3_RELATION, S3_INTEGRATOR):
-        logger.info("No S3 relation %s <-> %s found, nothing to drop.", app_endpoint, s3_endpoint)
-        return
 
     try:
         await ops_test.model.applications[app].destroy_relation(
@@ -827,12 +825,6 @@ async def _drop_azure_relation_if_any(ops_test: OpsTest, app: str) -> None:
 
     app_endpoint = f"{app}:{AZURE_RELATION}"
     azure_endpoint = f"{AZURE_INTEGRATOR}:{AZURE_RELATION}"
-
-    if not await _has_relation(ops_test, app, AZURE_RELATION, AZURE_INTEGRATOR):
-        logger.info(
-            "No Azure relation %s <-> %s found, nothing to drop.", app_endpoint, azure_endpoint
-        )
-        return
 
     try:
         await ops_test.model.applications[app].destroy_relation(
@@ -865,7 +857,7 @@ async def _ensure_only_s3_integrator_related(
     app_endpoint = f"{app}:{S3_RELATION}"
     s3_endpoint = f"{S3_INTEGRATOR}:{S3_RELATION}"
 
-    if not await _has_relation(ops_test, app, S3_RELATION, S3_INTEGRATOR):
+    try:
         await ops_test.model.integrate(app, S3_INTEGRATOR)
         await ops_test.model.wait_for_idle(
             apps=[app, S3_INTEGRATOR],
@@ -873,8 +865,13 @@ async def _ensure_only_s3_integrator_related(
             idle_period=IDLE_PERIOD,
         )
         logger.info("Integrated %s <-> %s.", app_endpoint, s3_endpoint)
-    else:
-        logger.info("S3 relation %s <-> %s already present.", app_endpoint, s3_endpoint)
+    except Exception as e:
+        logger.info(
+            "S3 relation %s <-> %s already present or failed to create: %s",
+            app_endpoint,
+            s3_endpoint,
+            e,
+        )
 
 
 async def _ensure_only_azure_integrator_related(ops_test: OpsTest, app: str) -> None:
@@ -891,7 +888,7 @@ async def _ensure_only_azure_integrator_related(ops_test: OpsTest, app: str) -> 
     app_endpoint = f"{app}:{AZURE_RELATION}"
     azure_endpoint = f"{AZURE_INTEGRATOR}:{AZURE_RELATION}"
 
-    if not await _has_relation(ops_test, app, AZURE_RELATION, AZURE_INTEGRATOR):
+    try:
         await ops_test.model.integrate(app, AZURE_INTEGRATOR)
         await ops_test.model.wait_for_idle(
             apps=[app, AZURE_INTEGRATOR],
@@ -899,11 +896,17 @@ async def _ensure_only_azure_integrator_related(ops_test: OpsTest, app: str) -> 
             idle_period=IDLE_PERIOD,
         )
         logger.info("Integrated %s <-> %s.", app_endpoint, azure_endpoint)
-    else:
-        logger.info("Azure relation %s <-> %s already present.", app_endpoint, azure_endpoint)
+    except Exception as e:
+        logger.info(
+            "Azure relation %s <-> %s already present or failed to create: %s",
+            app_endpoint,
+            azure_endpoint,
+            e,
+        )
 
 
-@pytest.mark.group(id="all")
+@pytest.mark.group(id=ALL_S3_GROUP)
+@pytest.mark.group(id=ALL_AZURE_GROUP)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_deploy_and_test_status(ops_test: OpsTest, charm, series) -> None:
@@ -931,7 +934,7 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest, charm, series) ->
     )
 
 
-@pytest.mark.group(id="all")
+@pytest.mark.group(id=ALL_S3_GROUP)
 @pytest.mark.abort_on_fail
 async def test_repo_missing_message(ops_test: OpsTest) -> None:
     """Validate the repository missing message format from OpenSearch.
@@ -949,7 +952,7 @@ async def test_repo_missing_message(ops_test: OpsTest) -> None:
     assert "repository_missing_exception" in resp["error"]["type"]
 
 
-@pytest.mark.group(id="all")
+@pytest.mark.group(id=ALL_S3_GROUP)
 @pytest.mark.abort_on_fail
 async def test_wrong_s3_credentials(
     ops_test: OpsTest,
@@ -1028,7 +1031,7 @@ async def test_wrong_s3_credentials(
         assert S3_REPOSITORY in resp_ok
 
 
-@pytest.mark.group(id="all")
+@pytest.mark.group(id=ALL_S3_GROUP)
 @pytest.mark.abort_on_fail
 async def test_wrong_s3_ca_blocked(
     ops_test: OpsTest,
@@ -1107,7 +1110,7 @@ async def test_wrong_s3_ca_blocked(
         assert S3_REPOSITORY in resp_ok
 
 
-@pytest.mark.group(id="all")
+@pytest.mark.group(id=ALL_AZURE_GROUP)
 @pytest.mark.abort_on_fail
 async def test_wrong_azure_credentials(
     ops_test: OpsTest,
@@ -1184,7 +1187,7 @@ async def test_wrong_azure_credentials(
         assert AZURE_REPOSITORY in resp_ok
 
 
-@pytest.mark.group(id="all")
+@pytest.mark.group(id=ALL_S3_GROUP)
 @pytest.mark.abort_on_fail
 async def test_change_config_and_backup_restore(
     ops_test: OpsTest,
