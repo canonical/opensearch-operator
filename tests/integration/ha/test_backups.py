@@ -49,7 +49,6 @@ from ..helpers import (
     run_action,
 )
 from ..helpers_deployments import get_application_units, wait_until
-from ..relations.helpers import new_relation_joined
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import (
     add_juju_secret,
@@ -776,6 +775,24 @@ async def test_restore_to_new_cluster(
 # -------------------------------------------------------------------------------------------
 
 
+async def _has_relation(
+    ops_test: OpsTest,
+    app: str,
+    endpoint: str,
+    other_app: str,
+) -> bool:
+    """Return True if app:endpoint is related to other_app."""
+    app_obj = ops_test.model.applications.get(app)
+    if not app_obj:
+        return False
+
+    # app_obj.relations is a dict: {endpoint_name: [Relation, ...]}
+    for rel in app_obj.relations.get(endpoint, []):
+        if rel.application.name == other_app:
+            return True
+    return False
+
+
 async def _drop_s3_relation_if_any(ops_test: OpsTest, app: str) -> None:
     """If app is related to S3_INTEGRATOR via S3_RELATION, drop that relation."""
     if S3_INTEGRATOR not in ops_test.model.applications:
@@ -784,7 +801,7 @@ async def _drop_s3_relation_if_any(ops_test: OpsTest, app: str) -> None:
     app_endpoint = f"{app}:{S3_RELATION}"
     s3_endpoint = f"{S3_INTEGRATOR}:{S3_RELATION}"
 
-    if not new_relation_joined(ops_test, app_endpoint, s3_endpoint):
+    if not await _has_relation(ops_test, app, S3_RELATION, S3_INTEGRATOR):
         logger.info("No S3 relation %s <-> %s found, nothing to drop.", app_endpoint, s3_endpoint)
         return
 
@@ -811,7 +828,7 @@ async def _drop_azure_relation_if_any(ops_test: OpsTest, app: str) -> None:
     app_endpoint = f"{app}:{AZURE_RELATION}"
     azure_endpoint = f"{AZURE_INTEGRATOR}:{AZURE_RELATION}"
 
-    if not new_relation_joined(ops_test, app_endpoint, azure_endpoint):
+    if not await _has_relation(ops_test, app, AZURE_RELATION, AZURE_INTEGRATOR):
         logger.info(
             "No Azure relation %s <-> %s found, nothing to drop.", app_endpoint, azure_endpoint
         )
@@ -848,7 +865,7 @@ async def _ensure_only_s3_integrator_related(
     app_endpoint = f"{app}:{S3_RELATION}"
     s3_endpoint = f"{S3_INTEGRATOR}:{S3_RELATION}"
 
-    if not new_relation_joined(ops_test, app_endpoint, s3_endpoint):
+    if not await _has_relation(ops_test, app, S3_RELATION, S3_INTEGRATOR):
         await ops_test.model.integrate(app, S3_INTEGRATOR)
         await ops_test.model.wait_for_idle(
             apps=[app, S3_INTEGRATOR],
@@ -874,7 +891,7 @@ async def _ensure_only_azure_integrator_related(ops_test: OpsTest, app: str) -> 
     app_endpoint = f"{app}:{AZURE_RELATION}"
     azure_endpoint = f"{AZURE_INTEGRATOR}:{AZURE_RELATION}"
 
-    if not new_relation_joined(ops_test, app_endpoint, azure_endpoint):
+    if not await _has_relation(ops_test, app, AZURE_RELATION, AZURE_INTEGRATOR):
         await ops_test.model.integrate(app, AZURE_INTEGRATOR)
         await ops_test.model.wait_for_idle(
             apps=[app, AZURE_INTEGRATOR],
