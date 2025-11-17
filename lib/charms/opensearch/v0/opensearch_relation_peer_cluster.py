@@ -594,7 +594,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 return None
 
             cfg = (
-                self.charm.snapshot_manager.resolver.get_storage_config("azure")
+                self.charm.snapshots_manager.resolver.get_storage_config("azure")
                 or ObjectStorageConfig()
             )
             azure = cfg.azure
@@ -629,7 +629,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(S3_RELATION):
                 return None
             cfg = (
-                self.charm.snapshot_manager.resolver.get_storage_config("s3")
+                self.charm.snapshots_manager.resolver.get_storage_config("s3")
                 or ObjectStorageConfig()
             )
             s3 = cfg.s3
