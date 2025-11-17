@@ -63,12 +63,12 @@ class SnapshotsUnitTestFixtures:
         "charms.opensearch.v0.opensearch_health.OpenSearchHealth.get",
         return_value=HealthColors.GREEN,
     )
-    patch_snap_running = patch(
-        "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_snapshot_running",
+    patch_backup_running = patch(
+        "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_backup_in_progress",
         return_value=False,
     )
     patch_restore_running = patch(
-        "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_restore_running",
+        "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_restore_in_progress",
         return_value=False,
     )
     patch_create_snapshot = patch(
@@ -90,7 +90,7 @@ class SnapshotsUnitTestFixtures:
         self.mock_az_conn = self.patch_az_conn.start()
         self.mock_is_repo_created = self.patch_is_repo_created.start()
         self.mock_health_get = self.patch_health_get.start()
-        self.mock_snap_running = self.patch_snap_running.start()
+        self.mock_backup_running = self.patch_backup_running.start()
         self.mock_restore_running = self.patch_restore_running.start()
         self.mock_create_snapshot = self.patch_create_snapshot.start()
         self.mock_get_snapshot = self.patch_get_snapshot.start()

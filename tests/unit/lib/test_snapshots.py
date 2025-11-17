@@ -565,14 +565,14 @@ class TestPrerequisites(SnapshotsUnitTestFixtures):
 
         self.mock_is_repo_created.return_value = True
         self.mock_health_get.return_value = HealthColors.GREEN
-        self.mock_snap_running.return_value = True
+        self.mock_backup_running.return_value = True
         self.mock_restore_running.return_value = False
 
         with pytest.raises(testing.ActionFailed) as err:
             self.ctx.run(self.ctx.on.action("create-backup"), st)
         assert "operation in progress" in err.value.message.lower()
 
-        self.mock_snap_running.return_value = False
+        self.mock_backup_running.return_value = False
         self.mock_restore_running.return_value = True
 
         with pytest.raises(testing.ActionFailed) as err:

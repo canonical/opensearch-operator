@@ -253,7 +253,7 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.snapshots_manager.verify_repository("s3")
         except OpenSearchHttpError as e:
             if self.charm.unit.is_leader():
-                self._set_app_to_blocked(self.classify_os_repo_errors(e))
+                self._set_app_to_blocked(self._classify_os_repo_errors(e))
             return
 
         if self.charm.unit.is_leader():
@@ -387,7 +387,7 @@ class OpenSearchSnapshotsEvents(Object):
         self._broadcast_storage_trigger(kind="azure", action="gone")
 
     @staticmethod
-    def classify_os_repo_errors(err: "OpenSearchHttpError") -> str:
+    def _classify_os_repo_errors(err: "OpenSearchHttpError") -> str:
         """Detect the CA or key related errors."""
         text = json.dumps(
             getattr(err, "response_body", {}), ensure_ascii=False, default=str
@@ -1046,7 +1046,7 @@ class OpenSearchSnapshotsEvents(Object):
         try:
             if (
                 self.charm.snapshots_manager.is_backup_in_progress()
-                or self.charm.snapshots_manager.is_restore_running()
+                or self.charm.snapshots_manager.is_restore_in_progress()
             ):
                 return "Backup / Restore operation in progress."
         except OpenSearchHttpError as e:
@@ -1445,7 +1445,7 @@ class OpenSearchSnapshotsManager:
         return len(response.get("snapshots", [])) > 0
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
-    def is_restore_running(self) -> bool:
+    def is_restore_in_progress(self) -> bool:
         """Check if a restore operation is running.
 
         Returns:
@@ -1492,7 +1492,9 @@ class OpenSearchSnapshotsManager:
         """
         if object_storage_type not in {"s3", "s3-pcluster"}:
             return False
-        chain = (object_storage_config.s3 and object_storage_config.s3.tls_ca_chain) or None
+
+        s3_cfg = object_storage_config.s3
+        chain = s3_cfg.tls_ca_chain if s3_cfg else None
         if not chain:
             return False
 

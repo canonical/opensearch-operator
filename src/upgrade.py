@@ -296,7 +296,7 @@ class Upgrade(abc.ABC):
                 typ
                 and self._charm.snapshots_manager.is_repository_created(typ)
                 and (
-                    self._charm.snapshots_manager.is_restore_running()
+                    self._charm.snapshots_manager.is_restore_in_progress()
                     or self._charm.snapshots_manager.is_backup_in_progress()
                 )
             ):
