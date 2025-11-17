@@ -360,7 +360,6 @@ class S3RelData(Model):
             chain = v.get("chain")
             if isinstance(chain, list):
                 return "\n".join(s.strip() for s in chain if s)
-            import json
 
             return json.dumps(v)
         return str(v)

@@ -3,9 +3,8 @@
 
 """OpenSearch StorageResolver."""
 import logging
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, Literal, Optional
 
-from charms.data_platform_libs.v0.data_interfaces import Scope
 from charms.opensearch.v0.constants_charm import (
     AZURE_RELATION,
     GCS_RELATION,
@@ -20,6 +19,9 @@ from charms.opensearch.v0.models import (
 )
 from pydantic import ValidationError
 
+if TYPE_CHECKING:
+    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
+
 ObjectStorageType = Literal[
     "s3", "azure", "gcs", "s3-pcluster", "azure-pcluster", "gcs-pcluster", "conflict"
 ]
@@ -30,7 +32,7 @@ logger = logging.getLogger(__name__)
 class ObjectStorageResolver:
     """Resolves active object storage type and config from relations/peer-cluster."""
 
-    def __init__(self, charm):
+    def __init__(self, charm: "OpenSearchBaseCharm") -> None:
         """Initialize the object storage resolver object."""
         self.charm = charm
 
@@ -56,8 +58,6 @@ class ObjectStorageResolver:
                 return "azure"
             if self.charm.model.get_relation(GCS_RELATION):
                 return "gcs"
-            if typ := self.charm.peers_data.get(Scope.UNIT, "object-storage-type"):
-                return typ  # last known type
             return
 
         # non-main orchestrator
@@ -70,8 +70,6 @@ class ObjectStorageResolver:
             return "azure-pcluster"
         if peer_data.credentials.gcs:
             return "gcs-pcluster"
-        if typ := self.charm.peers_data.get(Scope.UNIT, "object-storage-type"):
-            return typ
         return
 
     def get_storage_config(  # noqa: C901

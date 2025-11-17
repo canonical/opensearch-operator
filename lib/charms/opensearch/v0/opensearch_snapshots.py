@@ -99,6 +99,7 @@ SYSTEM_INDICES = {
     OpenSearchNodeLock.OPENSEARCH_INDEX,
 }
 
+# The text that may appear in the CA related errors.
 CA_ERRORS = (
     "certificate verify failed",
     "pkix path",
@@ -108,11 +109,6 @@ CA_ERRORS = (
     "validator_exception",
     "unable to find valid",
 )
-
-_CONFLICT_FLAG = {
-    "s3": "snapshots_publish_after_conflict_s3",
-    "azure": "snapshots_publish_after_conflict_azure",
-}
 
 
 class _ObjectStorageEvent(EventBase):
@@ -190,13 +186,17 @@ class OpenSearchSnapshotsEvents(Object):
         """Handler for s3 credentials changed event."""
         dep = self.charm.opensearch_peer_cm.deployment_desc()
         # block non-main orchestrators only when they are in a multi-app topology.
-        if dep and dep.typ != DeploymentType.MAIN_ORCHESTRATOR and self._has_peer_topology():
+        if (
+            dep
+            and dep.typ != DeploymentType.MAIN_ORCHESTRATOR
+            and self._is_part_of_large_deployment()
+        ):
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelShouldNotExist), app=True)
                 self.charm.status.set(BlockedStatus(BackupRelShouldNotExist))
             return
 
-        object_storage_type = self.charm.snapshots_manager.resolver.get_storage_type() or "s3"
+        object_storage_type = self.charm.snapshots_manager.resolver.get_storage_type()
         logger.info(f"S3 credentials changed for object storage type {object_storage_type}")
         if object_storage_type == "conflict":
             if self.charm.unit.is_leader():
@@ -226,12 +226,8 @@ class OpenSearchSnapshotsEvents(Object):
         # apply locally (leader does cluster-level config)
         self.charm.keystore_manager.put_entries(
             {
-                "s3.client.default.access_key": self.charm.snapshots_manager.resolver.get_storage_config(
-                    "s3"
-                ).s3.credentials.access_key,
-                "s3.client.default.secret_key": self.charm.snapshots_manager.resolver.get_storage_config(
-                    "s3"
-                ).s3.credentials.secret_key,
+                "s3.client.default.access_key": cfg.s3.credentials.access_key,
+                "s3.client.default.secret_key": cfg.s3.credentials.secret_key,
             }
         )
         logger.info("S3 credentials are added to keystore.")
@@ -304,13 +300,17 @@ class OpenSearchSnapshotsEvents(Object):
         """Handler for azure credentials changed event."""
         dep = self.charm.opensearch_peer_cm.deployment_desc()
         # block non-main orchestrators only when they are in a multi-app topology.
-        if dep and dep.typ != DeploymentType.MAIN_ORCHESTRATOR and self._has_peer_topology():
+        if (
+            dep
+            and dep.typ != DeploymentType.MAIN_ORCHESTRATOR
+            and self._is_part_of_large_deployment()
+        ):
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelShouldNotExist), app=True)
                 self.charm.status.set(BlockedStatus(BackupRelShouldNotExist))
             return
 
-        object_storage_type = self.charm.snapshots_manager.resolver.get_storage_type() or "azure"
+        object_storage_type = self.charm.snapshots_manager.resolver.get_storage_type()
 
         if object_storage_type == "conflict":
             if self.charm.unit.is_leader():
@@ -339,12 +339,8 @@ class OpenSearchSnapshotsEvents(Object):
 
         self.charm.keystore_manager.put_entries(
             {
-                "azure.client.default.account": self.charm.snapshots_manager.resolver.get_storage_config(
-                    "azure"
-                ).azure.credentials.storage_account,
-                "azure.client.default.key": self.charm.snapshots_manager.resolver.get_storage_config(
-                    "azure"
-                ).azure.credentials.secret_key,
+                "azure.client.default.account": cfg.azure.credentials.storage_account,
+                "azure.client.default.key": cfg.azure.credentials.secret_key,
             }
         )
         self.charm.keystore_manager.reload()
@@ -498,6 +494,8 @@ class OpenSearchSnapshotsEvents(Object):
         try:
             stored = (
                 list_cas(
+                    # TODO: create a S3 CA truststore juju secret
+                    #  and it should be known by subclusters
                     store_pwd="changeit",
                     store_path=f"{self.charm.opensearch.paths.certs}/cacerts.p12",
                 )
@@ -1047,7 +1045,7 @@ class OpenSearchSnapshotsEvents(Object):
 
         try:
             if (
-                self.charm.snapshots_manager.is_snapshot_running()
+                self.charm.snapshots_manager.is_backup_in_progress()
                 or self.charm.snapshots_manager.is_restore_running()
             ):
                 return "Backup / Restore operation in progress."
@@ -1081,7 +1079,7 @@ class OpenSearchSnapshotsEvents(Object):
             )
             logger.info("Created snapshot repository for %s", storage_type)
 
-    def _has_peer_topology(self) -> bool:
+    def _is_part_of_large_deployment(self) -> bool:
         """Return True if this app participates in a multi-app topology (main/failover/data)."""
         return bool(
             self.charm.model.relations.get(PeerClusterOrchestratorRelationName, [])
@@ -1094,12 +1092,7 @@ class OpenSearchSnapshotsManager:
     def __init__(self, charm: "OpenSearchBaseCharm", opensearch: "OpenSearchDistribution"):
         self.charm = charm  # todo this will need to be replaced by the clusterState
         self.opensearch = opensearch
-        self._resolver = ObjectStorageResolver(charm)
-
-    @property
-    def resolver(self) -> ObjectStorageResolver:
-        """Resolve object storage."""
-        return self._resolver
+        self.resolver = ObjectStorageResolver(charm)
 
     def get_active_storage_type(self) -> ObjectStorageType | None:
         """Get the active storage type."""
@@ -1440,8 +1433,8 @@ class OpenSearchSnapshotsManager:
             raise
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
-    def is_snapshot_running(self) -> bool:
-        """Check if a snapshot is running.
+    def is_backup_in_progress(self) -> bool:
+        """Check if a backup is running.
 
         Returns:
             True if snapshot is running else False
@@ -1514,6 +1507,7 @@ class OpenSearchSnapshotsManager:
         """
         stored_cacerts = (
             list_cas(
+                # TODO: create a S3 CA truststore juju secret and it should be known by subclusters
                 store_pwd="changeit",
                 store_path=f"{self.opensearch.paths.certs}/cacerts.p12",
             )
@@ -1561,14 +1555,14 @@ class OpenSearchSnapshotsManager:
         if not s3_tls_ca_chain:
             remove_ca(
                 alias=S3_CA_ALIAS,
+                # TODO: create a S3 CA truststore juju secret and it should be known by subclusters
                 store_pwd="changeit",
                 store_path=store_path,
             )
             return
 
         # If we already have the same CA, skip re-import
-        current_chain = self._find_s3_chain_in_store()
-        if current_chain and _normalize_chain(current_chain) == _normalize_chain(s3_tls_ca_chain):
+        if self.is_custom_s3_ca_stored(s3_tls_ca_chain):
             logger.info("S3 CA unchanged; skipping re-import.")
             return
 
@@ -1576,12 +1570,14 @@ class OpenSearchSnapshotsManager:
         # to avoid keytool already exists error
         remove_ca(
             alias=S3_CA_ALIAS,
+            # TODO: create a S3 CA truststore juju secret and it should be known by subclusters
             store_pwd="changeit",
             store_path=store_path,
         )
 
         # Import fresh CA
         store_s3_ca(
+            # TODO: create a S3 CA truststore juju secret and it should be known by subclusters
             store_pwd="changeit",
             store_path=store_path,
             alias=S3_CA_ALIAS,
