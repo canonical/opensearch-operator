@@ -775,26 +775,6 @@ async def test_restore_to_new_cluster(
 # -------------------------------------------------------------------------------------------
 
 
-async def _has_relation(
-    ops_test: OpsTest,
-    app: str,
-    endpoint: str,
-    related_app: str,
-) -> bool:
-    """Return True if app_name:endpoint is integrated to related_app."""
-    status = await ops_test.model.get_status()
-    app_status = status["applications"].get(app)
-    if not app_status:
-        return False
-
-    # app_status["relations"] is a dict: {endpoint: [ { "related-application": ... }, ... ]}
-    for rel in app_status.get("relations", {}).get(endpoint, []):
-        if rel.get("related-application") == related_app:
-            return True
-
-    return False
-
-
 async def _drop_s3_relation_if_any(ops_test: OpsTest, app: str) -> None:
     """If app is related to S3_INTEGRATOR via S3_RELATION, drop that relation."""
     if S3_INTEGRATOR not in ops_test.model.applications:

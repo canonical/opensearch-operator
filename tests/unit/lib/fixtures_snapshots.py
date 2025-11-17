@@ -64,7 +64,7 @@ class SnapshotsUnitTestFixtures:
         return_value=HealthColors.GREEN,
     )
     patch_backup_running = patch(
-        "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_backup_in_progress",
+        "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.is_snapshot_in_progress",
         return_value=False,
     )
     patch_restore_running = patch(

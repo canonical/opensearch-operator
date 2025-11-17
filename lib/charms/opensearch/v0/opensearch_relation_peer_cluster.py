@@ -54,6 +54,8 @@ from ops import (
 )
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
+from lib.charms.opensearch.v0.helper_storage import ObjectStorageType
+
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
@@ -594,7 +596,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 return None
 
             cfg = (
-                self.charm.snapshots_manager.resolver.get_storage_config("azure")
+                self.charm.snapshots_manager.resolver.get_storage_config(ObjectStorageType.AZURE)
                 or ObjectStorageConfig()
             )
             azure = cfg.azure
@@ -629,7 +631,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(S3_RELATION):
                 return None
             cfg = (
-                self.charm.snapshots_manager.resolver.get_storage_config("s3")
+                self.charm.snapshots_manager.resolver.get_storage_config(ObjectStorageType.S3)
                 or ObjectStorageConfig()
             )
             s3 = cfg.s3
@@ -664,7 +666,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(S3_RELATION):
                 return None
             cfg = (
-                self.charm.snapshots_manager.resolver.get_storage_config("s3")
+                self.charm.snapshots_manager.resolver.get_storage_config(ObjectStorageType.S3)
                 or ObjectStorageConfig()
             )
             s3 = cfg.s3

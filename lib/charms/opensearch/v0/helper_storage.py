@@ -3,7 +3,8 @@
 
 """OpenSearch StorageResolver."""
 import logging
-from typing import TYPE_CHECKING, Literal, Optional
+from enum import Enum
+from typing import TYPE_CHECKING, Optional
 
 from charms.opensearch.v0.constants_charm import (
     AZURE_RELATION,
@@ -22,11 +23,19 @@ from pydantic import ValidationError
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
-ObjectStorageType = Literal[
-    "s3", "azure", "gcs", "s3-pcluster", "azure-pcluster", "gcs-pcluster", "conflict"
-]
-
 logger = logging.getLogger(__name__)
+
+
+class ObjectStorageType(str, Enum):
+    """The object storage types."""
+
+    S3 = "s3"
+    AZURE = "azure"
+    GCS = "gcs"
+    S3_PCLUSTER = "s3-pcluster"
+    AZURE_PCLUSTER = "azure-pcluster"
+    GCS_PCLUSTER = "gcs-pcluster"
+    CONFLICT = "conflict"
 
 
 class ObjectStorageResolver:
@@ -51,13 +60,13 @@ class ObjectStorageResolver:
                 if r
             ]
             if len(active) > 1:
-                return "conflict"
+                return ObjectStorageType.CONFLICT
             if self.charm.model.get_relation(S3_RELATION):
-                return "s3"
+                return ObjectStorageType.S3
             if self.charm.model.get_relation(AZURE_RELATION):
-                return "azure"
+                return ObjectStorageType.AZURE
             if self.charm.model.get_relation(GCS_RELATION):
-                return "gcs"
+                return ObjectStorageType.GCS
             return
 
         # non-main orchestrator
@@ -65,11 +74,11 @@ class ObjectStorageResolver:
         if not peer_data or not peer_data.credentials:
             return
         if peer_data.credentials.s3:
-            return "s3-pcluster"
+            return ObjectStorageType.S3_PCLUSTER
         if peer_data.credentials.azure:
-            return "azure-pcluster"
+            return ObjectStorageType.AZURE_PCLUSTER
         if peer_data.credentials.gcs:
-            return "gcs-pcluster"
+            return ObjectStorageType.GCS_PCLUSTER
         return
 
     def get_storage_config(  # noqa: C901
@@ -77,10 +86,10 @@ class ObjectStorageResolver:
     ) -> Optional[ObjectStorageConfig]:
         """Get the active object storage config from relations/peer-cluster."""
         object_storage_type = forced_type or self.get_storage_type()
-        if not object_storage_type or object_storage_type == "conflict":
+        if not object_storage_type or object_storage_type == ObjectStorageType.CONFLICT:
             return
 
-        if object_storage_type == "s3":
+        if object_storage_type == ObjectStorageType.S3:
             info = self.charm.snapshot_events.s3_requirer.get_s3_connection_info()
 
             try:
@@ -90,7 +99,7 @@ class ObjectStorageResolver:
                 s3 = None
             return ObjectStorageConfig(s3=s3) if s3 else None
 
-        if object_storage_type == "azure":
+        if object_storage_type == ObjectStorageType.AZURE:
             info = self.charm.snapshot_events.azure_requirer.get_azure_storage_connection_info()
             try:
                 azure = AzureRelData.from_relation(info) if info else None
@@ -99,14 +108,14 @@ class ObjectStorageResolver:
                 azure = None
             return ObjectStorageConfig(azure=azure) if azure else None
 
-        if object_storage_type == "gcs":
+        if object_storage_type == ObjectStorageType.GCS:
             gcs_rel = self.charm.model.get_relation(GCS_RELATION)
             if not gcs_rel or not gcs_rel.app:
                 return
             return
 
         peer_data = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)
-        if object_storage_type == "s3-pcluster":
+        if object_storage_type == ObjectStorageType.S3_PCLUSTER:
             try:
                 data = S3RelData.from_dict(
                     {
@@ -120,7 +129,7 @@ class ObjectStorageResolver:
                 data = None
             return ObjectStorageConfig(s3=data) if data else None
 
-        if object_storage_type == "azure-pcluster":
+        if object_storage_type == ObjectStorageType.AZURE_PCLUSTER:
             try:
                 data = AzureRelData.from_dict({"credentials": peer_data.credentials.azure})
             except ValidationError as e:
@@ -128,7 +137,7 @@ class ObjectStorageResolver:
                 data = None
             return ObjectStorageConfig(azure=data) if data else None
 
-        if object_storage_type == "gcs-pcluster":
+        if object_storage_type == ObjectStorageType.GCS_PCLUSTER:
             try:
                 data = GcsRelData.from_dict({"credentials": peer_data.credentials.gcs})
             except ValidationError as e:

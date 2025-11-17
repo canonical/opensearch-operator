@@ -432,7 +432,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         return_value=[],
     )
     @patch(
-        f"{BASE_LIB_PATH}.opensearch_snapshots.OpenSearchSnapshotsManager.is_backup_in_progress"
+        f"{BASE_LIB_PATH}.opensearch_snapshots.OpenSearchSnapshotsManager.is_snapshot_in_progress"
     )
     @patch(
         f"{BASE_LIB_PATH}.opensearch_snapshots.OpenSearchSnapshotsManager.is_restore_in_progress"

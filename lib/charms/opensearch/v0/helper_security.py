@@ -224,6 +224,7 @@ def store_s3_ca(
     alias: str, store_pwd: str, store_path: str, ca: str, keep_previous: bool = True
 ) -> bool:
     """Add new CA cert(s) to the PKCS12 trust store for S3."""
+    logger.info("Storing CA cert(s) with alias: %s into truststore.", alias)
     return _store_ca_chain(
         alias_base=alias,
         store_pwd=store_pwd,
@@ -242,6 +243,7 @@ def store_ca(
     alias: str, store_pwd: str, store_path: str, ca: str, keep_previous: bool = True
 ) -> bool:
     """Add new CA cert(s) to a PKCS12 trust store (generic)."""
+    logger.info("Storing CA cert(s) with alias: %s into truststore.", alias)
     return _store_ca_chain(
         alias_base=alias,
         store_pwd=store_pwd,
@@ -342,6 +344,7 @@ def read_ca(alias: str, store_pwd: str, store_path: str) -> Optional[str]:
 def remove_ca(alias: str, store_pwd: str, store_path: str) -> None:
     """Remove old CA cert from trust store."""
     if not exists(store_path):
+        logger.debug("Trust store %s does not exist, nothing to remove.", store_path)
         return
 
     list_cmd = f"{KEYTOOL} -list -keystore {store_path} -alias {alias} -storetype PKCS12"
@@ -349,14 +352,118 @@ def remove_ca(alias: str, store_pwd: str, store_path: str) -> None:
     try:
         run_cmd(list_cmd, list_args)
     except OpenSearchCmdError as e:
-        # This message means there was no "ca" alias or store before, if it happens ignore
-        if e.out and f"Alias <{alias}> does not exist" in e.out:
+        if _is_alias_missing_error(e, alias):
+            logger.debug(
+                "Alias %s not found in %s when listing before delete, ignoring.",
+                alias,
+                store_path,
+            )
             return
+        # Anything else is a real error
+        raise
 
     del_cmd = f"{KEYTOOL} -delete -keystore {store_path} -alias {alias} -storetype PKCS12"
     del_args = f"-storepass {store_pwd}"
-    run_cmd(del_cmd, del_args)
+    try:
+        run_cmd(del_cmd, del_args)
+    except OpenSearchCmdError as e:
+        if _is_alias_missing_error(e, alias):
+            logger.debug(
+                "Alias %s already gone from %s when deleting, ignoring.",
+                alias,
+                store_path,
+            )
+            return
+        raise
+
     logger.info("Removed %s from truststore.", alias)
+
+
+def _is_alias_missing_error(exc: OpenSearchCmdError, alias: str) -> bool:
+    """Return True if keytool says that given alias does not exist."""
+    msg = (exc.out or "") + (exc.err or "")
+    return f"Alias <{alias}> does not exist" in msg
+
+
+def _collect_aliases_to_remove(alias_base: str, store_pwd: str, store_path: str) -> list[str]:
+    """List aliases that should be removed (base, base-*, old-base-*)."""
+    list_cmd = f"{KEYTOOL} -list -v -keystore {store_path} -storetype PKCS12"
+    list_args = f"-storepass {store_pwd}"
+    try:
+        result = run_cmd(list_cmd, list_args)
+    except OpenSearchCmdError as e:
+        logger.debug(
+            "Failed to list aliases from %s: %s%s",
+            store_path,
+            e.out or "",
+            e.err or "",
+        )
+        raise
+
+    aliases_to_remove: list[str] = []
+    for line in result.out.splitlines():
+        if "Alias name:" not in line:
+            continue
+        name = line.split("Alias name:", 1)[1].strip()
+        if (
+            name == alias_base
+            or name.startswith(f"{alias_base}-")
+            or name.startswith(f"{OLD_CA_PREFIX}{alias_base}-")
+        ):
+            aliases_to_remove.append(name)
+
+    return aliases_to_remove
+
+
+def _remove_ca_aliases(alias_base: str, store_pwd: str, store_path: str) -> None:
+    """Core logic to delete aliases for a given base name."""
+    aliases_to_remove = _collect_aliases_to_remove(
+        alias_base=alias_base, store_pwd=store_pwd, store_path=store_path
+    )
+
+    if not aliases_to_remove:
+        logger.debug("No aliases matching %s/* found in %s.", alias_base, store_path)
+        return
+    logger.info("Aliases: %s going to be removed", ", ".join(aliases_to_remove))
+    for name in aliases_to_remove:
+        del_cmd = f"{KEYTOOL} -delete -keystore {store_path} " f"-alias {name} -storetype PKCS12"
+        del_args = f"-storepass {store_pwd}"
+        try:
+            run_cmd(del_cmd, del_args)
+            logger.info("Removed %s from truststore %s.", name, store_path)
+        except OpenSearchCmdError as e:
+            # If the alias is not found, just ignore it. It can be removed before delete.
+            if _is_alias_missing_error(e, name):
+                logger.debug(
+                    "Alias %s already gone from %s when deleting, ignoring.",
+                    name,
+                    store_path,
+                )
+                continue
+            raise
+
+
+def remove_s3_ca(alias: str, store_pwd: str, store_path: str) -> None:
+    """Remove S3 CA cert(s) from trust store."""
+    if not alias:
+        logger.debug("remove_s3_ca called with empty alias, nothing to do.")
+        return
+
+    if not exists(store_path):
+        logger.debug("Trust store %s does not exist, nothing to remove.", store_path)
+        return
+
+    try:
+        run_cmd(f"sudo chmod 0664 {store_path}")
+    except OpenSearchCmdError as e:
+        logger.warning(
+            "Failed to chmod 0664 on %s before S3 CA removal: %s%s",
+            store_path,
+            e.out or "",
+            e.err or "",
+        )
+    _remove_ca_aliases(alias_base=alias, store_pwd=store_pwd, store_path=store_path)
+    logger.info("Removed %s from truststore %s.", alias, store_path)
 
 
 def store_key_pair(

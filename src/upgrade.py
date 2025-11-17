@@ -297,7 +297,7 @@ class Upgrade(abc.ABC):
                 and self._charm.snapshots_manager.is_repository_created(typ)
                 and (
                     self._charm.snapshots_manager.is_restore_in_progress()
-                    or self._charm.snapshots_manager.is_backup_in_progress()
+                    or self._charm.snapshots_manager.is_snapshot_in_progress()
                 )
             ):
                 raise PrecheckFailed("Backup or restore is in progress")

@@ -39,7 +39,7 @@ from charms.opensearch.v0.helper_security import (
     _hash,
     _normalize_chain,
     list_cas,
-    remove_ca,
+    remove_s3_ca,
     store_s3_ca,
 )
 from charms.opensearch.v0.helper_storage import ObjectStorageResolver, ObjectStorageType
@@ -209,7 +209,7 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.status.clear(BackupRelConflict, app=True)
             self.charm.status.clear(BackupRelConflict)
 
-        cfg = self.charm.snapshots_manager.resolver.get_storage_config("s3")
+        cfg = self.charm.snapshots_manager.resolver.get_storage_config(ObjectStorageType.S3)
         creds = getattr(getattr(cfg, "s3", None), "credentials", None)
         # handle case where this was deferred in the above case, then the s3 relation was severed
         if object_storage_type != "s3" or not cfg or not creds:
@@ -243,13 +243,13 @@ class OpenSearchSnapshotsEvents(Object):
             logger.info("S3 CA stored.")
         else:
             if self.charm.snapshots_manager.is_custom_s3_ca_stored():
-                self.charm.snapshots_manager.store_s3_ca(None)
+                self.charm.snapshots_manager.remove_s3_ca()
                 logger.info("S3 CA removed.")
 
         self._restart_for_ca(new_chain, reason="apply object storage CA change")
 
         try:
-            self._ensure_repository(object_storage_type, cfg)
+            self.charm.snapshots_manager.ensure_repository(object_storage_type, cfg)
             self.charm.snapshots_manager.verify_repository("s3")
         except OpenSearchHttpError as e:
             if self.charm.unit.is_leader():
@@ -271,7 +271,7 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.status.clear(BackupRelShouldNotExist, app=True)
             self.charm.status.clear(BackupRelShouldNotExist)
 
-        if self.charm.snapshots_manager.resolver.get_storage_type() == "conflict":
+        if self.charm.snapshots_manager.resolver.get_storage_type() == ObjectStorageType.CONFLICT:
             return
 
         keystore_entries = ["s3.client.default.access_key", "s3.client.default.secret_key"]
@@ -282,7 +282,7 @@ class OpenSearchSnapshotsEvents(Object):
             return
 
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
-            self.charm.snapshots_manager.store_s3_ca(None)
+            self.charm.snapshots_manager.remove_s3_ca()
             self._restart_for_ca(None, reason="clean up the object storage CA")
 
         if self.charm.unit.is_leader():
@@ -323,7 +323,7 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.status.clear(BackupRelConflict, app=True)
             self.charm.status.clear(BackupRelConflict)
 
-        cfg = self.charm.snapshots_manager.resolver.get_storage_config("azure")
+        cfg = self.charm.snapshots_manager.resolver.get_storage_config(ObjectStorageType.AZURE)
         creds = getattr(getattr(cfg, "azure", None), "credentials", None)
 
         if object_storage_type != "azure" or not cfg or not creds:
@@ -345,7 +345,7 @@ class OpenSearchSnapshotsEvents(Object):
         )
         self.charm.keystore_manager.reload()
         try:
-            self._ensure_repository(object_storage_type, cfg)
+            self.charm.snapshots_manager.ensure_repository(object_storage_type, cfg)
             self.charm.snapshots_manager.verify_repository("azure")
         except OpenSearchHttpError:
             if self.charm.unit.is_leader():
@@ -370,7 +370,7 @@ class OpenSearchSnapshotsEvents(Object):
             self.charm.status.clear(BackupRelShouldNotExist, app=True)
             self.charm.status.clear(BackupRelShouldNotExist)
 
-        if self.charm.snapshots_manager.resolver.get_storage_type() == "conflict":
+        if self.charm.snapshots_manager.resolver.get_storage_type() == ObjectStorageType.CONFLICT:
             return
 
         keystore_entries = ["azure.client.default.account", "azure.client.default.key"]
@@ -459,7 +459,7 @@ class OpenSearchSnapshotsEvents(Object):
 
             else:
                 if self.charm.snapshots_manager.is_custom_s3_ca_stored():
-                    self.charm.snapshots_manager.store_s3_ca(None)
+                    self.charm.snapshots_manager.remove_s3_ca()
                     self._restart_for_ca(None, reason="clean up the object storage CA")
 
         elif event.kind == "azure":
@@ -484,7 +484,7 @@ class OpenSearchSnapshotsEvents(Object):
                 ["s3.client.default.access_key", "s3.client.default.secret_key"],
             ):
                 if self.charm.snapshots_manager.is_custom_s3_ca_stored():
-                    self.charm.snapshots_manager.store_s3_ca(None)
+                    self.charm.snapshots_manager.remove_s3_ca()
                     self._restart_for_ca(None, reason="clean up the object storage CA")
         elif event.kind == "azure":
             self._cleanup("azure", ["azure.client.default.account", "azure.client.default.key"])
@@ -517,6 +517,7 @@ class OpenSearchSnapshotsEvents(Object):
              True if we requested a restart, else False.
         """
         if self._ca_changed(new_chain):
+            logger.info("Restarting Opensearch for CA chain changes.")
             self.charm.request_opensearch_restart(reason=reason)
             return True
         return False
@@ -1045,7 +1046,7 @@ class OpenSearchSnapshotsEvents(Object):
 
         try:
             if (
-                self.charm.snapshots_manager.is_backup_in_progress()
+                self.charm.snapshots_manager.is_snapshot_in_progress()
                 or self.charm.snapshots_manager.is_restore_in_progress()
             ):
                 return "Backup / Restore operation in progress."
@@ -1053,31 +1054,6 @@ class OpenSearchSnapshotsEvents(Object):
             return f"Action failed with: {str(e)}."
 
         return
-
-    def _ensure_repository(
-        self, storage_type: ObjectStorageType, storage_cfg: ObjectStorageConfig
-    ) -> None:
-        """Create the repository if we have a storage type/config and it doesn't exist yet.
-
-        Args:
-            storage_type (ObjectStorageType): Object storage type
-            storage_cfg (ObjectStorageConfig): Object storage config
-
-        Raises:
-            OpenSearchHttpError: repository does not exist
-        """
-        if not storage_type or not storage_cfg or storage_type == "conflict":
-            return
-
-        if not self.charm.unit.is_leader():
-            return
-
-        if not self.charm.snapshots_manager.is_repository_created(storage_type):
-            self.charm.snapshots_manager.create_repo(
-                object_storage_type=storage_type,
-                object_storage_config=storage_cfg,
-            )
-            logger.info("Created snapshot repository for %s", storage_type)
 
     def _is_part_of_large_deployment(self) -> bool:
         """Return True if this app participates in a multi-app topology (main/failover/data)."""
@@ -1152,6 +1128,31 @@ class OpenSearchSnapshotsManager:
         # This should always pass and is set for documentation purposes
         assert response.get("acknowledged") is True
         return repo_name
+
+    def ensure_repository(
+        self, storage_type: ObjectStorageType, storage_cfg: ObjectStorageConfig
+    ) -> None:
+        """Create the repository if we have a storage type/config and it doesn't exist yet.
+
+        Args:
+            storage_type (ObjectStorageType): Object storage type
+            storage_cfg (ObjectStorageConfig): Object storage config
+
+        Raises:
+            OpenSearchHttpError: repository does not exist
+        """
+        if not storage_type or not storage_cfg or storage_type == "conflict":
+            return
+
+        if not self.charm.unit.is_leader():
+            return
+
+        if not self.is_repository_created(storage_type):
+            self.create_repo(
+                object_storage_type=storage_type,
+                object_storage_config=storage_cfg,
+            )
+            logger.info("Created snapshot repository for %s", storage_type)
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def remove_repo(
@@ -1433,7 +1434,7 @@ class OpenSearchSnapshotsManager:
             raise
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
-    def is_backup_in_progress(self) -> bool:
+    def is_snapshot_in_progress(self) -> bool:
         """Check if a backup is running.
 
         Returns:
@@ -1544,24 +1545,30 @@ class OpenSearchSnapshotsManager:
         # Normalize both sides in case of whitespace/ordering differences
         return _normalize_chain(current_chain) == _normalize_chain(s3_ca_chain)
 
+    def remove_s3_ca(self) -> None:
+        """Remove an S3 TLS CA chain on the cacerts trust store.
+
+        Args:
+            s3_tls_ca_chain: S3 TLS CA chain to remove
+        """
+        store_path = f"{self.opensearch.paths.certs}/cacerts.p12"
+        # Drop the CA entirely
+        remove_s3_ca(
+            alias=S3_CA_ALIAS,
+            # TODO: create a S3 CA truststore juju secret and it should be known by subclusters
+            store_pwd="changeit",
+            store_path=store_path,
+        )
+
     def store_s3_ca(self, s3_tls_ca_chain: str | None) -> None:
         """Store or remove an S3 TLS CA chain on the cacerts trust store.
 
         Args:
-            s3_tls_ca_chain: S3 TLS CA chain to store or remove
+            s3_tls_ca_chain: S3 TLS CA chain to store
 
         If the there is s3_tls_ca_chain, the old CA will be removed.
         """
         store_path = f"{self.opensearch.paths.certs}/cacerts.p12"
-        # Drop the CA entirely
-        if not s3_tls_ca_chain:
-            remove_ca(
-                alias=S3_CA_ALIAS,
-                # TODO: create a S3 CA truststore juju secret and it should be known by subclusters
-                store_pwd="changeit",
-                store_path=store_path,
-            )
-            return
 
         # If we already have the same CA, skip re-import
         if self.is_custom_s3_ca_stored(s3_tls_ca_chain):
@@ -1570,7 +1577,7 @@ class OpenSearchSnapshotsManager:
 
         # Chain changed: ensure we remove the old alias family first
         # to avoid keytool already exists error
-        remove_ca(
+        remove_s3_ca(
             alias=S3_CA_ALIAS,
             # TODO: create a S3 CA truststore juju secret and it should be known by subclusters
             store_pwd="changeit",
