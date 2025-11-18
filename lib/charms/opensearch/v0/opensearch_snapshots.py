@@ -68,6 +68,8 @@ from ops import (
 from ops.framework import EventBase, EventSource
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
+from lib.charms.opensearch.v0.constants_charm import BackupCredentialCleanupFailed
+
 # The unique Charmhub library identifier, never change it
 LIBID = "89db18e639c64a6ea223c63172c04dc6."
 
@@ -279,7 +281,18 @@ class OpenSearchSnapshotsEvents(Object):
             object_storage_type="s3", keystore_entries=keystore_entries, remove_repo=True
         ):
             logger.warning("Cleanup for s3 credentials are failed.")
-            return
+            if self.charm.unit.is_leader():
+                self.charm.status.set(
+                    BlockedStatus(BackupCredentialCleanupFailed),
+                    app=True,
+                )
+                self.charm.status.set(
+                    BlockedStatus(BackupCredentialCleanupFailed),
+                )
+                return
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
+            self.charm.status.clear(BackupCredentialCleanupFailed)
 
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.remove_s3_ca()
@@ -377,9 +390,19 @@ class OpenSearchSnapshotsEvents(Object):
         if not self._cleanup(
             object_storage_type="azure", keystore_entries=keystore_entries, remove_repo=True
         ):
-            return
+            if self.charm.unit.is_leader():
+                self.charm.status.set(
+                    BlockedStatus(BackupCredentialCleanupFailed),
+                    app=True,
+                )
+                self.charm.status.set(
+                    BlockedStatus(BackupCredentialCleanupFailed),
+                )
+                return
 
         if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
+            self.charm.status.clear(BackupCredentialCleanupFailed)
             self.charm.status.clear(BackupCredentialKeysIncorrect, app=True)
             self.charm.status.clear(BackupCredentialKeysIncorrect)
 
@@ -479,15 +502,42 @@ class OpenSearchSnapshotsEvents(Object):
 
     def _on_object_storage_gone_on_peers(self, event: _ObjectStorageGone) -> None:
         if event.kind == "s3":
-            if self._cleanup(
+            if not self._cleanup(
                 "s3",
                 ["s3.client.default.access_key", "s3.client.default.secret_key"],
             ):
-                if self.charm.snapshots_manager.is_custom_s3_ca_stored():
-                    self.charm.snapshots_manager.remove_s3_ca()
-                    self._restart_for_ca(None, reason="clean up the object storage CA")
+                if self.charm.unit.is_leader():
+                    self.charm.status.set(
+                        BlockedStatus(BackupCredentialCleanupFailed),
+                        app=True,
+                    )
+                    self.charm.status.set(
+                        BlockedStatus(BackupCredentialCleanupFailed),
+                    )
+                    return
+            if self.charm.unit.is_leader():
+                self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
+                self.charm.status.clear(BackupCredentialCleanupFailed)
+            if self.charm.snapshots_manager.is_custom_s3_ca_stored():
+                self.charm.snapshots_manager.remove_s3_ca()
+                self._restart_for_ca(None, reason="clean up the object storage CA")
+
         elif event.kind == "azure":
-            self._cleanup("azure", ["azure.client.default.account", "azure.client.default.key"])
+            if not self._cleanup(
+                "azure", ["azure.client.default.account", "azure.client.default.key"]
+            ):
+                if self.charm.unit.is_leader():
+                    self.charm.status.set(
+                        BlockedStatus(BackupCredentialCleanupFailed),
+                        app=True,
+                    )
+                    self.charm.status.set(
+                        BlockedStatus(BackupCredentialCleanupFailed),
+                    )
+                    return
+            if self.charm.unit.is_leader():
+                self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
+                self.charm.status.clear(BackupCredentialCleanupFailed)
 
     def _current_s3_ca_chain(self) -> str:
         """Return the currently stored S3 CA chain (string) from cacerts, or ''."""
@@ -904,7 +954,7 @@ class OpenSearchSnapshotsEvents(Object):
                 event.defer()
                 return
 
-    def _cleanup(self, object_storage_type, keystore_entries, remove_repo=False) -> bool:
+    def _cleanup(self, object_storage_type, keystore_entries, remove_repo: bool = False) -> bool:
         """Cleanup object storage config.
 
         Args:
@@ -920,26 +970,29 @@ class OpenSearchSnapshotsEvents(Object):
 
         if keystore_entries:
             try:
-                self.charm.keystore_manager.remove_entries(keystore_entries)
-                self.charm.keystore_manager.reload()
-                logger.info("Removed keystore entries for %s", object_storage_type)
+                self.snapshot_manager.cleanup_keystore(object_storage_type, keystore_entries)
             except OpenSearchCmdError as e:
-                msg = f"{getattr(e, 'stdout', '')}{getattr(e, 'stderr', '')}"
-                if "does not exist" in msg:
-                    logger.info("Keystore entries already absent for %s.", object_storage_type)
-                else:
-                    logger.warning("Keystore cleanup error for %s: %s", object_storage_type, e)
+                logger.warning(
+                    "Keystore cleanup for %s failed after retries: %s",
+                    object_storage_type,
+                    e,
+                )
+                return False
 
         if remove_repo:
             try:
                 self.charm.snapshots_manager.remove_repo(
-                    object_storage_type=object_storage_type, require_healthy=True
+                    object_storage_type=object_storage_type,
+                    require_healthy=True,
                 )
             except Exception as e:
                 logger.error(
-                    "Repo cleanup for %s failed after 3 attempts: %s", object_storage_type, e
+                    "Repo cleanup for %s failed after 3 attempts: %s",
+                    object_storage_type,
+                    e,
                 )
                 return False
+
         return True
 
     def _peer_storage_kind(self) -> str | None:
@@ -1593,6 +1646,31 @@ class OpenSearchSnapshotsManager:
             ca=s3_tls_ca_chain,
             keep_previous=False,
         )
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
+    def cleanup_keystore(self, object_storage_type, keystore_entries) -> None:
+        """Remove keystore entries for the given object storage type with retries.
+
+        Retries on OpenSearchCmdError unless the error indicates the entries
+        do not exist.
+        """
+        try:
+            self.charm.keystore_manager.remove_entries(keystore_entries)
+            self.charm.keystore_manager.reload()
+            logger.info("Removed keystore entries for %s", object_storage_type)
+        except OpenSearchCmdError as e:
+            msg = f"{getattr(e, 'stdout', '')}{getattr(e, 'stderr', '')}"
+            if "does not exist" in msg:
+                logger.info("Keystore entries already absent for %s.", object_storage_type)
+                # treat as success
+                return
+
+            logger.warning(
+                "Keystore cleanup attempt failed for %s: %s",
+                object_storage_type,
+                e,
+            )
+            raise
 
     @staticmethod
     def _repo_type(object_storage_type: ObjectStorageType) -> str | None:

@@ -77,6 +77,9 @@ BackupCredentialKeysIncorrect = (
 BackupCredentialCAIncorrect = (
     "Repository not reachable: bad credentials or permissions, fix the CA."
 )
+BackupCredentialCleanupFailed = (
+    "Failed to remove keystore credentials, repo removal.Please check the logs for more details."
+)
 BackupRelConflict = "Too many object storage relations. Only one is supported."
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
 SecretAccessError = "Failed to access secret, please check permissions."
