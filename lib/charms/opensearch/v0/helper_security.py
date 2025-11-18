@@ -259,7 +259,7 @@ def remove_ca(alias: str, store_pwd: str, store_path: str) -> None:
         return
 
     aliases = list_aliases(store_pwd, store_path) or []
-    to_remove = [a for a in aliases if a == alias or a.startswith(f"{alias}-")]
+    to_remove = [a for a in aliases if a.startswith(f"{alias}-")]
 
     for a in to_remove:
         del_cmd = f"{KEYTOOL} -delete -keystore {store_path} -alias {a} -storetype PKCS12"
