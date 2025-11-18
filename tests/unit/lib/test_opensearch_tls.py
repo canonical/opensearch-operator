@@ -1427,6 +1427,7 @@ class TestOpenSearchTLS(unittest.TestCase):
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS._remove_ca_from_request_bundle")
     @patch("charms.opensearch.v0.opensearch_tls.OpenSearchTLS.reload_tls_certificates")
     @patch("charms.opensearch.v0.helper_security.tempfile.NamedTemporaryFile")
+    @patch("charms.opensearch.v0.helper_security.list_aliases")
     @patch("charms.opensearch.v0.helper_security.run_cmd")
     @patch("charms.opensearch.v0.helper_security.exists")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
@@ -1451,6 +1452,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         deployment_desc,
         os_path_exists,
         run_cmd,
+        list_aliases,
         named_temporary_file,
         reload_tls_certificates,
         mock_remove_ca_from_request_bundle,
@@ -1473,7 +1475,7 @@ class TestOpenSearchTLS(unittest.TestCase):
         ca = "new_ca"
         key = "key"
         keystore_password = "keystore_12345"
-
+        list_aliases.return_value = ["new_ca", "old-ca-0", "old-ca"]
         self.secret_store.put_object(
             Scope.APP,
             CertType.APP_ADMIN.val,
@@ -1584,7 +1586,10 @@ class TestOpenSearchTLS(unittest.TestCase):
             in run_cmd.call_args_list[1].args[0]
         )
 
-        assert re.search("keytool .*-delete .*-alias old-ca", run_cmd.call_args_list[-1].args[0])
+        assert re.search("keytool .*-delete .*-alias old-ca ", run_cmd.call_args_list[-1].args[0])
+        assert re.search(
+            "keytool .*-delete .*-alias old-ca-0 ", run_cmd.call_args_list[-2].args[0]
+        )
         assert (
             "/var/snap/opensearch/current/etc/opensearch"
             in named_temporary_file.call_args_list[0][1]["dir"]
