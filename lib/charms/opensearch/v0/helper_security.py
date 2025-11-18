@@ -258,19 +258,14 @@ def remove_ca(alias: str, store_pwd: str, store_path: str) -> None:
     if not exists(store_path):
         return
 
-    list_cmd = f"{KEYTOOL} -list -keystore {store_path} -alias {alias} -storetype PKCS12"
-    list_args = f"-storepass {store_pwd}"
-    try:
-        run_cmd(list_cmd, list_args)
-    except OpenSearchCmdError as e:
-        # This message means there was no "ca" alias or store before, if it happens ignore
-        if e.out and f"Alias <{alias}> does not exist" in e.out:
-            return
+    aliases = list_aliases(store_pwd, store_path) or []
+    to_remove = [a for a in aliases if a == alias or a.startswith(f"{alias}-")]
 
-    del_cmd = f"{KEYTOOL} -delete -keystore {store_path} -alias {alias} -storetype PKCS12"
-    del_args = f"-storepass {store_pwd}"
-    run_cmd(del_cmd, del_args)
-    logger.info("Removed %s from truststore.", alias)
+    for a in to_remove:
+        del_cmd = f"{KEYTOOL} -delete -keystore {store_path} -alias {a} -storetype PKCS12"
+        del_args = f"-storepass {store_pwd}"
+        run_cmd(del_cmd, del_args)
+        logger.info("Removed %s from truststore.", a)
 
 
 def store_key_pair(
