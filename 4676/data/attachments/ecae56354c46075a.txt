@@ -1,0 +1,244 @@
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:795 Connecting to existing model concierge-lxd:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/opensearch-0
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/self-signed-certificates-264
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.11   unsupported  01:39:09Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         waiting    0/3  opensearch                                 0  no       waiting for machine
+self-signed-certificates           waiting    0/1  self-signed-certificates  latest/stable  264  no       waiting for machine
+
+Unit                        Workload  Agent       Machine  Public address  Ports  Message
+opensearch/0                waiting   allocating  0                               waiting for machine
+opensearch/1                waiting   allocating  1                               waiting for machine
+opensearch/2                waiting   allocating  2                               waiting for machine
+self-signed-certificates/0  waiting   allocating  3                               waiting for machine
+
+Machine  State    Address  Inst id  Base          AZ  Message
+0        pending           pending  ubuntu@24.04      Creating container
+1        pending           pending  ubuntu@24.04      Creating container
+2        pending           pending  ubuntu@24.04      Creating container
+3        pending           pending  ubuntu@22.04      
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:39:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: self-signed-certificates - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:39:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: self-signed-certificates - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:39:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 01:42:36 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.11   unsupported  01:42:36Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         blocked      3  opensearch                                 0  no       Missing TLS relation with this cluster.
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports  Message
+opensearch/0*                blocked      executing  0        10.172.16.189          Missing TLS relation with this cluster.
+opensearch/1                 maintenance  executing  1        10.172.16.40           (install) Installing OpenSearch...
+opensearch/2                 maintenance  executing  2        10.172.16.69           (install) Installing OpenSearch...
+self-signed-certificates/0*  active       executing  3        10.172.16.215          
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.172.16.189  juju-daa17e-0  ubuntu@24.04  github-runner  Running
+1        started  10.172.16.40   juju-daa17e-1  ubuntu@24.04  github-runner  Running
+2        started  10.172.16.69   juju-daa17e-2  ubuntu@24.04  github-runner  Running
+3        started  10.172.16.215  juju-daa17e-3  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:42:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: Missing TLS relation with this cluster.
+		opensearch-0.f9b* -- (10.172.16.189) -- [executing (since: 01:42:36)] blocked: Missing TLS relation with this cluster.
+		opensearch-1.f9b  -- (10.172.16.40) -- [executing (since: 01:40:31)] maintenance: Installing OpenSearch...
+		opensearch-2.f9b  -- (10.172.16.69) -- [executing (since: 01:40:30)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:42:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Installing OpenSearch...
+		opensearch-0.f9b* -- (10.172.16.189) -- [executing (since: 01:42:46)] waiting: Waiting for OpenSearch to start...
+		opensearch-1.f9b  -- (10.172.16.40) -- [executing (since: 01:42:47)] active: 
+		opensearch-2.f9b  -- (10.172.16.69) -- [executing (since: 01:40:30)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:42:59 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Waiting for TLS to be fully configured...
+		opensearch-0.f9b* -- (10.172.16.189) -- [executing (since: 01:42:46)] waiting: Waiting for OpenSearch to start...
+		opensearch-1.f9b  -- (10.172.16.40) -- [executing (since: 01:42:55)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-2.f9b  -- (10.172.16.69) -- [executing (since: 01:42:59)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:43:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch waiting -- message: Requesting lock on operation: start
+		opensearch-0.f9b* -- (10.172.16.189) -- [executing (since: 01:42:46)] active: 
+		opensearch-1.f9b  -- (10.172.16.40) -- [executing (since: 01:43:11)] waiting: Requesting lock on operation: start
+		opensearch-2.f9b  -- (10.172.16.69) -- [executing (since: 01:43:10)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:43:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch waiting -- message: Requesting lock on operation: start
+		opensearch-0.f9b* -- (10.172.16.189) -- [executing (since: 01:42:46)] active: 
+		opensearch-1.f9b  -- (10.172.16.40) -- [executing (since: 01:43:22)] waiting: Requesting lock on operation: start
+		opensearch-2.f9b  -- (10.172.16.69) -- [executing (since: 01:43:20)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:43:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Plugin configuration check.
+		opensearch-0.f9b* -- (10.172.16.189) -- [executing (since: 01:43:26)] maintenance: Plugin configuration check.
+		opensearch-1.f9b  -- (10.172.16.40) -- [executing (since: 01:43:26)] waiting: Waiting for OpenSearch to start...
+		opensearch-2.f9b  -- (10.172.16.69) -- [executing (since: 01:43:33)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:43:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch waiting -- message: Waiting for OpenSearch to start...
+		opensearch-0.f9b* -- (10.172.16.189) -- [executing (since: 01:43:45)] active: 
+		opensearch-1.f9b  -- (10.172.16.40) -- [executing (since: 01:43:26)] waiting: Waiting for OpenSearch to start...
+		opensearch-2.f9b  -- (10.172.16.69) -- [idle (since: 01:43:44)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:43:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.f9b* -- (10.172.16.189) -- [executing (since: 01:43:57)] active: 
+		opensearch-1.f9b  -- (10.172.16.40) -- [executing (since: 01:43:50)] maintenance: Plugin configuration check.
+		opensearch-2.f9b  -- (10.172.16.69) -- [executing (since: 01:43:50)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:44:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.f9b* -- (10.172.16.189) -- [idle (since: 01:44:04)] active: 
+		opensearch-1.f9b  -- (10.172.16.40) -- [idle (since: 01:44:07)] active: 
+		opensearch-2.f9b  -- (10.172.16.69) -- [executing (since: 01:43:50)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:44:19 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.f9b* -- (10.172.16.189) -- [executing (since: 01:44:17)] active: 
+		opensearch-1.f9b  -- (10.172.16.40) -- [executing (since: 01:44:18)] active: 
+		opensearch-2.f9b  -- (10.172.16.69) -- [executing (since: 01:44:15)] maintenance: Plugin configuration check.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:44:30 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.f9b* -- (10.172.16.189) -- [idle (since: 01:44:21)] active: 
+		opensearch-1.f9b  -- (10.172.16.40) -- [idle (since: 01:44:20)] active: 
+		opensearch-2.f9b  -- (10.172.16.69) -- [idle (since: 01:44:26)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:44:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.f9b* -- (10.172.16.189) -- [idle (since: 01:44:21)] active: 
+		opensearch-1.f9b  -- (10.172.16.40) -- [idle (since: 01:44:20)] active: 
+		opensearch-2.f9b  -- (10.172.16.69) -- [idle (since: 01:44:26)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:44:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.f9b* -- (10.172.16.189) -- [idle (since: 01:44:48)] active: 
+		opensearch-1.f9b  -- (10.172.16.40) -- [idle (since: 01:44:48)] active: 
+		opensearch-2.f9b  -- (10.172.16.69) -- [idle (since: 01:44:48)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:45:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.f9b* -- (10.172.16.189) -- [idle (since: 01:44:48)] active: 
+		opensearch-1.f9b  -- (10.172.16.40) -- [idle (since: 01:44:48)] active: 
+		opensearch-2.f9b  -- (10.172.16.69) -- [idle (since: 01:44:48)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:45:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.f9b* -- (10.172.16.189) -- [idle (since: 01:44:48)] active: 
+		opensearch-1.f9b  -- (10.172.16.40) -- [idle (since: 01:44:48)] active: 
+		opensearch-2.f9b  -- (10.172.16.69) -- [idle (since: 01:44:48)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:45:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 01:45:28 -- Waiting for model: complete.

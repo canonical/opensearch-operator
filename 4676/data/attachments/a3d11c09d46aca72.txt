@@ -1,0 +1,58 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.11   unsupported  02:01:45Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         active       3  opensearch                                 0  no       
+s3-integrator                      blocked      1  s3-integrator             1/stable       145  no       Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports     Message
+opensearch/0*                active       idle       2        10.223.212.113  9200/tcp  
+opensearch/1                 active       idle       3        10.223.212.70   9200/tcp  
+opensearch/2                 maintenance  executing  4        10.223.212.200            (install) Installing OpenSearch...
+s3-integrator/0*             blocked      idle       0        10.223.212.25             Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates/0*  active       idle       1        10.223.212.223            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.223.212.25   juju-59713d-0  ubuntu@22.04  github-runner  Running
+1        started  10.223.212.223  juju-59713d-1  ubuntu@22.04  github-runner  Running
+2        started  10.223.212.113  juju-59713d-2  ubuntu@24.04  github-runner  Running
+3        started  10.223.212.70   juju-59713d-3  ubuntu@24.04  github-runner  Running
+4        started  10.223.212.200  juju-59713d-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-2: 01:39:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:39:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:39:11 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:39:11 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:39:14 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:39:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:39:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:39:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:52:12 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:52:12 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:185 Cleaning backups from cloud buckets
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:511 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.25.1 Python/3.12.3 (Linux-6.14.0-35-generic-x86_64-with-glibc2.39)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': '89414d43-c422-11f0-ba51-00163e8acc0b'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:547 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': '0868b225-701e-0069-612f-588b9e000000'
+    'x-ms-client-request-id': '89414d43-c422-11f0-ba51-00163e8acc0b'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Tue, 18 Nov 2025 02:01:46 GMT'
