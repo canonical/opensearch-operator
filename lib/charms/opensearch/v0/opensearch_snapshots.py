@@ -37,7 +37,7 @@ from charms.opensearch.v0.constants_charm import (
 from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.helper_security import (
     _hash,
-    _normalize_chain,
+    _normalize_chain_unordered,
     list_cas,
     remove_s3_ca,
     store_s3_ca,
@@ -358,6 +358,8 @@ class OpenSearchSnapshotsEvents(Object):
         )
         self.charm.keystore_manager.reload()
         try:
+            if not self.charm.unit.is_leader():
+                return
             self.charm.snapshots_manager.ensure_repository(object_storage_type, cfg)
             self.charm.snapshots_manager.verify_repository("azure")
         except OpenSearchHttpError:
@@ -539,29 +541,24 @@ class OpenSearchSnapshotsEvents(Object):
                 self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
                 self.charm.status.clear(BackupCredentialCleanupFailed)
 
-    def _current_s3_ca_chain(self) -> str:
-        """Return the currently stored S3 CA chain (string) from cacerts, or ''."""
-        try:
-            stored = (
-                list_cas(
-                    # TODO: create a S3 CA truststore juju secret
-                    #  and it should be known by subclusters
-                    store_pwd="changeit",
-                    store_path=f"{self.charm.opensearch.paths.certs}/cacerts.p12",
-                )
-                or {}
-            )
-            return stored.get(S3_CA_ALIAS) or ""
-        except Exception:
-            return ""
-
     def _ca_changed(self, new_chain: str | None) -> bool:
-        current_norm = _normalize_chain(self._current_s3_ca_chain())
-        new_norm = _normalize_chain(new_chain)
-        return _hash(current_norm) != _hash(new_norm)
+        """Return True if the installed CA differs from new_chain."""
+        current_chain = self.charm.snapshots_manager.find_s3_chain_in_store()
+        # No CA installed and nothing new: no change
+        if not current_chain and not new_chain:
+            return False
+
+        # Only one side has a chain: definitely changed
+        if bool(current_chain) != bool(new_chain):
+            return True
+
+        # Both non-empty: compare as unordered sets of normalized cert blocks
+        current_blocks = _normalize_chain_unordered(current_chain)
+        new_blocks = _normalize_chain_unordered(new_chain)
+        return _hash("".join(current_blocks)) != _hash("".join(new_blocks))
 
     def _restart_for_ca(self, new_chain: str | None, *, reason: str) -> bool:
-        """Request restart iff the installed CA differs from new_chain.
+        """Request restart if the installed CA differs from new_chain.
 
         Returns:
              True if we requested a restart, else False.
@@ -970,7 +967,9 @@ class OpenSearchSnapshotsEvents(Object):
 
         if keystore_entries:
             try:
-                self.snapshot_manager.cleanup_keystore(object_storage_type, keystore_entries)
+                self.charm.snapshots_manager.cleanup_keystore(
+                    object_storage_type, keystore_entries
+                )
             except OpenSearchCmdError as e:
                 logger.warning(
                     "Keystore cleanup for %s failed after retries: %s",
@@ -1072,11 +1071,12 @@ class OpenSearchSnapshotsEvents(Object):
 
         try:
             if not self.charm.snapshots_manager.is_repository_created(object_storage_type):
+                if object_storage_type in {"s3-pcluster", "azure-pcluster"}:
+                    return "Repository should be created by main orchestrator."
+
                 object_storage_config = self._effective_config(object_storage_type)
                 if not object_storage_config:
                     return "Object storage configuration not ready."
-                if object_storage_type == "s3-pcluster" or object_storage_type == "azure-pcluster":
-                    return "Repository should be created by main orchestrator."
                 logger.info(f"[snapshots] repo {repo_name} missing; attempting create.")
                 self.charm.snapshots_manager.create_repo(
                     object_storage_type, object_storage_config
@@ -1125,13 +1125,13 @@ class OpenSearchSnapshotsManager:
 
     def get_active_storage_type(self) -> ObjectStorageType | None:
         """Get the active storage type."""
-        return self.charm.snapshots_manager.resolver.get_storage_type()
+        return self.charm.resolver.get_storage_type()
 
     def get_object_storage_config(
         self, forced_type: ObjectStorageType | None = None
     ) -> ObjectStorageConfig | None:
         """Get the object storage config."""
-        return self.charm.snapshots_manager.resolver.get_storage_config(forced_type)
+        return self.charm.resolver.get_storage_config(forced_type)
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def create_repo(
@@ -1195,9 +1195,6 @@ class OpenSearchSnapshotsManager:
             OpenSearchHttpError: repository does not exist
         """
         if not storage_type or not storage_cfg or storage_type == "conflict":
-            return
-
-        if not self.charm.unit.is_leader():
             return
 
         if not self.is_repository_created(storage_type):
@@ -1555,7 +1552,27 @@ class OpenSearchSnapshotsManager:
         logger.info("S3 CA is required.")
         return True
 
-    def _find_s3_chain_in_store(self) -> str:
+    @staticmethod
+    def _alias_index(alias: str, prefix: str) -> int:
+        """Order aliases so that plain S3_CA_ALIAS comes first (if present)
+
+        Args:
+            alias: The alias to order
+            prefix: The prefix to order
+        Returns:
+            alias_order(int): alias index
+            S3_CA_ALIAS-0, S3_CA_ALIAS-1, ... follow in numeric order
+        """
+        if alias == S3_CA_ALIAS:
+            return -1
+        suffix = alias[len(prefix):]
+        try:
+            return int(suffix)
+        except ValueError:
+            # unknown format, keep but treat as 0
+            return 0
+
+    def find_s3_chain_in_store(self) -> str:
         """Return the currently stored S3 CA chain from cacerts, or ''.
 
         Returns:
@@ -1572,11 +1589,23 @@ class OpenSearchSnapshotsManager:
         if not stored_cacerts:
             return ""
 
-        # list_cas returns aliases such as "s3-snapshots-gateway-0", "s3-snapshots-gateway-1"
+        prefix = f"{S3_CA_ALIAS}-"
+
+        # Collect all relevant aliases
+        matching: list[tuple[str, str]] = []
         for alias, chain in stored_cacerts.items():
-            if alias == S3_CA_ALIAS or alias.startswith(f"{S3_CA_ALIAS}-"):
-                return chain or ""
-        return ""
+            if alias == S3_CA_ALIAS or alias.startswith(prefix):
+                matching.append((alias, chain or ""))
+
+        if not matching:
+            return ""
+
+        # Sort by alias index
+        matching.sort(key=lambda item: self._alias_index(item[0], prefix))
+
+        # Concatenate non-empty chain parts
+        chain_parts = [chain for _, chain in matching if chain]
+        return "\n".join(chain_parts) if chain_parts else ""
 
     def is_custom_s3_ca_stored(self, s3_ca_chain: str | None = None) -> bool:
         """Check if a custom CA for the object storage is stored in the cacerts trust store.
@@ -1587,16 +1616,18 @@ class OpenSearchSnapshotsManager:
         Returns:
             True if the given CA chain is stored in the stored cacerts, else False
         """
-        current_chain = self._find_s3_chain_in_store()
+        current_chain = self.find_s3_chain_in_store()
         if not current_chain:
-            # nothing stored
             return False
 
         if not s3_ca_chain:
             return True
 
-        # Normalize both sides in case of whitespace/ordering differences
-        return _normalize_chain(current_chain) == _normalize_chain(s3_ca_chain)
+        # Compare as unordered sets of normalized cert blocks
+        stored_blocks = _normalize_chain_unordered(current_chain)
+        new_blocks = _normalize_chain_unordered(s3_ca_chain)
+
+        return stored_blocks == new_blocks
 
     def remove_s3_ca(self) -> None:
         """Remove an S3 TLS CA chain on the cacerts trust store.

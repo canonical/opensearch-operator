@@ -568,6 +568,53 @@ def _normalize_chain(text: Optional[str]) -> str:
     return "\n".join(line.strip() for line in text.strip().splitlines() if line.strip())
 
 
+def _normalize_chain_unordered(chain: str) -> list[str]:
+    """Normalize a PEM chain into a sorted list of cert blocks for comparison.
+
+    This makes comparison robust to:
+    - whitespace differences
+    - order of certificates within the chain
+    """
+    blocks = _split_pem_chain(chain)
+    # Use existing _normalize_chain on each block to clean whitespace etc.
+    normalized_blocks = [_normalize_chain(block) for block in blocks if block and block.strip()]
+    # Sort so order does not matter
+    return sorted(normalized_blocks)
+
+
+def _split_pem_chain(chain: str) -> list[str]:
+    """Split a PEM chain into individual certificate blocks."""
+    if not chain:
+        return []
+
+    blocks: list[str] = []
+    buf: list[str] = []
+    in_block = False
+
+    for line in chain.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+
+        if "BEGIN CERTIFICATE" in line:
+            in_block = True
+            buf = [line]
+            continue
+
+        if "END CERTIFICATE" in line and in_block:
+            buf.append(line)
+            blocks.append("\n".join(buf))
+            buf = []
+            in_block = False
+            continue
+
+        if in_block:
+            buf.append(line)
+
+    # If we somehow ended without an END line, ignore the partial block
+    return blocks
+
+
 def _hash(text: str) -> str:
     """Hash a PEM chain string."""
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
