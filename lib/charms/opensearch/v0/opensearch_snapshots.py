@@ -68,7 +68,7 @@ from ops import (
 from ops.framework import EventBase, EventSource
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
-from lib.charms.opensearch.v0.constants_charm import BackupCredentialCleanupFailed
+from charms.opensearch.v0.constants_charm import BackupCredentialCleanupFailed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "89db18e639c64a6ea223c63172c04dc6."
