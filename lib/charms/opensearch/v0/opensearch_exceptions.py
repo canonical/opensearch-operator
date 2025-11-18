@@ -107,3 +107,11 @@ class OpenSearchSecretError(OpenSearchError):
 
 class OpenSearchSecretInsertionError(OpenSearchSecretError):
     """Exception thrown when a secret (group) was not found."""
+
+
+class OpenSearchNoClusterManagersError(OpenSearchError):
+    """Exception thrown when there are no cluster managers in the cluster."""
+
+    def __init__(self):
+        message = "No cluster managers left in the cluster fleet. Please scale up your cluster manager units."
+        super().__init__(message)
