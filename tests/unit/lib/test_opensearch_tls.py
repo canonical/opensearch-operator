@@ -4,12 +4,11 @@
 """Unit test for the helper_cluster library."""
 import itertools
 import re
-import shutil
-import tempfile
+import socket
 import unittest
 import uuid
 from unittest import mock
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, Mock, call, patch
 
 import responses
 from charms.opensearch.v0.constants_charm import (
@@ -83,17 +82,6 @@ class TestOpenSearchTLS(unittest.TestCase):
 
     @patch("charm.OpenSearchOperatorCharm._put_or_update_internal_user_leader")
     def setUp(self, _) -> None:
-        self._real_mkstemp = tempfile.mkstemp
-        self._mkstemp_safe_dir = tempfile.mkdtemp(prefix="keystore-tmp-")
-        self._mkstemp_patcher = patch(
-            "charms.opensearch.v0.helper_security.tempfile.mkstemp",
-            side_effect=self._mkstemp_side_effect,
-        )
-        self._mkstemp_mock = self._mkstemp_patcher.start()
-        self.addCleanup(self._mkstemp_patcher.stop)
-        self.addCleanup(lambda: shutil.rmtree(self._mkstemp_safe_dir, ignore_errors=True))
-
-        # Harness/bootstrap as before
         self.harness = Harness(OpenSearchOperatorCharm)
         self.harness.add_network("1.1.1.1")
         self.addCleanup(self.harness.cleanup)
@@ -108,13 +96,10 @@ class TestOpenSearchTLS(unittest.TestCase):
 
         self.secret_store = self.charm.secrets
 
-        # Use test config directory
-        self.charm.opensearch.config = YamlConfigSetter(base_path="tests/unit/resources/config")
+        socket.getfqdn = Mock()
+        socket.getfqdn.return_value = "nebula"
 
-    def _mkstemp_side_effect(self, *args, **kwargs):
-        """Call the real mkstemp but force a writable temp dir to avoid env issues."""
-        kwargs["dir"] = self._mkstemp_safe_dir
-        return self._real_mkstemp(*args, **kwargs)
+        self.charm.opensearch.config = YamlConfigSetter(base_path="tests/unit/resources/config")
 
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     @patch(f"{BASE_LIB_PATH}.opensearch_tls.get_host_public_ip")
@@ -805,7 +790,6 @@ class TestOpenSearchTLS(unittest.TestCase):
         new_cert = "new_cert"
         new_chain = ["new_chain"]
         new_ca = "new_ca"
-        _expected_dir = "/var/snap/opensearch/current/etc/opensearch"
 
         self.secret_store.put_object(
             Scope.APP,
@@ -863,10 +847,10 @@ class TestOpenSearchTLS(unittest.TestCase):
             "chmod +r /var/snap/opensearch/current/etc/opensearch/certificates/ca.p12"
             in run_cmd.call_args_list[2].args[0]
         )
-        dirs = [kwargs.get("dir", "") for _, kwargs in self._mkstemp_mock.call_args_list]
-        assert any(
-            _expected_dir in d for d in dirs
-        ), f"mkstemp not called with dir containing {_expected_dir}"
+        assert (
+            "/var/snap/opensearch/current/etc/opensearch"
+            in named_temporary_file.call_args_list[0][1]["dir"]
+        )
         # NOTE: The new cert and chain are NOT saved into the keystore (disk)
 
         # Set flag, set status, restart

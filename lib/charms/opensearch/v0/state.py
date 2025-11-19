@@ -12,6 +12,7 @@ from charms.opensearch.v0.constants_charm import PERFORMANCE_PROFILE, PeerRelati
 from charms.opensearch.v0.models import (
     DeploymentDescription,
     PeerClusterApp,
+    PeerClusterOrchestrators,
     PerformanceType,
 )
 from ops import Object
@@ -62,6 +63,14 @@ class OpenSearchApp:
         if not deployment_desc_dict:
             return None
         return DeploymentDescription.from_dict(deployment_desc_dict)
+
+    @property
+    def orchestrators(self) -> PeerClusterOrchestrators | None:
+        """Return PeerClusterOrchestrators from peer relation"""
+        orchestrators_dict = self.relation_data.get_object(self.scope, "orchestrators")
+        if not orchestrators_dict:
+            return None
+        return PeerClusterOrchestrators.from_dict(orchestrators_dict)
 
 
 class OpenSearchUnit:

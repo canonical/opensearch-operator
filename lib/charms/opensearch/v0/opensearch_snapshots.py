@@ -63,7 +63,6 @@ from ops import (
     BlockedStatus,
     MaintenanceStatus,
     Object,
-    Relation,
     Secret,
 )
 from ops.framework import EventBase, EventSource
@@ -531,7 +530,6 @@ class OpenSearchSnapshotsEvents(Object):
         Args:
             reason (str): reason for restarting Opensearch.
         """
-        logger.info("Restarting Opensearch for CA chain changes.")
         self.charm.request_opensearch_restart(reason=reason)
 
     def _get_peer_orchestrator_relation_payload(self, relation) -> str | None:
@@ -539,13 +537,13 @@ class OpenSearchSnapshotsEvents(Object):
         if relation is not None:
             app_bag = relation.data.get(relation.app, {}) or {}
         else:
-            rel = self._find_provider_relation_with_data()
+            rel = self._get_provider_rel_payload()
             if rel:
                 app_bag = rel.data.get(rel.app, {}) or {}
 
         return app_bag.get("data")
 
-    def _emit_local_storage_event(self, trigger: dict, relation=None) -> bool:  # noqa: C901
+    def _emit_local_storage_event(self, trigger: dict) -> bool:  # noqa: C901
         """Emit local storage event only when payload is ready in this relation.
 
         Args:
@@ -567,23 +565,18 @@ class OpenSearchSnapshotsEvents(Object):
         if kind not in {"s3", "azure"} or action not in {"changed", "gone"}:
             return False
 
-        payload_raw = self._get_peer_orchestrator_relation_payload(relation)
+        payload = self._get_provider_rel_payload()
 
         if action == "changed":
-            if not payload_raw:
+            if not payload:
                 return False
 
-            try:
-                payload = json.loads(payload_raw)
-            except Exception:
-                return False
-
-            creds = payload.get("credentials") or {}
+            creds = payload.credentials
             if kind == "s3":
-                if not isinstance(creds.get("s3"), dict):
+                if not getattr(creds, "s3", None):
                     return False
             elif kind == "azure":
-                if not isinstance(creds.get("azure"), dict):
+                if not getattr(creds, "azure", None):
                     return False
 
         scope = Scope.APP if self.charm.unit.is_leader() else Scope.UNIT
@@ -603,47 +596,52 @@ class OpenSearchSnapshotsEvents(Object):
             # After conflicts are resolved, we should check which credentials
             # are really exist in the Peer Cluster Orchestrator relation data
             try:
-                payload = json.loads(payload_raw)
-                if payload and payload.get("credentials"):
-                    creds = payload.get("credentials")
-                    if creds.get("s3"):
+                if payload:
+                    creds = payload.credentials
+                    if getattr(creds, "s3", None):
                         self.object_storage_changed.emit(kind="s3", action="changed")
-                    elif creds.get("azure"):
+                    elif getattr(creds, "azure", None):
                         self.object_storage_changed.emit(kind="azure", action="changed")
             except Exception:
                 logger.warning("Payload is not valid JSON")
 
         return True
 
-    def _find_provider_relation_with_data(self) -> Relation | None:
-        """Return the first PeerCluster provider relation that already carries data.
+    def _get_provider_rel_payload(self) -> dict | None:  # noqa: C901
+        """Return the payload from the main orchestrator relation, if any."""
+        main_rel_id = self.charm.state.app.orchestrators.main_rel_id
 
-        Looks through all active peer-cluster provider relations and returns the first
-        relation whose remote app databag contains the key data. If none are
-        found, returns None.
+        if main_rel_id is None:
+            logger.info("orchestrators has no main_rel_id yet")
+            return None
 
-        Returns:
-            Relation: The relation whose remote app databag has data,
-             else None if no such relation exists.
-        """
-        for rel in self.charm.model.relations.get(PeerClusterRelationName, []):
-            app_bag = rel.data.get(rel.app, {})
-            if app_bag.get("data"):
-                return rel
-        return None
-
-    def _get_provider_rel_payload(self) -> dict | None:
-        rel = self._find_provider_relation_with_data()
+        rel = self.charm.model.get_relation(PeerClusterOrchestratorRelationName, main_rel_id)
         if not rel:
-            logger.info("no rel payload found")
-            return
+            logger.info(
+                "no %s relation found for id=%s",
+                PeerClusterOrchestratorRelationName,
+                main_rel_id,
+            )
+            return None
+
         try:
-            payload = json.loads(rel.data[rel.app]["data"])
-            logger.info("provided payload: %s", payload)
-            return payload
-        except Exception:
-            logger.warning("failed to load provided payload")
-            return
+            data_str = rel.data[rel.app].get("data")
+        except Exception as e:
+            logger.warning("failed to get relation data: %s", e)
+            return None
+
+        if not data_str:
+            logger.info("no rel payload found on %s", PeerClusterOrchestratorRelationName)
+            return None
+
+        try:
+            payload = self.charm.opensearch_peer_cm.rel_data_from_str(data_str)
+        except Exception as e:
+            logger.warning("failed to parse relation data: %s", e)
+            return None
+
+        logger.info("provided %s payload", PeerClusterOrchestratorRelationName)
+        return payload
 
     def _secret_value_from_id(self, secret_uri: str) -> str | None:
         try:
@@ -655,44 +653,47 @@ class OpenSearchSnapshotsEvents(Object):
 
     def _read_s3_from_peer(self) -> dict[str, str] | None:
         payload = self._get_provider_rel_payload()
+        logger.info("provided payload: %s", payload)
         if not payload:
             return
-        creds = (payload.get("credentials") or {}).get("s3") or {}
+        creds = getattr(payload, "credentials", None)
         if not creds:
             return
-        access_key_secret_id = creds.get("access-key")
-        secret_key_secret_id = creds.get("secret-key")
-        if not (access_key_secret_id and secret_key_secret_id):
+        s3_creds = getattr(creds, "s3", None)
+        if not s3_creds:
+            logger.warning("no S3 credentials found.")
+            return
+        access_key = s3_creds.access_key
+        secret_key = s3_creds.secret_key
+        if not (access_key and secret_key):
             return
 
-        access_key = self._secret_value_from_id(access_key_secret_id)
-        secret_key = self._secret_value_from_id(secret_key_secret_id)
-
         # CA chain may be published separately
-        tls_chain = None
-        s3_ca_secret_id = (payload.get("credentials") or {}).get("s3_tls_ca_chain")
-        logger.info("S3 CA secret ID: %s", s3_ca_secret_id)
-        if isinstance(s3_ca_secret_id, str) and s3_ca_secret_id.startswith("secret://"):
-            tls_chain = self._secret_value_from_id(s3_ca_secret_id)
-
-        return {"access_key": access_key, "secret_key": secret_key, "s3_tls_ca_chain": tls_chain}
+        s3_ca_secret = getattr(creds, "s3_tls_ca_chain", None)
+        logger.info("S3 CA secret: %s", s3_ca_secret)
+        return {
+            "access_key": access_key,
+            "secret_key": secret_key,
+            "s3_tls_ca_chain": s3_ca_secret,
+        }
 
     def _read_azure_from_peer(self) -> dict[str, str] | None:
         payload = self._get_provider_rel_payload()
         if not payload:
             return
-        creds = (payload.get("credentials") or {}).get("azure") or {}
+        creds = getattr(payload, "credentials", None)
         if not creds:
+            return
+        azure_creds = getattr(creds, "azure", None)
+        if not azure_creds:
             logger.warning("no Azure credentials found.")
             return
-        storage_account_secret_id = creds.get("storage-account")
-        secret_key_secret_id = creds.get("secret-key")
-        if not (storage_account_secret_id and secret_key_secret_id):
+        storage_account = azure_creds.storage_account
+        secret_key = azure_creds.secret_key
+        if not (storage_account and secret_key):
             logger.debug("Azure storage credentials are incomplete.")
             return
 
-        storage_account = self._secret_value_from_id(storage_account_secret_id)
-        secret_key = self._secret_value_from_id(secret_key_secret_id)
         return {"storage_account": storage_account, "secret_key": secret_key}
 
     def get_s3_info(self) -> Optional[S3RelData]:
@@ -888,7 +889,7 @@ class OpenSearchSnapshotsEvents(Object):
                 return
 
             # If emit returns False, payload not ready yet, defer
-            if not self._emit_local_storage_event(trigger_data, relation=event.relation):
+            if not self._emit_local_storage_event(trigger_data):
                 event.defer()
                 return
 
@@ -912,7 +913,7 @@ class OpenSearchSnapshotsEvents(Object):
                 return
 
             # If emit returns False, payload not ready yet, defer
-            if not self._emit_local_storage_event(trigger_data, relation=event.relation):
+            if not self._emit_local_storage_event(trigger_data):
                 event.defer()
                 return
 
@@ -1655,16 +1656,25 @@ class OpenSearchSnapshotsManager:
             self.charm.keystore_manager.reload()
             logger.info("Removed keystore entries for %s", object_storage_type)
         except OpenSearchCmdError as e:
-            msg = f"{getattr(e, 'stdout', '')}{getattr(e, 'stderr', '')}"
-            if "does not exist" in msg:
-                logger.info("Keystore entries already absent for %s.", object_storage_type)
-                # treat as success
+            parts = [
+                getattr(e, "stdout", "") or "",
+                getattr(e, "stderr", "") or "",
+                str(e) or "",
+            ]
+            msg = " ".join(parts).lower()
+            if "does not exist" in msg and "keystore" in msg:
+                # treat as successful cleanup
+                logger.info(
+                    "Keystore entries already absent for %s (message: %s).",
+                    object_storage_type,
+                    msg,
+                )
                 return
 
             logger.warning(
                 "Keystore cleanup attempt failed for %s: %s",
                 object_storage_type,
-                e,
+                msg or repr(e),
             )
             raise
 
