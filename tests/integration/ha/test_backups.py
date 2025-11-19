@@ -471,7 +471,7 @@ async def test_large_setups_relations_with_misconfiguration(
     await wait_until(
         ops_test,
         apps=["main"],
-        units_statuses=["blocked"],
+        units_statuses=["active"],
         apps_statuses=["blocked"],
         apps_full_statuses={"main": {"blocked": [BackupCredentialKeysIncorrect]}},
         idle_period=IDLE_PERIOD,
@@ -487,7 +487,7 @@ async def test_large_setups_relations_with_misconfiguration(
         ops_test,
         apps=["failover", APP_NAME],
         apps_statuses=["blocked"],
-        units_statuses=["blocked"],
+        units_statuses=["active"],
         apps_full_statuses={
             "failover": {"blocked": [BackupRelShouldNotExist]},
             APP_NAME: {"blocked": [BackupRelShouldNotExist]},
@@ -506,7 +506,7 @@ async def test_large_setups_relations_with_misconfiguration(
     await wait_until(
         ops_test,
         apps=["main"],
-        units_statuses=["blocked"],
+        units_statuses=["active"],
         apps_statuses=["blocked"],
         apps_full_statuses={"main": {"blocked": [BackupCredentialKeysIncorrect]}},
         idle_period=IDLE_PERIOD,
@@ -962,7 +962,7 @@ async def test_wrong_s3_credentials(
     await wait_until(
         ops_test,
         apps=[app],
-        units_statuses=["blocked", "active"],
+        units_statuses=["active"],
         apps_statuses=["blocked", "active"],
         idle_period=30,
     )
@@ -1062,7 +1062,7 @@ async def test_wrong_s3_ca_blocked(
     await wait_until(
         ops_test,
         apps=[app],
-        units_statuses=["blocked", "active"],
+        units_statuses=["active"],
         apps_statuses=["blocked", "active"],
         idle_period=IDLE_PERIOD,
     )
@@ -1121,7 +1121,7 @@ async def test_wrong_azure_credentials(
     await wait_until(
         ops_test,
         apps=[app],
-        units_statuses=["blocked", "active"],
+        units_statuses=["active"],
         apps_statuses=["blocked", "active"],
         idle_period=IDLE_PERIOD,
     )
