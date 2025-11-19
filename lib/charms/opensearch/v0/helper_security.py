@@ -10,6 +10,7 @@ import secrets
 import string
 import subprocess
 import tempfile
+from contextlib import suppress
 from datetime import datetime
 from os.path import exists
 from typing import Any, Optional, Tuple
@@ -140,7 +141,7 @@ def split_ca_chain(pem_content: str) -> list[str]:
 
 def _store_ca_chain(  # noqa: C901
     *,
-    alias_base: str,
+    alias: str,
     store_pwd: str,
     store_path: str,
     ca: str,
@@ -149,7 +150,6 @@ def _store_ca_chain(  # noqa: C901
     owner: str | None = None,
     final_mode: str | None = None,
     add_read_perm: bool = False,
-    tolerate_import_if_listed: bool = False,
 ) -> bool:
     """Common implementation to store a CA chain into a PKCS12 keystore."""
     tmpdir = os.path.dirname(store_path)
@@ -162,15 +162,15 @@ def _store_ca_chain(  # noqa: C901
             pass
 
     for i, pem in enumerate(certs):
-        ix_alias = f"{alias_base}-{i}"
-        old_alias = f"old-{alias_base}-{i}"
+        internal_alias = f"{alias}-{i}"
+        old_internal_alias = f"old-{alias}-{i}"
 
         # rename existing alias to old-<alias>-<i> if requested
         if keep_previous:
             try:
                 run_cmd(
                     f"{KEYTOOL} -changealias "
-                    f"-alias {ix_alias} -destalias {old_alias} "
+                    f"-alias {internal_alias} -destalias {old_internal_alias} "
                     f"-keystore {store_path} -storetype PKCS12",
                     f"-storepass {store_pwd}",
                 )
@@ -180,31 +180,40 @@ def _store_ca_chain(  # noqa: C901
                     return False
 
         # import the cert
-        fd, tmpfile = tempfile.mkstemp(dir=tmpdir)
         try:
-            with os.fdopen(fd, "w", encoding="utf-8", errors="replace") as f:
-                f.write(pem)
+            with tempfile.NamedTemporaryFile(
+                dir=tmpdir,
+                mode="w",
+                encoding="utf-8",
+                errors="replace",
+                delete=False,
+            ) as tmp:
+                tmp.write(pem)
+                tmp.flush()
+                tmp_path = tmp.name
 
             try:
                 run_cmd(
                     f"{KEYTOOL} -importcert -noprompt "
-                    f"-alias {ix_alias} -keystore {store_path} -file {tmpfile} -storetype PKCS12",
+                    f"-alias {internal_alias} -keystore {store_path} -file {tmp_path} -storetype PKCS12",
                     f"-storepass {store_pwd}",
                 )
-            except OpenSearchCmdError:
-                if tolerate_import_if_listed:
-                    listed = list_cas(store_pwd=store_pwd, store_path=store_path) or {}
-                    if ix_alias in listed:
-                        pass
-                    else:
-                        return False
-                else:
-                    return False
-        finally:
-            try:
-                os.remove(tmpfile)
-            except FileNotFoundError:
-                pass
+            except OpenSearchCmdError as e:
+                logger.error(
+                    "Failed to import cert for alias %s into %s: %s",
+                    internal_alias,
+                    store_path,
+                    (e.out or "") + (e.err or ""),
+                )
+                return False
+            finally:
+                # clean up temp file
+                with suppress(FileNotFoundError):
+                    os.remove(tmp_path)
+        except OSError as e:
+            # tmp file creation issues
+            logger.error("Failed to create temporary file for CA import: %s", e)
+            return False
 
     # post-actions
     try:
@@ -226,7 +235,7 @@ def store_s3_ca(
     """Add new CA cert(s) to the PKCS12 trust store for S3."""
     logger.info("Storing CA cert(s) with alias: %s into truststore.", alias)
     return _store_ca_chain(
-        alias_base=alias,
+        alias=alias,
         store_pwd=store_pwd,
         store_path=store_path,
         ca=ca,
@@ -235,7 +244,6 @@ def store_s3_ca(
         owner="snap_daemon:root",
         final_mode="0640",
         add_read_perm=False,
-        tolerate_import_if_listed=True,  # keep your graceful fallback
     )
 
 
@@ -245,7 +253,7 @@ def store_ca(
     """Add new CA cert(s) to a PKCS12 trust store (generic)."""
     logger.info("Storing CA cert(s) with alias: %s into truststore.", alias)
     return _store_ca_chain(
-        alias_base=alias,
+        alias=alias,
         store_pwd=store_pwd,
         store_path=store_path,
         ca=ca,
@@ -254,7 +262,6 @@ def store_ca(
         owner=None,
         final_mode=None,
         add_read_perm=True,
-        tolerate_import_if_listed=False,
     )
 
 
@@ -303,27 +310,17 @@ def list_cas(store_pwd: str, store_path: str) -> Optional[dict[str, str]]:  # no
         alias_line = next(
             (line for line in block.split("\n") if line.strip().startswith("friendlyName:")), None
         )
-        if not alias_line:
-            continue
         alias = alias_line.split("friendlyName:", 1)[-1].strip()
-
-        # extract the PEM body
-        if start_cert_marker not in block:
-            continue
         pem = f"{start_cert_marker}{block.split(start_cert_marker, 1)[1]}".strip()
 
         # parse optional trailing -<int> index
         base = alias
         idx = 0
         parts = alias.rsplit("-", 1)
-        if len(parts) == 2:
-            maybe_idx = parts[1]
-            try:
-                idx = int(maybe_idx)
-                base = parts[0]
-            except ValueError:
-                # alias had a dash but no numeric index, keep whole alias as base and idx=0
-                pass
+        if len(parts) == 2 and parts[1].isdigit():
+            # Only treat as index if suffix is purely digits
+            idx = int(parts[1])
+            base = parts[0]
 
         chains.setdefault(base, []).append((idx, pem))
 
@@ -387,30 +384,19 @@ def _is_alias_missing_error(exc: OpenSearchCmdError, alias: str) -> bool:
 
 def _collect_aliases_to_remove(alias_base: str, store_pwd: str, store_path: str) -> list[str]:
     """List aliases that should be removed (base, base-*, old-base-*)."""
-    list_cmd = f"{KEYTOOL} -list -v -keystore {store_path} -storetype PKCS12"
-    list_args = f"-storepass {store_pwd}"
-    try:
-        result = run_cmd(list_cmd, list_args)
-    except OpenSearchCmdError as e:
-        logger.debug(
-            "Failed to list aliases from %s: %s%s",
-            store_path,
-            e.out or "",
-            e.err or "",
-        )
-        raise
+    # Get all aliases from the keystore
+    all_aliases = list_aliases(store_pwd=store_pwd, store_path=store_path)
+    if all_aliases is None:
+        logger.debug("Could not list aliases from %s, no aliases to remove.", store_path)
+        return []
 
     aliases_to_remove: list[str] = []
-    for line in result.out.splitlines():
-        if "Alias name:" not in line:
-            continue
-        name = line.split("Alias name:", 1)[1].strip()
-        if (
-            name == alias_base
-            or name.startswith(f"{alias_base}-")
-            or name.startswith(f"{OLD_CA_PREFIX}{alias_base}-")
-        ):
-            aliases_to_remove.append(name)
+    for name in all_aliases:
+        if name.startswith(f"{alias_base}-"):
+            # Verify the suffix is a digit
+            suffix = name.split("-")[-1]
+            if suffix.isdigit():
+                aliases_to_remove.append(name)
 
     return aliases_to_remove
 

@@ -47,9 +47,9 @@ class ObjectStorageResolver:
 
     def get_storage_type(self) -> Optional[ObjectStorageType]:  # noqa: C901
         """Get the active object storage type from relations/peer-cluster."""
-        dep = self.charm.opensearch_peer_cm.deployment_desc()
-        dep_typ = getattr(dep, "typ", DeploymentType.MAIN_ORCHESTRATOR)
-        if not dep or dep_typ in {DeploymentType.MAIN_ORCHESTRATOR}:
+        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
+        dep_typ = getattr(deployment_desc, "typ", DeploymentType.MAIN_ORCHESTRATOR)
+        if not deployment_desc or dep_typ in {DeploymentType.MAIN_ORCHESTRATOR}:
             active = [
                 r
                 for r in [

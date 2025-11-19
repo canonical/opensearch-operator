@@ -684,7 +684,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             self.charm.secrets.put(Scope.APP, "s3-tls-ca-chain", ca)
             logger.debug("Secret created for TLS CA chain.")
             return ca
-        return self.charm.secrets.get(Scope.APP, "s3-tls-ca-chain") or None
+        return self.charm.secrets.get(Scope.APP, "s3-tls-ca-chain")
 
     def _rel_data(
         self,

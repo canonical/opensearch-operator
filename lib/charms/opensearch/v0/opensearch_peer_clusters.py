@@ -650,20 +650,20 @@ class OpenSearchPeerClustersManager:
             .get(self._charm.secrets.hash_key(KibanaserverUser))
         )
 
-        if "monitor_password" in credentials:
+        if credentials.get("monitor_password"):
             credentials["monitor_password"] = (
                 self._charm.model.get_secret(id=credentials["monitor_password"])
                 .peek_content()
                 .get(self._charm.secrets.password_key(COSUser))
             )
 
-        if "admin_tls" in credentials:
+        if credentials.get("admin_tls"):
             credentials["admin_tls"] = self._charm.model.get_secret(
                 id=credentials["admin_tls"]
             ).peek_content()
 
         if (
-            "s3" in credentials
+            credentials.get("s3")
             and credentials["s3"].get("access-key")
             and credentials["s3"].get("secret-key")
         ):
@@ -678,14 +678,14 @@ class OpenSearchPeerClustersManager:
                 .get("s3-secret-key")
             )
 
-        if "s3_tls_ca_chain" in credentials:
+        if credentials.get("s3_tls_ca_chain"):
             credentials["s3_tls_ca_chain"] = (
                 self._charm.model.get_secret(id=credentials["s3_tls_ca_chain"])
                 .peek_content()
                 .get("s3-tls-ca-chain")
             )
         if (
-            "azure" in credentials
+            credentials.get("azure")
             and credentials["azure"].get("storage-account")
             and credentials["azure"].get("secret-key")
         ):

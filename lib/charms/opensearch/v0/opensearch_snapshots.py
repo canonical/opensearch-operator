@@ -25,6 +25,7 @@ from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
     S3_RELATION,
     BackupCredentialCAIncorrect,
+    BackupCredentialCleanupFailed,
     BackupCredentialKeysIncorrect,
     BackupInProgress,
     BackupRelConflict,
@@ -67,8 +68,6 @@ from ops import (
 )
 from ops.framework import EventBase, EventSource
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
-
-from charms.opensearch.v0.constants_charm import BackupCredentialCleanupFailed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "89db18e639c64a6ea223c63172c04dc6."
@@ -186,11 +185,11 @@ class OpenSearchSnapshotsEvents(Object):
 
     def _on_s3_credentials_changed(self, event: CredentialsChangedEvent) -> None:  # noqa: C901
         """Handler for s3 credentials changed event."""
-        dep = self.charm.opensearch_peer_cm.deployment_desc()
+        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
         # block non-main orchestrators only when they are in a multi-app topology.
         if (
-            dep
-            and dep.typ != DeploymentType.MAIN_ORCHESTRATOR
+            deployment_desc
+            and deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
             and self._is_part_of_large_deployment()
         ):
             if self.charm.unit.is_leader():
@@ -241,14 +240,17 @@ class OpenSearchSnapshotsEvents(Object):
         new_chain = cfg.s3.tls_ca_chain if need_custom_ca else None
 
         if new_chain:
-            self.charm.snapshots_manager.store_s3_ca(new_chain)
-            logger.info("S3 CA stored.")
+            if not self.charm.snapshots_manager.is_custom_s3_ca_stored(new_chain):
+                # Content differs: rotate / store new chain
+                self.charm.snapshots_manager.store_s3_ca(new_chain)
+                logger.info("S3 CA stored/updated.")
+                self._restart_for_ca(reason="apply object storage CA change")
         else:
+            # No CA configured now. If we had one, remove it
             if self.charm.snapshots_manager.is_custom_s3_ca_stored():
                 self.charm.snapshots_manager.remove_s3_ca()
                 logger.info("S3 CA removed.")
-
-        self._restart_for_ca(new_chain, reason="apply object storage CA change")
+                self._restart_for_ca(reason="clean up the object storage CA")
 
         try:
             self.charm.snapshots_manager.ensure_repository(object_storage_type, cfg)
@@ -296,7 +298,7 @@ class OpenSearchSnapshotsEvents(Object):
 
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.remove_s3_ca()
-            self._restart_for_ca(None, reason="clean up the object storage CA")
+            self._restart_for_ca(reason="clean up the object storage CA")
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupCredentialKeysIncorrect, app=True)
@@ -311,11 +313,11 @@ class OpenSearchSnapshotsEvents(Object):
         self, event: StorageConnectionInfoChangedEvent
     ) -> None:
         """Handler for azure credentials changed event."""
-        dep = self.charm.opensearch_peer_cm.deployment_desc()
+        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
         # block non-main orchestrators only when they are in a multi-app topology.
         if (
-            dep
-            and dep.typ != DeploymentType.MAIN_ORCHESTRATOR
+            deployment_desc
+            and deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
             and self._is_part_of_large_deployment()
         ):
             if self.charm.unit.is_leader():
@@ -479,13 +481,14 @@ class OpenSearchSnapshotsEvents(Object):
             # Optional CA chain
             if info.get("s3_tls_ca_chain"):
                 logger.info("S3 TLS CA Chain detected.")
+                ca_changed = self._ca_changed(info["s3_tls_ca_chain"])
                 self.charm.snapshots_manager.store_s3_ca(info["s3_tls_ca_chain"])
-                self._restart_for_ca(info["s3_tls_ca_chain"], reason="apply new object storage CA")
+                if ca_changed:
+                    self._restart_for_ca(reason="apply object storage CA change")
 
-            else:
-                if self.charm.snapshots_manager.is_custom_s3_ca_stored():
-                    self.charm.snapshots_manager.remove_s3_ca()
-                    self._restart_for_ca(None, reason="clean up the object storage CA")
+            elif self.charm.snapshots_manager.is_custom_s3_ca_stored():
+                self.charm.snapshots_manager.remove_s3_ca()
+                self._restart_for_ca(reason="clean up the object storage CA")
 
         elif event.kind == "azure":
             info = self._read_azure_from_peer()
@@ -520,9 +523,10 @@ class OpenSearchSnapshotsEvents(Object):
             if self.charm.unit.is_leader():
                 self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
                 self.charm.status.clear(BackupCredentialCleanupFailed)
+
             if self.charm.snapshots_manager.is_custom_s3_ca_stored():
                 self.charm.snapshots_manager.remove_s3_ca()
-                self._restart_for_ca(None, reason="clean up the object storage CA")
+                self._restart_for_ca(reason="clean up the object storage CA")
 
         elif event.kind == "azure":
             if not self._cleanup(
@@ -546,28 +550,29 @@ class OpenSearchSnapshotsEvents(Object):
         current_chain = self.charm.snapshots_manager.find_s3_chain_in_store()
         # No CA installed and nothing new: no change
         if not current_chain and not new_chain:
+            logger.debug("No CA installed and nothing new: no change")
             return False
 
         # Only one side has a chain: definitely changed
         if bool(current_chain) != bool(new_chain):
+            logger.debug("The CA is added or removed: definitely changed")
             return True
 
         # Both non-empty: compare as unordered sets of normalized cert blocks
         current_blocks = _normalize_chain_unordered(current_chain)
         new_blocks = _normalize_chain_unordered(new_chain)
-        return _hash("".join(current_blocks)) != _hash("".join(new_blocks))
+        is_different = _hash("".join(current_blocks)) != _hash("".join(new_blocks))
+        logger.debug("The old and new CA chains are different: %s", is_different)
+        return is_different
 
-    def _restart_for_ca(self, new_chain: str | None, *, reason: str) -> bool:
-        """Request restart if the installed CA differs from new_chain.
+    def _restart_for_ca(self, reason: str) -> None:
+        """Request a Opensearch restart.
 
-        Returns:
-             True if we requested a restart, else False.
+        Args:
+            reason (str): reason for restarting Opensearch.
         """
-        if self._ca_changed(new_chain):
-            logger.info("Restarting Opensearch for CA chain changes.")
-            self.charm.request_opensearch_restart(reason=reason)
-            return True
-        return False
+        logger.info("Restarting Opensearch for CA chain changes.")
+        self.charm.request_opensearch_restart(reason=reason)
 
     def _get_peer_orchestrator_relation_payload(self, relation) -> str | None:
         app_bag = {}
@@ -904,12 +909,12 @@ class OpenSearchSnapshotsEvents(Object):
     def _on_peer_clusters_relation_changed_for_snapshots(self, event) -> None:  # noqa C901
         """Apply snapshots config when the orchestrator broadcasts over peer-clusters."""
         # Only leaders perform cluster-level config
-        dep = self.charm.opensearch_peer_cm.deployment_desc()
-        if not dep:
+        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
+        if not deployment_desc:
             event.defer()
             return
 
-        if dep.typ == DeploymentType.MAIN_ORCHESTRATOR:
+        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             return
 
         trigger_from_rel_data = event.relation.data.get(event.app, {}).get("storage_trigger")
@@ -929,11 +934,11 @@ class OpenSearchSnapshotsEvents(Object):
 
     def _on_peer_clusters_relation_departed_for_snapshots(self, event) -> None:  # noqa C901
         """Cleanup snapshot config if the orchestrator we depended on is gone."""
-        dep = self.charm.opensearch_peer_cm.deployment_desc()
-        if not dep:
+        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
+        if not deployment_desc:
             return
 
-        if dep.typ == DeploymentType.MAIN_ORCHESTRATOR:
+        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             return
 
         trigger_raw_data = event.relation.data.get(event.app, {}).get("storage_trigger")
@@ -1047,8 +1052,8 @@ class OpenSearchSnapshotsEvents(Object):
         if not self.charm.unit.is_leader():
             return "Backup/Restore related actions must be run on the juju leader unit."
 
-        dep = self.charm.opensearch_peer_cm.deployment_desc()
-        if not dep:
+        deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
+        if not deployment_desc:
             return "Deployment not ready."
 
         if self.charm.upgrade_in_progress:
@@ -1125,13 +1130,13 @@ class OpenSearchSnapshotsManager:
 
     def get_active_storage_type(self) -> ObjectStorageType | None:
         """Get the active storage type."""
-        return self.charm.resolver.get_storage_type()
+        return self.resolver.get_storage_type()
 
     def get_object_storage_config(
         self, forced_type: ObjectStorageType | None = None
     ) -> ObjectStorageConfig | None:
         """Get the object storage config."""
-        return self.charm.resolver.get_storage_config(forced_type)
+        return self.resolver.get_storage_config(forced_type)
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def create_repo(
@@ -1565,7 +1570,7 @@ class OpenSearchSnapshotsManager:
         """
         if alias == S3_CA_ALIAS:
             return -1
-        suffix = alias[len(prefix):]
+        suffix = alias[len(prefix) :]
         try:
             return int(suffix)
         except ValueError:
@@ -1618,9 +1623,11 @@ class OpenSearchSnapshotsManager:
         """
         current_chain = self.find_s3_chain_in_store()
         if not current_chain:
+            # Nothing stored at all: definitely no custom S3 CA
             return False
 
         if not s3_ca_chain:
+            # There is existing S3 CA stored, but no new one, we need to remove the old one.
             return True
 
         # Compare as unordered sets of normalized cert blocks
