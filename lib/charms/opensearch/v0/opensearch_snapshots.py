@@ -229,23 +229,22 @@ class OpenSearchSnapshotsEvents(Object):
         logger.info("S3 credentials are added to keystore.")
         self.charm.keystore_manager.reload()
 
-        need_custom_ca = self.charm.snapshots_manager.requires_custom_s3_ca(
+        needs_custom_ca = self.charm.snapshots_manager.requires_custom_s3_ca(
             object_storage_type, cfg
         )
-        new_chain = cfg.s3.tls_ca_chain if need_custom_ca else None
 
-        if new_chain:
-            if not self.charm.snapshots_manager.is_custom_s3_ca_stored(new_chain):
+        if needs_custom_ca:
+            if not self.charm.snapshots_manager.is_custom_s3_ca_stored(cfg.s3.tls_ca_chain):
                 # Content differs: rotate / store new chain
-                self.charm.snapshots_manager.store_s3_ca(new_chain)
+                self.charm.snapshots_manager.store_s3_ca(cfg.s3.tls_ca_chain)
                 logger.info("S3 CA stored/updated.")
                 self._restart_for_ca(reason="apply object storage CA change")
-        else:
+
+        elif self.charm.snapshots_manager.is_custom_s3_ca_stored():
             # No CA configured now. If we had one, remove it
-            if self.charm.snapshots_manager.is_custom_s3_ca_stored():
-                self.charm.snapshots_manager.remove_s3_ca()
-                logger.info("S3 CA removed.")
-                self._restart_for_ca(reason="clean up the object storage CA")
+            self.charm.snapshots_manager.remove_s3_ca()
+            logger.info("S3 CA removed.")
+            self._restart_for_ca(reason="clean up the object storage CA")
 
         try:
             self.charm.snapshots_manager.ensure_repository(object_storage_type, cfg)
@@ -1076,9 +1075,7 @@ class OpenSearchSnapshotsEvents(Object):
 
     def _is_part_of_large_deployment(self) -> bool:
         """Return True if this app participates in a multi-app topology (main/failover/data)."""
-        return bool(
-            self.charm.model.relations.get(PeerClusterOrchestratorRelationName, [])
-        ) or bool(self.charm.model.relations.get(PeerClusterRelationName, []))
+        return self.charm.peer_cm.is_provider() or self.charm.peer_cm.is_consumer()
 
 
 class OpenSearchSnapshotsManager:
