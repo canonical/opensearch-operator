@@ -886,7 +886,10 @@ class OpenSearchSnapshotEvents(Object):
 
     def _is_part_of_large_deployment(self) -> bool:
         """Return True if this app participates in a multi-app topology (main/failover/data)."""
-        return self.charm.peer_cm.is_provider() or self.charm.peer_cm.is_consumer()
+        return (
+            self.charm.opensearch_peer_cm.is_provider()
+            or self.charm.opensearch_peer_cm.is_consumer()
+        )
 
 
 class OpenSearchSnapshotsManager:
@@ -899,11 +902,22 @@ class OpenSearchSnapshotsManager:
     def get_object_storage_config(
         self, forced_type: ObjectStorageType | None = None
     ) -> ObjectStorageConfig | None:
-        """Get the object storage config."""
+        """Get the object storage config.
+
+        Args:
+            forced_type (ObjectStorageType | None): force the type of the config to return.
+
+        Returns:
+            ObjectStorageConfig | None: the object storage config.
+        """
         return self.get_storage_config(forced_type)
 
     def get_storage_type(self) -> Optional[ObjectStorageType]:  # noqa: C901
-        """Get the active object storage type from relations/peer-cluster."""
+        """Get the active object storage type from relations/peer-cluster.
+
+        Returns:
+            Optional[ObjectStorageType]: the active object storage type.
+        """
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             logger.debug("Deployment description missing; storage type unknown.")
             return None
@@ -943,7 +957,14 @@ class OpenSearchSnapshotsManager:
     def get_storage_config(  # noqa: C901
         self, forced_type: Optional[ObjectStorageType] = None
     ) -> Optional[ObjectStorageConfig]:
-        """Get the active object storage config from relations/peer-cluster."""
+        """Get the active object storage config from relations/peer-cluster.
+
+        Args:
+            forced_type (Optional[ObjectStorageType]): force the type of the config to return.
+
+        Returns:
+            ObjectStorageConfig | None: the active object storage config.
+        """
         object_storage_type = forced_type or self.get_storage_type()
         if not object_storage_type or object_storage_type == ObjectStorageType.CONFLICT:
             return
@@ -1414,7 +1435,7 @@ class OpenSearchSnapshotsManager:
             prefix: The prefix to order
         Returns:
             alias_order(int): alias index
-            S3_CA_ALIAS-0, S3_CA_ALIAS-1, ... follow in numeric order
+            S3_CA_ALIAS-0, S3_CA_ALIAS-1, etc. follow in numeric order
         """
         if alias == S3_CA_ALIAS:
             return -1
@@ -1486,7 +1507,7 @@ class OpenSearchSnapshotsManager:
         Args:
             s3_tls_ca_chain: S3 TLS CA chain to store
 
-        If the there is s3_tls_ca_chain, the old CA will be removed.
+        If there is s3_tls_ca_chain, the old CA will be removed.
         """
         store_path = f"{self.opensearch.paths.certs}/cacerts.p12"
 
@@ -1515,6 +1536,10 @@ class OpenSearchSnapshotsManager:
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def cleanup_keystore(self, object_storage_type, keystore_entries) -> None:
         """Remove keystore entries for the given object storage type with retries.
+
+        Args:
+            object_storage_type: Object storage type to use
+            keystore_entries: Keystore entries to remove
 
         Retries on OpenSearchCmdError unless the error indicates the entries
         do not exist.
@@ -1605,7 +1630,7 @@ class OpenSearchSnapshotsManager:
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def verify_repository(self, object_storage_type: ObjectStorageType) -> None:
-        """Verify repo by listing snapshots.
+        """Verify repository by listing snapshots.
 
         Args:
             object_storage_type (ObjectStorageType): Object storage type

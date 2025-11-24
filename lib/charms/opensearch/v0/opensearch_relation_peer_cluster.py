@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, MutableMapping, Optional
 
 from charms.opensearch.v0.constants_charm import (
     AZURE_RELATION,
+    PCLUSTER_MISSING_REL_MSG_KEY,
     S3_RELATION,
     AdminUser,
     COSUser,
@@ -59,7 +60,7 @@ from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
-PCLUSTER_MISSING_REL_MSG_KEY = "pcluster_missing_relations_msg"
+
 logger = logging.getLogger(__name__)
 
 

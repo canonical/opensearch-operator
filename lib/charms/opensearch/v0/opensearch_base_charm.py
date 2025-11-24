@@ -2037,7 +2037,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
     ) -> None:
         """Ask the charm to restart OpenSearch via its internal restart event.
 
-        Returns True if a restart was requested/emitted, False if skipped.
+        Args:
+            reason: the reason for the restart.
         """
         if reason:
             msg = f"Requesting OpenSearch restart for {reason}"

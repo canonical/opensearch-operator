@@ -13,13 +13,12 @@ import tempfile
 from contextlib import suppress
 from datetime import datetime
 from os.path import exists
-from typing import Any, Optional, Tuple
+from typing import Optional, Tuple
 
 import bcrypt
 from charms.opensearch.v0.helper_charm import run_cmd
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from cryptography import x509
-from ops.model import Secret, SecretInfo
 
 # The unique Charmhub library identifier, never change it
 LIBID = "224ce9884b0d47b997357fec522f11c7"
@@ -231,7 +230,18 @@ def _store_ca_chain(  # noqa: C901
 def store_s3_ca(
     alias: str, store_pwd: str, store_path: str, ca: str, keep_previous: bool = True
 ) -> bool:
-    """Add new CA cert(s) to the PKCS12 trust store for S3."""
+    """Add new CA cert(s) to the PKCS12 trust store for S3.
+
+    Args:
+        alias: Alias to use for the CA certs.
+        store_pwd: Password for the trust store.
+        store_path: Path to the trust store.
+        ca: CA cert(s) to store.
+        keep_previous: Whether to keep the previous CA certs in the trust store.
+
+    Returns:
+        bool: True if the operation succeeded, False otherwise.
+    """
     logger.info("Storing CA cert(s) with alias: %s into truststore.", alias)
     return _store_ca_chain(
         alias=alias,
@@ -246,7 +256,18 @@ def store_s3_ca(
 def store_ca(
     alias: str, store_pwd: str, store_path: str, ca: str, keep_previous: bool = True
 ) -> bool:
-    """Add new CA cert(s) to a PKCS12 trust store (generic)."""
+    """Add new CA cert(s) to a PKCS12 trust store (generic).
+
+    Args:
+        alias: Alias to use for the CA certs.
+        store_pwd: Password for the trust store.
+        store_path: Path to the trust store.
+        ca: CA cert(s) to store.
+        keep_previous: Whether to keep the previous CA certs in the trust store.
+
+    Returns:
+        bool: True if the operation succeeded, False otherwise.
+    """
     logger.info("Storing CA cert(s) with alias: %s into truststore.", alias)
     return _store_ca_chain(
         alias=alias,
@@ -342,7 +363,13 @@ def read_ca(alias: str, store_pwd: str, store_path: str) -> Optional[str]:
 
 
 def remove_ca(alias: str, store_pwd: str, store_path: str) -> None:
-    """Remove old CA cert from trust store."""
+    """Remove old CA cert from the truststore.
+
+    Args:
+        alias: Alias to use for the CA certs.
+        store_pwd: Password for the trust store.
+        store_path: Path to the trust store.
+    """
     if not exists(store_path):
         logger.debug("Trust store %s does not exist, nothing to remove.", store_path)
         return
@@ -380,13 +407,30 @@ def remove_ca(alias: str, store_pwd: str, store_path: str) -> None:
 
 
 def _is_alias_missing_error(exc: OpenSearchCmdError, alias: str) -> bool:
-    """Return True if keytool says that given alias does not exist."""
+    """Return True if keytool says that given alias does not exist.
+
+    Args:
+        exc: The OpenSearchCmdError to check.
+        alias: The alias that was attempted to be deleted.
+
+    Returns:
+        bool: True if the error message indicates that the alias does not exist.
+    """
     msg = (exc.out or "") + (exc.err or "")
     return f"Alias <{alias}> does not exist" in msg
 
 
 def _collect_aliases_to_remove(alias_base: str, store_pwd: str, store_path: str) -> list[str]:
-    """List aliases that should be removed (base, base-*, old-base-*)."""
+    """List aliases that should be removed (base, base-*, old-base-*).
+
+    Args:
+        alias_base: The base alias to match.
+        store_pwd: Password for the trust store.
+        store_path: Path to the trust store.
+
+    Returns:
+        List of aliases to remove.
+    """
     # Get all aliases from the keystore
     all_aliases = list_aliases(store_pwd=store_pwd, store_path=store_path)
     if all_aliases is None:
@@ -405,7 +449,13 @@ def _collect_aliases_to_remove(alias_base: str, store_pwd: str, store_path: str)
 
 
 def _remove_ca_aliases(alias_base: str, store_pwd: str, store_path: str) -> None:
-    """Core logic to delete aliases for a given base name."""
+    """Core logic to delete aliases for a given base name.
+
+    Args:
+        alias_base: The base alias to match.
+        store_pwd: Password for the trust store.
+        store_path: Path to the trust store.
+    """
     aliases_to_remove = _collect_aliases_to_remove(
         alias_base=alias_base, store_pwd=store_pwd, store_path=store_path
     )
@@ -433,7 +483,13 @@ def _remove_ca_aliases(alias_base: str, store_pwd: str, store_path: str) -> None
 
 
 def remove_s3_ca(alias: str, store_pwd: str, store_path: str) -> None:
-    """Remove S3 CA cert(s) from the truststore."""
+    """Remove S3 CA cert(s) from the truststore.
+
+    Args:
+        alias: Alias to use for the CA certs.
+        store_pwd: Password for the trust store.
+        store_path: Path to the trust store.
+    """
     if not alias:
         logger.debug("remove_s3_ca called with empty alias, nothing to do.")
         return
@@ -560,6 +616,12 @@ def _normalize_chain(text: Optional[str]) -> str:
 def _normalize_chain_unordered(chain: str) -> list[str]:
     """Normalize a PEM chain into a sorted list of cert blocks for comparison.
 
+    Args:
+        chain: PEM chain string.
+
+    Returns:
+        list[str]: List of certificate blocks, sorted by normalized content.
+
     This makes comparison robust to:
     - whitespace differences
     - order of certificates within the chain
@@ -572,7 +634,14 @@ def _normalize_chain_unordered(chain: str) -> list[str]:
 
 
 def _split_pem_chain(chain: str) -> list[str]:
-    """Split a PEM chain into individual certificate blocks."""
+    """Split a PEM chain into individual certificate blocks.
+
+    Args:
+        chain: PEM chain string.
+
+    Returns:
+        list[str]: List of certificate blocks.
+    """
     if not chain:
         return []
 
@@ -607,15 +676,3 @@ def _split_pem_chain(chain: str) -> list[str]:
 def _hash(text: str) -> str:
     """Hash a PEM chain string."""
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
-def _jsonify_secrets(obj: Any) -> Any:
-    """Return JSON-serializable copy where Secret/SecretInfo become their string ids."""
-    if isinstance(obj, (Secret, SecretInfo)):
-        return obj.id
-    if isinstance(obj, dict):
-        return {k: _jsonify_secrets(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple)):
-        t = type(obj)
-        return t(_jsonify_secrets(v) for v in obj)
-    return obj
