@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from types import SimpleNamespace
 
 import pytest
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
@@ -13,7 +12,6 @@ from charms.opensearch.v0.opensearch_snapshots import (
 )
 from ops import testing
 
-from lib.charms.opensearch.v0.models import DeploymentType
 from tests.unit.lib.fixtures_snapshots import SnapshotsUnitTestFixtures
 
 _S3_PEM = """-----BEGIN CERTIFICATE-----
@@ -101,6 +99,7 @@ class TestCreateBackup(SnapshotsUnitTestFixtures):
             "backup-id": "2025-01-01T10:00:00Z",
             "status": "success",
         }
+
 
 class TestListBackups(SnapshotsUnitTestFixtures):
     @pytest.mark.parametrize("backend", ["s3", "azure"])
