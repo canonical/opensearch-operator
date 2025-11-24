@@ -31,6 +31,7 @@ import pytest
 from azure.storage.blob import BlobServiceClient
 from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
+    BackupCredentialIncorrect,
     BackupRelShouldNotExist,
 )
 from charms.opensearch.v0.opensearch_snapshots import AZURE_REPOSITORY, S3_REPOSITORY
@@ -61,7 +62,7 @@ from .helpers import (
     restore,
 )
 from .helpers_data import index_docs_count
-from charms.opensearch.v0.constants_charm import BackupCredentialIncorrect
+
 logger = logging.getLogger(__name__)
 
 ALL_GROUPS = {
