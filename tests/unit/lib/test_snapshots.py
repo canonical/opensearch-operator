@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
 import pytest
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
@@ -12,6 +13,7 @@ from charms.opensearch.v0.opensearch_snapshots import (
 )
 from ops import testing
 
+from lib.charms.opensearch.v0.models import DeploymentType
 from tests.unit.lib.fixtures_snapshots import SnapshotsUnitTestFixtures
 
 _S3_PEM = """-----BEGIN CERTIFICATE-----
@@ -69,28 +71,24 @@ class TestCreateBackup(SnapshotsUnitTestFixtures):
             "status": "success",
         }
 
-    def test_create_backup_when_s3_repo_missing_and_ca_present_then_ca_forwarded_to_manager(
-        self, monkeypatch
+    def test_create_backup_when_s3_repo_missing_and_ca_present_then_raise_repository_missing_error(
+        self,
     ):
         ca = "-----BEGIN CERT-----\nMIIB...==\n-----END CERT-----\n"
-        self.mock_is_repo_created.side_effect = [False, True]
         self.use_s3(ca=ca)
-        st = testing.State(leader=True, relations={self.s3_relation()})
+        self.mock_is_repo_created.return_value = False
 
-        def fake_create_repo(_self, ost, object_storage_config, name=None):
-            assert object_storage_config.s3.tls_ca_chain == ca, "CA not forwarded to create_repo"
-            return "s3-repository"
-
-        monkeypatch.setattr(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.create_repo",
-            fake_create_repo,
+        st = testing.State(
+            leader=True,
+            relations={self.s3_relation()},
         )
 
-        self.ctx.run(self.ctx.on.action("create-backup"), st)
-        assert self.ctx.action_results == {
-            "backup-id": "2025-01-01T10:00:00Z",
-            "status": "success",
-        }
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(self.ctx.on.action("create-backup"), st)
+
+        assert "The opensearch repository could not be created yet." in str(err.value)
+
+        self.mock_create_snapshot.assert_not_called()
 
     def test_create_backup_when_s3_has_no_ca_then_operations_still_succeed(self):
         s3_no_ca = {k: v for k, v in S3_CONN_INFO_WITH_CA.items() if k != "tls_ca_chain"}
@@ -103,7 +101,6 @@ class TestCreateBackup(SnapshotsUnitTestFixtures):
             "backup-id": "2025-01-01T10:00:00Z",
             "status": "success",
         }
-
 
 class TestListBackups(SnapshotsUnitTestFixtures):
     @pytest.mark.parametrize("backend", ["s3", "azure"])
@@ -185,6 +182,22 @@ class TestListBackups(SnapshotsUnitTestFixtures):
         msg = err.value.message.lower()
         assert "server error" in msg or "503" in msg
 
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_list_backups_when_not_leader_then_action_fails(self, backend):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
+
+        st = testing.State(leader=False, relations=rels)
+
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(self.ctx.on.action("list-backups", params={"output": "json"}), st)
+
+        assert "leader" in err.value.message.lower()
+
 
 class TestRestore(SnapshotsUnitTestFixtures):
     @pytest.mark.parametrize("backend", ["s3", "azure"])
@@ -199,7 +212,7 @@ class TestRestore(SnapshotsUnitTestFixtures):
         st = testing.State(leader=True, relations=rels)
 
         monkeypatch.setattr(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsEvents._action_missing_pre_requisites",
+            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotEvents._action_missing_pre_requisites",
             lambda _self, report_running_operations=True: "cluster not ready",
         )
 
@@ -422,6 +435,24 @@ class TestRestore(SnapshotsUnitTestFixtures):
         )
         assert called["ok"]
 
+    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    def test_restore_when_not_leader_then_action_fails(self, backend):
+        if backend == "s3":
+            self.use_s3()
+            rels = {self.s3_relation()}
+        else:
+            self.use_azure()
+            rels = {self.azure_relation()}
+
+        st = testing.State(leader=False, relations=rels)
+
+        with pytest.raises(testing.ActionFailed) as err:
+            self.ctx.run(
+                self.ctx.on.action("restore", params={"backup-id": "2025-01-01T10:00:00Z"}), st
+            )
+
+        assert "leader" in err.value.message.lower()
+
 
 class TestPrerequisites(SnapshotsUnitTestFixtures):
     @pytest.mark.parametrize("backend", ["s3", "azure"])
@@ -444,16 +475,14 @@ class TestPrerequisites(SnapshotsUnitTestFixtures):
     def test_prereq_when_deployment_not_ready_then_action_fails(self, backend, monkeypatch):
         if backend == "s3":
             self.use_s3()
-            rels = {self.s3_relation()}
+            relations = {self.s3_relation()}
         else:
             self.use_azure()
-            rels = {self.azure_relation()}
+            relations = {self.azure_relation()}
 
-        st = testing.State(leader=True, relations=rels)
-        monkeypatch.setattr(
-            "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
-            lambda *_a, **_k: None,
-        )
+        self.mock_deployment_desc.return_value = None
+
+        st = testing.State(leader=True, relations=relations)
 
         with pytest.raises(testing.ActionFailed) as err:
             self.ctx.run(self.ctx.on.action("create-backup"), st)
@@ -462,10 +491,6 @@ class TestPrerequisites(SnapshotsUnitTestFixtures):
 
     def test_prereq_when_upgrade_in_progress_then_action_fails(self, monkeypatch):
         st = testing.State(leader=True)
-        monkeypatch.setattr(
-            "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
-            lambda *_a, **_k: object(),
-        )
         monkeypatch.setattr(
             "src.charm.OpenSearchOperatorCharm.upgrade_in_progress",
             property(lambda _self: True),
@@ -478,11 +503,6 @@ class TestPrerequisites(SnapshotsUnitTestFixtures):
 
     def test_prereq_when_storage_relation_missing_then_action_fails(self, monkeypatch):
         st = testing.State(leader=True)
-        monkeypatch.setattr(
-            "charms.opensearch.v0.opensearch_peer_clusters.OpenSearchPeerClustersManager.deployment_desc",
-            lambda *_a, **_k: object(),
-        )
-
         with pytest.raises(testing.ActionFailed) as err:
             self.ctx.run(self.ctx.on.action("create-backup"), st)
 
@@ -516,7 +536,7 @@ class TestPrerequisites(SnapshotsUnitTestFixtures):
         with pytest.raises(testing.ActionFailed) as err:
             self.ctx.run(self.ctx.on.action("create-backup"), st)
 
-        assert "repository has not been created" in err.value.message.lower()
+        assert "repository could not be created" in err.value.message.lower()
 
     @pytest.mark.parametrize("backend", ["s3", "azure"])
     def test_prereq_when_http_error_during_repo_check_then_error_message_displayed(

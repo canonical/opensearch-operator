@@ -146,18 +146,19 @@ def _store_ca_chain(  # noqa: C901
     store_path: str,
     ca: str,
     keep_previous: bool,
-    pre_chmod_existing: str | None = None,
-    owner: str | None = None,
-    final_mode: str | None = None,
+    snap_user_with_write_permission: bool = False,
     add_read_perm: bool = False,
 ) -> bool:
     """Common implementation to store a CA chain into a PKCS12 keystore."""
     tmpdir = os.path.dirname(store_path)
+    starter_mode = "0664"
+    snap_user = "snap_daemon:root"
+    final_mode = "0640"
     # import root first, then intermediates
     certs = list(reversed(split_ca_chain(ca)))
-    if pre_chmod_existing and os.path.exists(store_path):
+    if snap_user_with_write_permission and os.path.exists(store_path):
         try:
-            run_cmd(f"sudo chmod {pre_chmod_existing} {store_path}")
+            run_cmd(f"sudo chmod {starter_mode} {store_path}")
         except OpenSearchCmdError:
             pass
 
@@ -217,10 +218,8 @@ def _store_ca_chain(  # noqa: C901
 
     # post-actions
     try:
-        if owner:
-            run_cmd(f"sudo chown {owner} {store_path}")
-        if final_mode:
-            run_cmd(f"sudo chmod {final_mode} {store_path}")
+        if snap_user_with_write_permission:
+            run_cmd(f"sudo chown {snap_user} {store_path}; sudo chmod {final_mode} {store_path}")
         if add_read_perm:
             run_cmd(f"sudo chmod +r {store_path}")
     except OpenSearchCmdError:
@@ -240,10 +239,7 @@ def store_s3_ca(
         store_path=store_path,
         ca=ca,
         keep_previous=keep_previous,
-        pre_chmod_existing="0664",
-        owner="snap_daemon:root",
-        final_mode="0640",
-        add_read_perm=False,
+        snap_user_with_write_permission=True,
     )
 
 
@@ -258,9 +254,6 @@ def store_ca(
         store_path=store_path,
         ca=ca,
         keep_previous=keep_previous,
-        pre_chmod_existing=None,
-        owner=None,
-        final_mode=None,
         add_read_perm=True,
     )
 
@@ -287,7 +280,17 @@ def list_aliases(store_pwd: str, store_path: str) -> Optional[list[str]]:
 
 
 def list_cas(store_pwd: str, store_path: str) -> Optional[dict[str, str]]:  # noqa: C901
-    """List the CAs currently stored in a trust store."""
+    """List the CAs currently stored in a trust store.
+
+    Args:
+        store_pwd: Password for the trust store.
+        store_path: Path to the trust store.
+
+    Returns:
+        A mapping from base alias to full concatenated PEM chain.
+        If an alias is partitioned as <alias>-0, <alias>-1, ... in the store,
+        they are reassembled and returned under the base <alias> key.
+    """
     if not exists(store_path):
         return None
 

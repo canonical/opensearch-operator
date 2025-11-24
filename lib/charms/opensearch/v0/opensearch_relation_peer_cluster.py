@@ -25,7 +25,6 @@ from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENT
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology
-from charms.opensearch.v0.helper_storage import ObjectStorageType
 from charms.opensearch.v0.models import (
     AzureRelDataCredentials,
     DeploymentDescription,
@@ -43,6 +42,7 @@ from charms.opensearch.v0.models import (
 )
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
+from charms.opensearch.v0.opensearch_snapshots import ObjectStorageType
 from ops import (
     BlockedStatus,
     EventBase,
@@ -59,7 +59,7 @@ from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
-
+PCLUSTER_MISSING_REL_MSG_KEY = "pcluster_missing_relations_msg"
 logger = logging.getLogger(__name__)
 
 
@@ -393,15 +393,23 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if self._has_secret_and_no_relation(info["key"], info["relation_name"])
         ]
         if should_block:
-            logger.warning(
-                "%s Missing relations for: %s",
-                PClusterMissingStorageRelations,
-                ", ".join(should_block),
-            )
-            self.charm.status.set(BlockedStatus(PClusterMissingStorageRelations), app=True)
+            details = ", ".join(sorted(should_block))
+            extra = f" Missing relations for: {details}"
+            extra = extra[:120]
+            full_msg = f"{PClusterMissingStorageRelations}{extra}"
+            logger.warning(full_msg)
+            self.charm.peers_data.put(Scope.APP, PCLUSTER_MISSING_REL_MSG_KEY, full_msg)
+            self.charm.status.set(BlockedStatus(full_msg), app=True)
             return
 
-        self.charm.status.clear(PClusterMissingStorageRelations, app=True)
+        stored_msg = self.charm.peers_data.get(
+            Scope.APP,
+            PCLUSTER_MISSING_REL_MSG_KEY,
+            default=PClusterMissingStorageRelations,
+        )
+
+        self.charm.status.clear(stored_msg, app=True)
+        self.charm.peers_data.delete(Scope.APP, PCLUSTER_MISSING_REL_MSG_KEY)
 
     def _has_secret_and_no_relation(self, key: str, relation_name: str) -> bool:
         """Checks if the relation data has credentials for a non-related app"""
@@ -556,6 +564,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         trigger_rel_id: Optional[int] = None,
     ) -> None:
         """Save in the peer cluster rel data the current app's descriptions."""
+        if deployment_desc is None:
+            logger.debug("No deployment description available; skipping fleet apps update.")
+            return
+
         cluster_fleet_apps = (
             self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
         )
@@ -603,7 +615,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 return None
 
             cfg = (
-                self.charm.snapshots_manager.resolver.get_storage_config(ObjectStorageType.AZURE)
+                self.charm.snapshots_manager.get_storage_config(ObjectStorageType.AZURE)
                 or ObjectStorageConfig()
             )
             azure = cfg.azure
@@ -638,25 +650,33 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(S3_RELATION):
                 return None
             cfg = (
-                self.charm.snapshots_manager.resolver.get_storage_config(ObjectStorageType.S3)
+                self.charm.snapshots_manager.get_storage_config(ObjectStorageType.S3)
                 or ObjectStorageConfig()
             )
-            s3 = cfg.s3
+            s3_cfg = cfg.s3
             if not (
-                s3 and s3.credentials and s3.credentials.access_key and s3.credentials.secret_key
+                s3_cfg
+                and s3_cfg.credentials
+                and s3_cfg.credentials.access_key
+                and s3_cfg.credentials.secret_key
             ):
                 return None
 
             # As the main orchestrator, this application must set the S3 information.
-            access_key = s3.credentials.access_key
-            secret_key = s3.credentials.secret_key
+            access_key = s3_cfg.credentials.access_key
+            secret_key = s3_cfg.credentials.secret_key
+            s3_tls_ca_chain = s3_cfg.tls_ca_chain
 
             # set the secrets in the charm
             # TODO Move this to s3 relation and include both in one secret
             self.charm.secrets.put(Scope.APP, "s3-access-key", access_key)
             self.charm.secrets.put(Scope.APP, "s3-secret-key", secret_key)
+            if s3_tls_ca_chain:
+                self.charm.secrets.put(Scope.APP, "s3-tls-ca-chain", s3_tls_ca_chain)
 
-            return S3RelDataCredentials(access_key=access_key, secret_key=secret_key)
+            return S3RelDataCredentials(
+                access_key=access_key, secret_key=secret_key, s3_tls_ca_chain=s3_tls_ca_chain
+            )
 
         if not self.charm.secrets.get(Scope.APP, "s3-access-key"):
             return None
@@ -665,26 +685,8 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         return S3RelDataCredentials(
             access_key=self.charm.secrets.get(Scope.APP, "s3-access-key"),
             secret_key=self.charm.secrets.get(Scope.APP, "s3-secret-key"),
+            s3_tls_ca_chain=self.charm.secrets.get(Scope.APP, "s3-tls-ca-chain"),
         )
-
-    def _s3_tls_ca(self, deployment_desc: DeploymentDescription) -> Optional[str]:
-        """Retrieve S3 storage credentials."""
-        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
-            if not self.charm.model.get_relation(S3_RELATION):
-                return None
-            cfg = (
-                self.charm.snapshots_manager.resolver.get_storage_config(ObjectStorageType.S3)
-                or ObjectStorageConfig()
-            )
-            s3 = cfg.s3
-            ca = s3.tls_ca_chain if s3 else None
-            if not ca:
-                return
-
-            self.charm.secrets.put(Scope.APP, "s3-tls-ca-chain", ca)
-            logger.debug("Secret created for TLS CA chain.")
-            return ca
-        return self.charm.secrets.get(Scope.APP, "s3-tls-ca-chain")
 
     def _rel_data(
         self,
@@ -736,7 +738,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 admin_tls=self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val),
                 s3=self._s3_credentials(deployment_desc),
                 azure=self._azure_credentials(deployment_desc),
-                s3_tls_ca_chain=self._s3_tls_ca(deployment_desc),
             )
         return None
 
@@ -748,7 +749,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
     ) -> Optional[PeerClusterRelErrorData]:
         """Build error peer relation data object."""
         should_sever_relation, should_retry, blocked_msg = False, True, None
-        message_suffix = f"in related '{deployment_desc.typ}'"
+        message_suffix = (
+            f"in related '{deployment_desc.typ}' sub-cluster"
+            if deployment_desc and getattr(deployment_desc, "typ", None)
+            else ""
+        )
 
         if not deployment_desc:
             blocked_msg = "'main/failover'-orchestrators not configured yet."
@@ -895,10 +900,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 "secret-key": self.secrets.get_secret_id(Scope.APP, "s3-secret-key"),
             }
 
-        if rel_data.credentials and rel_data.credentials.s3_tls_ca_chain:
+        if rel_data.credentials and getattr(rel_data.credentials.s3, "s3_tls_ca_chain", None):
             sid = self.secrets.get_secret_id(Scope.APP, "s3-tls-ca-chain")
             if sid:
-                redacted_dict["credentials"]["s3_tls_ca_chain"] = sid
+                redacted_dict["credentials"]["s3"]["s3-tls-ca-chain"] = sid
 
         if (
             rel_data.credentials.azure
@@ -938,6 +943,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                             self.secrets.grant_secret_to_relation(
                                 secret_id["secret-key"], relation
                             )
+                        if secret_id.get("s3-tls-ca-chain"):
+                            self.secrets.grant_secret_to_relation(
+                                secret_id["s3-tls-ca-chain"], relation
+                            )
                     elif key == "azure":
                         if secret_id["storage-account"]:
                             self.secrets.grant_secret_to_relation(
@@ -947,9 +956,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                             self.secrets.grant_secret_to_relation(
                                 secret_id["secret-key"], relation
                             )
-                    elif key == "s3_tls_ca_chain":
-                        if secret_id:
-                            self.secrets.grant_secret_to_relation(secret_id, relation)
                     else:
                         self.secrets.grant_secret_to_relation(secret_id, relation)
 

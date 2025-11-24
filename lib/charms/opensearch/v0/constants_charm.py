@@ -71,11 +71,8 @@ PClusterMissingStorageRelations = "Found credentials with missing storage relati
 BackupSetupFailed = "Backup setup failed, check logs for details"
 BackupRelShouldNotExist = "This unit should not be related to backup relation"
 BackupRelDataIncomplete = "Backup relation data missing or incomplete."
-BackupCredentialKeysIncorrect = (
-    "Repository not reachable: bad credentials or permissions: fix keystore keys."
-)
-BackupCredentialCAIncorrect = (
-    "Repository not reachable: bad credentials or permissions, fix the CA."
+BackupCredentialIncorrect = (
+    "Backup configuration error: bad credentials, permissions, or invalid CA."
 )
 BackupCredentialCleanupFailed = (
     "Failed to remove keystore credentials, repo removal.Please check the logs for more details."

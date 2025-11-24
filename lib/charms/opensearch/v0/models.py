@@ -280,6 +280,7 @@ class S3RelDataCredentials(Model):
 
     access_key: str = Field(alias="access-key", default=None)
     secret_key: str = Field(alias="secret-key", default=None)
+    s3_tls_ca_chain: Optional[Union[str, List[str]]] = Field(default=None, alias="s3-tls-ca-chain")
 
     class Config:
         """Model config of this pydantic model."""
@@ -537,7 +538,6 @@ class PeerClusterRelDataCredentials(Model):
     monitor_password: Optional[str]
     admin_tls: Optional[Dict[str, Optional[str]]]
     s3: Optional[S3RelDataCredentials]
-    s3_tls_ca_chain: Optional[str] = None
     azure: Optional[AzureRelDataCredentials]
     gcs: Optional[GcsRelData]
 

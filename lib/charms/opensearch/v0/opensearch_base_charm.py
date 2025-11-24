@@ -98,7 +98,7 @@ from charms.opensearch.v0.opensearch_relation_peer_cluster import (
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
 from charms.opensearch.v0.opensearch_snapshots import (
-    OpenSearchSnapshotsEvents,
+    OpenSearchSnapshotEvents,
     OpenSearchSnapshotsManager,
 )
 from charms.opensearch.v0.opensearch_tls import OLD_CA_ALIAS, OpenSearchTLS
@@ -230,7 +230,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.plugin_manager = OpenSearchPluginManager(self)
         self.snapshots_manager = OpenSearchSnapshotsManager(self, self.opensearch)
-        self.snapshot_events = OpenSearchSnapshotsEvents(self)
+        self.snapshot_events = OpenSearchSnapshotEvents(self)
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
         self.peer_cluster_provider = OpenSearchPeerClusterProvider(self)
