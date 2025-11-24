@@ -402,17 +402,7 @@ class OpenSearchConfig:
         """
         NetworkHost = namedtuple("NetworkHost", ["entry", "old", "new"])
 
-        try:
-            node = self.load_node()
-        except FileNotFoundError:
-            # opensearch.yml not there yet
-            # probably snap not configured / service not started
-            logger.debug(
-                "%s not found; skipping update_host_if_needed (OpenSearch not ready yet).",
-                self.CONFIG_YML,
-            )
-            return False
-
+        node = self.load_node()
         result = False
         for host in [
             NetworkHost(
