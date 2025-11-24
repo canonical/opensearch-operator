@@ -31,7 +31,6 @@ import pytest
 from azure.storage.blob import BlobServiceClient
 from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
-    BackupCredentialKeysIncorrect,
     BackupRelShouldNotExist,
 )
 from charms.opensearch.v0.opensearch_snapshots import AZURE_REPOSITORY, S3_REPOSITORY
@@ -62,7 +61,7 @@ from .helpers import (
     restore,
 )
 from .helpers_data import index_docs_count
-
+from charms.opensearch.v0.constants_charm import BackupCredentialIncorrect
 logger = logging.getLogger(__name__)
 
 ALL_GROUPS = {
@@ -473,7 +472,7 @@ async def test_large_setups_relations_with_misconfiguration(
         apps=["main"],
         units_statuses=["active"],
         apps_statuses=["blocked"],
-        apps_full_statuses={"main": {"blocked": [BackupCredentialKeysIncorrect]}},
+        apps_full_statuses={"main": {"blocked": [BackupCredentialIncorrect]}},
         idle_period=IDLE_PERIOD,
     )
 
@@ -508,7 +507,7 @@ async def test_large_setups_relations_with_misconfiguration(
         apps=["main"],
         units_statuses=["active"],
         apps_statuses=["blocked"],
-        apps_full_statuses={"main": {"blocked": [BackupCredentialKeysIncorrect]}},
+        apps_full_statuses={"main": {"blocked": [BackupCredentialIncorrect]}},
         idle_period=IDLE_PERIOD,
     )
 
