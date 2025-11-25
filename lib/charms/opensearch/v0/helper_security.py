@@ -16,7 +16,12 @@ from os.path import exists
 from typing import Optional, Tuple
 
 import bcrypt
+import boto3
+from azure.core.exceptions import AzureError
+from azure.storage.blob import BlobServiceClient
+from botocore.exceptions import BotoCoreError, ClientError
 from charms.opensearch.v0.helper_charm import run_cmd
+from charms.opensearch.v0.models import ObjectStorageConfig
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from cryptography import x509
 
@@ -676,3 +681,117 @@ def _split_pem_chain(chain: str) -> list[str]:
 def _hash(text: str) -> str:
     """Hash a PEM chain string."""
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def validate_s3_credentials(cfg: ObjectStorageConfig) -> bool:
+    """Validate S3 credentials + CA using boto3.
+
+    Args:
+        cfg: ObjectStorageConfigobject
+
+    Returns:
+        True if credentials (and CA) work with S3, False otherwise.
+
+    All errors are logged with full traceback here.
+    """
+    s3_cfg = cfg.s3
+
+    ca_tmp_path = None
+    verify_param: str | bool = True
+
+    # If we have a custom CA chain, write it to a temp file and pass it to boto3
+    if s3_cfg.tls_ca_chain:
+        fd, ca_tmp_path = tempfile.mkstemp(prefix="opensearch-s3-ca-", suffix=".pem")
+        with os.fdopen(fd, "w") as f:
+            f.write(s3_cfg.tls_ca_chain)
+        verify_param = ca_tmp_path
+
+    try:
+        session = boto3.session.Session(
+            aws_access_key_id=s3_cfg.credentials.access_key,
+            aws_secret_access_key=s3_cfg.credentials.secret_key,
+            aws_session_token=getattr(s3_cfg.credentials, "session_token", None),
+        )
+
+        s3_client = session.client(
+            "s3",
+            endpoint_url=s3_cfg.endpoint,
+            region_name=s3_cfg.region,
+            verify=verify_param,
+        )
+
+        # This will test both credentials and TLS/CA
+        s3_client.head_bucket(Bucket=s3_cfg.bucket)
+
+        logger.info("S3 credential validation with boto3 succeeded.")
+        return True
+
+    except (BotoCoreError, ClientError, Exception) as e:  # noqa: BLE001
+        logger.error(
+            "S3 credential validation with boto3 failed: %s",
+            e,
+            exc_info=e,
+        )
+        return False
+
+    finally:
+        if ca_tmp_path:
+            try:
+                os.remove(ca_tmp_path)
+            except FileNotFoundError:
+                pass
+
+
+def validate_azure_credentials(cfg: ObjectStorageConfig) -> bool:
+    """Validate Azure Storage credentials using azure-storage-blob.
+
+    Args:
+        cfg: ObjectStorageConfigobject
+
+    Returns:
+        True if we can access the configured container, False otherwise.
+
+    Uses the storage-account, secret-key and container fields provided by
+    azure-storage-integrator.
+    """
+    az_cfg = cfg.azure
+
+    try:
+        account_name = az_cfg.credentials.storage_account
+        account_key = az_cfg.credentials.secret_key
+        container_name = az_cfg.container
+
+        # If azure integrator ever sends a custom endpoint, we will use it.
+        # Otherwise, we will use public Azure blob endpoint.
+        account_url = getattr(az_cfg, "endpoint", None)
+        if not account_url:
+            account_url = f"https://{account_name}.blob.core.windows.net"
+
+        client = BlobServiceClient(
+            account_url=account_url,
+            credential=account_key,
+        )
+
+        container_client = client.get_container_client(container_name)
+
+        # check credentials.
+        container_client.get_container_properties()
+
+        logger.info("Azure Storage credential validation succeeded.")
+        return True
+
+    except AzureError as e:
+        logger.error(
+            "Azure Storage credential validation failed: %s",
+            e,
+            exc_info=e,
+        )
+        return False
+
+    except Exception as e:  # noqa: BLE001
+        logger.error(
+            "Unexpected error during Azure Storage credential validation: %s",
+            e,
+            exc_info=e,
+        )
+        return False

@@ -27,6 +27,7 @@ from charms.opensearch.v0.constants_charm import (
     BackupCredentialCleanupFailed,
     BackupCredentialIncorrect,
     BackupInProgress,
+    BackupMisconfiguration,
     BackupRelConflict,
     BackupRelDataIncomplete,
     BackupRelShouldNotExist,
@@ -41,6 +42,8 @@ from charms.opensearch.v0.helper_security import (
     list_cas,
     remove_s3_ca,
     store_s3_ca,
+    validate_azure_credentials,
+    validate_s3_credentials,
 )
 from charms.opensearch.v0.models import (
     AzureRelData,
@@ -192,6 +195,14 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelDataIncomplete, app=True)
 
+        if not validate_s3_credentials(cfg):
+            if self.charm.unit.is_leader():
+                self.charm.status.set(BlockedStatus(BackupCredentialIncorrect), app=True)
+            return
+
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupCredentialIncorrect, app=True)
+
         # apply locally (leader does cluster-level config)
         self.charm.keystore_manager.put_entries(
             {
@@ -211,7 +222,10 @@ class OpenSearchSnapshotEvents(Object):
                 # Content differs: rotate / store new chain
                 self.charm.snapshots_manager.store_s3_ca(cfg.s3.tls_ca_chain)
                 logger.info("S3 CA stored/updated.")
-                self._restart_for_ca(reason="apply object storage CA change")
+                if self.charm.snapshots_manager.should_restart_for_full_setup(
+                    object_storage_type, cfg
+                ):
+                    self._restart_for_ca(reason="apply object storage CA change")
 
         elif self.charm.snapshots_manager.is_custom_s3_ca_stored():
             # No CA configured now. If we had one, remove it
@@ -224,18 +238,19 @@ class OpenSearchSnapshotEvents(Object):
             self.charm.snapshots_manager.verify_repository("s3")
         except OpenSearchHttpError as e:
             logger.error(
-                "Failed to ensure/verify snapshot repository for %s. "
+                "Failed to create/verify snapshot repository for %s. "
                 "Error: %s, response_body=%r",
                 object_storage_type,
                 e,
                 getattr(e, "response_body", None),
             )
             if self.charm.unit.is_leader():
-                self.charm.status.set(BlockedStatus(BackupCredentialIncorrect), app=True)
+                self.charm.status.set(BlockedStatus(BackupMisconfiguration), app=True)
+            event.defer()
             return
 
         if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupCredentialIncorrect, app=True)
+            self.charm.status.clear(BackupMisconfiguration, app=True)
 
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
@@ -244,6 +259,7 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelShouldNotExist, app=True)
             self.charm.status.clear(BackupRelDataIncomplete, app=True)
+            self.charm.status.clear(BackupMisconfiguration, app=True)
 
         keystore_entries = ["s3.client.default.access_key", "s3.client.default.secret_key"]
         if not self.charm.snapshots_manager.cleanup(
@@ -311,6 +327,17 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelDataIncomplete, app=True)
 
+        if not validate_azure_credentials(cfg):
+            if self.charm.unit.is_leader():
+                self.charm.status.set(
+                    BlockedStatus(BackupCredentialIncorrect),
+                    app=True,
+                )
+            return
+
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupCredentialIncorrect, app=True)
+
         self.charm.keystore_manager.put_entries(
             {
                 "azure.client.default.account": cfg.azure.credentials.storage_account,
@@ -323,15 +350,24 @@ class OpenSearchSnapshotEvents(Object):
                 return
             self.charm.snapshots_manager.ensure_repository(object_storage_type, cfg)
             self.charm.snapshots_manager.verify_repository("azure")
-        except OpenSearchHttpError:
+        except OpenSearchHttpError as e:
+            logger.error(
+                "Failed to create/verify snapshot repository for %s. "
+                "Error: %s, response_body=%r",
+                object_storage_type,
+                e,
+                getattr(e, "response_body", None),
+            )
             if self.charm.unit.is_leader():
                 self.charm.status.set(
-                    BlockedStatus(BackupCredentialIncorrect),
+                    BlockedStatus(BackupMisconfiguration),
                     app=True,
                 )
+            event.defer()
             return
+
         if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupCredentialIncorrect, app=True)
+            self.charm.status.clear(BackupMisconfiguration, app=True)
 
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
@@ -340,6 +376,7 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelShouldNotExist, app=True)
             self.charm.status.clear(BackupRelDataIncomplete, app=True)
+            self.charm.status.clear(BackupMisconfiguration, app=True)
 
         keystore_entries = ["azure.client.default.account", "azure.client.default.key"]
         if not self.charm.snapshots_manager.cleanup(
@@ -580,7 +617,10 @@ class OpenSearchSnapshotEvents(Object):
 
     def _get_provider_rel_payload(self) -> PeerClusterRelData | None:  # noqa: C901
         """Return the payload from the main orchestrator relation, if any."""
+        if not self.charm.opensearch_peer_cm.is_consumer(of="main"):
+            return None
         if not self.charm.state.app.orchestrators:
+            logger.info("no orchestrators found")
             return None
 
         main_rel_id = self.charm.state.app.orchestrators.main_rel_id
@@ -1629,17 +1669,47 @@ class OpenSearchSnapshotsManager:
             return "gcs"
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
-    def verify_repository(self, object_storage_type: ObjectStorageType) -> None:
+    def verify_repository(self, object_storage_type: ObjectStorageType) -> bool:
         """Verify repository by listing snapshots.
 
         Args:
             object_storage_type (ObjectStorageType): Object storage type
 
+        Returns:
+            True if the repository can be listed successfully.
+
         Raises:
-            OpenSearchHttpError if there are any backend issues such as auth/perm errors
+            OpenSearchHttpError if there are any backend issues such as auth/perm errors.
         """
         repo = self.repository_name(object_storage_type)
         # If creds/endpoint/perm are wrong, this call raises OpenSearchHttpError with a 500.
-        _ = self.opensearch.request(
-            "GET", f"_snapshot/{repo}/_all", alt_hosts=self.charm.alt_hosts, timeout=30
+        self.opensearch.request(
+            "GET",
+            f"_snapshot/{repo}/_all",
+            alt_hosts=self.charm.alt_hosts,
+            timeout=30,
         )
+        return True
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
+    def should_restart_for_full_setup(
+        self, object_storage_type: ObjectStorageType, object_storage_config: ObjectStorageConfig
+    ) -> bool:
+        """Check if a restart is needed for full setup."""
+        if not self.opensearch.is_started():
+            return False
+
+        try:
+            test_repo = f"tmp-{self.charm.unit_name}-{self.repository_name(object_storage_type)}"
+            self.create_repo(object_storage_type, object_storage_config, name=test_repo)
+            # best effort clean up
+            try:
+                self.remove_repo(object_storage_type)
+            except Exception:
+                pass
+            # creation succeeded, no restart needed
+            return False
+        except OpenSearchHttpError as e:
+            if e.response_body.get("error", {}).get("type") == "repository_verification_exception":
+                return True
+            raise

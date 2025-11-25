@@ -1542,6 +1542,10 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             ):
                 blocked_msg = "Cannot relate 2 clusters with different 'cluster_name' values."
 
+        if storage_type := self.charm.snapshots_manager.get_storage_type():
+            if not self.charm.snapshots_manager.verify_repository(storage_type):
+                blocked_msg = "Object storage related but storage configuration is not completed in main orchestator yet."
+
         if not blocked_msg:
             self._clear_errors(f"error_from_requirer-{event_rel_id}")
             return False
