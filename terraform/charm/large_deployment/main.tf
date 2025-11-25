@@ -126,8 +126,8 @@ resource "juju_offer" "opensearch_failover-offer" {
 # For CROSS-MODEL TLS integrations
 resource "juju_integration" "tls-opensearch-cross_model-integration" {
   # Only if cross-model
-  for_each = { for app in local.apps_not_in_main_model : app.app_name => app }
-  model_uuid    = each.value.model_uuid
+  for_each   = { for app in local.apps_not_in_main_model : app.app_name => app }
+  model_uuid = each.value.model_uuid
 
   application {
     offer_url = juju_offer.self_signed_certificates-offer["offered"].url
@@ -144,8 +144,8 @@ resource "juju_integration" "tls-opensearch-cross_model-integration" {
 
 # large deployments peer-cluster integrations with main orchestrator
 resource "juju_integration" "peer_cluster-main-cross_model-relation" {
-  for_each = { for app in local.apps_not_in_main_model : app.app_name => app }
-  model_uuid    = each.value.model_uuid
+  for_each   = { for app in local.apps_not_in_main_model : app.app_name => app }
+  model_uuid = each.value.model_uuid
 
   application {
     name     = each.value.app_name
@@ -164,8 +164,8 @@ resource "juju_integration" "peer_cluster-main-cross_model-relation" {
 
 # large deployments peer-cluster integrations with failover orchestrator if any
 resource "juju_integration" "peer_cluster-failover-cross_model-relation" {
-  for_each = var.failover != null ? { for app in local.apps_not_in_failover_model : app.app_name => app } : {}
-  model_uuid    = each.value.model_uuid
+  for_each   = var.failover != null ? { for app in local.apps_not_in_failover_model : app.app_name => app } : {}
+  model_uuid = each.value.model_uuid
 
   application {
     name     = each.value.app_name
