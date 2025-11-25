@@ -58,7 +58,7 @@ resource "juju_application" "data-integrator" {
     base     = var.data-integrator.base
   }
   model_uuid = var.main.model_uuid
-  config = var.data-integrator.config
+  config     = var.data-integrator.config
 
   constraints = var.data-integrator.constraints
   machines    = (var.data-integrator.machines == null || length(var.data-integrator.machines) == 0) ? null : var.data-integrator.machines
@@ -73,7 +73,7 @@ resource "juju_application" "backups-integrator" {
     base     = var.backups-integrator.base
   }
   model_uuid = var.main.model_uuid
-  config = var.backups-integrator.config
+  config     = var.backups-integrator.config
 
   constraints = var.backups-integrator.constraints
   machines    = (var.backups-integrator.machines == null || length(var.backups-integrator.machines) == 0) ? null : var.backups-integrator.machines
@@ -100,7 +100,7 @@ resource "juju_application" "grafana_agents" {
 resource "juju_integration" "opensearch_dashboards-tls-integration" {
   for_each = var.opensearch-dashboards.tls ? { "integrate" = true } : {}
 
-  model_uuid =var.main.model_uuid
+  model_uuid = var.main.model_uuid
 
   application {
     name = var.opensearch-dashboards.app_name
@@ -152,7 +152,7 @@ resource "juju_integration" "backups_integrator-opensearch_main-integration" {
 
 # integrate the data integrator with the opensearch main
 resource "juju_integration" "data_integrator-opensearch_main-integration" {
-  model_uuid =var.main.model_uuid
+  model_uuid = var.main.model_uuid
 
   application {
     name = juju_application.data-integrator.name
