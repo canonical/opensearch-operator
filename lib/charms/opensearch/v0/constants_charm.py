@@ -79,6 +79,7 @@ BackupCredentialCleanupFailed = (
 )
 BackupRelConflict = "Too many object storage relations. Only one is supported."
 PCLUSTER_MISSING_REL_MSG_KEY = "pcluster_missing_relations_msg"
+BackupMisconfiguration = "opensearch-<object storage> repository setup failed. Check the object-storage integrator config."
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
 SecretAccessError = "Failed to access secret, please check permissions."
 JWTAuthConfigInvalid = (
