@@ -188,12 +188,13 @@ def trigger_peer_rel_changed(
         )
 
 
-def run_cmd(command: str, args: str = None) -> SimpleNamespace:
+def run_cmd(command: str, args: str = None, use_errors_replace: bool = False) -> SimpleNamespace:
     """Run command.
 
     Arg:
         command: can contain arguments
         args: command line arguments
+        use_errors_replace: replace errors with empty string
     """
     command_with_args = command
     if args is not None:
@@ -206,16 +207,22 @@ def run_cmd(command: str, args: str = None) -> SimpleNamespace:
     logger.debug(f"Executing command: {command}")
 
     try:
-        output = subprocess.run(
-            command_with_args,
+        run_kwargs = dict(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             shell=True,
             text=True,
             encoding="utf-8",
-            errors="replace",
             timeout=25,
             env=os.environ,
+        )
+
+        if use_errors_replace:
+            run_kwargs["errors"] = "replace"
+
+        output = subprocess.run(
+            command_with_args,
+            **run_kwargs,
         )
 
         if output.returncode != 0:

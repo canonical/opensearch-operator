@@ -323,7 +323,7 @@ def list_cas(store_pwd: str, store_path: str) -> Optional[dict[str, str]]:  # no
     cmd = f"openssl pkcs12 -in {store_path}"
     args = f"-passin pass:{store_pwd}"
     try:
-        stored_certs = run_cmd(cmd, args).out
+        stored_certs = run_cmd(cmd, args, use_errors_replace=True).out
     except OpenSearchCmdError as e:
         logging.error("Error reading the current truststore: %s", e)
         return None
@@ -581,6 +581,7 @@ def get_cert_issuer_from_path(store_pwd: str, store_path: str) -> Optional[str]:
             -passin pass:{store_pwd} \
             | openssl x509 -noout -issuer
             """,
+            use_errors_replace=True,
         ).out
     except OpenSearchCmdError as e:
         logger.error("Error reading the current certificate: %s", e)
@@ -595,7 +596,7 @@ def get_cert_issuer_from_keystore(store_pwd: str, store_path: str) -> Optional[s
     cmd = f"openssl pkcs12 -in {store_path} -nodes"
     args = f"-passin pass:{store_pwd} | openssl x509 -noout -issuer"
     try:
-        return run_cmd(command=cmd, args=args).out
+        return run_cmd(command=cmd, args=args, use_errors_replace=True).out
     except OpenSearchCmdError as e:
         logger.error("Error reading the current certificate: %s", e)
         return None
