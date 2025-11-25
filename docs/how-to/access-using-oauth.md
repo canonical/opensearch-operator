@@ -4,21 +4,6 @@
 This guide shows how to secure an OpenSearch deployment with OAuth tokens issued by
 Canonical’s Identity Platform (Hydra) and then query OpenSearch using generated tokens.
 
-## Introduction
-
-This document guides you to integrate an OpenSearch deployment on LXD with the Identity Platform
-running on MicroK8s. Hydra will act as the OAuth2 Authorization Server and issue access tokens.
-You will then configure OpenSearch to trust these tokens by mapping OAuth client IDs to OpenSearch
-roles provided by the Data Integrator charm. Finally, you will query the OpenSearch API
-with a bearer token and validate that access control is enforced correctly.
-
-At the end of this guide, you will have:
-
-* An OpenSearch cluster on LXD with TLS certificates and role mappings configured.
-* An Identity Platform (Hydra, Kratos, Traefik, etc.) running on MicroK8s.
-* OAuth client created in Hydra that can obtain tokens for OpenSearch.
-* Verified access to the _cat/indices API with OAuth2 bearer tokens.
-
 ## Prerequisites
 
 * A working LXD cloud on your machine.
