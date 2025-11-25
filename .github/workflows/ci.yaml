@@ -130,7 +130,7 @@ jobs:
           MODEL_UUID=$(juju show-model test | grep "model-uuid" | awk '{split($0, a, ": "); print a[2]}')
           pushd ./terraform/product/simple_deployment/
           terraform apply \
-            -var="opensearch={\"model\": \"$MODEL_UUID\"}" \
+            -var="opensearch={\"model_uuid\": \"$MODEL_UUID\"}" \
             -var="backups-integrator={\"config\": {\"bucket\": \"test\"}}" \
             -auto-approve
           popd
