@@ -11,7 +11,7 @@ variable "main" {
   description = "Main orchestrator app definition"
   type = object({
     app_name          = string
-    model             = string
+    model_uuid        = string
     config            = optional(map(string), {})
     channel           = optional(string, "2/stable")
     base              = optional(string, "ubuntu@22.04")
@@ -29,7 +29,7 @@ variable "failover" {
   description = "Failover orchestrator app definition"
   type = object({
     app_name          = string
-    model             = string
+    model_uuid        = string
     config            = optional(map(string), { "init_hold" : "true" })
     channel           = optional(string, "2/stable")
     base              = optional(string, "ubuntu@22.04")
@@ -48,7 +48,7 @@ variable "apps" {
   description = "Non orchestrator apps (e.g: ml, data.hot etc.)"
   type = list(object({
     app_name          = string
-    model             = string
+    model_uuid        = string
     config            = optional(map(string), { "init_hold" : "true" })
     channel           = optional(string, "2/stable")
     base              = optional(string, "ubuntu@22.04")
