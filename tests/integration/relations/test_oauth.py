@@ -8,7 +8,7 @@ from asyncio import gather
 
 import pytest
 import requests
-from charms.opensearch.v0.constants_charm import OAuthRelationInvalid
+from opensearch_single_kernel.lib.charms.opensearch.v0.constants_charm import OAuthRelationInvalid
 from integration.helpers import CONFIG_OPTS, get_leader_unit_ip
 from integration.helpers_deployments import wait_until
 from juju.client.client import Action

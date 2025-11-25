@@ -6,7 +6,7 @@ import asyncio
 import logging
 
 import pytest
-from charms.opensearch.v0.constants_charm import PClusterNoDataNode
+from opensearch_single_kernel.lib.charms.opensearch.v0.constants_charm import PClusterNoDataNode
 from pytest_operator.plugin import OpsTest
 from requests import request
 

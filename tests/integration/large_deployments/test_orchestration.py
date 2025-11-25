@@ -6,10 +6,10 @@ import json
 import logging
 
 import pytest
-from charms.opensearch.v0.constants_charm import (
+from opensearch_single_kernel.lib.charms.opensearch.v0.constants_charm import (
     PeerRelationName,
 )
-from charms.opensearch.v0.models import (
+from opensearch_single_kernel.lib.charms.opensearch.v0.models import (
     PeerClusterOrchestrators,
 )
 from pytest_operator.plugin import OpsTest

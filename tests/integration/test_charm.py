@@ -9,7 +9,7 @@ import subprocess
 
 import pytest
 import yaml
-from charms.opensearch.v0.constants_charm import (
+from opensearch_single_kernel.lib.charms.opensearch.v0.constants_charm import (
     OPENSEARCH_SNAP_REVISION,
     OpenSearchSystemUsers,
     TLSRelationMissing,

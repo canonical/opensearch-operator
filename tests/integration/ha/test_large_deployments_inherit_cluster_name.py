@@ -7,7 +7,7 @@ import logging
 import time
 
 import pytest
-from charms.opensearch.v0.constants_charm import PClusterNoRelation
+from opensearch_single_kernel.lib.charms.opensearch.v0.constants_charm import PClusterNoRelation
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import CONFIG_OPTS, MODEL_CONFIG, get_leader_unit_ip

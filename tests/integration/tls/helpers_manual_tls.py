@@ -9,7 +9,7 @@ import json
 import logging
 from typing import TYPE_CHECKING, NamedTuple
 
-from charms.tls_certificates_interface.v3.tls_certificates import (
+from opensearch_single_kernel.lib.charms.tls_certificates_interface.v3.tls_certificates import (
     generate_ca,
     generate_certificate,
     generate_private_key,

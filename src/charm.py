@@ -4,21 +4,31 @@
 # See LICENSE file for licensing details.
 
 """Charmed Machine Operator for OpenSearch."""
+
 import logging
 import typing
 
 import ops
-from charms.opensearch.v0.constants_charm import InstallError, InstallProgress
-from charms.opensearch.v0.helper_cos import update_grafana_dashboards_title
-from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
-from charms.opensearch.v0.opensearch_exceptions import OpenSearchInstallError
+from opensearch_single_kernel.charms.opensearch.v0.constants_charm import (
+    InstallError,
+    InstallProgress,
+)
+from opensearch_single_kernel.charms.opensearch.v0.helper_cos import (
+    update_grafana_dashboards_title,
+)
+from opensearch_single_kernel.charms.opensearch.v0.opensearch_base_charm import (
+    OpenSearchBaseCharm,
+)
+from opensearch_single_kernel.charms.opensearch.v0.opensearch_exceptions import (
+    OpenSearchInstallError,
+)
 from ops.charm import InstallEvent
 from ops.main import main
 from ops.model import BlockedStatus, MaintenanceStatus
 
-import machine_upgrade
-import upgrade
-from opensearch import OpenSearchSnap
+import opensearch_single_kernel.machine_upgrade as machine_upgrade
+import opensearch_single_kernel.upgrade as upgrade
+from opensearch_single_kernel.opensearch import OpenSearchSnap
 
 logger = logging.getLogger(__name__)
 
@@ -36,16 +46,19 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             self._on_upgrade_peer_relation_created,
         )
         self.framework.observe(
-            self.on[upgrade.PEER_RELATION_ENDPOINT_NAME].relation_changed, self._reconcile_upgrade
+            self.on[upgrade.PEER_RELATION_ENDPOINT_NAME].relation_changed,
+            self._reconcile_upgrade,
         )
         self.framework.observe(
-            self.on[upgrade.PRECHECK_ACTION_NAME].action, self._on_pre_upgrade_check_action
+            self.on[upgrade.PRECHECK_ACTION_NAME].action,
+            self._on_pre_upgrade_check_action,
         )
         self.framework.observe(
             self.on[upgrade.RESUME_ACTION_NAME].action, self._on_resume_upgrade_action
         )
         self.framework.observe(
-            self.on[machine_upgrade.FORCE_ACTION_NAME].action, self._on_force_upgrade_action
+            self.on[machine_upgrade.FORCE_ACTION_NAME].action,
+            self._on_force_upgrade_action,
         )
 
     @property
@@ -162,9 +175,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         try:
             self._upgrade.pre_upgrade_check()
         except upgrade.PrecheckFailed as exception:
-            message = (
-                f"Charm is *not* ready for upgrade. Pre-upgrade check failed: {exception.message}"
-            )
+            message = f"Charm is *not* ready for upgrade. Pre-upgrade check failed: {exception.message}"
             logger.debug(f"Pre-upgrade check event failed: {message}")
             event.fail(message)
             return

@@ -6,13 +6,13 @@ import json
 import logging
 
 import pytest
-from charms.opensearch.v0.constants_charm import (
+from opensearch_single_kernel.lib.charms.opensearch.v0.constants_charm import (
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
     PeerRelationName,
 )
-from charms.opensearch.v0.constants_tls import TLS_RELATION
-from charms.opensearch.v0.models import (
+from opensearch_single_kernel.lib.charms.opensearch.v0.constants_tls import TLS_RELATION
+from opensearch_single_kernel.lib.charms.opensearch.v0.models import (
     DeploymentDescription,
     DeploymentType,
     PeerClusterOrchestrators,

@@ -29,12 +29,12 @@ from typing import Dict
 import boto3
 import pytest
 from azure.storage.blob import BlobServiceClient
-from charms.opensearch.v0.constants_charm import (
+from opensearch_single_kernel.lib.charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
     BackupRelShouldNotExist,
     BackupSetupFailed,
 )
-from charms.opensearch.v0.opensearch_backups import S3_REPOSITORY
+from opensearch_single_kernel.lib.charms.opensearch.v0.opensearch_backups import S3_REPOSITORY
 from pytest_operator.plugin import OpsTest
 
 from ..ha.continuous_writes import ContinuousWrites

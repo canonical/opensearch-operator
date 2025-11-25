@@ -7,8 +7,8 @@ import logging
 import time
 
 import pytest
-from charms.opensearch.v0.constants_charm import ClusterHealthYellow
-from charms.opensearch.v0.helper_cluster import ClusterTopology
+from opensearch_single_kernel.lib.charms.opensearch.v0.constants_charm import ClusterHealthYellow
+from opensearch_single_kernel.lib.charms.opensearch.v0.helper_cluster import ClusterTopology
 from pytest_operator.plugin import OpsTest
 
 from ..ha.helpers import (

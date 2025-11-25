@@ -7,7 +7,7 @@ import logging
 
 import pytest
 import requests
-from charms.opensearch.v0.constants_charm import (
+from opensearch_single_kernel.lib.charms.opensearch.v0.constants_charm import (
     JWT_CONFIG_RELATION,
     JWTRelationInvalid,
 )

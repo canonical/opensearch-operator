@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Union
 
 import requests
 import yaml
-from charms.opensearch.v0.helper_networking import is_reachable
+from opensearch_single_kernel.lib.charms.opensearch.v0.helper_networking import is_reachable
 from opensearchpy import OpenSearch
 from pytest_operator.plugin import OpsTest
 from tenacity import (

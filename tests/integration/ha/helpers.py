@@ -9,7 +9,7 @@ import subprocess
 import time
 from typing import Dict, List, Optional
 
-from charms.opensearch.v0.models import App, Node
+from opensearch_single_kernel.lib.charms.opensearch.v0.models import App, Node
 from pytest_operator.plugin import OpsTest
 from tenacity import (
     RetryError,

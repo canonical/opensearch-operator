@@ -8,7 +8,7 @@ import re
 import time
 
 import pytest
-from charms.opensearch.v0.constants_charm import ClientRelationName
+from opensearch_single_kernel.lib.charms.opensearch.v0.constants_charm import ClientRelationName
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import APP_NAME as OPENSEARCH_APP_NAME
