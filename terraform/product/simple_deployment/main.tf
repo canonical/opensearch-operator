@@ -16,7 +16,7 @@ module "opensearch" {
   app_name          = var.opensearch.app_name
   units             = var.opensearch.units
   config            = merge(var.opensearch.config, { "init_hold" : "false" })
-  model             = var.opensearch.model
+  model_uuid        = var.opensearch.model_uuid
   constraints       = var.opensearch.constraints
   storage           = var.opensearch.storage
   endpoint_bindings = var.opensearch.endpoint_bindings
@@ -28,8 +28,8 @@ module "opensearch" {
 
 # OpenSearch dashboards
 module "opensearch-dashboards" {
-  source = "git::https://github.com/canonical/opensearch-dashboards-operator//terraform?ref=2/edge"
-  model  = var.opensearch.model
+  source     = "git::https://github.com/canonical/opensearch-dashboards-operator//terraform?ref=DPE-8947-upgrade-terraform-modules-1.0.0"
+  model_uuid = var.opensearch.model_uuid
 
   channel  = var.opensearch-dashboards.channel
   revision = var.opensearch-dashboards.revision
@@ -52,11 +52,11 @@ resource "juju_application" "data-integrator" {
     revision = var.data-integrator.revision
     base     = var.data-integrator.base
   }
-  model  = var.opensearch.model
-  config = var.data-integrator.config
+  model_uuid = var.opensearch.model_uuid
+  config     = var.data-integrator.config
 
   constraints = var.data-integrator.constraints
-  placement   = length(var.data-integrator.machines) == 1 ? var.data-integrator.machines[0] : null
+  machines    = (var.data-integrator.machines == null || length(var.data-integrator.machines) == 0) ? null : var.data-integrator.machines
 }
 
 resource "juju_application" "grafana-agent" {
@@ -66,8 +66,8 @@ resource "juju_application" "grafana-agent" {
     revision = var.grafana-agent.revision
     base     = var.grafana-agent.base
   }
-  model  = var.opensearch.model
-  config = var.grafana-agent.config
+  model_uuid = var.opensearch.model_uuid
+  config     = var.grafana-agent.config
 }
 
 resource "juju_application" "backups-integrator" {
@@ -77,11 +77,11 @@ resource "juju_application" "backups-integrator" {
     revision = var.backups-integrator.revision
     base     = var.backups-integrator.base
   }
-  model  = var.opensearch.model
-  config = var.backups-integrator.config
+  model_uuid = var.opensearch.model_uuid
+  config     = var.backups-integrator.config
 
   constraints = var.backups-integrator.constraints
-  placement   = length(var.backups-integrator.machines) == 1 ? var.backups-integrator.machines[0] : null
+  machines    = (var.backups-integrator.machines == null || length(var.backups-integrator.machines) == 0) ? null : var.backups-integrator.machines
 }
 
 
@@ -93,7 +93,7 @@ resource "juju_application" "backups-integrator" {
 resource "juju_integration" "opensearch_dashboards-tls-integration" {
   for_each = var.opensearch-dashboards.tls ? { "integrate" = true } : {}
 
-  model = var.opensearch.model
+  model_uuid = var.opensearch.model_uuid
 
   application {
     name = var.opensearch-dashboards.app_name
@@ -110,7 +110,7 @@ resource "juju_integration" "opensearch_dashboards-tls-integration" {
 }
 
 resource "juju_integration" "opensearch_dashboards-opensearch-integration" {
-  model = var.opensearch.model
+  model_uuid = var.opensearch.model_uuid
 
   application {
     name = var.opensearch-dashboards.app_name
@@ -127,7 +127,7 @@ resource "juju_integration" "opensearch_dashboards-opensearch-integration" {
 }
 
 resource "juju_integration" "backups_integrator-opensearch-integration" {
-  model = var.opensearch.model
+  model_uuid = var.opensearch.model_uuid
 
   application {
     name = juju_application.backups-integrator.name
@@ -144,7 +144,7 @@ resource "juju_integration" "backups_integrator-opensearch-integration" {
 }
 
 resource "juju_integration" "data_integrator-opensearch-integration" {
-  model = var.opensearch.model
+  model_uuid = var.opensearch.model_uuid
 
   application {
     name = juju_application.data-integrator.name
@@ -161,7 +161,7 @@ resource "juju_integration" "data_integrator-opensearch-integration" {
 }
 
 resource "juju_integration" "grafana_agent-opensearch-integration" {
-  model = var.opensearch.model
+  model_uuid = var.opensearch.model_uuid
 
   application {
     name = juju_application.grafana-agent.name
@@ -178,7 +178,7 @@ resource "juju_integration" "grafana_agent-opensearch-integration" {
 }
 
 resource "juju_integration" "grafana_agent-opensearch_dashboards-integration" {
-  model = var.opensearch.model
+  model_uuid = var.opensearch.model_uuid
 
   application {
     name = juju_application.grafana-agent.name

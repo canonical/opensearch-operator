@@ -5,7 +5,7 @@ variable "opensearch" {
   description = "OpenSearch app definition"
   type = object({
     app_name          = optional(string, "opensearch")
-    model             = string
+    model_uuid        = string
     config            = optional(map(string), { "cluster_name" : "opensearch" })
     channel           = optional(string, "2/stable")
     base              = optional(string, "ubuntu@22.04")
