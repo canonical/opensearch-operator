@@ -217,6 +217,14 @@ def run_cmd(command: str, args: str = None, use_errors_replace: bool = False) ->
             env=os.environ,
         )
 
+        # OpenSSL's "pkcs12 -in" output may contain non-UTF-8 bytes in Bag Attributes
+        # (e.g., friendlyName: debian:netlock_arany_=class_gold=_fQtanúsítvány.pem). When Python
+        # decodes stdout/stderr as UTF-8, this can raise UnicodeDecodeError.
+        #
+        # We enable errors="replace" only when explicitly requested (e.g., in list_cas or
+        # certificate-issuer parsing), because those commands only need ASCII PEM blocks
+        # and not the exact attribute encoding. All other commands (keytool, chmod, x509)
+        # should fail if their output is not valid UTF-8.
         if use_errors_replace:
             run_kwargs["errors"] = "replace"
 
