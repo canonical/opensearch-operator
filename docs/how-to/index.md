@@ -18,6 +18,7 @@ The following guides cover key processes and common tasks for managing and using
 * [Scale horizontally](how-to-scale-horizontally)
 * [Integrate with an application](how-to-integrate-with-an-application)
 * [Perform load testing](how-to-perform-load-testing)
+* [Optimize Cluster Performance with Profiles](how-to-optimize-cluster-performance)
 * [Recover from attached storage](how-to-recover-from-attached-storage)
 * [Access using OAuth](how-to-access-using-oauth)
 
@@ -46,6 +47,7 @@ The following guides cover key processes and common tasks for managing and using
 deploy/index
 tls-encryption/index
 Scale horizontally <scale-horizontally>
+Optimize Cluster Performance <optimize-cluster-performance>
 Integrate with an application <integrate-with-an-application>
 back-up-and-restore/index
 recover-from-attached-storage
