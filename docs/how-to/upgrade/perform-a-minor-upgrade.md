@@ -49,12 +49,8 @@ To upgrade your OpenSearch cluster, follow these steps:
   In case of failure, roll back with `juju refresh`.
 5. Resume upgrade: The upgrade can be resumed if the upgrade of the first unit is successful.
   All units in an app will be executed sequentially from the highest to lowest unit number.
-6. (optional) Consider [rolling back](how-to-minor-rollback)
-  in case of disaster.
-  Please [inform and include us](https://app.element.io/#/room/#charmhub-data-platform:ubuntu.com)
-  in your case scenario troubleshooting to trace the source of the issue and prevent it in the future.
-7. (optional) Scale back: Remove no longer necessary units created in step 2 (if any).
-8. Post-upgrade check: Ensure all units are in the proper state and the cluster is healthy.
+6. (optional) Scale back: Remove no longer necessary units created in step 2 (if any).
+7. Post-upgrade check: Ensure all units are in the proper state and the cluster is healthy.
 
 ### Collect all necessary pre-upgrade information
 
@@ -96,8 +92,6 @@ If the deployment is of a local charm, save a copy of the current `.charm` file.
 Optionally, it is recommended to scale the application up by one unit before upgrading.
 
 The new unit will be the first one to be updated, and it will assert that the upgrade is possible.
-In case of failure, having the extra unit will ease the rollback procedure,
-without disrupting servicem see more in [Minor rollback how-to](how-to-minor-rollback).
 
 ```shell
 juju add-unit opensearch
@@ -273,11 +267,6 @@ Machine  State    Address         Inst id        Base          AZ  Message
 
 Notice the `Rev` column in the `juju status` output.
 The revision number should reflect the new revision of the application.
-
-## Rollback (optional)
-
-In case of a failed upgrade, you can roll back to the previous revision.
-To do so, follow the guide [How to perform a minor rollback](how-to-minor-rollback).
 
 ## Scale-back (optional)
 
