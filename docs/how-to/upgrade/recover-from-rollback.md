@@ -5,7 +5,6 @@ OpenSearch does not support rolling back to a previous version. If a unit has al
 
 
 ```{note}
-OpenSearch does not support rolling back to a previous version.
 For more information, please refer to the upstream
 [OpenSearch documentation about rolling upgrades](https://docs.opensearch.org/latest/migrate-or-upgrade/rolling-upgrade/#preparing-to-upgrade).
 ```
