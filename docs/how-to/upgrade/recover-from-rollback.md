@@ -1,12 +1,12 @@
 (how-to-recover-rollback)=
-## Recovering from a Rollback
+# Recovering from a Rollback
 
 OpenSearch does not support rolling back to a previous version. If a unit has already been upgraded, performing `juju refresh` to a previous revision will result in OpenSearch failing to start on that unit. In this situation, a manual recovery is required. This section describes how to restore the cluster to a healthy, operable state.
 
 For more information, please refer to the upstream
 [OpenSearch documentation about rolling upgrades](https://docs.opensearch.org/latest/migrate-or-upgrade/rolling-upgrade/#preparing-to-upgrade).
 
-### Unit Waiting to Start
+## Unit Waiting to Start
 After running `juju refresh`, the rolled back unit may appear stuck displaying the status `Waiting for OpenSearch to start...`:
 
 ```
@@ -29,7 +29,7 @@ Machine  State    Address        Inst id        Base          AZ  Message
 
 This unit will not recover automatically and additional steps are required to replace it.
 
-### Check Cluster Health
+## Check Cluster Health
 Retrieve the cluster health:
 
 ```
@@ -103,7 +103,7 @@ After deleting any orphaned indices, verify that the cluster returns to green or
 GET _cluster/health?pretty
 ```
 
-### Set Allocation Settings
+## Set Allocation Settings
 During the upgrade process, the routing allocation setting may be restricted to `primaries`. Restore normal allocation by enabling all routing:
 
 ```
@@ -115,21 +115,21 @@ PUT _cluster/settings
 }
 ```
 
-### Add a New Unit
+## Add a New Unit
 Add a replacement unit to restore the desired scale for your application:
 
 ```
 juju add-unit opensearch -n 1
 ```
 
-### Remove Rolled Back Unit
+## Remove Rolled Back Unit
 Remove the rolled back unit. Replace `opensearch/2` with the unit that was rolled back:
 
 ```
 juju remove-unit opensearch/2
 ```
 
-### Remove Lock
+## Remove Lock
 If the replacement unit appears stuck displaying the status message `Requesting lock on operation: start`, check if the departed unit still hold the lock:
 
 ```
@@ -174,7 +174,7 @@ Machine  State    Address        Inst id        Base          AZ  Message
 4        started  10.45.114.228  juju-1fafd0-4  ubuntu@22.04      Running
 ```
 
-### Verify New Unit Has Joined the Cluster
+## Verify New Unit Has Joined the Cluster
 List the nodes in the current cluster:
 
 ```

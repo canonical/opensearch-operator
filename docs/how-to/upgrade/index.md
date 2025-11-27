@@ -7,5 +7,5 @@ For instructions on performing version upgrades, see the following guides:
 :titlesonly:
 
 Perform a minor upgrade <perform-a-minor-upgrade>
-Perform a minor rollback <perform-a-minor-rollback>
+Recover from a rollback <recovering-from-a-rollback>
 ```
