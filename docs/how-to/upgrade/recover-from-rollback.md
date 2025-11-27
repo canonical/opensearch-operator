@@ -134,6 +134,18 @@ If the replacement unit appears stuck displaying the status message `Requesting 
 
 ```
 GET /.charm_node_lock/_doc/0
+
+{
+  "_index": ".charm_node_lock",
+  "_id": "0",
+  "_version": 3,
+  "_seq_no": 28,
+  "_primary_term": 1,
+  "found": true,
+  "_source": {
+    "unit-name": "opensearch-2.4c1"
+  }
+}
 ```
 
 If the departed unit holds the lock, delete the lock document:
