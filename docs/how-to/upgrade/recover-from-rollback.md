@@ -104,7 +104,7 @@ GET _cluster/health?pretty
 ```
 
 ### Set Allocation Settings
-During the upgrade process, the routing allocation setting may be restriced to `primaries`. Restore normal allocation by enabling all routing:
+During the upgrade process, the routing allocation setting may be restricted to `primaries`. Restore normal allocation by enabling all routing:
 
 ```
 PUT _cluster/settings
