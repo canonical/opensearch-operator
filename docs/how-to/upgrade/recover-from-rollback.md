@@ -41,7 +41,7 @@ GET _cluster/health?pretty
 
 If the cluster health is red, one or more primary shards cannot be allocated. Allocation explanations will identify any indices that exist only on the rolled back unit which has left the cluster. As the departed unit will not rejoin, these indices cannot be recovered and must be removed.
 
-- Identify the problematic index from the output of:
+Identify the problematic index from the output of:
 
 ```
 GET _cluster/allocation/explain?pretty
@@ -94,7 +94,7 @@ For example, in the following output, `index1` cannot be recovered as its curren
 }
 ```
 
-- Delete the index. Replace `index1` with the name of the index identified in the previous step:
+Delete the index. Replace `index1` with the name of the index identified in the previous step:
 
 ```
 DELETE /index1
