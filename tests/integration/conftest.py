@@ -29,3 +29,11 @@ def charm(ubuntu_base):
     # juju bundle files expect local charms to begin with `./` or `/` to distinguish them from
     # Charmhub charms.
     return f"./opensearch_ubuntu@{ubuntu_base}-amd64.charm"
+
+
+# workaround for https://bugs.launchpad.net/snapd/+bug/2127244
+@pytest.fixture(autouse=True)
+async def fix_ubuntu_22_image(ops_test, ubuntu_base: str):
+    """Ensure that Ubuntu 22.04 uses the daily image stream to avoid image resolution issues."""
+    if ubuntu_base == "22.04":
+        await ops_test.model.set_config({"image-stream": "daily"})
