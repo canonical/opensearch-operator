@@ -14,6 +14,9 @@ from charms.data_platform_libs.v0.azure_storage import (
     StorageConnectionInfoChangedEvent,
     StorageConnectionInfoGoneEvent,
 )
+from charms.data_platform_libs.v0.gcs_storage import (
+    GcsStorageRequires,
+)
 from charms.data_platform_libs.v0.s3 import (
     CredentialsChangedEvent,
     CredentialsGoneEvent,
@@ -39,15 +42,19 @@ from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.helper_security import (
     _hash,
     _normalize_chain_unordered,
+    add_custom_policy_to_jvm,
+    create_custom_java_security_policy,
     list_cas,
     remove_s3_ca,
     store_s3_ca,
     validate_azure_credentials,
+    validate_gcs_credentials,
     validate_s3_credentials,
 )
 from charms.opensearch.v0.models import (
     AzureRelData,
     DeploymentType,
+    GcsRelData,
     ObjectStorageConfig,
     PeerClusterRelData,
     S3RelData,
@@ -125,6 +132,7 @@ class OpenSearchSnapshotEvents(Object):
         # requirers
         self.s3_requirer = S3Requirer(charm, S3_RELATION)
         self.azure_requirer = AzureStorageRequires(charm, AZURE_RELATION)
+        self.gcs_requirer = GcsStorageRequires(charm, GCS_RELATION)
 
         # simple deployments or main orchestrator
         self.framework.observe(
@@ -137,6 +145,12 @@ class OpenSearchSnapshotEvents(Object):
         )
         self.framework.observe(
             self.azure_requirer.on.storage_connection_info_gone, self._on_azure_credentials_gone
+        )
+        self.framework.observe(
+            self.gcs_requirer.on.storage_connection_info_changed, self._on_gcs_credentials_changed
+        )
+        self.framework.observe(
+            self.gcs_requirer.on.storage_connection_info_gone, self._on_gcs_credentials_gone
         )
 
         # large deployments with non-main orchestrator
@@ -396,6 +410,117 @@ class OpenSearchSnapshotEvents(Object):
 
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
+    def _on_gcs_credentials_changed(  # noqa: C901
+        self, event: StorageConnectionInfoChangedEvent
+    ) -> None:
+        """Handler for gcs credentials changed event."""
+        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+            logger.debug("Deployment description not ready; deferring %s", event)
+            event.defer()
+            return
+
+        # block non-main orchestrators only when they are in a multi-app topology.
+        if (
+            deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
+            and self._is_part_of_large_deployment()
+        ):
+            if self.charm.unit.is_leader():
+                self.charm.status.set(BlockedStatus(BackupRelShouldNotExist), app=True)
+            return
+
+        object_storage_type = self.charm.snapshots_manager.get_storage_type()
+
+        if object_storage_type == "conflict":
+            if self.charm.unit.is_leader():
+                self.charm.status.set(BlockedStatus(BackupRelConflict), app=True)
+            event.defer()
+            return
+
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupRelConflict, app=True)
+
+        cfg = self.charm.snapshots_manager.get_storage_config(ObjectStorageType.GCS)
+        creds = getattr(getattr(cfg, "gcs", None), "credentials", None)
+
+        if object_storage_type != "gcs" or not cfg or not creds:
+            logger.warning("No gcs object storage configuration.")
+            if self.charm.unit.is_leader():
+                self.charm.status.set(BlockedStatus(BackupRelDataIncomplete), app=True)
+            return
+
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupRelDataIncomplete, app=True)
+
+        if not validate_gcs_credentials(cfg):
+            if self.charm.unit.is_leader():
+                self.charm.status.set(
+                    BlockedStatus(BackupCredentialIncorrect),
+                    app=True,
+                )
+            return
+
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupCredentialIncorrect, app=True)
+
+        self.charm.keystore_manager.put_entries(
+            {
+                "gcs.client.default.secret_key": cfg.gcs.credentials.secret_key,
+            }
+        )
+        self.charm.keystore_manager.reload()
+        self.charm.snapshots_manager.add_java_security_policy()
+
+        try:
+            if not self.charm.unit.is_leader():
+                return
+            self.charm.snapshots_manager.ensure_repository(object_storage_type, cfg)
+            self.charm.snapshots_manager.verify_repository("gcs")
+        except OpenSearchHttpError as e:
+            logger.error(
+                "Failed to create/verify snapshot repository for %s. "
+                "Error: %s, response_body=%r",
+                object_storage_type,
+                e,
+                getattr(e, "response_body", None),
+            )
+            if self.charm.unit.is_leader():
+                self.charm.status.set(
+                    BlockedStatus(BackupMisconfiguration),
+                    app=True,
+                )
+            event.defer()
+            return
+
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupMisconfiguration, app=True)
+
+        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+
+    def _on_gcs_credentials_gone(self, event: StorageConnectionInfoGoneEvent) -> None:
+        """Handler for gcs credentials gone event."""
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupRelShouldNotExist, app=True)
+            self.charm.status.clear(BackupRelDataIncomplete, app=True)
+            self.charm.status.clear(BackupMisconfiguration, app=True)
+
+        keystore_entries = ["gcs.client.default.secret_key"]
+        if not self.charm.snapshots_manager.cleanup(
+            object_storage_type="gcs", keystore_entries=keystore_entries, remove_repo=True
+        ):
+            if self.charm.unit.is_leader():
+                self.charm.status.set(
+                    BlockedStatus(BackupCredentialCleanupFailed),
+                    app=True,
+                )
+            event.defer()
+            return
+
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
+            self.charm.status.clear(BackupCredentialIncorrect, app=True)
+
+        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+
     def _on_peer_clusters_relation_changed_for_snapshots(self, event) -> None:  # noqa C901
         """Apply snapshots config when the orchestrator broadcasts over peer-clusters."""
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
@@ -409,16 +534,26 @@ class OpenSearchSnapshotEvents(Object):
         # Read peer data
         s3_info = self._read_s3_from_peer()
         azure_info = self._read_azure_from_peer()
+        gcs_info = self._read_gcs_from_peer()
+        backends_enabled = [
+            bool(s3_info),
+            bool(azure_info),
+            bool(gcs_info),
+        ]
 
         # check conflict
-        if s3_info and azure_info:
+        if sum(backends_enabled) >= 2:
             logger.error(
-                "Received both S3 and Azure snapshot credentials over peer-clusters. "
-                "This is a conflict, not applying any object-storage config."
+                "Received conflicting snapshot credentials over peer-clusters "
+                "(S3=%s, Azure=%s, GCS=%s). "
+                "Only one backend may be configured; not applying any object-storage config.",
+                bool(s3_info),
+                bool(azure_info),
+                bool(gcs_info),
             )
             return
 
-        # only S3 provided: clean Azure, configure S3
+        # only S3 provided: clean Azure and GCS, configure S3
         if s3_info:
             # clean Azure keys from keystore.
             if not self.charm.snapshots_manager.cleanup(
@@ -426,6 +561,24 @@ class OpenSearchSnapshotEvents(Object):
                 keystore_entries=[
                     "azure.client.default.account",
                     "azure.client.default.key",
+                ],
+            ):
+                if self.charm.unit.is_leader():
+                    self.charm.status.set(
+                        BlockedStatus(BackupCredentialCleanupFailed),
+                        app=True,
+                    )
+                event.defer()
+                return
+
+            if self.charm.unit.is_leader():
+                self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
+
+            # clean GCS keys from keystore
+            if not self.charm.snapshots_manager.cleanup(
+                object_storage_type="gcs",
+                keystore_entries=[
+                    "gcs.client.default.secret_key",
                 ],
             ):
                 if self.charm.unit.is_leader():
@@ -464,7 +617,7 @@ class OpenSearchSnapshotEvents(Object):
 
             return
 
-        # only Azure provided: clean S3, configure Azure
+        # only Azure provided: clean S3, GCS, configure Azure
         if azure_info:
             # clean S3 keys from keystore and CA from truststore
             if not self.charm.snapshots_manager.cleanup(
@@ -489,6 +642,24 @@ class OpenSearchSnapshotEvents(Object):
                 self.charm.snapshots_manager.remove_s3_ca()
                 self._restart_for_ca(reason="clean up the object storage CA")
 
+            # Clean GCS credentials from keystore.
+            if not self.charm.snapshots_manager.cleanup(
+                object_storage_type="gcs",
+                keystore_entries=[
+                    "gcs.client.default.secret_key",
+                ],
+            ):
+                if self.charm.unit.is_leader():
+                    self.charm.status.set(
+                        BlockedStatus(BackupCredentialCleanupFailed),
+                        app=True,
+                    )
+                event.defer()
+                return
+
+            if self.charm.unit.is_leader():
+                self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
+
             # apply Azure credentials
             self.charm.keystore_manager.put_entries(
                 {
@@ -500,7 +671,61 @@ class OpenSearchSnapshotEvents(Object):
             self.charm.keystore_manager.reload()
             return
 
-        # neither S3 nor Azure provided: clean everything.
+        # only GCS provided: clean S3, Azure and configure GCS
+        if gcs_info:
+            # clean S3 keys from keystore and CA from truststore
+            if not self.charm.snapshots_manager.cleanup(
+                object_storage_type="s3",
+                keystore_entries=[
+                    "s3.client.default.access_key",
+                    "s3.client.default.secret_key",
+                ],
+            ):
+                if self.charm.unit.is_leader():
+                    self.charm.status.set(
+                        BlockedStatus(BackupCredentialCleanupFailed),
+                        app=True,
+                    )
+                event.defer()
+                return
+
+            if self.charm.unit.is_leader():
+                self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
+
+            if self.charm.snapshots_manager.is_custom_s3_ca_stored():
+                self.charm.snapshots_manager.remove_s3_ca()
+                self._restart_for_ca(reason="clean up the object storage CA")
+
+            # clean Azure keys from keystore.
+            if not self.charm.snapshots_manager.cleanup(
+                object_storage_type="azure",
+                keystore_entries=[
+                    "azure.client.default.account",
+                    "azure.client.default.key",
+                ],
+            ):
+                if self.charm.unit.is_leader():
+                    self.charm.status.set(
+                        BlockedStatus(BackupCredentialCleanupFailed),
+                        app=True,
+                    )
+                event.defer()
+                return
+
+            if self.charm.unit.is_leader():
+                self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
+
+            # apply GCS credentials
+            self.charm.keystore_manager.put_entries(
+                {
+                    "gcs.client.default.secret_key": gcs_info["secret_key"],
+                }
+            )
+            logger.info("GCS storage credentials are added to keystore.")
+            self.charm.keystore_manager.reload()
+            return
+
+        # No S3/Azure/GCS credentials provided: clean everything.
         logger.info(
             "No snapshot backend credentials received from peer-clusters"
             "cleaning all object-storage snapshot configuration."
@@ -521,6 +746,14 @@ class OpenSearchSnapshotEvents(Object):
             keystore_entries=[
                 "azure.client.default.account",
                 "azure.client.default.key",
+            ],
+        )
+
+        # clean GCS-related config
+        self.charm.snapshots_manager.cleanup(
+            object_storage_type="gcs",
+            keystore_entries=[
+                "gcs.client.default.secret_key",
             ],
         )
 
@@ -569,6 +802,24 @@ class OpenSearchSnapshotEvents(Object):
             keystore_entries=[
                 "azure.client.default.account",
                 "azure.client.default.key",
+            ],
+        ):
+            if self.charm.unit.is_leader():
+                self.charm.status.set(
+                    BlockedStatus(BackupCredentialCleanupFailed),
+                    app=True,
+                )
+            event.defer()
+            return
+
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
+
+        # clean GCS-related config
+        if not self.charm.snapshots_manager.cleanup(
+            object_storage_type="gcs",
+            keystore_entries=[
+                "gcs.client.default.secret_key",
             ],
         ):
             if self.charm.unit.is_leader():
@@ -696,8 +947,24 @@ class OpenSearchSnapshotEvents(Object):
             "secret_key": payload.credentials.azure.secret_key,
         }
 
+    def _read_gcs_from_peer(self) -> dict[str, str] | None:
+        payload = self._get_provider_rel_payload()
+        logger.debug("provided payload: %s", payload)
+
+        if not payload or not payload.credentials or not payload.credentials.gcs:
+            logger.warning("no gcs credentials found.")
+            return
+
+        if not (payload.credentials.gcs.secret_key):
+            logger.debug("GCS storage credentials are incomplete.")
+            return
+
+        return {
+            "secret_key": payload.credentials.gcs.secret_key,
+        }
+
     def _on_create_backup_action(self, event: ActionEvent) -> None:
-        """Handler for s3 create backup action event."""
+        """Handler for create backup action event."""
         if error_message := self._action_missing_pre_requisites():
             event.fail(error_message)
             return
@@ -1034,7 +1301,13 @@ class OpenSearchSnapshotsManager:
             gcs_rel = self.charm.model.get_relation(GCS_RELATION)
             if not gcs_rel or not gcs_rel.app:
                 return
-            return
+            info = self.charm.snapshot_events.gcs_requirer.get_storage_connection_info(gcs_rel)
+            try:
+                gcs = GcsRelData.from_relation(info) if info else None
+            except ValidationError as e:
+                logger.warning("validation error while building gcs payload: %s", e)
+                gcs = None
+            return ObjectStorageConfig(gcs=gcs) if gcs else None
 
         peer_data = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)
         if object_storage_type == ObjectStorageType.S3_PCLUSTER:
@@ -1440,7 +1713,8 @@ class OpenSearchSnapshotsManager:
         if object_storage_type in {"azure", "azure-pcluster"}:
             return AZURE_REPOSITORY
 
-        return GCS_REPOSITORY
+        if object_storage_type in {"gcs", "gcs-pcluster"}:
+            return GCS_REPOSITORY
 
     @staticmethod
     def requires_custom_s3_ca(
@@ -1704,7 +1978,7 @@ class OpenSearchSnapshotsManager:
             self.create_repo(object_storage_type, object_storage_config, name=test_repo)
             # best effort clean up
             try:
-                self.remove_repo(object_storage_type)
+                self.remove_repo(object_storage_type, name=test_repo)
             except Exception:
                 pass
             # creation succeeded, no restart needed
@@ -1713,3 +1987,11 @@ class OpenSearchSnapshotsManager:
             if e.response_body.get("error", {}).get("type") == "repository_verification_exception":
                 return True
             raise
+
+    def add_java_security_policy(self) -> None:
+        """Add java security policy to the JVM."""
+        changed_policy = create_custom_java_security_policy()
+        changed_jvm = add_custom_policy_to_jvm()
+
+        if changed_policy or changed_jvm:
+            self.charm.request_opensearch_restart(reason="Java security policy changed")

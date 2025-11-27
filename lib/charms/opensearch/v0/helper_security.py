@@ -3,6 +3,7 @@
 
 """Helpers for security related operations, such as password generation etc."""
 import hashlib
+import json
 import logging
 import math
 import os
@@ -13,6 +14,7 @@ import tempfile
 from contextlib import suppress
 from datetime import datetime
 from os.path import exists
+from pathlib import Path
 from typing import Optional, Tuple
 
 import bcrypt
@@ -24,6 +26,8 @@ from charms.opensearch.v0.helper_charm import run_cmd
 from charms.opensearch.v0.models import ObjectStorageConfig
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from cryptography import x509
+from google.api_core.exceptions import GoogleAPIError
+from google.cloud import storage
 
 # The unique Charmhub library identifier, never change it
 LIBID = "224ce9884b0d47b997357fec522f11c7"
@@ -40,6 +44,10 @@ logger = logging.getLogger(__name__)
 
 KEYTOOL = "opensearch.keytool"
 OLD_CA_PREFIX = "old-"
+CUSTOM_POLICY_PATH = Path("/var/snap/opensearch/current/etc/opensearch/custom.policy")
+JVM_OPTS_DIR = Path("/var/snap/opensearch/current/etc/opensearch/jvm.options.d")
+JVM_OPTS_FILE = JVM_OPTS_DIR / "99-custom-policy.options"
+JAVA_POLICY_LINE = f"-Djava.security.policy=={CUSTOM_POLICY_PATH}"
 
 
 def hash_string(string: str) -> str:
@@ -796,3 +804,134 @@ def validate_azure_credentials(cfg: ObjectStorageConfig) -> bool:
             exc_info=e,
         )
         return False
+
+
+def validate_gcs_credentials(cfg: ObjectStorageConfig) -> bool:  # noqa: C901
+    """Validate GCS credentials using google-cloud-storage.
+
+    Args:
+        cfg: ObjectStorageConfig object
+
+    Returns:
+        True if we can access the configured bucket, False otherwise.
+
+    cfg.gcs.credentials.secret_key to contain a service-account JSON
+    (as a string), and cfg.gcs.bucket to contain the bucket name.
+    """
+    gcs_cfg = cfg.gcs
+
+    if not getattr(gcs_cfg, "credentials", None):
+        logger.error("GCS credential validation failed: missing credentials block.")
+        return False
+
+    service_account_json = getattr(gcs_cfg.credentials, "secret_key", None)
+    bucket_name = getattr(gcs_cfg, "bucket", None)
+
+    if not service_account_json:
+        logger.error("GCS credential validation failed: secret_key is empty.")
+        return False
+    if not bucket_name:
+        logger.error("GCS credential validation failed: bucket name is missing.")
+        return False
+
+    try:
+        sa_info = json.loads(service_account_json)
+    except (TypeError, ValueError) as e:
+        logger.error(
+            "GCS credential validation failed: secret_key is not valid JSON: %s",
+            e,
+        )
+        return False
+
+    project_id = sa_info.get("project_id")
+
+    client_kwargs: dict = {}
+    if project_id:
+        client_kwargs["project"] = project_id
+
+    endpoint = getattr(gcs_cfg, "endpoint", None)
+    client_options = {"api_endpoint": endpoint} if endpoint else None
+
+    try:
+        if client_options:
+            client = storage.Client.from_service_account_info(
+                sa_info,
+                client_options=client_options,
+                **client_kwargs,
+            )
+        else:
+            client = storage.Client.from_service_account_info(
+                sa_info,
+                **client_kwargs,
+            )
+
+        # list_blobs will raise if credentials are wrong or bucket is not accessible.
+        blobs_iter = client.list_blobs(bucket_name, max_results=1)
+        # Fetch one page
+        _ = next(iter(blobs_iter), None)
+
+        logger.info("GCS credential validation succeeded.")
+        return True
+
+    except GoogleAPIError as e:
+        logger.error(
+            "GCS credential validation with Google Cloud Storage failed: %s",
+            e,
+            exc_info=e,
+        )
+        return False
+    except Exception as e:  # noqa: BLE001
+        logger.error(
+            "Unexpected error during GCS credential validation: %s",
+            e,
+            exc_info=e,
+        )
+        return False
+
+
+def create_custom_java_security_policy() -> bool:
+    """Create or update custom.policy for OpenSearch.
+
+    Returns:
+        True if file was changed, False if it was already as expected.
+    """
+    policy_content = """grant {
+        permission java.io.FilePermission "/sys/class/dmi/id/product_name", "read";
+    };
+    """
+
+    current = (
+        CUSTOM_POLICY_PATH.read_text(encoding="utf-8") if CUSTOM_POLICY_PATH.exists() else None
+    )
+
+    if current == policy_content:
+        return False
+
+    CUSTOM_POLICY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CUSTOM_POLICY_PATH.write_text(policy_content, encoding="utf-8")
+    logger.info("Updated Java security policy at %s", CUSTOM_POLICY_PATH)
+    return True
+
+
+def add_custom_policy_to_jvm() -> bool:
+    """Ensure 99-custom-policy.options contains the Java policy option.
+
+    Returns:
+        True if file was changed, False if no change was necessary.
+    """
+    JVM_OPTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    if JVM_OPTS_FILE.exists():
+        lines = JVM_OPTS_FILE.read_text(encoding="utf-8").splitlines()
+    else:
+        lines = []
+
+    # normalize whitespace
+    stripped = [line.strip() for line in lines]
+    if JAVA_POLICY_LINE in stripped:
+        return False
+
+    stripped.append(JAVA_POLICY_LINE)
+    JVM_OPTS_FILE.write_text("\n".join(stripped) + "\n", encoding="utf-8")
+    logger.info("Added Java policy option to %s", JVM_OPTS_FILE)
+    return True

@@ -30,14 +30,19 @@ S3_CONN_INFO_WITH_CA = {
 
 
 class TestCreateBackup(SnapshotsUnitTestFixtures):
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_create_backup_when_manager_raises_http_error_then_action_fails(self, backend):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=True, relations=rels)
         self.mock_create_snapshot.side_effect = OpenSearchHttpError(
@@ -51,14 +56,19 @@ class TestCreateBackup(SnapshotsUnitTestFixtures):
         assert "backup request failed" in msg
         assert "server error" in msg or "500" in msg
 
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_create_backup_when_all_ok_then_success_result_is_returned(self, backend):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=True, relations=rels)
 
@@ -102,14 +112,19 @@ class TestCreateBackup(SnapshotsUnitTestFixtures):
 
 
 class TestListBackups(SnapshotsUnitTestFixtures):
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_list_backups_when_json_requested_then_json_is_returned(self, backend):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=True, relations=rels)
         snapshots = {
@@ -126,14 +141,19 @@ class TestListBackups(SnapshotsUnitTestFixtures):
 
         assert json.loads(self.ctx.action_results["backups"]) == snapshots
 
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_list_backups_when_table_requested_then_table_is_returned(self, backend):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=True, relations=rels)
         snapshots = {
@@ -153,14 +173,19 @@ class TestListBackups(SnapshotsUnitTestFixtures):
         assert "2025-01-01T10:00:00Z" in table
         assert "success" in table
 
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_list_backups_when_manager_raises_http_error_then_action_fails(self, backend):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=True, relations=rels)
 
@@ -181,14 +206,19 @@ class TestListBackups(SnapshotsUnitTestFixtures):
         msg = err.value.message.lower()
         assert "server error" in msg or "503" in msg
 
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_list_backups_when_not_leader_then_action_fails(self, backend):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=False, relations=rels)
 
@@ -199,14 +229,19 @@ class TestListBackups(SnapshotsUnitTestFixtures):
 
 
 class TestRestore(SnapshotsUnitTestFixtures):
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_restore_when_prereqs_missing_then_action_fails(self, backend, monkeypatch):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=True, relations=rels)
 
@@ -222,14 +257,19 @@ class TestRestore(SnapshotsUnitTestFixtures):
 
         assert "cluster not ready" in err.value.message.lower()
 
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_restore_when_snapshot_not_found_then_action_fails(self, backend):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=True, relations=rels)
         self.mock_get_snapshot.return_value = None
@@ -239,14 +279,19 @@ class TestRestore(SnapshotsUnitTestFixtures):
 
         assert "not found" in err.value.message.lower()
 
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_restore_when_get_snapshot_http_error_then_action_fails(self, backend):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=True, relations=rels)
         self.mock_get_snapshot.side_effect = OpenSearchHttpError(
@@ -267,16 +312,21 @@ class TestRestore(SnapshotsUnitTestFixtures):
             ((["idx1"], {"idx2": {"closed": False}}), True, "failed to close"),
         ],
     )
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_restore_when_closing_indices_varies_then_paths_are_handled(
         self, backend, close_result, expect_fail, expect_msg, monkeypatch
     ):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=True, relations=rels)
         self.mock_get_snapshot.return_value = {
@@ -304,14 +354,19 @@ class TestRestore(SnapshotsUnitTestFixtures):
                 self.ctx.on.action("restore", params={"backup-id": "2025-01-01T10:00:00Z"}), st
             )
 
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_restore_when_start_fails_then_action_fails_with_message(self, backend, monkeypatch):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=True, relations=rels)
         self.mock_get_snapshot.return_value = {
@@ -338,16 +393,21 @@ class TestRestore(SnapshotsUnitTestFixtures):
             )
         assert "restore failed" in err.value.message.lower()
 
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_restore_when_non_restored_indices_exist_then_action_fails_with_count(
         self, backend, monkeypatch
     ):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=True, relations=rels)
         self.mock_get_snapshot.return_value = {"snapshot": "S", "state": "SUCCESS"}
@@ -365,16 +425,21 @@ class TestRestore(SnapshotsUnitTestFixtures):
             self.ctx.run(self.ctx.on.action("restore", params={"backup-id": "S"}), st)
         assert "failed to restore 2 indices" in err.value.message.lower()
 
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_restore_when_http_error_on_close_indices_then_action_fails(
         self, backend, monkeypatch
     ):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=True, relations=rels)
         self.mock_get_snapshot.return_value = {
@@ -395,14 +460,19 @@ class TestRestore(SnapshotsUnitTestFixtures):
             self.ctx.run(self.ctx.on.action("restore", params={"backup-id": "S"}), st)
         assert "close" in err.value.message.lower()
 
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_restore_when_all_ok_then_health_apply_is_called(self, backend, monkeypatch):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=True, relations=rels)
         self.mock_get_snapshot.return_value = {
@@ -434,14 +504,19 @@ class TestRestore(SnapshotsUnitTestFixtures):
         )
         assert called["ok"]
 
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_restore_when_not_leader_then_action_fails(self, backend):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=False, relations=rels)
 
@@ -454,14 +529,19 @@ class TestRestore(SnapshotsUnitTestFixtures):
 
 
 class TestPrerequisites(SnapshotsUnitTestFixtures):
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_prereq_when_not_leader_then_action_fails(self, backend):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=False, relations=rels)
 
@@ -470,18 +550,23 @@ class TestPrerequisites(SnapshotsUnitTestFixtures):
 
         assert "leader" in err.value.message.lower()
 
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_prereq_when_deployment_not_ready_then_action_fails(self, backend, monkeypatch):
         if backend == "s3":
             self.use_s3()
-            relations = {self.s3_relation()}
-        else:
+            rels = {self.s3_relation()}
+        elif backend == "azure":
             self.use_azure()
-            relations = {self.azure_relation()}
+            rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         self.mock_deployment_desc.return_value = None
 
-        st = testing.State(leader=True, relations=relations)
+        st = testing.State(leader=True, relations=rels)
 
         with pytest.raises(testing.ActionFailed) as err:
             self.ctx.run(self.ctx.on.action("create-backup"), st)
@@ -514,16 +599,21 @@ class TestPrerequisites(SnapshotsUnitTestFixtures):
 
         assert "conflict" in err.value.message.lower()
 
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_prereq_when_repo_missing_and_cannot_create_then_action_fails(
         self, backend, monkeypatch
     ):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=True, relations=rels)
 
@@ -537,16 +627,21 @@ class TestPrerequisites(SnapshotsUnitTestFixtures):
 
         assert "repository could not be created" in err.value.message.lower()
 
-    @pytest.mark.parametrize("backend", ["s3", "azure"])
+    @pytest.mark.parametrize("backend", ["s3", "azure", "gcs"])
     def test_prereq_when_http_error_during_repo_check_then_error_message_displayed(
         self, backend, monkeypatch
     ):
         if backend == "s3":
             self.use_s3()
             rels = {self.s3_relation()}
-        else:
+        elif backend == "azure":
             self.use_azure()
             rels = {self.azure_relation()}
+        elif backend == "gcs":
+            self.use_gcs()
+            rels = {self.gcs_relation()}
+        else:
+            raise AssertionError(f"Unknown backend {backend}")
 
         st = testing.State(leader=True, relations=rels)
 

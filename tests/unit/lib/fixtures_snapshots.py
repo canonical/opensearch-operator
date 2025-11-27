@@ -14,6 +14,7 @@ from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_health import HealthColors
 from ops import testing
 
+from lib.charms.opensearch.v0.constants_charm import GCS_RELATION
 from src.charm import OpenSearchOperatorCharm
 
 DEFAULT_S3_INFO = {
@@ -31,6 +32,24 @@ DEFAULT_AZURE_INFO = {
     "container": "backups",
     "endpoint": "https://acct.blob.core.windows.net",
     "path": "base/path",
+}
+
+DEFAULT_GCS_INFO = {
+    "bucket": "my-gcs-bucket",
+    "path": "base/path",
+    "storage-class": "STANDARD",
+    "secret_key": """{
+        "type": "service_account",
+        "project_id": "my-gcp-project",
+        "private_key_id": "fakeprivatekeyid",
+        "private_key": "-----BEGIN PRIVATE KEY-----\\nFAKEKEY\\n-----END PRIVATE KEY-----\\n",
+        "client_email": "opensearch-backup@my-gcp-project.iam.gserviceaccount.com",
+        "client_id": "123456789012345678901",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/opensearch-backup%40my-gcp-project.iam.gserviceaccount.com"
+    }""",
 }
 
 
@@ -53,6 +72,10 @@ class SnapshotsUnitTestFixtures:
     patch_az_conn = patch(
         "charms.data_platform_libs.v0.azure_storage.AzureStorageRequires.get_azure_storage_connection_info",
         return_value=DEFAULT_AZURE_INFO,
+    )
+    patch_gcs_conn = patch(
+        "charms.data_platform_libs.v0.gcs_storage.GcsStorageRequires.get_storage_connection_info",
+        return_value=DEFAULT_GCS_INFO,
     )
 
     patch_is_repo_created = patch(
@@ -88,6 +111,7 @@ class SnapshotsUnitTestFixtures:
         self.mock_alt_hosts = self.patch_alt_hosts.start()
         self.mock_s3_conn = self.patch_s3_conn.start()
         self.mock_az_conn = self.patch_az_conn.start()
+        self.mock_gcs_conn = self.patch_gcs_conn.start()
         self.mock_is_repo_created = self.patch_is_repo_created.start()
         self.mock_health_get = self.patch_health_get.start()
         self.mock_backup_running = self.patch_backup_running.start()
@@ -123,6 +147,11 @@ class SnapshotsUnitTestFixtures:
         info = info or DEFAULT_AZURE_INFO
         self.mock_az_conn.return_value = info
 
+    def use_gcs(self, info: dict | None = None) -> None:
+        """Configure fixture to behave as if Azure is connected."""
+        info = info or DEFAULT_GCS_INFO
+        self.mock_gcs_conn.return_value = info
+
     @staticmethod
     def s3_relation() -> testing.Relation:
         return testing.Relation(
@@ -133,4 +162,10 @@ class SnapshotsUnitTestFixtures:
     def azure_relation() -> testing.Relation:
         return testing.Relation(
             endpoint=AZURE_RELATION, interface="azure", remote_app_name="azure-integrator"
+        )
+
+    @staticmethod
+    def gcs_relation() -> testing.Relation:
+        return testing.Relation(
+            endpoint=GCS_RELATION, interface="gcs", remote_app_name="gcs-integrator"
         )

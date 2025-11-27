@@ -92,6 +92,9 @@ S3_RELATION = "s3-credentials"
 AZURE_INTEGRATOR = "azure-storage-integrator"
 AZURE_INTEGRATOR_CHANNEL = "latest/edge"
 AZURE_RELATION = "azure-credentials"
+GCS_INTEGRATOR = "gcs-integrator"
+GCS_INTEGRATOR_CHANNEL = "1/edge"
+GCS_RELATION = "gcs-credentials"
 
 TIMEOUT = 30 * 60
 BackupsPath = f"opensearch/{uuid.uuid4()}"
@@ -137,6 +140,13 @@ def cloud_configs(storage_config: Dict[str, str]) -> Dict[str, Dict[str, str]]:
             "container": "data-charms-testing",
             "path": BackupsPath,
         }
+    if os.environ.get("GCP_SERVICE_ACCOUNT"):
+        results["gcs"] = {
+            "bucket": "data-charms-testing",
+            "path": BackupsPath,
+            "storage-class": "STANDARD",
+        }
+
     return results
 
 
@@ -153,6 +163,11 @@ def cloud_credentials(storage_credentials: Dict[str, str]) -> Dict[str, Dict[str
         results["azure"] = {
             "secret-key": os.environ["AZURE_SECRET_KEY"],
             "storage-account": os.environ["AZURE_STORAGE_ACCOUNT"],
+        }
+
+    if os.environ.get("GCP_SERVICE_ACCOUNT"):
+        results["gcs"] = {
+            "secret-key": os.environ["GCP_SERVICE_ACCOUNT"],
         }
     return results
 
@@ -288,6 +303,46 @@ async def _configure_azure(
 
     if app_name and wait_for_app_active:
         await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
+
+
+async def _configure_gcs(
+    ops_test: OpsTest,
+    config: Dict[str, str],
+    credentials: Dict[str, str],
+    app_name: str | None = None,
+    wait_for_app_active: bool = True,
+) -> None:
+    """Configure gcs-integrator with bucket/path/storage-class + Juju secret credentials."""
+    base_cfg = {
+        "bucket": config["bucket"],
+        "path": config.get("path", "") or "",
+        "storage-class": config.get("storage-class", "STANDARD"),
+    }
+    await ops_test.model.applications[GCS_INTEGRATOR].set_config(base_cfg)
+    logger.info("Adding Juju secret for gcs-integrator credentials")
+
+    local_label = "".join(random.choice(string.ascii_letters) for _ in range(10))
+    credentials_secret_uri = await add_juju_secret(
+        ops_test,
+        GCS_INTEGRATOR,
+        local_label,
+        {"secret-key": credentials["secret-key"]},
+    )
+    logger.info(
+        "Juju secret for gcs-integrator credentials added. Secret URI: %s",
+        credentials_secret_uri,
+    )
+
+    full_cfg = base_cfg | {
+        "credentials": credentials_secret_uri,
+    }
+    await ops_test.model.applications[GCS_INTEGRATOR].set_config(full_cfg)
+    await ops_test.model.wait_for_idle(apps=[GCS_INTEGRATOR], timeout=TIMEOUT)
+
+    if app_name and wait_for_app_active:
+        await ops_test.model.wait_for_idle(
+            apps=[app_name], status="active", timeout=TIMEOUT, idle_period=IDLE_PERIOD
+        )
 
 
 @pytest.mark.parametrize("cloud_name,deploy_type", SMALL_DEPLOYMENTS_ALL_CLOUDS)

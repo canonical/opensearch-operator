@@ -19,19 +19,5 @@ HASH_POSTFIX = f"{PW_POSTFIX}-hash"
 ADMIN_PW = f"admin-{PW_POSTFIX}"
 ADMIN_PW_HASH = f"{ADMIN_PW}-hash"
 S3_CREDENTIALS = "s3-creds"
-S3_PEER_SECRET_KEYS = [
-    "secret-key",
-    "access-key",
-    "s3-secret-key",
-    "s3-access-key",
-    S3_CREDENTIALS,
-]
 AZURE_CREDENTIALS = "azure-creds"
-AZURE_PEER_SECRET_KEYS = [
-    "azure-storage-account",
-    "azure-secret-key",
-    "secret-key",
-    "storage-account",
-    AZURE_CREDENTIALS,
-]
 GCS_CREDENTIALS = "gcs-creds"
