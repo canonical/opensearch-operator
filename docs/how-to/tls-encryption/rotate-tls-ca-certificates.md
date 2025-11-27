@@ -77,7 +77,7 @@ you can check the certificates in use by running the following command:
 openssl s_client -showcerts -connect leader_unit_IP:port < /dev/null | grep issuer
 ```
 
-Where `leader_unit_IP` is the IP address of the leader unit and `port` is the port number ofthe OpenSearch service.
+Where `leader_unit_IP` is the IP address of the leader unit and `port` is the port number of the OpenSearch service.
 This command will show the issuer of the certificate in use which should include the new CA certificate common name.
 
 ### Rotate the CA certificates using the `manual-tls operator`

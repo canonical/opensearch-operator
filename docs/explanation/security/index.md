@@ -35,7 +35,7 @@ For more information on Juju security hardening, see the
 When configuring cloud credentials to be used with Juju, ensure that users have correct permissions
 to operate at the required level. Juju superusers responsible for bootstrapping
 and managing controllers require elevated permissions to manage several kinds of resources,
-such as virtual machines, networks, storages, etc.
+such as virtual machines, networks, storage, etc.
 Please refer to the links below for more information on the policies required to be used
 depending on the cloud.
 
