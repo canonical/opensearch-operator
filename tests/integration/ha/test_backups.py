@@ -513,10 +513,10 @@ async def test_large_setups_relations_with_misconfiguration(
 
     # Reverting should return it to normal
     await ops_test.model.applications[APP_NAME].destroy_relation(
-        f"{APP_NAME}:{backup_relation}", backup_integrator
+        f"{APP_NAME}:{backup_relation}", backup_integrator, block_until_done=True
     )
     await ops_test.model.applications["failover"].destroy_relation(
-        f"failover:{backup_relation}", backup_integrator
+        f"failover:{backup_relation}", backup_integrator, block_until_done=True
     )
 
     await wait_until(
@@ -534,7 +534,7 @@ async def test_large_setups_relations_with_misconfiguration(
 
     try:
         await ops_test.model.applications["main"].destroy_relation(
-            f"main:{backup_relation}", backup_integrator
+            f"main:{backup_relation}", backup_integrator, block_until_done=True
         )
         await wait_until(
             ops_test,
@@ -636,7 +636,7 @@ async def test_remove_and_readd_backup_relation(
     logger.info("Remove backup relation")
     # Remove relation
     await ops_test.model.applications[app].destroy_relation(
-        f"{app}:{backup_relation}", backup_integrator
+        f"{app}:{backup_relation}", backup_integrator, block_until_done=True
     )
     await wait_until(
         ops_test,
@@ -830,7 +830,9 @@ async def _drop_s3_relation_if_any(ops_test: OpsTest, app: str) -> None:
     app_endpoint = f"{app}:{S3_RELATION}"
     s3_endpoint = f"{S3_INTEGRATOR}:{S3_RELATION}"
 
-    await ops_test.model.applications[app].destroy_relation(f"{app}:{S3_RELATION}", S3_INTEGRATOR)
+    await ops_test.model.applications[app].destroy_relation(
+        f"{app}:{S3_RELATION}", S3_INTEGRATOR, block_until_done=True
+    )
     await wait_until(
         ops_test,
         apps=[app, S3_INTEGRATOR],
@@ -853,7 +855,7 @@ async def _drop_azure_relation_if_any(ops_test: OpsTest, app: str) -> None:
     app_endpoint = f"{app}:{AZURE_RELATION}"
     azure_endpoint = f"{AZURE_INTEGRATOR}:{AZURE_RELATION}"
     await ops_test.model.applications[app].destroy_relation(
-        f"{app}:{AZURE_RELATION}", AZURE_INTEGRATOR
+        f"{app}:{AZURE_RELATION}", AZURE_INTEGRATOR, block_until_done=True
     )
     await wait_until(
         ops_test,
