@@ -2,15 +2,14 @@
 # See LICENSE file for licensing details.
 
 """Helpers for security related operations, such as password generation etc."""
-import hashlib
 import logging
 import math
 import os
+import re
 import secrets
 import string
 import subprocess
 import tempfile
-from contextlib import suppress
 from datetime import datetime
 from os.path import exists
 from typing import Optional, Tuple
@@ -191,7 +190,7 @@ def _store_ca_chain(  # noqa: C901
                 mode="w",
                 encoding="utf-8",
                 errors="replace",
-                delete=False,
+                delete=True,
             ) as tmp:
                 tmp.write(pem)
                 tmp.flush()
@@ -211,10 +210,6 @@ def _store_ca_chain(  # noqa: C901
                     (e.out or "") + (e.err or ""),
                 )
                 return False
-            finally:
-                # clean up temp file
-                with suppress(FileNotFoundError):
-                    os.remove(tmp_path)
         except OSError as e:
             # tmp file creation issues
             logger.error("Failed to create temporary file for CA import: %s", e)
@@ -222,10 +217,12 @@ def _store_ca_chain(  # noqa: C901
 
     # post-actions
     try:
+        command = ""
         if snap_user_with_write_permission:
-            run_cmd(f"sudo chown {snap_user} {store_path}; sudo chmod {final_mode} {store_path}")
+            command = f"sudo chown {snap_user} {store_path}; sudo chmod {final_mode} {store_path};"
         if add_read_perm:
-            run_cmd(f"sudo chmod +r {store_path}")
+            command += f"sudo chmod +r {store_path}"
+        run_cmd(command)
     except OpenSearchCmdError:
         pass
 
@@ -376,7 +373,7 @@ def remove_ca(alias: str, store_pwd: str, store_path: str) -> None:
         store_path: Path to the trust store.
     """
     if not exists(store_path):
-        logger.debug("Trust store %s does not exist, nothing to remove.", store_path)
+        logger.debug("Truststore %s does not exist, nothing to remove.", store_path)
         return
 
     list_cmd = f"{KEYTOOL} -list -keystore {store_path} -alias {alias} -storetype PKCS12"
@@ -605,7 +602,7 @@ def get_cert_issuer_from_keystore(store_pwd: str, store_path: str) -> Optional[s
         return None
 
 
-def _normalize_chain(text: Optional[str]) -> str:
+def _normalize_certificate_chain(text: Optional[str]) -> str:
     """Normalize a PEM chain string before hashing.
 
     Args:
@@ -619,7 +616,7 @@ def _normalize_chain(text: Optional[str]) -> str:
     return "\n".join(line.strip() for line in text.strip().splitlines() if line.strip())
 
 
-def _normalize_chain_unordered(chain: str) -> list[str]:
+def normalize_certificate_chain_unordered(chain: str) -> list[str]:
     """Normalize a PEM chain into a sorted list of cert blocks for comparison.
 
     Args:
@@ -633,8 +630,10 @@ def _normalize_chain_unordered(chain: str) -> list[str]:
     - order of certificates within the chain
     """
     blocks = _split_pem_chain(chain)
-    # Use existing _normalize_chain on each block to clean whitespace etc.
-    normalized_blocks = [_normalize_chain(block) for block in blocks if block and block.strip()]
+    # Use existing _normalize_certificate_chain on each block to clean whitespace etc.
+    normalized_blocks = [
+        _normalize_certificate_chain(block) for block in blocks if block and block.strip()
+    ]
     # Sort so order does not matter
     return sorted(normalized_blocks)
 
@@ -651,40 +650,16 @@ def _split_pem_chain(chain: str) -> list[str]:
     if not chain:
         return []
 
-    blocks: list[str] = []
-    buf: list[str] = []
-    in_block = False
+    # Match complete / valid certificate blocks
+    pattern = r"-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----"
+    matches = re.findall(pattern, chain, flags=re.DOTALL)
 
-    for line in chain.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-
-        if "BEGIN CERTIFICATE" in line:
-            in_block = True
-            buf = [line]
-            continue
-
-        if "END CERTIFICATE" in line and in_block:
-            buf.append(line)
-            blocks.append("\n".join(buf))
-            buf = []
-            in_block = False
-            continue
-
-        if in_block:
-            buf.append(line)
-
-    # If we somehow ended without an END line, ignore the partial block
-    return blocks
+    return [
+        "\n".join(line.strip() for line in cert.splitlines() if line.strip()) for cert in matches
+    ]
 
 
-def _hash(text: str) -> str:
-    """Hash a PEM chain string."""
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
-def validate_s3_credentials(cfg: ObjectStorageConfig) -> bool:
+def verify_s3_credentials(cfg: ObjectStorageConfig) -> bool:
     """Validate S3 credentials + CA using boto3.
 
     Args:
@@ -743,7 +718,7 @@ def validate_s3_credentials(cfg: ObjectStorageConfig) -> bool:
                 pass
 
 
-def validate_azure_credentials(cfg: ObjectStorageConfig) -> bool:
+def verify_azure_credentials(cfg: ObjectStorageConfig) -> bool:
     """Validate Azure Storage credentials using azure-storage-blob.
 
     Args:

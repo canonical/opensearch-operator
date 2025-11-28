@@ -156,6 +156,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             logger.debug("Node not a leader. Skipping refresh relation data")
             return
 
+        if not self.peer_cm.deployment_desc():
+            logger.debug("Current cluster not ready. Deferring event.")
+            event.defer()
+            return
+
         self.refresh_relation_data(event, event_rel_id=event.relation.id, can_defer=False)
 
     def _on_peer_cluster_relation_changed(self, event: RelationChangedEvent):  # noqa: C901
@@ -388,13 +393,13 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             },
         }
 
-        should_block = [
+        missing_relations = [
             name
             for name, info in credentials_to_check.items()
             if self._has_secret_and_no_relation(info["key"], info["relation_name"])
         ]
-        if should_block:
-            details = ", ".join(sorted(should_block))
+        if missing_relations:
+            details = ", ".join(sorted(missing_relations))
             extra = f" Missing relations for: {details}"
             extra = extra[:120]
             full_msg = f"{PClusterMissingStorageRelations}{extra}"
@@ -565,10 +570,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         trigger_rel_id: Optional[int] = None,
     ) -> None:
         """Save in the peer cluster rel data the current app's descriptions."""
-        if deployment_desc is None:
-            logger.debug("No deployment description available; skipping fleet apps update.")
-            return
-
         cluster_fleet_apps = (
             self.charm.peers_data.get_object(Scope.APP, "cluster_fleet_apps") or {}
         )
@@ -615,11 +616,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(AZURE_RELATION):
                 return None
 
-            cfg = (
+            object_storage_config = (
                 self.charm.snapshots_manager.get_storage_config(ObjectStorageType.AZURE)
                 or ObjectStorageConfig()
             )
-            azure = cfg.azure
+            azure = object_storage_config.azure
             if not (azure and azure.credentials and azure.credentials.storage_account):
                 return None
 
@@ -650,11 +651,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             if not self.charm.model.get_relation(S3_RELATION):
                 return None
-            cfg = (
+            object_storage_config = (
                 self.charm.snapshots_manager.get_storage_config(ObjectStorageType.S3)
                 or ObjectStorageConfig()
             )
-            s3_cfg = cfg.s3
+            s3_cfg = object_storage_config.s3
             if not (
                 s3_cfg
                 and s3_cfg.credentials
@@ -750,11 +751,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
     ) -> Optional[PeerClusterRelErrorData]:
         """Build error peer relation data object."""
         should_sever_relation, should_retry, blocked_msg = False, True, None
-        message_suffix = (
-            f"in related '{deployment_desc.typ}' sub-cluster"
-            if deployment_desc and getattr(deployment_desc, "typ", None)
-            else ""
-        )
+        message_suffix = f"in related '{deployment_desc.typ}'"
 
         if not deployment_desc:
             blocked_msg = "'main/failover'-orchestrators not configured yet."
@@ -902,8 +899,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             }
 
         if rel_data.credentials and getattr(rel_data.credentials.s3, "s3_tls_ca_chain", None):
-            sid = self.secrets.get_secret_id(Scope.APP, "s3-tls-ca-chain")
-            if sid:
+            if sid := self.secrets.get_secret_id(Scope.APP, "s3-tls-ca-chain"):
                 redacted_dict["credentials"]["s3"]["s3-tls-ca-chain"] = sid
 
         if (
@@ -1542,7 +1538,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             ):
                 blocked_msg = "Cannot relate 2 clusters with different 'cluster_name' values."
 
-        if storage_type := self.charm.snapshots_manager.get_storage_type():
+        elif storage_type := self.charm.snapshots_manager.get_storage_type():
             if not self.charm.snapshots_manager.verify_repository(storage_type):
                 blocked_msg = "Object storage related but storage configuration is not completed in main orchestator yet."
 

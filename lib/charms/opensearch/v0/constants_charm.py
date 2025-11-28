@@ -78,7 +78,6 @@ BackupCredentialCleanupFailed = (
     "Failed to remove keystore credentials, repo removal.Please check the logs for more details."
 )
 BackupRelConflict = "Too many object storage relations. Only one is supported."
-PCLUSTER_MISSING_REL_MSG_KEY = "pcluster_missing_relations_msg"
 BackupMisconfiguration = "opensearch-<object storage> repository setup failed. Check the object-storage integrator config."
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
 SecretAccessError = "Failed to access secret, please check permissions."
@@ -154,3 +153,6 @@ OAUTH_RELATION = "oauth"
 PERFORMANCE_PROFILE = "profile"
 
 JWT_CONFIG_RELATION = "jwt-configuration"
+
+# Peer relation keys
+PCLUSTER_MISSING_REL_MSG_KEY = "pcluster_missing_relations_msg"

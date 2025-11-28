@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 """OpenSearch Snapshots."""
-
+import hashlib
 import json
 import logging
 from datetime import datetime
@@ -37,13 +37,12 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.helper_security import (
-    _hash,
-    _normalize_chain_unordered,
     list_cas,
+    normalize_certificate_chain_unordered,
     remove_s3_ca,
     store_s3_ca,
-    validate_azure_credentials,
-    validate_s3_credentials,
+    verify_azure_credentials,
+    verify_s3_credentials,
 )
 from charms.opensearch.v0.models import (
     AzureRelData,
@@ -88,8 +87,6 @@ if TYPE_CHECKING:
 S3_REPOSITORY = "s3-repository"
 AZURE_REPOSITORY = "azure-repository"
 GCS_REPOSITORY = "gcs-repository"
-OS_PEER_KEY_TYPE = "object-storage-type"
-OS_PEER_KEY_REPO = "object-storage-repo"
 S3_CA_ALIAS = "s3-snapshots-gateway"
 STORE_PASSWORD = "changeit"
 # System indices that should not be snapshotted/restored
@@ -170,8 +167,6 @@ class OpenSearchSnapshotEvents(Object):
             return
 
         object_storage_type = self.charm.snapshots_manager.get_storage_type()
-        if not object_storage_type:
-            return
 
         logger.info(f"S3 credentials changed for object storage type {object_storage_type}")
         if object_storage_type == "conflict":
@@ -183,10 +178,15 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelConflict, app=True)
 
-        cfg = self.charm.snapshots_manager.get_storage_config(ObjectStorageType.S3)
-        creds = getattr(getattr(cfg, "s3", None), "credentials", None)
-        # handle case where this was deferred in the above case, then the s3 relation was severed
-        if object_storage_type != "s3" or not cfg or not creds:
+        object_storage_config = self.charm.snapshots_manager.get_storage_config(
+            ObjectStorageType.S3
+        )
+        # handle case where this was deferred, then the S3 relation was severed
+        if (
+            not object_storage_config
+            or not object_storage_config.s3
+            or not object_storage_config.s3.credentials
+        ):
             logger.warning("No S3 object storage configuration.")
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelDataIncomplete), app=True)
@@ -195,7 +195,7 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelDataIncomplete, app=True)
 
-        if not validate_s3_credentials(cfg):
+        if not verify_s3_credentials(object_storage_config):
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupCredentialIncorrect), app=True)
             return
@@ -206,35 +206,39 @@ class OpenSearchSnapshotEvents(Object):
         # apply locally (leader does cluster-level config)
         self.charm.keystore_manager.put_entries(
             {
-                "s3.client.default.access_key": cfg.s3.credentials.access_key,
-                "s3.client.default.secret_key": cfg.s3.credentials.secret_key,
+                "s3.client.default.access_key": object_storage_config.s3.credentials.access_key,
+                "s3.client.default.secret_key": object_storage_config.s3.credentials.secret_key,
             }
         )
         logger.info("S3 credentials are added to keystore.")
         self.charm.keystore_manager.reload()
 
         needs_custom_ca = self.charm.snapshots_manager.requires_custom_s3_ca(
-            object_storage_type, cfg
+            object_storage_type, object_storage_config
         )
 
         if needs_custom_ca:
-            if not self.charm.snapshots_manager.is_custom_s3_ca_stored(cfg.s3.tls_ca_chain):
+            if not self.charm.snapshots_manager.is_custom_s3_ca_stored(
+                object_storage_config.s3.tls_ca_chain
+            ):
                 # Content differs: rotate / store new chain
-                self.charm.snapshots_manager.store_s3_ca(cfg.s3.tls_ca_chain)
+                self.charm.snapshots_manager.store_s3_ca(object_storage_config.s3.tls_ca_chain)
                 logger.info("S3 CA stored/updated.")
                 if self.charm.snapshots_manager.should_restart_for_full_setup(
-                    object_storage_type, cfg
+                    object_storage_type, object_storage_config
                 ):
-                    self._restart_for_ca(reason="apply object storage CA change")
+                    self.charm.request_opensearch_restart(reason="apply object storage CA change")
 
         elif self.charm.snapshots_manager.is_custom_s3_ca_stored():
             # No CA configured now. If we had one, remove it
             self.charm.snapshots_manager.remove_s3_ca()
             logger.info("S3 CA removed.")
-            self._restart_for_ca(reason="clean up the object storage CA")
+            self.charm.request_opensearch_restart(reason="clean up the object storage CA")
 
         try:
-            self.charm.snapshots_manager.ensure_repository(object_storage_type, cfg)
+            self.charm.snapshots_manager.ensure_repository(
+                object_storage_type, object_storage_config
+            )
             self.charm.snapshots_manager.verify_repository("s3")
         except OpenSearchHttpError as e:
             logger.error(
@@ -279,7 +283,7 @@ class OpenSearchSnapshotEvents(Object):
 
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.remove_s3_ca()
-            self._restart_for_ca(reason="clean up the object storage CA")
+            self.charm.request_opensearch_restart(reason="clean up the object storage CA")
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupCredentialIncorrect, app=True)
@@ -315,11 +319,15 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelConflict, app=True)
 
-        cfg = self.charm.snapshots_manager.get_storage_config(ObjectStorageType.AZURE)
-        creds = getattr(getattr(cfg, "azure", None), "credentials", None)
-
-        if object_storage_type != "azure" or not cfg or not creds:
-            logger.warning("No Azure object storage configuration.")
+        object_storage_config = self.charm.snapshots_manager.get_storage_config(
+            ObjectStorageType.AZURE
+        )
+        if (
+            not object_storage_config
+            or not object_storage_config.azure
+            or not object_storage_config.azure.credentials
+        ):
+            logger.warning("No S3 object storage configuration.")
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelDataIncomplete), app=True)
             return
@@ -327,7 +335,7 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelDataIncomplete, app=True)
 
-        if not validate_azure_credentials(cfg):
+        if not verify_azure_credentials(object_storage_config):
             if self.charm.unit.is_leader():
                 self.charm.status.set(
                     BlockedStatus(BackupCredentialIncorrect),
@@ -340,15 +348,17 @@ class OpenSearchSnapshotEvents(Object):
 
         self.charm.keystore_manager.put_entries(
             {
-                "azure.client.default.account": cfg.azure.credentials.storage_account,
-                "azure.client.default.key": cfg.azure.credentials.secret_key,
+                "azure.client.default.account": object_storage_config.azure.credentials.storage_account,
+                "azure.client.default.key": object_storage_config.azure.credentials.secret_key,
             }
         )
         self.charm.keystore_manager.reload()
         try:
             if not self.charm.unit.is_leader():
                 return
-            self.charm.snapshots_manager.ensure_repository(object_storage_type, cfg)
+            self.charm.snapshots_manager.ensure_repository(
+                object_storage_type, object_storage_config
+            )
             self.charm.snapshots_manager.verify_repository("azure")
         except OpenSearchHttpError as e:
             logger.error(
@@ -398,17 +408,14 @@ class OpenSearchSnapshotEvents(Object):
 
     def _on_peer_clusters_relation_changed_for_snapshots(self, event) -> None:  # noqa C901
         """Apply snapshots config when the orchestrator broadcasts over peer-clusters."""
-        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+        if not self.charm.opensearch_peer_cm.deployment_desc():
             logger.debug("Deployment description not ready; deferring %s", event)
             event.defer()
             return
 
-        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
-            return
-
         # Read peer data
-        s3_info = self._read_s3_from_peer()
-        azure_info = self._read_azure_from_peer()
+        s3_info = self._read_s3_from_peer_cluster_rel()
+        azure_info = self._read_azure_from_peer_cluster_rel()
 
         # check conflict
         if s3_info and azure_info:
@@ -455,12 +462,12 @@ class OpenSearchSnapshotEvents(Object):
                 ca_changed = self._ca_changed(s3_info["s3_tls_ca_chain"])
                 self.charm.snapshots_manager.store_s3_ca(s3_info["s3_tls_ca_chain"])
                 if ca_changed:
-                    self._restart_for_ca(reason="apply object storage CA change")
+                    self.charm.request_opensearch_restart(reason="apply object storage CA change")
 
             elif self.charm.snapshots_manager.is_custom_s3_ca_stored():
                 # If we had a custom CA but peer no longer provides one, clean it up
                 self.charm.snapshots_manager.remove_s3_ca()
-                self._restart_for_ca(reason="clean up the object storage CA")
+                self.charm.request_opensearch_restart(reason="clean up the object storage CA")
 
             return
 
@@ -487,7 +494,7 @@ class OpenSearchSnapshotEvents(Object):
 
             if self.charm.snapshots_manager.is_custom_s3_ca_stored():
                 self.charm.snapshots_manager.remove_s3_ca()
-                self._restart_for_ca(reason="clean up the object storage CA")
+                self.charm.request_opensearch_restart(reason="clean up the object storage CA")
 
             # apply Azure credentials
             self.charm.keystore_manager.put_entries(
@@ -527,16 +534,15 @@ class OpenSearchSnapshotEvents(Object):
         # clean S3 CA
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.remove_s3_ca()
-            self._restart_for_ca(reason="clean up object storage CA after backend removal")
+            self.charm.request_opensearch_restart(
+                reason="clean up object storage CA after backend removal"
+            )
 
     def _on_peer_clusters_relation_departed_for_snapshots(self, event) -> None:  # noqa C901
         """Cleanup snapshot config if the orchestrator we depended on is gone."""
-        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+        if not self.charm.opensearch_peer_cm.deployment_desc():
             logger.debug("Deployment description not ready; deferring %s", event)
             event.defer()
-            return
-
-        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             return
 
         logger.info(
@@ -585,7 +591,9 @@ class OpenSearchSnapshotEvents(Object):
         # clean S3 CA if it was stored
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.remove_s3_ca()
-            self._restart_for_ca(reason="clean up object storage CA after peer-clusters departed")
+            self.charm.request_opensearch_restart(
+                reason="clean up object storage CA after peer-clusters departed"
+            )
 
     def _ca_changed(self, new_chain: str | None) -> bool:
         """Return True if the installed CA differs from new_chain."""
@@ -601,45 +609,19 @@ class OpenSearchSnapshotEvents(Object):
             return True
 
         # Both non-empty: compare as unordered sets of normalized cert blocks
-        current_blocks = _normalize_chain_unordered(current_chain)
-        new_blocks = _normalize_chain_unordered(new_chain)
-        is_different = _hash("".join(current_blocks)) != _hash("".join(new_blocks))
+        current_blocks = normalize_certificate_chain_unordered(current_chain)
+        new_blocks = normalize_certificate_chain_unordered(new_chain)
+        is_different = (
+            hashlib.sha256("".join(current_blocks).encode("utf-8")).hexdigest()
+            != hashlib.sha256("".join(new_blocks).encode("utf-8")).hexdigest()
+        )
         logger.debug("The old and new CA chains are different: %s", is_different)
         return is_different
 
-    def _restart_for_ca(self, reason: str) -> None:
-        """Request a Opensearch restart.
-
-        Args:
-            reason (str): reason for restarting Opensearch.
-        """
-        self.charm.request_opensearch_restart(reason=reason)
-
     def _get_provider_rel_payload(self) -> PeerClusterRelData | None:  # noqa: C901
         """Return the payload from the main orchestrator relation, if any."""
-        if not self.charm.opensearch_peer_cm.is_consumer(of="main"):
-            return None
-        if not self.charm.state.app.orchestrators:
-            logger.info("no orchestrators found")
-            return None
-
-        main_rel_id = self.charm.state.app.orchestrators.main_rel_id
-
-        if main_rel_id is None:
-            logger.info("orchestrators has no main_rel_id yet")
-            return None
-
-        rel = self.charm.model.get_relation(PeerClusterOrchestratorRelationName, main_rel_id)
-        if not rel:
-            logger.info(
-                "no %s relation found for id=%s",
-                PeerClusterOrchestratorRelationName,
-                main_rel_id,
-            )
-            return None
-
         try:
-            data_str = rel.data[rel.app].get("data")
+            data_str = self.charm.opensearch_peer_cm.get_rel_data_from_main_orchestrator()
         except Exception as e:
             logger.warning("failed to get relation data: %s", e)
             return None
@@ -657,7 +639,7 @@ class OpenSearchSnapshotEvents(Object):
         logger.info("provided %s payload", PeerClusterOrchestratorRelationName)
         return payload
 
-    def _read_s3_from_peer(self) -> dict[str, str] | None:
+    def _read_s3_from_peer_cluster_rel(self) -> dict[str, str] | None:
         payload = self._get_provider_rel_payload()
         logger.debug("provided payload: %s", payload)
 
@@ -677,7 +659,7 @@ class OpenSearchSnapshotEvents(Object):
             "s3_tls_ca_chain": payload.credentials.s3.s3_tls_ca_chain,
         }
 
-    def _read_azure_from_peer(self) -> dict[str, str] | None:
+    def _read_azure_from_peer_cluster_rel(self) -> dict[str, str] | None:
         payload = self._get_provider_rel_payload()
         logger.debug("provided payload: %s", payload)
 
@@ -894,8 +876,7 @@ class OpenSearchSnapshotEvents(Object):
         pcluster_types = {"s3-pcluster", "azure-pcluster", "gcs-pcluster"}
         if object_storage_type not in pcluster_types:
             try:
-                cfg = self.charm.snapshots_manager.get_storage_config()
-                if not cfg:
+                if not self.charm.snapshots_manager.get_storage_config():
                     return "Object storage configuration not ready."
                 if not self.charm.snapshots_manager.is_repository_created(object_storage_type):
                     return "The opensearch repository could not be created yet."
@@ -1240,11 +1221,9 @@ class OpenSearchSnapshotsManager:
         logger.info("Restore of snapshot '%s' response: %s", snapshot_id, restore_resp)
 
         # this only serves as documentation and should always be true if no previous HTTP error
-        snap_field = restore_resp.get("snapshot")
-        assert (
-            "accepted" in restore_resp
-            or (isinstance(snap_field, str) and snap_field == snapshot_id)
-            or (isinstance(snap_field, dict) and snap_field.get("snapshot") == snapshot_id)
+        snapshot_field = restore_resp.get("snapshot")
+        assert "accepted" in restore_resp or (
+            isinstance(snapshot_field, dict) and snapshot_field.get("snapshot") == snapshot_id
         ), f"Unexpected restore response: {restore_resp}"
 
         # sanity check on the restore success
@@ -1522,8 +1501,8 @@ class OpenSearchSnapshotsManager:
             return True
 
         # Compare as unordered sets of normalized cert blocks
-        stored_blocks = _normalize_chain_unordered(current_chain)
-        new_blocks = _normalize_chain_unordered(s3_ca_chain)
+        stored_blocks = normalize_certificate_chain_unordered(current_chain)
+        new_blocks = normalize_certificate_chain_unordered(s3_ca_chain)
 
         return stored_blocks == new_blocks
 

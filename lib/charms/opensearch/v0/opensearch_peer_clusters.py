@@ -537,19 +537,47 @@ class OpenSearchPeerClustersManager:
             is not None
         )
 
-    def rel_data(self, peek_secrets: bool = False) -> Optional[PeerClusterRelData]:
-        """Return the peer cluster rel data if any."""
+    def get_rel_data_from_main_orchestrator(self) -> str | None:
+        """Get the data from the main orchestrator relation.
+
+        Returns:
+            data: peer cluster rel data if any.
+
+        """
         if not self.is_consumer(of="main"):
             return None
+        if not (
+            orchestrators := PeerClusterOrchestrators.from_dict(
+                self._charm.peers_data.get_object(Scope.APP, "orchestrators")
+            )
+        ):
+            logger.info("no orchestrators found")
+            return None
 
-        orchestrators = PeerClusterOrchestrators.from_dict(
-            self._charm.peers_data.get_object(Scope.APP, "orchestrators")
-        )
+        if orchestrators.main_rel_id is None:
+            logger.info("orchestrators has no main_rel_id yet")
+            return None
 
-        rel = self._charm.model.get_relation(
+        rel = self._charm.modelget_relation(
             PeerClusterOrchestratorRelationName, orchestrators.main_rel_id
         )
-        if not (data := rel.data[rel.app].get("data")):
+        if not rel:
+            logger.info(
+                "no %s relation found for id=%s",
+                PeerClusterOrchestratorRelationName,
+                orchestrators.main_rel_id,
+            )
+            return None
+
+        try:
+            return rel.data[rel.app].get("data")
+        except Exception as e:
+            logger.warning("failed to get relation data: %s", e)
+            return None
+
+    def rel_data(self, peek_secrets: bool = False) -> Optional[PeerClusterRelData]:
+        """Return the up-to-date peer cluster rel data."""
+        if not (data := self.get_rel_data_from_main_orchestrator()):
             return None
 
         if peek_secrets:
@@ -677,7 +705,7 @@ class OpenSearchPeerClustersManager:
                 .peek_content()
                 .get("s3-secret-key")
             )
-        if credentials.get("s3") and credentials["s3"].get("s3-tls-ca-chain"):
+        if credentials.get("s3", {}).get("s3-tls-ca-chain"):
             credentials["s3"]["s3-tls-ca-chain"] = (
                 self._charm.model.get_secret(id=credentials["s3"]["s3-tls-ca-chain"])
                 .peek_content()
