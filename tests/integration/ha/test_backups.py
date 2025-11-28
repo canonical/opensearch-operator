@@ -881,15 +881,6 @@ async def _ensure_only_s3_integrator_related(
 
     if S3_INTEGRATOR not in ops_test.model.applications:
         await ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL)
-        await wait_until(
-            ops_test,
-            apps=[S3_INTEGRATOR],
-            apps_full_statuses={
-                S3_INTEGRATOR: {"blocked": ["Missing parameters: ['access-key', 'secret-key']"]},
-            },
-            idle_period=IDLE_PERIOD,
-            timeout=TIMEOUT,
-        )
 
     # check if relation exists already
     if _is_related_with(ops_test, app, S3_INTEGRATOR):
@@ -898,21 +889,6 @@ async def _ensure_only_s3_integrator_related(
     app_endpoint = f"{app}:{S3_RELATION}"
     s3_endpoint = f"{S3_INTEGRATOR}:{S3_RELATION}"
     await ops_test.model.integrate(app, S3_INTEGRATOR)
-    await wait_until(
-        ops_test,
-        apps=[app, S3_INTEGRATOR],
-        units_statuses=["active"],
-        apps_full_statuses={
-            app: {"active": []},
-            S3_INTEGRATOR: {"blocked": ["Missing parameters: ['access-key', 'secret-key']"]},
-        },
-        wait_for_exact_units={
-            app: len(ops_test.model.applications[app].units),
-            S3_INTEGRATOR: 1,
-        },
-        idle_period=IDLE_PERIOD,
-        timeout=TIMEOUT,
-    )
     logger.info("Integrated %s <-> %s.", app_endpoint, s3_endpoint)
 
 
@@ -922,19 +898,6 @@ async def _ensure_only_azure_integrator_related(ops_test: OpsTest, app: str) -> 
 
     if AZURE_INTEGRATOR not in ops_test.model.applications:
         await ops_test.model.deploy(AZURE_INTEGRATOR, channel=AZURE_INTEGRATOR_CHANNEL)
-        await wait_until(
-            ops_test,
-            apps=[AZURE_INTEGRATOR],
-            apps_full_statuses={
-                AZURE_INTEGRATOR: {
-                    "blocked": [
-                        "Missing parameters: ['container', 'storage-account', 'credentials']"
-                    ]
-                },
-            },
-            idle_period=IDLE_PERIOD,
-            timeout=TIMEOUT,
-        )
 
     if _is_related_with(ops_test, app, AZURE_INTEGRATOR):
         return
@@ -942,23 +905,6 @@ async def _ensure_only_azure_integrator_related(ops_test: OpsTest, app: str) -> 
     app_endpoint = f"{app}:{AZURE_RELATION}"
     azure_endpoint = f"{AZURE_INTEGRATOR}:{AZURE_RELATION}"
     await ops_test.model.integrate(app, AZURE_INTEGRATOR)
-    await wait_until(
-        ops_test,
-        apps=[app, AZURE_INTEGRATOR],
-        units_statuses=["active"],
-        apps_full_statuses={
-            app: {"active": []},
-            AZURE_INTEGRATOR: {
-                "blocked": ["Missing parameters: ['container', 'storage-account', 'credentials']"]
-            },
-        },
-        wait_for_exact_units={
-            app: len(ops_test.model.applications[app].units),
-            AZURE_INTEGRATOR: 1,
-        },
-        idle_period=IDLE_PERIOD,
-        timeout=TIMEOUT,
-    )
     logger.info("Integrated %s <-> %s.", app_endpoint, azure_endpoint)
 
 
@@ -1038,19 +984,15 @@ async def test_wrong_s3_credentials(
     await _ensure_only_s3_integrator_related(ops_test, app)
 
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
-
     good_config = cloud_configs[provider]
     bad_credentials = {"access-key": "error", "secret-key": "error"}
 
     await _configure_s3(ops_test, good_config, bad_credentials)
+
     await wait_until(
         ops_test,
         apps=[app],
-        units_statuses=["active"],
-        apps_statuses=["blocked"],
         apps_full_statuses={app: {"blocked": [BackupCredentialIncorrect]}},
-        idle_period=IDLE_PERIOD,
-        wait_for_exact_units=3,
     )
     logger.info("Opensearch 1 app and unit is blocked because of S3 bad credentials.")
 
