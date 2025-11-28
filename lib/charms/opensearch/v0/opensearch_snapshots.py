@@ -922,7 +922,7 @@ class OpenSearchSnapshotsManager:
                 if r
             ]
             if len(active) == 0:
-                return
+                return None
             if len(active) > 1:
                 return ObjectStorageType.CONFLICT
             if self.charm.model.get_relation(S3_RELATION):
@@ -935,7 +935,7 @@ class OpenSearchSnapshotsManager:
         # non-main orchestrator
         peer_data = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)
         if not peer_data or not peer_data.credentials:
-            return
+            return None
         if peer_data.credentials.s3:
             return ObjectStorageType.S3_PCLUSTER
         if peer_data.credentials.azure:

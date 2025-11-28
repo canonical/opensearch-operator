@@ -221,8 +221,6 @@ async def _configure_s3(
     ops_test: OpsTest,
     config: Dict[str, str],
     credentials: Dict[str, str],
-    app_name: str | None = None,
-    wait_for_app_active: bool = True,
 ) -> None:
     """Configure s3-integrator with endpoint/bucket/path/region and optional tls-ca-chain."""
     base_cfg = {
@@ -247,16 +245,11 @@ async def _configure_s3(
     )
     await ops_test.model.wait_for_idle(apps=[S3_INTEGRATOR], timeout=TIMEOUT)
 
-    if app_name and wait_for_app_active:
-        await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
-
 
 async def _configure_azure(
     ops_test: OpsTest,
     config: Dict[str, str],
     credentials: Dict[str, str],
-    app_name: str = None,
-    wait_for_app_active: bool = True,
 ) -> None:
     await ops_test.model.applications[AZURE_INTEGRATOR].set_config(config)
     logger.info("Adding Juju secret for secret-key config option for azure-storage-integrator")
@@ -285,9 +278,6 @@ async def _configure_azure(
     await ops_test.model.applications[AZURE_INTEGRATOR].set_config(full_cfg)
 
     await ops_test.model.wait_for_idle(apps=[AZURE_INTEGRATOR], timeout=TIMEOUT)
-
-    if app_name and wait_for_app_active:
-        await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
 
 
 @pytest.mark.parametrize("cloud_name,deploy_type", SMALL_DEPLOYMENTS_ALL_CLOUDS)
@@ -443,7 +433,6 @@ async def test_large_setups_relations_with_misconfiguration(
             ops_test=ops_test,
             config=bad_config,
             credentials=bad_credentials,
-            wait_for_app_active=False,
         )
     elif cloud_name == "aws":
         bad_config = {
@@ -457,7 +446,6 @@ async def test_large_setups_relations_with_misconfiguration(
             ops_test=ops_test,
             config=bad_config,
             credentials=bad_credentials,
-            wait_for_app_active=False,
         )
     else:
         cfg = cloud_configs["microceph"]
@@ -474,9 +462,7 @@ async def test_large_setups_relations_with_misconfiguration(
             ops_test=ops_test,
             config=bad_config,
             credentials=bad_credentials,
-            wait_for_app_active=False,
         )
-
     await wait_until(
         ops_test,
         apps=["main"],
@@ -568,9 +554,17 @@ async def test_create_backup_and_restore(
 
     logger.info(f"Syncing credentials for {cloud_name}")
     if cloud_name == "azure":
-        await _configure_azure(ops_test, config, cloud_credentials[cloud_name], app)
+        await _configure_azure(ops_test, config, cloud_credentials[cloud_name])
     else:
-        await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
+        await _configure_s3(ops_test, config, cloud_credentials[cloud_name])
+
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        idle_period=IDLE_PERIOD,
+    )
 
     date_before_backup = datetime.utcnow()
 
@@ -636,9 +630,10 @@ async def test_remove_and_readd_backup_relation(
 
     logger.info(f"Syncing credentials for {cloud_name}")
     if cloud_name == "azure":
-        await _configure_azure(ops_test, config, cloud_credentials[cloud_name], app)
+        await _configure_azure(ops_test, config, cloud_credentials[cloud_name])
     else:
-        await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
+        await _configure_s3(ops_test, config, cloud_credentials[cloud_name])
+
     await wait_until(
         ops_test,
         apps=[app],
@@ -734,9 +729,16 @@ async def test_restore_to_new_cluster(
 
     logger.info(f"Syncing credentials for {cloud_name}")
     if cloud_name == "azure":
-        await _configure_azure(ops_test, config_cloud, cloud_credentials[cloud_name], app)
+        await _configure_azure(ops_test, config_cloud, cloud_credentials[cloud_name])
     else:
-        await _configure_s3(ops_test, config_cloud, cloud_credentials[cloud_name], app)
+        await _configure_s3(ops_test, config_cloud, cloud_credentials[cloud_name])
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        idle_period=IDLE_PERIOD,
+    )
     backups = await list_backups(ops_test, leader_id, app=app)
 
     global cwrites_backup_doc_count
@@ -972,9 +974,7 @@ async def test_wrong_s3_credentials(
     good_config = cloud_configs[provider]
     bad_credentials = {"access-key": "error", "secret-key": "error"}
 
-    await _configure_s3(
-        ops_test, good_config, bad_credentials, app_name=app, wait_for_app_active=False
-    )
+    await _configure_s3(ops_test, good_config, bad_credentials)
     await wait_until(
         ops_test,
         apps=[app],
@@ -1002,7 +1002,7 @@ async def test_wrong_s3_credentials(
 
     # revert back to normal state
     good_credentials = cloud_credentials[provider]
-    await _configure_s3(ops_test, good_config, good_credentials, app_name=app)
+    await _configure_s3(ops_test, good_config, good_credentials)
     await wait_until(
         ops_test,
         apps=[app],
@@ -1021,13 +1021,8 @@ async def test_wrong_s3_credentials(
     )
     logger.debug(f"Repo response after fixing S3 creds: {resp_ok}")
 
-    if "status" in resp_ok:
-        # Repository not yet created, but endpoint reachable and returns proper error
-        assert resp_ok["status"] == 404
-    else:
-        # Repository exists: body is a mapping including repo name
-        assert isinstance(resp_ok, dict)
-        assert S3_REPOSITORY in resp_ok
+    assert isinstance(resp_ok, dict)
+    assert S3_REPOSITORY in resp_ok
 
 
 @pytest.mark.group(id=ALL_S3_GROUP)
@@ -1058,8 +1053,6 @@ async def test_wrong_s3_ca_blocked(
         ops_test,
         bad_cfg,
         good_creds,
-        app_name=app,
-        wait_for_app_active=False,
     )
     logger.info("Configured S3 with wrong CA")
 
@@ -1077,7 +1070,7 @@ async def test_wrong_s3_ca_blocked(
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
     logger.info("Opensearch 1 app and unit is blocked because of S3 bad CA.")
     # restore the correct CA and ensure we recover to active.
-    await _configure_s3(ops_test, good_cfg, good_creds, app_name=app)
+    await _configure_s3(ops_test, good_cfg, good_creds)
     logger.info("Configured S3 with valid CA.")
     await wait_until(
         ops_test,
@@ -1125,7 +1118,7 @@ async def test_wrong_azure_credentials(
     bad_creds["secret-key"] = "invalid-secret-key"
 
     # Apply bad credentials
-    await _configure_azure(ops_test, good_cfg, bad_creds, app_name=app, wait_for_app_active=False)
+    await _configure_azure(ops_test, good_cfg, bad_creds)
 
     # Charm should eventually report blocked
     await wait_until(
@@ -1151,7 +1144,7 @@ async def test_wrong_azure_credentials(
         logger.info("Snapshot request failed with bad Azure credentials (expected).")
 
     # Restore correct credentials
-    await _configure_azure(ops_test, good_cfg, good_creds, app_name=app)
+    await _configure_azure(ops_test, good_cfg, good_creds)
     await wait_until(
         ops_test,
         apps=[app],
@@ -1214,7 +1207,14 @@ async def test_change_config_and_backup_restore(
 
         logger.info(f"Syncing credentials for {cloud_name}")
         config: Dict[str, str] = cloud_configs[cloud_name]
-        await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
+        await _configure_s3(ops_test, config, cloud_credentials[cloud_name])
+        await wait_until(
+            ops_test,
+            apps=[app],
+            apps_statuses=["active"],
+            units_statuses=["active"],
+            idle_period=IDLE_PERIOD,
+        )
 
         date_before_backup = datetime.utcnow()
 
