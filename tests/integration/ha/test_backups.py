@@ -23,7 +23,7 @@ import string
 import time
 import uuid
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict
 
 import boto3
@@ -120,10 +120,10 @@ async def force_clear_cwrites_index():
 
 
 @pytest.fixture(scope="session")
-def cloud_configs(storage_config: Dict[str, str]) -> Dict[str, Dict[str, str]]:
+def cloud_configs(microceph_config: Dict[str, str]) -> Dict[str, Dict[str, str]]:
     # Figure out the address of the LXD host itself, where tests are executed
     # this is where microceph will be installed.
-    results: Dict[str, Dict[str, str]] = {"microceph": storage_config}
+    results: Dict[str, Dict[str, str]] = {"microceph": microceph_config}
     if os.environ["AWS_ACCESS_KEY"]:
         results["aws"] = {
             "endpoint": "https://s3.amazonaws.com",
@@ -141,9 +141,9 @@ def cloud_configs(storage_config: Dict[str, str]) -> Dict[str, Dict[str, str]]:
 
 
 @pytest.fixture(scope="session")
-def cloud_credentials(storage_credentials: Dict[str, str]) -> Dict[str, Dict[str, str]]:
+def cloud_credentials(microceph_credentials: Dict[str, str]) -> Dict[str, Dict[str, str]]:
     """Read cloud credentials."""
-    results: Dict[str, Dict[str, str]] = {"microceph": storage_credentials}
+    results: Dict[str, Dict[str, str]] = {"microceph": microceph_credentials}
     if os.environ["AWS_ACCESS_KEY"]:
         results["aws"] = {
             "access-key": os.environ["AWS_ACCESS_KEY"],
@@ -529,10 +529,11 @@ async def test_large_setups_relations_with_misconfiguration(
         await ops_test.model.applications["main"].destroy_relation(
             f"main:{backup_relation}", backup_integrator
         )
-        await ops_test.model.wait_for_idle(
+        await wait_until(
+            ops_test,
             apps=["main"],
-            status="active",
-            timeout=TIMEOUT,
+            units_statuses=["active"],
+            apps_statuses=["active"],
             idle_period=IDLE_PERIOD,
         )
         logger.info("Cleaned up misconfigured backup relation from main; main is active again.")
@@ -571,7 +572,7 @@ async def test_create_backup_and_restore(
     else:
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
-    date_before_backup = datetime.utcnow()
+    date_before_backup = datetime.now(timezone.utc)
 
     # Wait, we want to make sure the timestamps are different
     await asyncio.sleep(5)
@@ -622,8 +623,13 @@ async def test_remove_and_readd_backup_relation(
     await ops_test.model.applications[app].destroy_relation(
         f"{app}:{backup_relation}", backup_integrator
     )
-    await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1400, idle_period=IDLE_PERIOD
+    await wait_until(
+        ops_test,
+        apps=[app],
+        units_statuses=["active"],
+        apps_statuses=["active"],
+        idle_period=IDLE_PERIOD,
+        timeout=1400,
     )
     logger.info("Re-add backup credentials relation")
     await ops_test.model.integrate(app, backup_integrator)
@@ -633,10 +639,15 @@ async def test_remove_and_readd_backup_relation(
         await _configure_azure(ops_test, config, cloud_credentials[cloud_name], app)
     else:
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
-    await ops_test.model.wait_for_idle(
-        apps=[app], status="active", timeout=1400, idle_period=IDLE_PERIOD
+    await wait_until(
+        ops_test,
+        apps=[app],
+        units_statuses=["active"],
+        apps_statuses=["active"],
+        idle_period=IDLE_PERIOD,
+        timeout=1400,
     )
-    date_before_backup = datetime.utcnow()
+    date_before_backup = datetime.now(timezone.utc)
 
     # Wait, we want to make sure the timestamps are different
     await asyncio.sleep(5)
@@ -753,7 +764,7 @@ async def test_restore_to_new_cluster(
 
     await writer.start()
     time.sleep(10)
-    date_before_backup = datetime.utcnow()
+    date_before_backup = datetime.now(timezone.utc)
 
     # Wait, we want to make sure the timestamps are different
     await asyncio.sleep(5)
@@ -969,6 +980,7 @@ async def test_wrong_s3_credentials(
         apps=[app],
         units_statuses=["active"],
         apps_statuses=["blocked"],
+        apps_full_statuses={app: {"blocked": [BackupCredentialIncorrect]}},
         idle_period=IDLE_PERIOD,
     )
     logger.info("Opensearch 1 app and unit is blocked because of S3 bad credentials.")
@@ -978,13 +990,15 @@ async def test_wrong_s3_credentials(
     )
     logger.debug(f"Response: {resp}")
     status = resp.get("status")
-    if status is not None:
-        assert status in (500, 404)
-    if "error" in resp:
-        assert "repository_exception" in resp["error"]["type"]
-        assert (
-            "Could not determine repository generation from root blobs" in resp["error"]["reason"]
-        )
+    assert status in (404, 500), f"Unexpected status: {status}, resp={resp}"
+    error = resp.get("error")
+    assert error is not None, f"No error field in response: {resp}"
+    err_type = error.get("type")
+    err_reason = error.get("reason", "")
+    assert "repository_exception" in err_type, f"Unexpected error type: {err_type}, resp={resp}"
+    assert (
+        "Could not determine repository generation from root blobs" in err_reason
+    ), f"Unexpected error reason: {err_reason}, resp={resp}"
 
     # revert back to normal state
     good_credentials = cloud_credentials[provider]
@@ -1054,6 +1068,7 @@ async def test_wrong_s3_ca_blocked(
         apps=[app],
         units_statuses=["active"],
         apps_statuses=["blocked"],
+        apps_full_statuses={app: {"blocked": [BackupCredentialIncorrect]}},
         idle_period=IDLE_PERIOD,
     )
 
@@ -1118,6 +1133,7 @@ async def test_wrong_azure_credentials(
         apps=[app],
         units_statuses=["active"],
         apps_statuses=["blocked"],
+        apps_full_statuses={app: {"blocked": [BackupCredentialIncorrect]}},
         idle_period=IDLE_PERIOD,
     )
     logger.info("Opensearch 1 app and unit is blocked because of Azure bad credentials.")
@@ -1200,7 +1216,7 @@ async def test_change_config_and_backup_restore(
         config: Dict[str, str] = cloud_configs[cloud_name]
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
-        date_before_backup = datetime.utcnow()
+        date_before_backup = datetime.now(timezone.utc)
 
         # Wait, we want to make sure the timestamps are different
         await asyncio.sleep(5)

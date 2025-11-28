@@ -153,6 +153,3 @@ OAUTH_RELATION = "oauth"
 PERFORMANCE_PROFILE = "profile"
 
 JWT_CONFIG_RELATION = "jwt-configuration"
-
-# Peer relation keys
-PCLUSTER_MISSING_REL_MSG_KEY = "pcluster_missing_relations_msg"

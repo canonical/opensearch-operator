@@ -529,7 +529,7 @@ class TestPrerequisites(SnapshotsUnitTestFixtures):
 
         self.mock_is_repo_created.side_effect = [False, False]
         monkeypatch.setattr(
-            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.create_repo",
+            "charms.opensearch.v0.opensearch_snapshots.OpenSearchSnapshotsManager.create_repository",
             lambda *_a, **_k: None,
         )
         with pytest.raises(testing.ActionFailed) as err:

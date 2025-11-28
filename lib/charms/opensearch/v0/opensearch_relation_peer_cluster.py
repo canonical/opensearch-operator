@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, MutableMapping, Optional
 
 from charms.opensearch.v0.constants_charm import (
     AZURE_RELATION,
-    PCLUSTER_MISSING_REL_MSG_KEY,
     S3_RELATION,
     AdminUser,
     COSUser,
@@ -24,7 +23,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.helper_charm import all_units, format_unit_name
+from charms.opensearch.v0.helper_charm import Status, all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.models import (
     AzureRelDataCredentials,
@@ -404,18 +403,12 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             extra = extra[:120]
             full_msg = f"{PClusterMissingStorageRelations}{extra}"
             logger.warning(full_msg)
-            self.charm.peers_data.put(Scope.APP, PCLUSTER_MISSING_REL_MSG_KEY, full_msg)
             self.charm.status.set(BlockedStatus(full_msg), app=True)
             return
 
-        stored_msg = self.charm.peers_data.get(
-            Scope.APP,
-            PCLUSTER_MISSING_REL_MSG_KEY,
-            default=PClusterMissingStorageRelations,
+        self.charm.status.clear(
+            PClusterMissingStorageRelations, pattern=Status.CheckPattern.Start, app=True
         )
-
-        self.charm.status.clear(stored_msg, app=True)
-        self.charm.peers_data.delete(Scope.APP, PCLUSTER_MISSING_REL_MSG_KEY)
 
     def _has_secret_and_no_relation(self, key: str, relation_name: str) -> bool:
         """Checks if the relation data has credentials for a non-related app"""

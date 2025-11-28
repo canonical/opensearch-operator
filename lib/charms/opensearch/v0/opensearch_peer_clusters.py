@@ -558,7 +558,7 @@ class OpenSearchPeerClustersManager:
             logger.info("orchestrators has no main_rel_id yet")
             return None
 
-        rel = self._charm.modelget_relation(
+        rel = self._charm.model.get_relation(
             PeerClusterOrchestratorRelationName, orchestrators.main_rel_id
         )
         if not rel:

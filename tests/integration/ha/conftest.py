@@ -6,7 +6,6 @@ import base64
 import dataclasses
 import json
 import logging
-import os
 import subprocess
 import time
 
@@ -77,8 +76,6 @@ async def c_balanced_writes_runner(ops_test: OpsTest, c_writes: ContinuousWrites
 @pytest.fixture(scope="session")
 def microceph() -> ConnectionInformation:
     """Deploy microceph with rados-gateway and provide the credentials to access it."""
-    if not os.environ.get("CI") == "true":
-        raise Exception("Not running on CI. Skipping microceph installation. ")
     logger.info("Setting up microceph")
 
     # socket.gethostbyname() might return `127.0.0.1`,
@@ -102,7 +99,7 @@ def microceph() -> ConnectionInformation:
             "-keyout",
             "key.pem",
             "-out",
-            "cert.pem",
+            "microceph_cert.pem",
             "-sha256",
             "-days",
             "365",
@@ -115,7 +112,7 @@ def microceph() -> ConnectionInformation:
         check=True,
     )
 
-    with open("cert.pem", "rb") as cert_file:
+    with open("microceph_cert.pem", "rb") as cert_file:
         cert = cert_file.read()
         cert_encoded = base64.b64encode(cert)
 
@@ -164,7 +161,7 @@ def microceph() -> ConnectionInformation:
                 endpoint_url=f"https://{host_ip}:445",
                 aws_access_key_id=key_id,
                 aws_secret_access_key=secret_key,
-                verify="cert.pem",
+                verify="microceph_cert.pem",
             ).create_bucket(Bucket=_BUCKET)
         except botocore.exceptions.EndpointConnectionError:
             if attempt == 2:
@@ -183,7 +180,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
-def storage_config(microceph: ConnectionInformation) -> dict[str, str]:
+def microceph_config(microceph: ConnectionInformation) -> dict[str, str]:
     """Provide the configuration required by s3-integrator."""
     # socket.gethostbyname() might return `127.0.0.1`,
     # which does not work from inside lxd container
@@ -193,7 +190,7 @@ def storage_config(microceph: ConnectionInformation) -> dict[str, str]:
         .split()[0]
     )
 
-    with open("cert.pem", "rb") as cert_file:
+    with open("microceph_cert.pem", "rb") as cert_file:
         cert = cert_file.read()
         cert_encoded = base64.b64encode(cert).decode("utf-8")
 
@@ -207,7 +204,7 @@ def storage_config(microceph: ConnectionInformation) -> dict[str, str]:
 
 
 @pytest.fixture(scope="session")
-def storage_credentials(microceph: ConnectionInformation) -> dict[str, str]:
+def microceph_credentials(microceph: ConnectionInformation) -> dict[str, str]:
     """Provide the access-credentials required by s3-integrator."""
     return {
         "access-key": microceph.access_key_id,
@@ -216,13 +213,15 @@ def storage_credentials(microceph: ConnectionInformation) -> dict[str, str]:
 
 
 @pytest.fixture(scope="function")
-def s3_bucket(storage_credentials, storage_config) -> None:
+def s3_bucket(microceph_credentials, microceph_config) -> None:
     """Provide a storage bucket on the deployed microceph instance."""
     session = boto3.Session(
-        aws_access_key_id=storage_credentials["access-key"],
-        aws_secret_access_key=storage_credentials["secret-key"],
-        region_name=storage_config["region"] if storage_config["region"] else None,
+        aws_access_key_id=microceph_credentials["access-key"],
+        aws_secret_access_key=microceph_credentials["secret-key"],
+        region_name=microceph_config["region"] if microceph_config["region"] else None,
     )
-    s3 = session.resource("s3", endpoint_url=storage_config["endpoint"], verify="cert.pem")
-    bucket = s3.Bucket(storage_config["bucket"])
-    yield bucket
+    s3 = session.resource(
+        "s3", endpoint_url=microceph_config["endpoint"], verify="microceph_cert.pem"
+    )
+    bucket = s3.Bucket(microceph_config["bucket"])
+    return bucket

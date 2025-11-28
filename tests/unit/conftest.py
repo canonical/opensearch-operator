@@ -49,11 +49,11 @@ def actions() -> Dict[str, Any]:
 
 @pytest.fixture
 def mk_ctx(monkeypatch):
-    def _mk(meta: dict, acts: dict, cfg_schema: dict, unit_id: int = 0):
+    def _mk(meta: dict, actions: dict, cfg_schema: dict, unit_id: int = 0):
         ctx = testing.Context(
             charm_type=OpenSearchOperatorCharm,
             meta=meta,
-            actions=acts,
+            actions=actions,
             config=cfg_schema,
             unit_id=unit_id,
             capture_deferred_events=True,

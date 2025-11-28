@@ -554,7 +554,7 @@ async def create_backup(
     assert action.status == "completed"
     st = str(action.response.get("status", ""))
     assert st in {"in_progress", "success"}, f"unexpected snapshot state: {st}"
-    assert "backup-id" in action.response and action.response["backup-id"]
+    assert action.response.get("backup-id"), "backup-id is missing in response"
     return action.response["backup-id"]
 
 

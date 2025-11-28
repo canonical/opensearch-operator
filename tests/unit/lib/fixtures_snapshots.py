@@ -109,11 +109,10 @@ class SnapshotsUnitTestFixtures:
     def context(self):
         self.ctx = testing.Context(charm_type=OpenSearchOperatorCharm)
 
-    def use_s3(self, *, ca: str | None = None, info: dict | None = None) -> None:
+    def use_s3(self, *, ca: str | None = None, info: dict[str, str] | None = None) -> None:
         """Configure fixture to behave as if S3 is connected, optionally inject a CA."""
         info = info or DEFAULT_S3_INFO
         if ca is not None:
-            info = dict(info)
             info["tls_ca_chain"] = ca
 
         self.mock_s3_conn.return_value = info
