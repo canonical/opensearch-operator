@@ -196,20 +196,20 @@ def _store_ca_chain(  # noqa: C901
                 tmp.flush()
                 tmp_path = tmp.name
 
-            try:
-                run_cmd(
-                    f"{KEYTOOL} -importcert -noprompt "
-                    f"-alias {internal_alias} -keystore {store_path} -file {tmp_path} -storetype PKCS12",
-                    f"-storepass {store_pwd}",
-                )
-            except OpenSearchCmdError as e:
-                logger.error(
-                    "Failed to import cert for alias %s into %s: %s",
-                    internal_alias,
-                    store_path,
-                    (e.out or "") + (e.err or ""),
-                )
-                return False
+                try:
+                    run_cmd(
+                        f"{KEYTOOL} -importcert -noprompt "
+                        f"-alias {internal_alias} -keystore {store_path} -file {tmp_path} -storetype PKCS12",
+                        f"-storepass {store_pwd}",
+                    )
+                except OpenSearchCmdError as e:
+                    logger.error(
+                        "Failed to import cert for alias %s into %s: %s",
+                        internal_alias,
+                        store_path,
+                        (e.out or "") + (e.err or ""),
+                    )
+                    return False
         except OSError as e:
             # tmp file creation issues
             logger.error("Failed to create temporary file for CA import: %s", e)

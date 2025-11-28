@@ -546,6 +546,7 @@ class OpenSearchPeerClustersManager:
         """
         if not self.is_consumer(of="main"):
             return None
+
         if not (
             orchestrators := PeerClusterOrchestrators.from_dict(
                 self._charm.peers_data.get_object(Scope.APP, "orchestrators")
@@ -561,7 +562,7 @@ class OpenSearchPeerClustersManager:
         rel = self._charm.model.get_relation(
             PeerClusterOrchestratorRelationName, orchestrators.main_rel_id
         )
-        if not rel:
+        if rel is None:
             logger.info(
                 "no %s relation found for id=%s",
                 PeerClusterOrchestratorRelationName,
@@ -569,11 +570,25 @@ class OpenSearchPeerClustersManager:
             )
             return None
 
-        try:
-            return rel.data[rel.app].get("data")
-        except Exception as e:
-            logger.warning("failed to get relation data: %s", e)
+        app_data = rel.data.get(rel.app)
+        if not app_data:
+            logger.info(
+                "no relation data for app %s on relation id=%s",
+                rel.app,
+                orchestrators.main_rel_id,
+            )
             return None
+
+        data = app_data.get("data")
+        if data is None:
+            logger.info(
+                "relation data for app %s on relation id=%s has no data key",
+                rel.app,
+                orchestrators.main_rel_id,
+            )
+            return None
+
+        return data
 
     def rel_data(self, peek_secrets: bool = False) -> Optional[PeerClusterRelData]:
         """Return the up-to-date peer cluster rel data."""
