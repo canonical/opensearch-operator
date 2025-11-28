@@ -6,14 +6,16 @@
 import json
 import logging
 import random
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from pytest_operator.plugin import OpsTest
 from tenacity import (
     RetryError,
     Retrying,
+    TryAgain,
     retry,
     stop_after_attempt,
+    stop_after_delay,
     wait_fixed,
     wait_random,
 )
@@ -129,3 +131,38 @@ async def create_index_and_bulk_insert(
     # Insert data in bulk
     await bulk_insert(ops_test, app, endpoint, payload)
     return payload_list
+
+
+def bulk_encode(docs: List[Dict[str, Any]], index_name: str) -> str:
+    """Helper method to encode docs for bulk insert"""
+    lines = []
+    for doc in docs:
+        lines.append(json.dumps({"index": {"_index": index_name}}))
+        lines.append(json.dumps(doc))
+
+    return "\n".join(lines) + "\n"
+
+
+async def poll_until(
+    ops_test: OpsTest,
+    endpoint: str,
+    condition: Callable,
+    timeout: int = 60,
+    interval: int = 5,
+) -> bool:
+    """Poll endpoint until condition is true or timeout"""
+    logger.info(f"Polling {endpoint}...")
+    try:
+        for attempt in Retrying(
+            stop=stop_after_delay(timeout), wait=wait_fixed(wait=interval), reraise=True
+        ):
+            with attempt:
+                response = await http_request(ops_test, "GET", endpoint)
+                if condition(response):
+                    logger.info(f"Done. Condition met: {response}")
+                    return True
+                logger.info(f"Condition not met: {response}")
+                raise TryAgain
+    except RetryError:
+        logger.info("Polling timed out")
+        return False

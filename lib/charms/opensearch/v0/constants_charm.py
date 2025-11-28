@@ -81,6 +81,7 @@ BackupRelConflict = "Too many object storage relations. Only one is supported."
 BackupMisconfiguration = "opensearch-<object storage> repository setup failed. Check the object-storage integrator config."
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
 SecretAccessError = "Failed to access secret, please check permissions."
+SmtpRelationInvalid = "SMTP relation must be created with the main-orchestrator cluster."
 JWTAuthConfigInvalid = (
     "Configuration for JWT authentication is invalid. Check and correct parameters."
 )
@@ -113,7 +114,6 @@ BackupInProgress = "Backup in progress..."
 BackupSetupStart = "Backup setup started."
 BackupConfigureStart = "Configuring backup service..."
 BackupInDisabling = "Disabling backup service..."
-PluginConfigCheck = "Plugin configuration check."
 
 # Relation Interfaces
 ClientRelationName = "opensearch-client"

@@ -52,5 +52,6 @@ recover-from-attached-storage
 upgrade/index
 Access using Oauth <access-using-oauth>
 Enable JWT Authentication <enable-jwt-authentication>
+Enable email notifications <add-smtp-credentials>
 monitoring-cos/index
 ```

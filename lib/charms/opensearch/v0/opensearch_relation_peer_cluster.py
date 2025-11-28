@@ -23,7 +23,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS
 from charms.opensearch.v0.constants_tls import CertType
-from charms.opensearch.v0.helper_charm import Status, all_units, format_unit_name
+from charms.opensearch.v0.helper_charm import Status, all_units, diff, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology
 from charms.opensearch.v0.models import (
     AzureRelDataCredentials,
@@ -37,6 +37,7 @@ from charms.opensearch.v0.models import (
     PeerClusterRelData,
     PeerClusterRelDataCredentials,
     PeerClusterRelErrorData,
+    PluginConfigInfo,
     S3RelDataCredentials,
     StartMode,
 )
@@ -381,6 +382,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
     def _block_if_has_credentials_with_missing_relations(self) -> None:
         """Checks if the relation data has credentials for non-related apps"""
+        # For failover promotions: new main orchestrator may have secrets transferred
+        # by the previous main orchestrator for credentials from applications
+        # only related to the previous main orchestrator.
+        # The user needs to relate the integrators to the new main orchestrator
         if not self.charm.unit.is_leader():
             return
 
@@ -408,12 +413,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         self.charm.status.clear(
             PClusterMissingStorageRelations, pattern=Status.CheckPattern.Start, app=True
-        )
-
-    def _has_secret_and_no_relation(self, key: str, relation_name: str) -> bool:
-        """Checks if the relation data has credentials for a non-related app"""
-        return self.charm.secrets.has(Scope.APP, key) and not self.charm.model.get_relation(
-            relation_name
         )
 
     def refresh_relation_data(  # noqa: C901
@@ -712,7 +711,29 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             deployment_desc=deployment_desc,
             security_index_initialised=self._get_security_index_initialised(),
             first_data_node=self._get_first_data_node(),
+            plugins=(
+                self._plugin_config_info()
+                if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR
+                else None
+            ),
         )
+
+    def _plugin_config_info(self) -> dict[str, PluginConfigInfo]:
+        """Returns managed plugin configurations and grants related secrets to subclusters"""
+        plugins = self.charm.state.app.plugin_config_info
+        granted = dict(plugins)
+        # grant secrets to subsclusters
+        for label, plugin in plugins.items():
+            if plugin.secret_id and not self._grant_secret_to_subclusters(plugin.secret_id):
+                del granted[label]
+        return granted
+
+    def _grant_secret_to_subclusters(self, secret_id: str) -> bool:
+        """Returns True if secret is successfully granted to all subclusters"""
+        for relation in self.charm.model.relations[self.relation_name]:
+            if not self.secrets.grant_secret_to_relation(secret_id, relation):
+                return False
+        return True
 
     def _rel_data_credentials(
         self, deployment_desc: DeploymentDescription
@@ -1088,6 +1109,12 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # fetch the success data
         data = self.peer_cm.rel_data_from_str(data["data"])
 
+        # we need to differentiate between plugins being None and {}
+        # when an empty dict, plugins have been removed from the main orchestrator
+        # and we need to also remove them in subclusters
+        if (plugin_configs := data.plugins) is not None:
+            self._update_plugin_configs(plugin_configs)
+
         # check errors that can only be figured out from the requirer side
         if self._error_set_from_requirer(orchestrators, deployment_desc, data, event.relation.id):
             logger.debug("Error from requirer")
@@ -1140,6 +1167,25 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         # recompute the deployment desc
         self.charm.opensearch_peer_cm.run_with_relation_data(data)
+
+    def _update_plugin_configs(self, configs_from_relation) -> None:
+        """Add or Remove plugin config information transferred from main orchestrator"""
+        current_app_plugin_info = self.charm.state.app.plugin_config_info
+        add, remove = diff(configs_from_relation.keys(), current_app_plugin_info.keys())
+
+        for label in remove:
+            self.charm.plugin_manager.remove_plugin_config(scope=Scope.APP, label=label)
+
+        for label in add:
+            plugin = configs_from_relation[label]
+            if plugin.secret_id:
+                self.charm.secrets.get_tracked_secret(plugin.secret_id, Scope.APP, label)
+            self.charm.plugin_manager.put_plugin_config(
+                scope=Scope.APP,
+                label=label,
+                secret_id=plugin.secret_id,
+                relation_name=plugin.relation_name,
+            )
 
     def apply_orchestrator_status(self) -> None:
         """Sets or clears status based on presence of local orchestrators."""
