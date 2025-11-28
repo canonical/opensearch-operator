@@ -922,7 +922,7 @@ class OpenSearchSnapshotsManager:
                 if r
             ]
             if len(active) == 0:
-                return
+                return None
             if len(active) > 1:
                 return ObjectStorageType.CONFLICT
             if self.charm.model.get_relation(S3_RELATION):
@@ -935,7 +935,7 @@ class OpenSearchSnapshotsManager:
         # non-main orchestrator
         peer_data = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)
         if not peer_data or not peer_data.credentials:
-            return
+            return None
         if peer_data.credentials.s3:
             return ObjectStorageType.S3_PCLUSTER
         if peer_data.credentials.azure:
@@ -1627,15 +1627,25 @@ class OpenSearchSnapshotsManager:
         Raises:
             OpenSearchHttpError if there are any backend issues such as auth/perm errors.
         """
-        repository = self.repository_name(object_storage_type)
-        # If creds/endpoint/perm are wrong, this call raises OpenSearchHttpError with a 500.
-        self.opensearch.request(
-            "GET",
-            f"_snapshot/{repository}/_all",
-            alt_hosts=self.charm.alt_hosts,
-            timeout=30,
-        )
-        return True
+        try:
+            repository = self.repository_name(object_storage_type)
+            # If creds/endpoint/perm are wrong, this call raises OpenSearchHttpError with a 500.
+            self.opensearch.request(
+                "GET",
+                f"_snapshot/{repository}/_all",
+                alt_hosts=self.charm.alt_hosts,
+                timeout=30,
+            )
+            return True
+        except OpenSearchHttpError as e:
+            logger.error(
+                "Failed to create/verify snapshot repository for %s. "
+                "Error: %s, response_body=%r",
+                object_storage_type,
+                e,
+                getattr(e, "response_body", None),
+            )
+            return False
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def should_restart_for_full_setup(

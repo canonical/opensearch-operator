@@ -78,6 +78,17 @@ def microceph() -> ConnectionInformation:
     """Deploy microceph with rados-gateway and provide the credentials to access it."""
     logger.info("Setting up microceph")
 
+    # we check if microceph is already installed by checking if the credentials file exists
+    try:
+        with open("microceph_credentials.txt", "r") as cred_file:
+            creds = cred_file.readlines()
+            access_key_id = creds[0].strip().split("=")[1]
+            secret_access_key = creds[1].strip().split("=")[1]
+        logger.info("microceph is already installed")
+        return ConnectionInformation(access_key_id, secret_access_key, _BUCKET)
+    except FileNotFoundError:
+        pass
+
     # socket.gethostbyname() might return `127.0.0.1`,
     # which does not work from inside lxd container
     host_ip = (
@@ -153,6 +164,9 @@ def microceph() -> ConnectionInformation:
     key = json.loads(output)["keys"][0]
     key_id = key["access_key"]
     secret_key = key["secret_key"]
+    # write secret key and access key to file
+    with open("microceph_credentials.txt", "w") as cred_file:
+        cred_file.write(f"access_key={key_id}\nsecret_key={secret_key}\n")
     logger.info("Creating microceph bucket")
     for attempt in range(3):
         try:
