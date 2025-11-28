@@ -225,6 +225,8 @@ class OpenSearchSnapshotEvents(Object):
                 # Content differs: rotate / store new chain
                 self.charm.snapshots_manager.store_s3_ca(object_storage_config.s3.tls_ca_chain)
                 logger.info("S3 CA stored/updated.")
+                if not self.charm.unit.is_leader():
+                    return
                 if self.charm.snapshots_manager.should_restart_for_full_setup(
                     object_storage_type, object_storage_config
                 ):
@@ -1627,25 +1629,15 @@ class OpenSearchSnapshotsManager:
         Raises:
             OpenSearchHttpError if there are any backend issues such as auth/perm errors.
         """
-        try:
-            repository = self.repository_name(object_storage_type)
-            # If creds/endpoint/perm are wrong, this call raises OpenSearchHttpError with a 500.
-            self.opensearch.request(
-                "GET",
-                f"_snapshot/{repository}/_all",
-                alt_hosts=self.charm.alt_hosts,
-                timeout=30,
-            )
-            return True
-        except OpenSearchHttpError as e:
-            logger.error(
-                "Failed to create/verify snapshot repository for %s. "
-                "Error: %s, response_body=%r",
-                object_storage_type,
-                e,
-                getattr(e, "response_body", None),
-            )
-            return False
+        repository = self.repository_name(object_storage_type)
+        # If creds/endpoint/perm are wrong, this call raises OpenSearchHttpError with a 500.
+        self.opensearch.request(
+            "GET",
+            f"_snapshot/{repository}/_all",
+            alt_hosts=self.charm.alt_hosts,
+            timeout=30,
+        )
+        return True
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def should_restart_for_full_setup(
