@@ -17,7 +17,7 @@ from typing import Optional, Tuple
 import bcrypt
 import boto3
 from azure.core.exceptions import AzureError
-from azure.storage.blob import BlobServiceClient
+from azure.storage.blob import ContainerClient
 from botocore.exceptions import BotoCoreError, ClientError
 from charms.opensearch.v0.helper_charm import run_cmd
 from charms.opensearch.v0.models import ObjectStorageConfig
@@ -732,6 +732,14 @@ def verify_azure_credentials(cfg: ObjectStorageConfig) -> bool:
     """
     az_cfg = cfg.azure
 
+    # TODO move this to the pydantic model validation
+    if az_cfg.connection_protocol not in {"http", "https"}:
+        logger.warning(
+            "Azure Storage credential validation failed: unsupported connection protocol %s",
+            az_cfg.connection_protocol,
+        )
+        return False
+
     try:
         account_name = az_cfg.credentials.storage_account
         account_key = az_cfg.credentials.secret_key
@@ -739,9 +747,11 @@ def verify_azure_credentials(cfg: ObjectStorageConfig) -> bool:
 
         # If azure integrator ever sends a custom endpoint, we will use it.
         # Otherwise, we will use public Azure blob endpoint.
-        account_url = f"https://{account_name}.blob.core.windows.net"
-        client = BlobServiceClient(
+        account_url = az_cfg.endpoint or f"https://{account_name}.blob.core.windows.net"
+
+        client = ContainerClient(
             account_url=account_url,
+            container_name=container_name,
             credential=account_key,
         )
 
