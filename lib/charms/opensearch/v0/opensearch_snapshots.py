@@ -551,6 +551,12 @@ class OpenSearchSnapshotEvents(Object):
             event.defer()
             return
 
+        if self.charm.state.app.orchestrators and self.charm.state.app.orchestrators.main_rel_id:
+            logger.debug(
+                "Main orchestrator still accessible; do not cleanup as it can be scale down"
+            )
+            return
+
         logger.info(
             "peer-clusters relation for snapshots departed; "
             "cleaning all object-storage snapshot configuration."

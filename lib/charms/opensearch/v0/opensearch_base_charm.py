@@ -229,8 +229,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.node_lock = OpenSearchNodeLock(self)
 
         self.plugin_manager = OpenSearchPluginManager(self)
-        self.snapshots_manager = OpenSearchSnapshotsManager(self, self.opensearch)
-        self.snapshot_events = OpenSearchSnapshotEvents(self)
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
         self.peer_cluster_provider = OpenSearchPeerClusterProvider(self)
@@ -238,6 +236,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # Managers
         self.profiles_manager = ProfilesManager(self.state, self.opensearch)
+        self.snapshots_manager = OpenSearchSnapshotsManager(self, self.opensearch)
+        self.snapshot_events = OpenSearchSnapshotEvents(self)
 
         self.framework.observe(self._start_opensearch_event, self._start_opensearch)
         self.framework.observe(self._restart_opensearch_event, self._restart_opensearch)
