@@ -124,14 +124,14 @@ def cloud_configs(microceph_config: Dict[str, str]) -> Dict[str, Dict[str, str]]
     # Figure out the address of the LXD host itself, where tests are executed
     # this is where microceph will be installed.
     results: Dict[str, Dict[str, str]] = {"microceph": microceph_config}
-    if os.environ["AWS_ACCESS_KEY"]:
+    if os.environ.get("AWS_ACCESS_KEY"):
         results["aws"] = {
             "endpoint": "https://s3.amazonaws.com",
             "bucket": "data-charms-testing",
             "path": BackupsPath,
             "region": "us-east-1",
         }
-    if os.environ["AZURE_SECRET_KEY"]:
+    if os.environ.get("AZURE_SECRET_KEY"):
         results["azure"] = {
             "connection-protocol": "abfss",
             "container": "data-charms-testing",
@@ -141,15 +141,17 @@ def cloud_configs(microceph_config: Dict[str, str]) -> Dict[str, Dict[str, str]]
 
 
 @pytest.fixture(scope="session")
-def cloud_credentials(microceph_credentials: Dict[str, str]) -> Dict[str, Dict[str, str]]:
+def cloud_credentials(
+    microceph_credentials: Dict[str, str],
+) -> Dict[str, Dict[str, str]]:
     """Read cloud credentials."""
     results: Dict[str, Dict[str, str]] = {"microceph": microceph_credentials}
-    if os.environ["AWS_ACCESS_KEY"]:
+    if os.environ.get("AWS_ACCESS_KEY"):
         results["aws"] = {
             "access-key": os.environ["AWS_ACCESS_KEY"],
             "secret-key": os.environ["AWS_SECRET_KEY"],
         }
-    if os.environ["AZURE_SECRET_KEY"]:
+    if os.environ.get("AZURE_SECRET_KEY"):
         results["azure"] = {
             "secret-key": os.environ["AZURE_SECRET_KEY"],
             "storage-account": os.environ["AZURE_STORAGE_ACCOUNT"],
@@ -280,6 +282,16 @@ async def _configure_azure(
     await ops_test.model.wait_for_idle(apps=[AZURE_INTEGRATOR], timeout=TIMEOUT)
 
 
+def _is_related_with(ops_test: OpsTest, app_name: str, target_app_name: str) -> bool:
+    """Check if app_name has a relation with target_app_name."""
+    app = ops_test.model.applications.get(app_name)
+    for relation in app.relations:
+        for endpoint in relation.endpoints:
+            if endpoint.application_name == target_app_name:
+                return True
+    return False
+
+
 @pytest.mark.parametrize("cloud_name,deploy_type", SMALL_DEPLOYMENTS_ALL_CLOUDS)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -353,7 +365,11 @@ async def test_large_deployment_build_and_deploy(
         "init_hold": True,
         "roles": "cluster_manager",
     }
-    data_hot_conf = {"cluster_name": "backup-test", "init_hold": True, "roles": "data.hot"}
+    data_hot_conf = {
+        "cluster_name": "backup-test",
+        "init_hold": True,
+        "roles": "data.hot",
+    }
 
     backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
     backup_integrator_channel = (
@@ -406,7 +422,12 @@ async def test_large_deployment_build_and_deploy(
         apps=[TLS_CERTIFICATES_APP_NAME, "main", "failover", APP_NAME],
         apps_statuses=["active"],
         units_statuses=["active"],
-        wait_for_exact_units={TLS_CERTIFICATES_APP_NAME: 1, "main": 1, "failover": 2, APP_NAME: 1},
+        wait_for_exact_units={
+            TLS_CERTIFICATES_APP_NAME: 1,
+            "main": 1,
+            "failover": 2,
+            APP_NAME: 1,
+        },
         idle_period=IDLE_PERIOD,
         timeout=3600,
     )
@@ -803,6 +824,8 @@ async def _drop_s3_relation_if_any(ops_test: OpsTest, app: str) -> None:
     """If app is related to S3_INTEGRATOR via S3_RELATION, drop that relation."""
     if S3_INTEGRATOR not in ops_test.model.applications:
         return
+    if not _is_related_with(ops_test, app, S3_INTEGRATOR):
+        return
 
     app_endpoint = f"{app}:{S3_RELATION}"
     s3_endpoint = f"{S3_INTEGRATOR}:{S3_RELATION}"
@@ -822,6 +845,9 @@ async def _drop_s3_relation_if_any(ops_test: OpsTest, app: str) -> None:
 async def _drop_azure_relation_if_any(ops_test: OpsTest, app: str) -> None:
     """If app is related to AZURE_INTEGRATOR via AZURE_RELATION, drop that relation."""
     if AZURE_INTEGRATOR not in ops_test.model.applications:
+        return
+
+    if not _is_related_with(ops_test, app, AZURE_INTEGRATOR):
         return
 
     app_endpoint = f"{app}:{AZURE_RELATION}"
@@ -858,6 +884,10 @@ async def _ensure_only_s3_integrator_related(
             timeout=TIMEOUT,
         )
 
+    # check if relation exists already
+    if _is_related_with(ops_test, app, S3_INTEGRATOR):
+        return
+
     app_endpoint = f"{app}:{S3_RELATION}"
     s3_endpoint = f"{S3_INTEGRATOR}:{S3_RELATION}"
     await ops_test.model.integrate(app, S3_INTEGRATOR)
@@ -886,6 +916,9 @@ async def _ensure_only_azure_integrator_related(ops_test: OpsTest, app: str) -> 
             idle_period=IDLE_PERIOD,
             timeout=TIMEOUT,
         )
+
+    if _is_related_with(ops_test, app, AZURE_INTEGRATOR):
+        return
 
     app_endpoint = f"{app}:{AZURE_RELATION}"
     azure_endpoint = f"{AZURE_INTEGRATOR}:{AZURE_RELATION}"
@@ -943,7 +976,10 @@ async def test_repo_missing_message(ops_test: OpsTest) -> None:
     app: str = (await app_name(ops_test)) or APP_NAME
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
     resp = await http_request(
-        ops_test, "GET", f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}", json_resp=True
+        ops_test,
+        "GET",
+        f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}",
+        json_resp=True,
     )
     logger.debug(f"Response: {resp}")
     assert resp["status"] == 404
@@ -986,7 +1022,10 @@ async def test_wrong_s3_credentials(
     logger.info("Opensearch 1 app and unit is blocked because of S3 bad credentials.")
 
     resp = await http_request(
-        ops_test, "GET", f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}/_all", json_resp=True
+        ops_test,
+        "GET",
+        f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}/_all",
+        json_resp=True,
     )
     logger.debug(f"Response: {resp}")
     status = resp.get("status")
@@ -1082,7 +1121,10 @@ async def test_wrong_s3_ca_blocked(
     logger.info("Opensearch all apps and units become active after providing valid S3 CA.")
     # check if repo endpoint is reachable now (200 if created, 404 if not yet).
     resp_ok = await http_request(
-        ops_test, "GET", f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}", json_resp=True
+        ops_test,
+        "GET",
+        f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}",
+        json_resp=True,
     )
     logger.debug(f"Repo response after fixing S3 CA: {resp_ok}")
 
