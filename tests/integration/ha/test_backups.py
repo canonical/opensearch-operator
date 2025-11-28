@@ -897,7 +897,10 @@ async def _ensure_only_s3_integrator_related(
         ops_test,
         apps=[app, S3_INTEGRATOR],
         units_statuses=["active"],
-        apps_statuses=["active"],
+        apps_full_statuses={
+            app: {"active": []},
+            S3_INTEGRATOR: {"blocked": ["Missing parameters: ['access-key', 'secret-key']"]},
+        },
         idle_period=IDLE_PERIOD,
         timeout=TIMEOUT,
     )
@@ -929,7 +932,12 @@ async def _ensure_only_azure_integrator_related(ops_test: OpsTest, app: str) -> 
         ops_test,
         apps=[app, AZURE_INTEGRATOR],
         units_statuses=["active"],
-        apps_statuses=["active"],
+        apps_full_statuses={
+            app: {"active": []},
+            AZURE_INTEGRATOR: {
+                "blocked": ["Missing parameters: ['container', 'storage-account', 'credentials']"]
+            },
+        },
         idle_period=IDLE_PERIOD,
         timeout=TIMEOUT,
     )
@@ -1031,14 +1039,16 @@ async def test_wrong_s3_credentials(
     )
     logger.debug(f"Response: {resp}")
     status = resp.get("status")
-    assert status in (404, 500), f"Unexpected status: {status}, resp={resp}"
+    assert status == 404, f"Unexpected status: {status}, resp={resp}"
     error = resp.get("error")
     assert error is not None, f"No error field in response: {resp}"
     err_type = error.get("type")
     err_reason = error.get("reason", "")
-    assert "repository_exception" in err_type, f"Unexpected error type: {err_type}, resp={resp}"
     assert (
-        "Could not determine repository generation from root blobs" in err_reason
+        "repository_missing_exception" in err_type
+    ), f"Unexpected error type: {err_type}, resp={resp}"
+    assert (
+        "[s3-repository] missing" in err_reason
     ), f"Unexpected error reason: {err_reason}, resp={resp}"
 
     # revert back to normal state
@@ -1101,7 +1111,6 @@ async def test_wrong_s3_ca_blocked(
         ops_test,
         apps=[app],
         units_statuses=["active"],
-        apps_statuses=["blocked"],
         apps_full_statuses={app: {"blocked": [BackupCredentialIncorrect]}},
         idle_period=IDLE_PERIOD,
     )
