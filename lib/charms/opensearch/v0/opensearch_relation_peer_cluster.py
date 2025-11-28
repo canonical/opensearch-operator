@@ -1491,7 +1491,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         self._clear_errors(f"error_from_providers-{event_rel_id}")
         return False
 
-    def _error_set_from_requirer(
+    def _error_set_from_requirer(  # noqa: C901
         self,
         orchestrators: PeerClusterOrchestrators,
         deployment_desc: DeploymentDescription,
