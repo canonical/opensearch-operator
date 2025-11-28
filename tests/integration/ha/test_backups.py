@@ -23,7 +23,7 @@ import string
 import time
 import uuid
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Dict
 
 import boto3
@@ -572,7 +572,7 @@ async def test_create_backup_and_restore(
     else:
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
-    date_before_backup = datetime.now(timezone.utc)
+    date_before_backup = datetime.utcnow()
 
     # Wait, we want to make sure the timestamps are different
     await asyncio.sleep(5)
@@ -647,7 +647,7 @@ async def test_remove_and_readd_backup_relation(
         idle_period=IDLE_PERIOD,
         timeout=1400,
     )
-    date_before_backup = datetime.now(timezone.utc)
+    date_before_backup = datetime.utcnow()
 
     # Wait, we want to make sure the timestamps are different
     await asyncio.sleep(5)
@@ -764,7 +764,7 @@ async def test_restore_to_new_cluster(
 
     await writer.start()
     time.sleep(10)
-    date_before_backup = datetime.now(timezone.utc)
+    date_before_backup = datetime.utcnow()
 
     # Wait, we want to make sure the timestamps are different
     await asyncio.sleep(5)
@@ -1216,7 +1216,7 @@ async def test_change_config_and_backup_restore(
         config: Dict[str, str] = cloud_configs[cloud_name]
         await _configure_s3(ops_test, config, cloud_credentials[cloud_name], app)
 
-        date_before_backup = datetime.now(timezone.utc)
+        date_before_backup = datetime.utcnow()
 
         # Wait, we want to make sure the timestamps are different
         await asyncio.sleep(5)
