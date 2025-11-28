@@ -702,8 +702,8 @@ def verify_s3_credentials(cfg: ObjectStorageConfig) -> bool:
         logger.info("S3 credential validation with boto3 succeeded.")
         return True
 
-    except (BotoCoreError, ClientError, Exception) as e:  # noqa: BLE001
-        logger.warning(
+    except (BotoCoreError, ClientError) as e:
+        logger.error(
             "S3 credential validation with boto3 failed: %s",
             e,
             exc_info=e,
@@ -749,13 +749,11 @@ def verify_azure_credentials(cfg: ObjectStorageConfig) -> bool:
         # Otherwise, we will use public Azure blob endpoint.
         account_url = az_cfg.endpoint or f"https://{account_name}.blob.core.windows.net"
 
-        client = ContainerClient(
+        container_client = ContainerClient(
             account_url=account_url,
             container_name=container_name,
             credential=account_key,
         )
-
-        container_client = client.get_container_client(container_name)
 
         # check credentials.
         container_client.get_container_properties()
@@ -764,16 +762,8 @@ def verify_azure_credentials(cfg: ObjectStorageConfig) -> bool:
         return True
 
     except AzureError as e:
-        logger.warning(
+        logger.error(
             "Azure Storage credential validation failed: %s",
-            e,
-            exc_info=e,
-        )
-        return False
-
-    except Exception as e:  # noqa: BLE001
-        logger.warning(
-            "Unexpected error during Azure Storage credential validation: %s",
             e,
             exc_info=e,
         )

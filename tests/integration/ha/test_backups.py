@@ -487,8 +487,6 @@ async def test_large_setups_relations_with_misconfiguration(
     await wait_until(
         ops_test,
         apps=["main"],
-        units_statuses=["active"],
-        apps_statuses=["blocked"],
         apps_full_statuses={"main": {"blocked": [BackupCredentialIncorrect]}},
         idle_period=IDLE_PERIOD,
     )
@@ -502,8 +500,6 @@ async def test_large_setups_relations_with_misconfiguration(
     await wait_until(
         ops_test,
         apps=["failover", APP_NAME],
-        apps_statuses=["blocked"],
-        units_statuses=["active"],
         apps_full_statuses={
             "failover": {"blocked": [BackupRelShouldNotExist]},
             APP_NAME: {"blocked": [BackupRelShouldNotExist]},
@@ -522,8 +518,6 @@ async def test_large_setups_relations_with_misconfiguration(
     await wait_until(
         ops_test,
         apps=["main"],
-        units_statuses=["active"],
-        apps_statuses=["blocked"],
         apps_full_statuses={"main": {"blocked": [BackupCredentialIncorrect]}},
         idle_period=IDLE_PERIOD,
     )
@@ -541,6 +535,7 @@ async def test_large_setups_relations_with_misconfiguration(
             apps=["main"],
             units_statuses=["active"],
             apps_statuses=["active"],
+            wait_for_exact_units=1,
             idle_period=IDLE_PERIOD,
         )
         logger.info("Cleaned up misconfigured backup relation from main; main is active again.")
@@ -585,6 +580,7 @@ async def test_create_backup_and_restore(
         apps_statuses=["active"],
         units_statuses=["active"],
         idle_period=IDLE_PERIOD,
+        wait_for_exact_units=len(ops_test.model.applications[app].units),
     )
 
     date_before_backup = datetime.utcnow()
@@ -638,11 +634,13 @@ async def test_remove_and_readd_backup_relation(
     await ops_test.model.applications[app].destroy_relation(
         f"{app}:{backup_relation}", backup_integrator, block_until_done=True
     )
+
     await wait_until(
         ops_test,
         apps=[app],
         units_statuses=["active"],
         apps_statuses=["active"],
+        wait_for_exact_units=len(ops_test.model.applications[app].units),
         idle_period=IDLE_PERIOD,
         timeout=1400,
     )
@@ -661,6 +659,7 @@ async def test_remove_and_readd_backup_relation(
         units_statuses=["active"],
         apps_statuses=["active"],
         idle_period=IDLE_PERIOD,
+        wait_for_exact_units=len(ops_test.model.applications[app].units),
         timeout=1400,
     )
     date_before_backup = datetime.utcnow()
@@ -753,11 +752,13 @@ async def test_restore_to_new_cluster(
         await _configure_azure(ops_test, config_cloud, cloud_credentials[cloud_name])
     else:
         await _configure_s3(ops_test, config_cloud, cloud_credentials[cloud_name])
+
     await wait_until(
         ops_test,
         apps=[app],
         apps_statuses=["active"],
         units_statuses=["active"],
+        wait_for_exact_units=len(ops_test.model.applications[app].units),
         idle_period=IDLE_PERIOD,
     )
     backups = await list_backups(ops_test, leader_id, app=app)
@@ -833,11 +834,13 @@ async def _drop_s3_relation_if_any(ops_test: OpsTest, app: str) -> None:
     await ops_test.model.applications[app].destroy_relation(
         f"{app}:{S3_RELATION}", S3_INTEGRATOR, block_until_done=True
     )
+
     await wait_until(
         ops_test,
-        apps=[app, S3_INTEGRATOR],
+        apps=[app],
         units_statuses=["active"],
         apps_statuses=["active"],
+        wait_for_exact_units=len(ops_test.model.applications[app].units),
         idle_period=IDLE_PERIOD,
         timeout=TIMEOUT,
     )
@@ -859,9 +862,10 @@ async def _drop_azure_relation_if_any(ops_test: OpsTest, app: str) -> None:
     )
     await wait_until(
         ops_test,
-        apps=[app, AZURE_INTEGRATOR],
+        apps=[app],
         units_statuses=["active"],
         apps_statuses=["active"],
+        wait_for_exact_units=len(ops_test.model.applications[app].units),
         idle_period=IDLE_PERIOD,
         timeout=TIMEOUT,
     )
@@ -880,8 +884,9 @@ async def _ensure_only_s3_integrator_related(
         await wait_until(
             ops_test,
             apps=[S3_INTEGRATOR],
-            units_statuses=["active"],
-            apps_statuses=["active"],
+            apps_full_statuses={
+                S3_INTEGRATOR: {"blocked": ["Missing parameters: ['access-key', 'secret-key']"]},
+            },
             idle_period=IDLE_PERIOD,
             timeout=TIMEOUT,
         )
@@ -901,6 +906,10 @@ async def _ensure_only_s3_integrator_related(
             app: {"active": []},
             S3_INTEGRATOR: {"blocked": ["Missing parameters: ['access-key', 'secret-key']"]},
         },
+        wait_for_exact_units={
+            app: len(ops_test.model.applications[app].units),
+            S3_INTEGRATOR: 1,
+        },
         idle_period=IDLE_PERIOD,
         timeout=TIMEOUT,
     )
@@ -916,8 +925,13 @@ async def _ensure_only_azure_integrator_related(ops_test: OpsTest, app: str) -> 
         await wait_until(
             ops_test,
             apps=[AZURE_INTEGRATOR],
-            units_statuses=["active"],
-            apps_statuses=["active"],
+            apps_full_statuses={
+                AZURE_INTEGRATOR: {
+                    "blocked": [
+                        "Missing parameters: ['container', 'storage-account', 'credentials']"
+                    ]
+                },
+            },
             idle_period=IDLE_PERIOD,
             timeout=TIMEOUT,
         )
@@ -937,6 +951,10 @@ async def _ensure_only_azure_integrator_related(ops_test: OpsTest, app: str) -> 
             AZURE_INTEGRATOR: {
                 "blocked": ["Missing parameters: ['container', 'storage-account', 'credentials']"]
             },
+        },
+        wait_for_exact_units={
+            app: len(ops_test.model.applications[app].units),
+            AZURE_INTEGRATOR: 1,
         },
         idle_period=IDLE_PERIOD,
         timeout=TIMEOUT,
@@ -971,6 +989,10 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest, charm, series) ->
         units_statuses=["active"],
         apps_statuses=["active"],
         idle_period=IDLE_PERIOD,
+        wait_for_exact_units={
+            TLS_CERTIFICATES_APP_NAME: 1,
+            APP_NAME: 3,
+        },
         timeout=1400,
     )
 
@@ -1028,6 +1050,7 @@ async def test_wrong_s3_credentials(
         apps_statuses=["blocked"],
         apps_full_statuses={app: {"blocked": [BackupCredentialIncorrect]}},
         idle_period=IDLE_PERIOD,
+        wait_for_exact_units=3,
     )
     logger.info("Opensearch 1 app and unit is blocked because of S3 bad credentials.")
 
@@ -1059,6 +1082,7 @@ async def test_wrong_s3_credentials(
         apps=[app],
         apps_statuses=["active"],
         units_statuses=["active"],
+        wait_for_exact_units=3,
         idle_period=IDLE_PERIOD,
     )
     logger.info(
@@ -1127,6 +1151,7 @@ async def test_wrong_s3_ca_blocked(
         apps=[app],
         units_statuses=["active"],
         apps_statuses=["active"],
+        wait_for_exact_units=3,
         idle_period=IDLE_PERIOD,
     )
     logger.info("Opensearch all apps and units become active after providing valid S3 CA.")
@@ -1203,6 +1228,7 @@ async def test_wrong_azure_credentials(
         apps=[app],
         units_statuses=["active"],
         apps_statuses=["active"],
+        wait_for_exact_units=3,
         idle_period=IDLE_PERIOD,
     )
     logger.info(
@@ -1266,6 +1292,7 @@ async def test_change_config_and_backup_restore(
             apps=[app],
             apps_statuses=["active"],
             units_statuses=["active"],
+            wait_for_exact_units=len(ops_test.model.applications[app].units),
             idle_period=IDLE_PERIOD,
         )
 
