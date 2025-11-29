@@ -1,0 +1,61 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  13:10:39Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         active      3  opensearch                                 0  no       
+s3-integrator                      active      1  s3-integrator             1/stable       145  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0*                active    idle   2        10.52.124.169   9200/tcp  
+opensearch/1                 active    idle   3        10.52.124.87    9200/tcp  
+opensearch/2                 active    idle   4        10.52.124.81    9200/tcp  
+s3-integrator/0*             active    idle   1        10.52.124.67              
+self-signed-certificates/0*  active    idle   0        10.52.124.144             
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.52.124.144  juju-eafaae-0  ubuntu@22.04  github-runner  Running
+1        started  10.52.124.67   juju-eafaae-1  ubuntu@22.04  github-runner  Running
+2        started  10.52.124.169  juju-eafaae-2  ubuntu@24.04  github-runner  Running
+3        started  10.52.124.87   juju-eafaae-3  ubuntu@24.04  github-runner  Running
+4        started  10.52.124.81   juju-eafaae-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-2: 12:48:19 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 12:48:19 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 12:48:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 12:48:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 12:48:31 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 12:48:31 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 12:49:57 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 12:49:57 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 12:49:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 12:49:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 12:55:03 ERROR unit.opensearch/0.juju-log s3-credentials:5: Failed to setup backup service with exception: HTTP error self.response_code=None
+self.response_text="HTTPSConnectionPool(host='10.52.124.169', port=9200): Read timed out. (read timeout=10)"
+unit-opensearch-0: 12:55:03 ERROR unit.opensearch/0.juju-log s3-credentials:5: Failed to setup backup service with state Repository exception: unknown
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:185 Cleaning backups from cloud buckets
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:511 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.25.1 Python/3.12.3 (Linux-6.14.0-36-generic-x86_64-with-glibc2.39)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'cf8e3c81-cd24-11f0-80a9-00163ef2d617'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:547 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': '306bb491-801e-000f-3631-61c4be000000'
+    'x-ms-client-request-id': 'cf8e3c81-cd24-11f0-80a9-00163ef2d617'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Sat, 29 Nov 2025 13:10:45 GMT'
