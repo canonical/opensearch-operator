@@ -1537,7 +1537,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         self._clear_errors(f"error_from_providers-{event_rel_id}")
         return False
 
-    def _error_set_from_requirer(
+    def _error_set_from_requirer(  # noqa: C901
         self,
         orchestrators: PeerClusterOrchestrators,
         deployment_desc: DeploymentDescription,
@@ -1578,8 +1578,17 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 blocked_msg = "Cannot relate 2 clusters with different 'cluster_name' values."
 
         elif storage_type := self.charm.snapshots_manager.get_storage_type():
-            if not self.charm.snapshots_manager.verify_repository(storage_type):
-                blocked_msg = "Object storage related but storage configuration is not completed in main orchestator yet."
+            try:
+                if not self.charm.snapshots_manager.verify_repository(storage_type):
+                    blocked_msg = "Object storage related but storage configuration is not completed in main orchestator yet."
+            except OpenSearchHttpError as e:
+                logger.warning(
+                    "Failed to create/verify snapshot repository for %s. "
+                    "Error: %s, response_body=%r",
+                    storage_type,
+                    e,
+                    getattr(e, "response_body", None),
+                )
 
         if not blocked_msg:
             self._clear_errors(f"error_from_requirer-{event_rel_id}")

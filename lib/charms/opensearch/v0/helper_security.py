@@ -17,7 +17,7 @@ from typing import Optional, Tuple
 import bcrypt
 import boto3
 from azure.core.exceptions import AzureError
-from azure.storage.blob import BlobServiceClient
+from azure.storage.blob import ContainerClient
 from botocore.exceptions import BotoCoreError, ClientError
 from charms.opensearch.v0.helper_charm import run_cmd
 from charms.opensearch.v0.models import ObjectStorageConfig
@@ -702,8 +702,8 @@ def verify_s3_credentials(cfg: ObjectStorageConfig) -> bool:
         logger.info("S3 credential validation with boto3 succeeded.")
         return True
 
-    except (BotoCoreError, ClientError, Exception) as e:  # noqa: BLE001
-        logger.warning(
+    except (BotoCoreError, ClientError) as e:
+        logger.error(
             "S3 credential validation with boto3 failed: %s",
             e,
             exc_info=e,
@@ -732,6 +732,14 @@ def verify_azure_credentials(cfg: ObjectStorageConfig) -> bool:
     """
     az_cfg = cfg.azure
 
+    # TODO move this to the pydantic model validation
+    if az_cfg.connection_protocol not in {"http", "https"}:
+        logger.warning(
+            "Azure Storage credential validation failed: unsupported connection protocol %s",
+            az_cfg.connection_protocol,
+        )
+        return False
+
     try:
         account_name = az_cfg.credentials.storage_account
         account_key = az_cfg.credentials.secret_key
@@ -739,16 +747,13 @@ def verify_azure_credentials(cfg: ObjectStorageConfig) -> bool:
 
         # If azure integrator ever sends a custom endpoint, we will use it.
         # Otherwise, we will use public Azure blob endpoint.
-        account_url = getattr(az_cfg, "endpoint", None)
-        if not account_url:
-            account_url = f"https://{account_name}.blob.core.windows.net"
+        account_url = az_cfg.endpoint or f"https://{account_name}.blob.core.windows.net"
 
-        client = BlobServiceClient(
+        container_client = ContainerClient(
             account_url=account_url,
+            container_name=container_name,
             credential=account_key,
         )
-
-        container_client = client.get_container_client(container_name)
 
         # check credentials.
         container_client.get_container_properties()
@@ -757,16 +762,8 @@ def verify_azure_credentials(cfg: ObjectStorageConfig) -> bool:
         return True
 
     except AzureError as e:
-        logger.warning(
+        logger.error(
             "Azure Storage credential validation failed: %s",
-            e,
-            exc_info=e,
-        )
-        return False
-
-    except Exception as e:  # noqa: BLE001
-        logger.warning(
-            "Unexpected error during Azure Storage credential validation: %s",
             e,
             exc_info=e,
         )
