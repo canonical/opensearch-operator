@@ -142,10 +142,10 @@ def cloud_configs(microceph_config: Dict[str, str]) -> Dict[str, Dict[str, str]]
 
 @pytest.fixture(scope="session")
 def cloud_credentials(
-    microceph: Dict[str, str],
+    microceph_credentials: Dict[str, str],
 ) -> Dict[str, Dict[str, str]]:
     """Read cloud credentials."""
-    results: Dict[str, Dict[str, str]] = {"microceph": microceph}
+    results: Dict[str, Dict[str, str]] = {"microceph": microceph_credentials}
     if os.environ.get("AWS_ACCESS_KEY"):
         results["aws"] = {
             "access-key": os.environ["AWS_ACCESS_KEY"],
