@@ -454,6 +454,7 @@ async def test_large_setups_relations_with_misconfiguration(
             config=bad_config,
             credentials=bad_credentials,
         )
+        logger.info("Azure cloud is selected.")
     elif cloud_name == "aws":
         bad_config = {
             "endpoint": "http://localhost",
@@ -467,6 +468,7 @@ async def test_large_setups_relations_with_misconfiguration(
             config=bad_config,
             credentials=bad_credentials,
         )
+        logger.info("AWS cloud is selected.")
     else:
         cfg = cloud_configs["microceph"]
         bad_config = {
@@ -880,6 +882,15 @@ async def _ensure_only_s3_integrator_related(
 
     if S3_INTEGRATOR not in ops_test.model.applications:
         await ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL)
+        await wait_until(
+            ops_test,
+            apps=[S3_INTEGRATOR],
+            units_statuses=["blocked"],
+            apps_statuses=["blocked"],
+            wait_for_exact_units=len(ops_test.model.applications[app].units),
+            idle_period=IDLE_PERIOD,
+            timeout=1400,
+        )
 
     # check if relation exists already
     if _is_related_with(ops_test, app, S3_INTEGRATOR):
@@ -897,6 +908,15 @@ async def _ensure_only_azure_integrator_related(ops_test: OpsTest, app: str) -> 
 
     if AZURE_INTEGRATOR not in ops_test.model.applications:
         await ops_test.model.deploy(AZURE_INTEGRATOR, channel=AZURE_INTEGRATOR_CHANNEL)
+        await wait_until(
+            ops_test,
+            apps=[AZURE_INTEGRATOR],
+            units_statuses=["blocked"],
+            apps_statuses=["blocked"],
+            wait_for_exact_units=len(ops_test.model.applications[app].units),
+            idle_period=IDLE_PERIOD,
+            timeout=1400,
+        )
 
     if _is_related_with(ops_test, app, AZURE_INTEGRATOR):
         return
