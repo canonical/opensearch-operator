@@ -133,7 +133,7 @@ def cloud_configs(microceph_config: Dict[str, str]) -> Dict[str, Dict[str, str]]
         }
     if os.environ.get("AZURE_SECRET_KEY"):
         results["azure"] = {
-            "connection-protocol": "abfss",
+            "connection-protocol": "https",
             "container": "data-charms-testing",
             "path": BackupsPath,
         }
@@ -253,7 +253,6 @@ async def _configure_azure(
     config: Dict[str, str],
     credentials: Dict[str, str],
 ) -> None:
-    await ops_test.model.applications[AZURE_INTEGRATOR].set_config(config)
     logger.info("Adding Juju secret for secret-key config option for azure-storage-integrator")
 
     # Creates a new secret for each test
@@ -1149,7 +1148,7 @@ async def test_wrong_azure_credentials(
         apps_full_statuses={app: {"blocked": [BackupCredentialIncorrect]}},
         idle_period=IDLE_PERIOD,
     )
-    logger.info("Opensearch 1 app and unit is blocked because of Azure bad credentials.")
+    logger.info("Opensearch 1 app is blocked because of Azure bad credentials.")
     # Depending on timing, repo may be missing or failing verification.
     try:
         resp = await http_request(
