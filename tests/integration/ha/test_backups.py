@@ -287,7 +287,9 @@ def _is_related_with(ops_test: OpsTest, app_name: str, target_app_name: str) -> 
     for relation in app.relations:
         for endpoint in relation.endpoints:
             if endpoint.application_name == target_app_name:
+                logger.info("%s and %s already integrated", app_name, target_app_name)
                 return True
+    logger.info("%s and %s are not integrated yet", app_name, target_app_name)
     return False
 
 
@@ -1011,7 +1013,7 @@ async def test_wrong_s3_credentials(
         apps=[app],
         apps_full_statuses={app: {"blocked": [BackupCredentialIncorrect]}},
     )
-    logger.info("Opensearch 1 app and unit is blocked because of S3 bad credentials.")
+    logger.info("Opensearch 1 app is blocked because of S3 bad credentials.")
 
     resp = await http_request(
         ops_test,
@@ -1077,6 +1079,20 @@ async def test_wrong_s3_ca_blocked(
     good_cfg = cloud_configs["microceph"]
     good_creds = cloud_credentials["microceph"]
 
+    await _configure_s3(
+        ops_test,
+        good_cfg,
+        good_creds,
+    )
+    logger.info("Configured S3 with correct credentials and config.")
+    await wait_until(
+        ops_test,
+        apps=[app],
+        units_statuses=["active"],
+        apps_statuses=["active"],
+        wait_for_exact_units=3,
+        idle_period=IDLE_PERIOD,
+    )
     # Wrong CA chain
     bad_cfg = deepcopy(good_cfg)
     bad_cfg["tls-ca-chain"] = (
@@ -1101,7 +1117,7 @@ async def test_wrong_s3_ca_blocked(
     # With bad CA, repository verification usually fails.
     # it can be 500 (repo check error) or 404 (repo never created yet).
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
-    logger.info("Opensearch 1 app and unit is blocked because of S3 bad CA.")
+    logger.info("Opensearch 1 app is blocked because of S3 bad CA.")
     # restore the correct CA and ensure we recover to active.
     await _configure_s3(ops_test, good_cfg, good_creds)
     logger.info("Configured S3 with valid CA.")
