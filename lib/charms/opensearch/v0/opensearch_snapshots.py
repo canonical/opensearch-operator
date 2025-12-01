@@ -1658,7 +1658,7 @@ class OpenSearchSnapshotsManager:
             )
             # best effort clean up
             try:
-                self.remove_repository(object_storage_type)
+                self.remove_repository(object_storage_type, name=test_repository)
             except Exception:
                 pass
             # creation succeeded, no restart needed
