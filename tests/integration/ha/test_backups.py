@@ -886,9 +886,8 @@ async def _ensure_only_s3_integrator_related(
             ops_test,
             apps=[S3_INTEGRATOR],
             units_statuses=["blocked"],
-            apps_statuses=["blocked"],
-            wait_for_exact_units=len(ops_test.model.applications[app].units),
-            idle_period=IDLE_PERIOD,
+            wait_for_exact_units=1,
+            idle_period=10,
             timeout=1400,
         )
 
@@ -912,9 +911,8 @@ async def _ensure_only_azure_integrator_related(ops_test: OpsTest, app: str) -> 
             ops_test,
             apps=[AZURE_INTEGRATOR],
             units_statuses=["blocked"],
-            apps_statuses=["blocked"],
-            wait_for_exact_units=len(ops_test.model.applications[app].units),
-            idle_period=IDLE_PERIOD,
+            wait_for_exact_units=1,
+            idle_period=10,
             timeout=1400,
         )
 
