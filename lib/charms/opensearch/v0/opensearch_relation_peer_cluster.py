@@ -9,8 +9,6 @@ from hashlib import sha1
 from typing import TYPE_CHECKING, Any, Dict, List, MutableMapping, Optional
 
 from charms.opensearch.v0.constants_charm import (
-    AZURE_RELATION,
-    S3_RELATION,
     AdminUser,
     COSUser,
     KibanaserverUser,
@@ -21,7 +19,6 @@ from charms.opensearch.v0.constants_charm import (
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
 )
-from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import Status, all_units, diff, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology
@@ -386,7 +383,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if not self.charm.unit.is_leader():
             return
 
-        
         plugin_relation_names = [
             s.relation_name
             for s in self.charm.state.app.plugin_config_info.values()
@@ -399,7 +395,10 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(relation)
         ]:
             self.charm.status.set(
-                BlockedStatus(PClusterMissingStorageRelations.format(", ".join(missing_relations))), app=True
+                BlockedStatus(
+                    PClusterMissingStorageRelations.format(", ".join(missing_relations))
+                ),
+                app=True,
             )
             self.charm.state.app.relation_data.put(Scope.APP, "missing_relations", True)
             return
@@ -647,9 +646,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 return False
         return True
 
-    def _rel_data_credentials(
-        self
-    ) -> Optional[PeerClusterRelDataCredentials]:
+    def _rel_data_credentials(self) -> Optional[PeerClusterRelDataCredentials]:
         """Build and return the rel data credentials to be shared with requirer sub-clusters."""
         if self.charm.is_admin_user_configured():
             return PeerClusterRelDataCredentials(

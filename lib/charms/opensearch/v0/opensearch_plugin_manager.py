@@ -228,10 +228,10 @@ class OpenSearchPluginEvents(Object):
             ca_to_add = plugin_config.get("tls_ca_chain")
 
             self.charm.keystore.put_entries(keys_to_add)
-            cleanup = { "keys": list(keys_to_add.keys()) }
+            cleanup = {"keys": list(keys_to_add.keys())}
             if ca_to_add:
                 self.charm.snapshots_manager.update_ca(ca_to_add)
-                cleanup.update({ "tls_ca_chain": ca_to_add })
+                cleanup.update({"tls_ca_chain": ca_to_add})
             # store on unit for later removal (only keys needed and not values)
             self.charm.plugin_manager.put_plugin_config(
                 scope=Scope.UNIT, label=label, cleanup=cleanup

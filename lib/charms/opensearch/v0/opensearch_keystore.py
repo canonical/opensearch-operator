@@ -99,7 +99,7 @@ class OpenSearchKeystore:
         except OpenSearchHttpError as e:
             logger.error("Could not reload secure settings: %s", e)
             return False
-        
+
         logger.debug("keystore reloaded.")
         return response.get("_nodes", {}).get("failed", -1) == 0
 
