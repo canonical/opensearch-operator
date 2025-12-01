@@ -747,7 +747,9 @@ def verify_azure_credentials(cfg: ObjectStorageConfig) -> bool:
 
         # If azure integrator ever sends a custom endpoint, we will use it.
         # Otherwise, we will use public Azure blob endpoint.
-        account_url = az_cfg.endpoint or f"https://{account_name}.blob.core.windows.net"
+        raw_endpoint = az_cfg.endpoint
+        account_url = raw_endpoint.rsplit("/", 1)[0]
+        account_url = account_url or f"https://{account_name}.blob.core.windows.net"
 
         container_client = ContainerClient(
             account_url=account_url,
