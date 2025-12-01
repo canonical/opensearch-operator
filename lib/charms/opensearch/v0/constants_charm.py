@@ -76,7 +76,9 @@ BackupCredentialCleanupFailed = (
     "Failed to remove keystore credentials, repo removal.Please check the logs for more details."
 )
 BackupRelConflict = "Too many object storage relations. Only one is supported."
-BackupMisconfiguration = "opensearch-<object storage> repository setup failed. Check the object-storage integrator config."
+BackupMisconfiguration = (
+    "opensearch {} repository setup failed. Check the object-storage integrator config."
+)
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
 SecretAccessError = "Failed to access secret, please check permissions."
 SmtpRelationInvalid = "SMTP relation must be created with the main-orchestrator cluster."
