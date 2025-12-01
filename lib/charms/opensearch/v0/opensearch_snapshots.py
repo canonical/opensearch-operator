@@ -35,6 +35,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.helper_plugins import (
+    decode_plugin_secret_content,
     remove_plugin_secret,
     store_plugin_secret,
 )
@@ -58,6 +59,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
 )
 from charms.opensearch.v0.opensearch_health import HealthColors
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from ops import (
     ActionEvent,
@@ -134,6 +136,8 @@ class OpenSearchSnapshotEvents(Object):
         self.framework.observe(
             self.azure_requirer.on.storage_connection_info_gone, self._on_azure_credentials_gone
         )
+
+        self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
 
         # actions
         self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
@@ -421,6 +425,37 @@ class OpenSearchSnapshotEvents(Object):
 
             if self.charm.opensearch_peer_cm.is_provider(typ="main"):
                 self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+
+    def _on_secret_changed(self, event) -> None:
+        """Handles secret changes"""
+        label = self.charm.secrets.label(Scope.APP, self.secret_label)
+        if label != event.secret.label:
+            return
+
+        content = event.secret.get_content(refresh=True)
+        if not (plugin_config := decode_plugin_secret_content(content, self.secret_label)):
+            return
+
+        if not (keys := plugin_config.get("keys")):
+            return
+
+        cleanup = {"keys": list(keys.keys())}
+        if tls_ca_chain := plugin_config.get("tls_ca_chain"):
+            cleanup.update({"tls_ca_chain": tls_ca_chain})
+        # the keys to remove (user) may be changed here, add them to removal info for cleanup later
+        self.charm.plugin_manager.put_plugin_config(
+            scope=Scope.UNIT,
+            label=self.secret_label,
+            cleanup=cleanup,
+        )
+
+        self.charm.keystore.put_entries(keys)
+        if not self.charm.keystore.reload():
+            logger.debug("Could not reload secure settings. Deferring event.")
+            event.defer()
+            return
+
+        self.charm.snapshots_manager.update_ca(tls_ca_chain)
 
     def _propagate_credentials_to_subclusters(self, event, secret_content, relation_name):
         """Propagates credentials to subclusters as a secret"""
