@@ -1065,7 +1065,6 @@ async def test_wrong_s3_credentials(
 @pytest.mark.abort_on_fail
 async def test_wrong_s3_ca_blocked(
     ops_test: OpsTest,
-    cloud_name: str,
     cloud_configs: Dict[str, Dict[str, str]],
     cloud_credentials: Dict[str, Dict[str, str]],
 ) -> None:
@@ -1077,8 +1076,8 @@ async def test_wrong_s3_ca_blocked(
 
     app = (await app_name(ops_test)) or APP_NAME
     await _ensure_only_s3_integrator_related(ops_test, app)
-    good_cfg = cloud_configs[cloud_name]
-    good_creds = cloud_credentials[cloud_name]
+    good_cfg = cloud_configs["microceph"]
+    good_creds = cloud_credentials["microceph"]
 
     await _configure_s3(
         ops_test,
