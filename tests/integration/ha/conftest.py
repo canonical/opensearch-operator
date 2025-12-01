@@ -225,17 +225,3 @@ def microceph_credentials(microceph: ConnectionInformation) -> dict[str, str]:
         "secret-key": microceph.secret_access_key,
     }
 
-
-@pytest.fixture(scope="function")
-def s3_bucket(microceph_credentials, microceph_config) -> None:
-    """Provide a storage bucket on the deployed microceph instance."""
-    session = boto3.Session(
-        aws_access_key_id=microceph_credentials["access-key"],
-        aws_secret_access_key=microceph_credentials["secret-key"],
-        region_name=microceph_config["region"] if microceph_config["region"] else None,
-    )
-    s3 = session.resource(
-        "s3", endpoint_url=microceph_config["endpoint"], verify="microceph_cert.pem"
-    )
-    bucket = s3.Bucket(microceph_config["bucket"])
-    return bucket
