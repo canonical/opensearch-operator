@@ -594,6 +594,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.unit.is_leader():
             # Recompute the node roles in case self-healing didn't trigger leader related event
             self._recompute_roles_if_needed(event)
+            if self.peers_data.get(Scope.APP, "missing_relations"):
+                self.peer_cluster_provider.check_credentials_with_missing_relations()
             if self.model.relations[PeerClusterRelationName]:
                 self.peer_cluster_requirer.apply_orchestrator_status()
         elif event.relation.data.get(event.app):
@@ -877,14 +879,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.state.unit.relation_data.put(
                 Scope.UNIT, PERFORMANCE_PROFILE, config_profile.type.value
             )
-
-        if not self.opensearch.is_node_up():
-            logger.debug("Node not up yet, deferring plugin check")
-            # possible enhancement:
-            # currently we wait for Opensearch to be started before applying any plugin
-            # this could be improved as some plugins don't require the service to run
-            event.defer()
-            return
 
         if not self.opensearch_provider.update_relations_roles_mapping():
             event.defer()

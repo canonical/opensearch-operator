@@ -31,13 +31,10 @@ from charms.opensearch.v0.constants_charm import (
     BackupRelConflict,
     BackupRelDataIncomplete,
     BackupRelShouldNotExist,
-    PeerClusterOrchestratorRelationName,
-    PeerClusterRelationName,
     RestoreInProgress,
 )
 from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.helper_plugins import (
-    decode_plugin_secret_content,
     remove_plugin_secret,
     store_plugin_secret,
 )
@@ -53,9 +50,7 @@ from charms.opensearch.v0.models import (
     AzureRelData,
     DeploymentType,
     ObjectStorageConfig,
-    PeerClusterRelData,
     S3RelData,
-    S3RelDataCredentials,
 )
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -287,10 +282,15 @@ class OpenSearchSnapshotEvents(Object):
             self.charm.snapshots_manager.remove_s3_ca()
             self.charm.request_opensearch_restart(reason="clean up the object storage CA")
 
-        if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupCredentialIncorrect, app=True)
-            self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
+        if not self.charm.unit.is_leader():
+            return
 
+        self.charm.status.clear(BackupCredentialIncorrect, app=True)
+        self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
+
+        if (
+            backup_config := self.charm.state.app.plugin_config_info.get(self.secret_label)
+        ) and backup_config.relation_name == S3_RELATION:
             remove_plugin_secret(self.charm, self.secret_label)
 
             if self.charm.opensearch_peer_cm.is_provider(typ="main"):
@@ -362,7 +362,7 @@ class OpenSearchSnapshotEvents(Object):
 
         if not self.charm.unit.is_leader():
             return
-        
+
         try:
             self.charm.snapshots_manager.ensure_repository(
                 object_storage_type, object_storage_config
@@ -410,10 +410,14 @@ class OpenSearchSnapshotEvents(Object):
             event.defer()
             return
 
-        if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupCredentialIncorrect, app=True)
-            self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
+        if not self.charm.unit.is_leader():
+            return
+        self.charm.status.clear(BackupCredentialIncorrect, app=True)
+        self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
 
+        if (
+            backup_config := self.charm.state.app.plugin_config_info.get(self.secret_label)
+        ) and backup_config.relation_name == AZURE_RELATION:
             remove_plugin_secret(self.charm, self.secret_label)
 
             if self.charm.opensearch_peer_cm.is_provider(typ="main"):
@@ -700,9 +704,7 @@ class OpenSearchSnapshotsManager:
                 return ObjectStorageType.GCS
 
         # non-main orchestrator
-        if not (
-            backup_config := self.charm.state.app.plugin_config_info.get(self.backup_label)
-        ):
+        if not (backup_config := self.charm.state.app.plugin_config_info.get(self.backup_label)):
             return None
         if backup_config.relation_name == S3_RELATION:
             return ObjectStorageType.S3
@@ -1435,4 +1437,3 @@ class OpenSearchSnapshotsManager:
             # If we had a custom CA but peer no longer provides one, clean it up
             self.remove_s3_ca()
             self.charm.request_opensearch_restart(reason="clean up the object storage CA")
-

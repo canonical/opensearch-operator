@@ -532,9 +532,6 @@ class PeerClusterRelDataCredentials(Model):
     kibana_password_hash: str
     monitor_password: Optional[str]
     admin_tls: Optional[Dict[str, Optional[str]]]
-    # s3: Optional[S3RelDataCredentials]
-    # azure: Optional[AzureRelDataCredentials]
-    # gcs: Optional[GcsRelData]
 
 
 class PeerClusterApp(Model):
