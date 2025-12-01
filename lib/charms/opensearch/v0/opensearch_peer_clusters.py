@@ -590,13 +590,11 @@ class OpenSearchPeerClustersManager:
 
         return data
 
-    def rel_data(self, peek_secrets: bool = False) -> Optional[PeerClusterRelData]:
+    def rel_data(self) -> Optional[PeerClusterRelData]:
         """Return the up-to-date peer cluster rel data."""
         if not (data := self.get_rel_data_from_main_orchestrator()):
             return None
 
-        if peek_secrets:
-            return self.rel_data_from_str_and_peek_secrets(data)
         return self.rel_data_from_str(data)
 
     def _pre_validate_roles_change(self, new_roles: List[str], prev_roles: List[str]):
@@ -705,42 +703,42 @@ class OpenSearchPeerClustersManager:
                 id=credentials["admin_tls"]
             ).peek_content()
 
-        if (
-            credentials.get("s3")
-            and credentials["s3"].get("access-key")
-            and credentials["s3"].get("secret-key")
-        ):
-            credentials["s3"]["access-key"] = (
-                self._charm.model.get_secret(id=credentials["s3"]["access-key"])
-                .peek_content()
-                .get("s3-access-key")
-            )
-            credentials["s3"]["secret-key"] = (
-                self._charm.model.get_secret(id=credentials["s3"]["secret-key"])
-                .peek_content()
-                .get("s3-secret-key")
-            )
-        if credentials.get("s3", {}).get("s3-tls-ca-chain"):
-            credentials["s3"]["s3-tls-ca-chain"] = (
-                self._charm.model.get_secret(id=credentials["s3"]["s3-tls-ca-chain"])
-                .peek_content()
-                .get("s3-tls-ca-chain")
-            )
-        if (
-            credentials.get("azure")
-            and credentials["azure"].get("storage-account")
-            and credentials["azure"].get("secret-key")
-        ):
-            credentials["azure"]["storage-account"] = (
-                self._charm.model.get_secret(id=credentials["azure"]["storage-account"])
-                .peek_content()
-                .get("azure-storage-account")
-            )
-            credentials["azure"]["secret-key"] = (
-                self._charm.model.get_secret(id=credentials["azure"]["secret-key"])
-                .peek_content()
-                .get("azure-secret-key")
-            )
+        # if (
+        #     credentials.get("s3")
+        #     and credentials["s3"].get("access-key")
+        #     and credentials["s3"].get("secret-key")
+        # ):
+        #     credentials["s3"]["access-key"] = (
+        #         self._charm.model.get_secret(id=credentials["s3"]["access-key"])
+        #         .peek_content()
+        #         .get("s3-access-key")
+        #     )
+        #     credentials["s3"]["secret-key"] = (
+        #         self._charm.model.get_secret(id=credentials["s3"]["secret-key"])
+        #         .peek_content()
+        #         .get("s3-secret-key")
+        #     )
+        # if credentials.get("s3", {}).get("s3-tls-ca-chain"):
+        #     credentials["s3"]["s3-tls-ca-chain"] = (
+        #         self._charm.model.get_secret(id=credentials["s3"]["s3-tls-ca-chain"])
+        #         .peek_content()
+        #         .get("s3-tls-ca-chain")
+        #     )
+        # if (
+        #     credentials.get("azure")
+        #     and credentials["azure"].get("storage-account")
+        #     and credentials["azure"].get("secret-key")
+        # ):
+        #     credentials["azure"]["storage-account"] = (
+        #         self._charm.model.get_secret(id=credentials["azure"]["storage-account"])
+        #         .peek_content()
+        #         .get("azure-storage-account")
+        #     )
+        #     credentials["azure"]["secret-key"] = (
+        #         self._charm.model.get_secret(id=credentials["azure"]["secret-key"])
+        #         .peek_content()
+        #         .get("azure-secret-key")
+        #     )
         return PeerClusterRelData.from_dict(content)
 
     def _resolve_credential(

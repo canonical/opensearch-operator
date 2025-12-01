@@ -85,14 +85,23 @@ class OpenSearchKeystore:
         self._create_if_needed()
         return self._opensearch.run_bin("keystore", "list").splitlines()
 
-    def reload(self) -> None:
+    def reload(self) -> bool:
         """Reload the keystore."""
         self._create_if_needed()
         self._opensearch.run_bin("keystore", "upgrade")
 
-        if self._opensearch.is_node_up():
-            self._opensearch.request("POST", "_nodes/reload_secure_settings")
-            logger.debug("keystore reloaded.")
+        if not self._opensearch.is_started():
+            # service not running, settings will be picked up at startup
+            return True
+
+        try:
+            response = self._opensearch.request("POST", "_nodes/reload_secure_settings")
+        except OpenSearchHttpError as e:
+            logger.error("Could not reload secure settings: %s", e)
+            return False
+        
+        logger.debug("keystore reloaded.")
+        return response.get("_nodes", {}).get("failed", -1) == 0
 
     # TODO delete once backups rework fully merged
     def update(self, entries: Dict[str, Any]) -> None:
