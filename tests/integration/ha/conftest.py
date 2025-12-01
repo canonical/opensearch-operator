@@ -224,4 +224,3 @@ def microceph_credentials(microceph: ConnectionInformation) -> dict[str, str]:
         "access-key": microceph.access_key_id,
         "secret-key": microceph.secret_access_key,
     }
-
