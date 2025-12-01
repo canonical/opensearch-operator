@@ -91,7 +91,12 @@ For example, in the following output, `index1` cannot be recovered as its curren
 }
 ```
 
-Delete the index. Replace `index1` with the name of the index identified in the previous step:
+Delete the index by replacing `index1` with the name of the index identified in the previous step:
+
+```{warning}
+If you do not have a snapshot containing this index, it will not be recoverable.
+```
+
 
 ```
 DELETE /index1
