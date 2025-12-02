@@ -149,9 +149,7 @@ async def test_upgrade_rollback_from_local(
     app = (await app_name(ops_test)) or APP_NAME
     revision = VERSION_TO_REVISION[version][series]
     await assert_version_units(ops_test, app, version)
-    await assert_rollback_to_revision(
-        ops_test, app=app, charm=charm, revision=revision
-    )
+    await assert_rollback_to_revision(ops_test, app=app, charm=charm, revision=revision)
     await assert_version_units(ops_test, app, version)
 
 
