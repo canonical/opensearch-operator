@@ -252,12 +252,14 @@ class OpenSearchSnapshotEvents(Object):
                 getattr(e, "response_body", None),
             )
             if self.charm.unit.is_leader():
-                self.charm.status.set(BlockedStatus(BackupMisconfiguration.format("s3")), app=True)
+                self.charm.status.set(
+                    BlockedStatus(BackupMisconfiguration.format("s3", "s3 integrator")), app=True
+                )
             event.defer()
             return
 
         if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupMisconfiguration.format("s3"), app=True)
+            self.charm.status.clear(BackupMisconfiguration.format("s3", "s3 integrator"), app=True)
 
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
@@ -266,7 +268,7 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelShouldNotExist, app=True)
             self.charm.status.clear(BackupRelDataIncomplete, app=True)
-            self.charm.status.clear(BackupMisconfiguration.format("s3"), app=True)
+            self.charm.status.clear(BackupMisconfiguration.format("s3", "s3 integrator"), app=True)
 
         keystore_entries = ["s3.client.default.access_key", "s3.client.default.secret_key"]
         if not self.charm.snapshots_manager.cleanup(
@@ -376,14 +378,16 @@ class OpenSearchSnapshotEvents(Object):
             )
             if self.charm.unit.is_leader():
                 self.charm.status.set(
-                    BlockedStatus(BackupMisconfiguration.format("azure")),
+                    BlockedStatus(BackupMisconfiguration.format("azure", "azure integrator")),
                     app=True,
                 )
             event.defer()
             return
 
         if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupMisconfiguration.format("azure"), app=True)
+            self.charm.status.clear(
+                BackupMisconfiguration.format("azure", "azure integrator"), app=True
+            )
 
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
@@ -392,7 +396,9 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelShouldNotExist, app=True)
             self.charm.status.clear(BackupRelDataIncomplete, app=True)
-            self.charm.status.clear(BackupMisconfiguration.format("azure"), app=True)
+            self.charm.status.clear(
+                BackupMisconfiguration.format("azure", "azure integrator"), app=True
+            )
 
         keystore_entries = ["azure.client.default.account", "azure.client.default.key"]
         if not self.charm.snapshots_manager.cleanup(

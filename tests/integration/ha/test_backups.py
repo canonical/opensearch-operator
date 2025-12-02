@@ -84,6 +84,7 @@ LARGE_DEPLOYMENTS_ALL_CLOUDS = [
     ALL_GROUPS[(cloud, "large")] for cloud in ["aws", "microceph", "azure"]
 ]
 ALL_S3_GROUP = "all-s3"
+CA_S3 = "ca-s3"
 ALL_AZURE_GROUP = "all-azure"
 
 S3_INTEGRATOR = "s3-integrator"
@@ -627,7 +628,6 @@ async def test_remove_and_readd_backup_relation(
 
     leader_id: int = await get_leader_unit_id(ops_test, app=app)
     unit_ip: str = await get_leader_unit_ip(ops_test, app=app)
-    config: Dict[str, str] = cloud_configs[cloud_name]
 
     backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
     backup_relation = AZURE_RELATION if cloud_name == "azure" else S3_RELATION
@@ -649,13 +649,7 @@ async def test_remove_and_readd_backup_relation(
     )
     logger.info("Re-add backup credentials relation")
     await ops_test.model.integrate(app, backup_integrator)
-
-    logger.info(f"Syncing credentials for {cloud_name}")
-    if cloud_name == "azure":
-        await _configure_azure(ops_test, config, cloud_credentials[cloud_name])
-    else:
-        await _configure_s3(ops_test, config, cloud_credentials[cloud_name])
-
+    logger.info("Waiting for app status to be active.")
     await wait_until(
         ops_test,
         apps=[app],
@@ -927,6 +921,7 @@ async def _ensure_only_azure_integrator_related(ops_test: OpsTest, app: str) -> 
     logger.info("Integrated %s <-> %s.", app_endpoint, azure_endpoint)
 
 
+@pytest.mark.group(id=CA_S3)
 @pytest.mark.group(id=ALL_S3_GROUP)
 @pytest.mark.group(id=ALL_AZURE_GROUP)
 @pytest.mark.abort_on_fail
@@ -1061,7 +1056,7 @@ async def test_wrong_s3_credentials(
     assert S3_REPOSITORY in resp_ok
 
 
-@pytest.mark.group(id=ALL_S3_GROUP)
+@pytest.mark.group(id=CA_S3)
 @pytest.mark.abort_on_fail
 async def test_wrong_s3_ca_blocked(
     ops_test: OpsTest,
