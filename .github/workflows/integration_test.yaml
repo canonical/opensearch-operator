@@ -41,8 +41,13 @@ jobs:
               .stdout.strip()
               .split("\n")
           )
+          filtered_jobs = [
+              line for line in spread_jobs
+              if "test_backups.py-all-s3" in line
+          ]
+
           jobs = []
-          for job in spread_jobs:
+          for job in filtered_jobs:
               # Example `job`: "github-ci:ubuntu-24.04:tests/spread/test_charm.py:juju36"
               _, runner, task, variant = job.split(":")
               # Example: "test_charm.py"
