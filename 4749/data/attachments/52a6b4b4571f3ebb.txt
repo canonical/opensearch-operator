@@ -1,0 +1,178 @@
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:267 Adding Juju secret for secret-key config option for azure-storage-integrator
+[32mINFO    [0m integration.ha.helpers:helpers.py:605 Data keys to insert: dict_keys(['secret-key'])
+[32mINFO    [0m integration.ha.helpers:helpers.py:609 Add secret output: secret:d4nas55vtths5s3bkfcg
+
+[32mINFO    [0m integration.ha.helpers:helpers.py:611 Secret uri: secret:d4nas55vtths5s3bkfcg
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:277 Juju secret for secret-key config option for azure-storage-integrator added. Secret URI: secret:d4nas55vtths5s3bkfcg
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:286 Setting up configuration for azure-storage-integrator charm...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  azure-storage-integrator/0 [executing] blocked: Missing parameters: ['container', 'storage-account', 'credentials']
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  azure-storage-integrator/0 [idle] active: 
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  09:15:32Z
+
+App                       Version  Status       Scale  Charm                     Channel        Rev  Exposed  Message
+azure-storage-integrator           active           1  azure-storage-integrator  latest/edge     37  no       
+failover                           active           2  opensearch                                 1  no       
+main                               maintenance      1  opensearch                                 0  no       Backup setup started.
+opensearch                         active           1  opensearch                                 2  no       
+self-signed-certificates           active           1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports     Message
+azure-storage-integrator/0*  active       idle       0        10.52.23.178              
+failover/0*                  active       idle       2        10.52.23.132    9200/tcp  
+failover/1                   active       idle       3        10.52.23.134    9200/tcp  
+main/0*                      maintenance  executing  5        10.52.23.55     9200/tcp  Backup setup started.
+opensearch/0*                active       executing  4        10.52.23.33     9200/tcp  
+self-signed-certificates/0*  active       idle       1        10.52.23.11               
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.52.23.178  juju-fd3910-0  ubuntu@22.04  github-runner  Running
+1        started  10.52.23.11   juju-fd3910-1  ubuntu@22.04  github-runner  Running
+2        started  10.52.23.132  juju-fd3910-2  ubuntu@24.04  github-runner  Running
+3        started  10.52.23.134  juju-fd3910-3  ubuntu@24.04  github-runner  Running
+4        started  10.52.23.33   juju-fd3910-4  ubuntu@24.04  github-runner  Running
+5        started  10.52.23.55   juju-fd3910-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+09:15:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Backup setup started.
+		main-0.ca3* -- (10.52.23.55) -- [executing (since: 09:15:29)] maintenance: Backup setup started.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+09:15:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Backup setup started.
+		main-0.ca3* -- (10.52.23.55) -- [executing (since: 09:15:43)] maintenance: Backup setup started.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+09:15:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 09:15:55 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  09:15:55Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+azure-storage-integrator           active       1  azure-storage-integrator  latest/edge     37  no       
+failover                           active       2  opensearch                                 1  no       
+main                               blocked      1  opensearch                                 0  no       Backup setup failed, check logs for details
+opensearch                         active       1  opensearch                                 2  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+azure-storage-integrator/0*  active    executing  0        10.52.23.178              
+failover/0*                  active    executing  2        10.52.23.132    9200/tcp  
+failover/1                   active    executing  3        10.52.23.134    9200/tcp  
+main/0*                      blocked   executing  5        10.52.23.55     9200/tcp  Backup setup failed, check logs for details
+opensearch/0*                active    executing  4        10.52.23.33     9200/tcp  
+self-signed-certificates/0*  active    idle       1        10.52.23.11               
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.52.23.178  juju-fd3910-0  ubuntu@22.04  github-runner  Running
+1        started  10.52.23.11   juju-fd3910-1  ubuntu@22.04  github-runner  Running
+2        started  10.52.23.132  juju-fd3910-2  ubuntu@24.04  github-runner  Running
+3        started  10.52.23.134  juju-fd3910-3  ubuntu@24.04  github-runner  Running
+4        started  10.52.23.33   juju-fd3910-4  ubuntu@24.04  github-runner  Running
+5        started  10.52.23.55   juju-fd3910-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+09:15:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 09:15:58 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  09:15:58Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+azure-storage-integrator           active       1  azure-storage-integrator  latest/edge     37  no       
+failover                           blocked      2  opensearch                                 1  no       This unit should not be related to backup relation
+main                               blocked      1  opensearch                                 0  no       Backup setup failed, check logs for details
+opensearch                         blocked      1  opensearch                                 2  no       This unit should not be related to backup relation
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+azure-storage-integrator/0*  active    executing  0        10.52.23.178              
+failover/0*                  blocked   executing  2        10.52.23.132    9200/tcp  This unit should not be related to backup relation
+failover/1                   blocked   executing  3        10.52.23.134    9200/tcp  This unit should not be related to backup relation
+main/0*                      blocked   idle       5        10.52.23.55     9200/tcp  Backup setup failed, check logs for details
+opensearch/0*                blocked   executing  4        10.52.23.33     9200/tcp  This unit should not be related to backup relation
+self-signed-certificates/0*  active    idle       1        10.52.23.11               
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.52.23.178  juju-fd3910-0  ubuntu@22.04  github-runner  Running
+1        started  10.52.23.11   juju-fd3910-1  ubuntu@22.04  github-runner  Running
+2        started  10.52.23.132  juju-fd3910-2  ubuntu@24.04  github-runner  Running
+3        started  10.52.23.134  juju-fd3910-3  ubuntu@24.04  github-runner  Running
+4        started  10.52.23.33   juju-fd3910-4  ubuntu@24.04  github-runner  Running
+5        started  10.52.23.55   juju-fd3910-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+09:15:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 09:16:00 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  09:16:00Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+azure-storage-integrator           active       1  azure-storage-integrator  latest/edge     37  no       
+failover                           active       2  opensearch                                 1  no       
+main                               blocked      1  opensearch                                 0  no       Backup setup failed, check logs for details
+opensearch                         active       1  opensearch                                 2  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+azure-storage-integrator/0*  active    executing  0        10.52.23.178              
+failover/0*                  active    executing  2        10.52.23.132    9200/tcp  
+failover/1                   active    executing  3        10.52.23.134    9200/tcp  
+main/0*                      blocked   idle       5        10.52.23.55     9200/tcp  Backup setup failed, check logs for details
+opensearch/0*                active    idle       4        10.52.23.33     9200/tcp  
+self-signed-certificates/0*  active    idle       1        10.52.23.11               
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.52.23.178  juju-fd3910-0  ubuntu@22.04  github-runner  Running
+1        started  10.52.23.11   juju-fd3910-1  ubuntu@22.04  github-runner  Running
+2        started  10.52.23.132  juju-fd3910-2  ubuntu@24.04  github-runner  Running
+3        started  10.52.23.134  juju-fd3910-3  ubuntu@24.04  github-runner  Running
+4        started  10.52.23.33   juju-fd3910-4  ubuntu@24.04  github-runner  Running
+5        started  10.52.23.55   juju-fd3910-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+09:16:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 09:16:02 -- Waiting for model: complete.
