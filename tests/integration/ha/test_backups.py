@@ -32,6 +32,7 @@ from azure.storage.blob import BlobServiceClient
 from charms.opensearch.v0.constants_charm import (
     OPENSEARCH_BACKUP_ID_FORMAT,
     BackupCredentialIncorrect,
+    BackupMisconfiguration,
     BackupRelShouldNotExist,
 )
 from charms.opensearch.v0.opensearch_snapshots import AZURE_REPOSITORY, S3_REPOSITORY
@@ -449,6 +450,7 @@ async def test_large_setups_relations_with_misconfiguration(
     cloud_credentials: Dict[str, Dict[str, str]],
 ) -> None:
     """Confirm expected blocked messages under misconfiguration."""
+    logger.info("Set bad credentials")
     if cloud_name == "azure":
         bad_config = {"connection-protocol": "abfss", "container": "error", "path": "/"}
         bad_credentials = {"storage-account": "error", "secret-key": "error"}
@@ -488,15 +490,24 @@ async def test_large_setups_relations_with_misconfiguration(
             config=bad_config,
             credentials=bad_credentials,
         )
-    await wait_until(
-        ops_test,
-        apps=["main"],
-        apps_full_statuses={"main": {"blocked": [BackupCredentialIncorrect]}},
-        idle_period=IDLE_PERIOD,
-    )
 
     backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
     backup_relation = AZURE_RELATION if cloud_name == "azure" else S3_RELATION
+
+    await wait_until(
+        ops_test,
+        apps=["main"],
+        apps_full_statuses={
+            "main": {
+                "blocked": [
+                    BackupMisconfiguration.format(
+                        "s3" if backup_relation == S3_RELATION else "azure", backup_integrator
+                    )
+                ]
+            }
+        },
+        idle_period=IDLE_PERIOD,
+    )
 
     # Now, relate failover cluster to backup-integrator and review the status
     await ops_test.model.integrate(f"failover:{backup_relation}", backup_integrator)
