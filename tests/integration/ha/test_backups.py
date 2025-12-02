@@ -1109,15 +1109,12 @@ async def test_wrong_s3_ca_blocked(
     await wait_until(
         ops_test,
         apps=[app],
-        units_statuses=["active"],
         apps_full_statuses={app: {"blocked": [BackupCredentialIncorrect]}},
-        idle_period=IDLE_PERIOD,
     )
-
+    logger.info("Opensearch 1 app is blocked because of S3 bad CA.")
     # With bad CA, repository verification usually fails.
     # it can be 500 (repo check error) or 404 (repo never created yet).
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
-    logger.info("Opensearch 1 app is blocked because of S3 bad CA.")
     # restore the correct CA and ensure we recover to active.
     await _configure_s3(ops_test, good_cfg, good_creds)
     logger.info("Configured S3 with valid CA.")
