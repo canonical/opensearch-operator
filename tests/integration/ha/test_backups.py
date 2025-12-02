@@ -474,7 +474,7 @@ async def test_large_setups_relations_with_misconfiguration(
 ) -> None:
     """Confirm expected blocked messages under misconfiguration."""
     if cloud_name == "azure":
-        bad_config = {"connection-protocol": "abfss", "container": "error"}
+        bad_config = {"connection-protocol": "abfss", "container": "error", "path": "/"}
         bad_credentials = {"storage-account": "error", "secret-key": "error"}
         await _configure_azure(
             ops_test=ops_test,
@@ -486,6 +486,7 @@ async def test_large_setups_relations_with_misconfiguration(
         bad_config = {
             "endpoint": "http://localhost",
             "bucket": "error",
+            "path": "/",
             "region": "default",
         }
         bad_credentials = {"access-key": "error", "secret-key": "error"}
@@ -500,6 +501,7 @@ async def test_large_setups_relations_with_misconfiguration(
         bad_config = {
             "endpoint": "https://localhost:445",
             "bucket": "error",
+            "path": "etcd",
             "region": "default",
             "tls-ca-chain": cfg.get("tls-ca-chain"),
         }
