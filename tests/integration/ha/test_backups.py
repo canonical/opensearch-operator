@@ -650,7 +650,7 @@ async def test_remove_and_readd_backup_relation(
     )
     logger.info("Re-add backup credentials relation")
     await ops_test.model.integrate(app, backup_integrator)
-    
+
     logger.info(f"Syncing credentials for {cloud_name}")
     if cloud_name == "azure":
         await _configure_azure(ops_test, config, cloud_credentials[cloud_name])
