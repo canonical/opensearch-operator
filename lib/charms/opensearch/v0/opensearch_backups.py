@@ -80,8 +80,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, Optional, Set
 
 import pydantic
+from charms.data_platform_libs.v0.azure_storage import AzureStorageRequires
 from charms.data_platform_libs.v0.data_interfaces import RequirerData
-from charms.data_platform_libs.v0.object_storage import AzureStorageRequires
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.opensearch.v0.constants_charm import (
     AZURE_RELATION,
@@ -624,7 +624,7 @@ class OpenSearchBackupBase(Object):
     def __init__(self, charm: "OpenSearchBaseCharm", relation_name: str = PeerClusterRelationName):
         """Initializes the opensearch backup base.
 
-        This class will not hold a s3_client or object_storage object, as it is not intended to
+        This class will not hold a s3_client or azure_storage object, as it is not intended to
         really manage the relation besides waiting for the deployment description.
         """
         super().__init__(charm, relation_name)

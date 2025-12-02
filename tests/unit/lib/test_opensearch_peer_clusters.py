@@ -215,7 +215,6 @@ class TestOpenSearchPeerClustersManager(unittest.TestCase):
             app=App(model_uuid=self.charm.model.uuid, name="logs"),
             typ=DeploymentType.MAIN_ORCHESTRATOR,
             state=DeploymentState(value=State.ACTIVE),
-            profile="production",
         )
 
         alt_hosts.return_value = []

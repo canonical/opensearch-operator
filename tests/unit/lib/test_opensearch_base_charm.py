@@ -91,7 +91,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         self.harness.begin()
 
         self.charm = self.harness.charm
-        self.charm.opensearch_config.apply_performance_profile = MagicMock()
+        self.charm.opensearch_config.set_jvm_heap_size = MagicMock()
 
         for typ in ["ok", "ko"]:
             self.deployment_descriptions[typ].app = App(
@@ -228,21 +228,29 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     @patch(f"{BASE_CHARM_CLASS}._start_opensearch_event")
     @patch(f"{BASE_CHARM_CLASS}._apply_peer_cm_directives_and_check_if_can_start")
+    @patch(f"{BASE_CHARM_CLASS}._should_ignore_lock")
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_relation_peer_cluster.OpenSearchPeerClusterRequirer.set_first_data_node"
+    )
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_relation_peer_cluster.OpenSearchPeerClusterRequirer.get_cluster_first_data_node"
+    )
     def test_data_role_only_on_start(
         self,
-        is_fully_configured,
-        is_admin_user_configured,
-        set_client_auth,
-        deployment_desc,
-        _start_opensearch_event,
+        get_cluster_first_data_node,
+        set_first_data_node,
+        _should_ignore_lock,
         _apply_peer_cm_directives_and_check_if_can_start,
+        _start_opensearch_event,
+        deployment_desc,
+        set_client_auth,
+        is_admin_user_configured,
+        is_fully_configured,
     ):
         """Test start event for nodes that only have the `data` role."""
         with (
             patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up,
-            patch(
-                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
-            ),
+            patch(f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size"),
         ):
             is_node_up.return_value = False
             _apply_peer_cm_directives_and_check_if_can_start.return_value = True
@@ -250,10 +258,11 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             is_admin_user_configured.return_value = True
             deployment_desc.typ.return_value = DeploymentType.OTHER
             deployment_desc.config.roles.return_value = ["data"]
+            _should_ignore_lock.return_value = True
 
             self.harness.set_leader(True)
             self.charm.on.start.emit()
-            self.charm._start_opensearch_event.emit.assert_called_once()
+            self.charm._start_opensearch_event.emit.assert_not_called()
 
     @patch(f"{BASE_LIB_PATH}.opensearch_tls.OpenSearchTLS.is_fully_configured")
     @patch(f"{BASE_CHARM_CLASS}.is_admin_user_configured")
@@ -261,14 +270,24 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
     @patch(f"{BASE_CHARM_CLASS}._start_opensearch_event")
     @patch(f"{BASE_CHARM_CLASS}._apply_peer_cm_directives_and_check_if_can_start")
+    @patch(f"{BASE_CHARM_CLASS}._should_ignore_lock")
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_relation_peer_cluster.OpenSearchPeerClusterRequirer.set_first_data_node"
+    )
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_relation_peer_cluster.OpenSearchPeerClusterRequirer.get_cluster_first_data_node"
+    )
     def test_failover_orchestrator_with_data_role_on_start(
         self,
-        is_fully_configured,
-        is_admin_user_configured,
-        set_client_auth,
-        deployment_desc,
-        _start_opensearch_event,
+        get_cluster_first_data_node,
+        set_first_data_node,
+        _should_ignore_lock,
         _apply_peer_cm_directives_and_check_if_can_start,
+        _start_opensearch_event,
+        deployment_desc,
+        set_client_auth,
+        is_admin_user_configured,
+        is_fully_configured,
     ):
         """Test start event for failover orchestrator with `data` role."""
         with patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up:
@@ -278,11 +297,12 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             is_admin_user_configured.return_value = True
             deployment_desc.typ.return_value = DeploymentType.FAILOVER_ORCHESTRATOR
             deployment_desc.config.roles.return_value = ["cluster-manager", "data"]
+            _should_ignore_lock.return_value = True
 
             self.harness.set_leader(True)
             self.charm.on.start.emit()
 
-            self.charm._start_opensearch_event.emit.assert_called_once()
+            self.charm._start_opensearch_event.emit.assert_not_called()
 
     @patch(f"{BASE_LIB_PATH}.opensearch_locking.OpenSearchNodeLock.acquired")
     @patch(f"{PEER_CLUSTERS_MANAGER}.deployment_desc")
@@ -298,8 +318,10 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(f"{BASE_CHARM_CLASS}._put_or_update_internal_user_unit")
     @patch(f"{BASE_LIB_PATH}.opensearch_distro.OpenSearchDistribution.request")
     @patch(f"{BASE_CHARM_CLASS}._post_start_init")
+    @patch(f"{BASE_CHARM_CLASS}._should_ignore_lock")
     def test_on_start(
         self,
+        _should_ignore_lock,
         _post_start_init,
         request,
         _put_or_update_internal_user_unit,
@@ -318,14 +340,13 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         """Test on start event."""
         with (
             patch(f"{self.OPENSEARCH_DISTRO}.is_node_up") as is_node_up,
-            patch(
-                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
-            ),
+            patch(f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size"),
             patch(
                 f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchDistribution.is_service_started"
             ),
         ):
             # test when setup complete
+            _should_ignore_lock.return_value = False
             is_node_up.return_value = True
             self.peers_data.put(Scope.APP, "security_index_initialised", True)
             self.charm.on.start.emit()
@@ -342,7 +363,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
 
         with (
             patch(
-                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size"
             ) as perf_profile,
             patch(
                 f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchDistribution.is_service_started"
@@ -369,7 +390,7 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         with (
             patch(f"{self.OPENSEARCH_DISTRO}.start") as start,
             patch(
-                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.apply_performance_profile"
+                f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size"
             ) as perf_profile,
             patch(
                 f"{self.BASE_LIB_PATH}.opensearch_config.OpenSearchDistribution.is_service_started"
@@ -395,6 +416,21 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
             start.assert_called_once()
             _post_start_init.assert_called_once()
 
+    @patch(f"{BASE_LIB_PATH}.state.OpenSearchApp.deployment_description")
+    @patch(f"{BASE_LIB_PATH}.opensearch_health.OpenSearchHealth.apply", return_value="green")
+    @patch(f"{BASE_LIB_PATH}.opensearch_config.OpenSearchConfig.set_jvm_heap_size")
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_memory_requirements",
+        return_value=[],
+    )
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_cluster_topology",
+        return_value=[],
+    )
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_missing_system_requirements",
+        return_value=[],
+    )
     @patch(f"{BASE_LIB_PATH}.opensearch_backups.BackupManager.is_backup_in_progress")
     @patch(f"{BASE_LIB_PATH}.opensearch_backups.BackupManager.is_restore_in_progress")
     @patch(f"{BASE_CHARM_CLASS}._stop_opensearch")
@@ -402,13 +438,26 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
     @patch(
         f"{BASE_LIB_PATH}.opensearch_relation_provider.OpenSearchProvider.remove_lingering_relation_users_and_roles"
     )
-    def test_on_update_status(self, _, cert_expiration_remaining_hours, _stop_opensearch, __, ___):
+    def test_on_update_status(
+        self,
+        _,
+        cert_expiration_remaining_hours,
+        _stop_opensearch,
+        __,
+        ___,
+        ____,
+        _____,
+        ______,
+        _______,
+        ________,
+        _________,
+    ):
         """Test on update status."""
         with patch(
-            f"{self.OPENSEARCH_DISTRO}.missing_sys_requirements"
-        ) as missing_sys_requirements:
+            f"{self.BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_missing_system_requirements"
+        ) as check_missing_requirements:
             # test missing sys requirements
-            missing_sys_requirements.return_value = ["ulimit -n not set"]
+            check_missing_requirements.return_value = ["ulimit -n not set"]
             self.charm.on.update_status.emit()
             self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 

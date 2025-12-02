@@ -28,7 +28,7 @@ output "app_names" {
       "opensearch-dashboards" : module.opensearch-dashboards.app_names["opensearch-dashboards"]
       "data-integrator" : juju_application.data-integrator.name,
       "backups-integrator" : juju_application.backups-integrator.name,
-      "grafana-agent" : juju_application.grafana_agents[var.main.model].name
+      "grafana-agent" : juju_application.grafana_agents[var.main.model_uuid].name
     }
   )
 }

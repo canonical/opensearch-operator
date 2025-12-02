@@ -71,6 +71,13 @@ BackupSetupFailed = "Backup setup failed, check logs for details"
 BackupRelShouldNotExist = "This unit should not be related to backup relation"
 BackupRelDataIncomplete = "Backup relation data missing or incomplete."
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
+SecretAccessError = "Failed to access secret, please check permissions."
+JWTAuthConfigInvalid = (
+    "Configuration for JWT authentication is invalid. Check and correct parameters."
+)
+JWTRelationInvalid = "JWT relation must be created with Main-cluster-orchestrator"
+OAuthRelationInvalid = "OAuth relation must be created with Main-cluster-orchestrator"
+SecurityIndexUpdateError = "Failed to update security configuration, check logs for details."
 
 # Wait status
 RequestUnitServiceOps = "Requesting lock on operation: {}"
@@ -78,7 +85,10 @@ BackupDeferRelBrokenAsInProgress = "Backup service cannot be stopped: backup in 
 PClusterWaitingForFailoverPromotion = (
     "Main-cluster-orchestrator removed, waiting for failover promotion."
 )
-
+PClusterMainIsRequirer = "Main orchestrator cannot be a requirer"
+InvalidProfileConfigOption = (
+    "Invalid profile configuration option. Only `production` and `testing` values are allowed."
+)
 
 # Maintenance statuses
 InstallProgress = "Installing OpenSearch..."
@@ -130,3 +140,5 @@ AZURE_RELATION = "azure-credentials"
 OAUTH_RELATION = "oauth"
 
 PERFORMANCE_PROFILE = "profile"
+
+JWT_CONFIG_RELATION = "jwt-configuration"

@@ -8,6 +8,10 @@ concurrency:
 
 on:
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - '.gitignore'
   schedule:
     - cron: '53 0 * * *' # Daily at 00:53 UTC
   # Triggered on push to branch "main" by .github/workflows/release.yaml
@@ -123,10 +127,11 @@ jobs:
 
       - name: Terraform deploy - simple deployments product module
         run: |
+          MODEL_UUID=$(juju show-model test | grep "model-uuid" | awk '{split($0, a, ": "); print a[2]}')
           pushd ./terraform/product/simple_deployment/
           terraform apply \
-            -var='opensearch={"model": "test"}' \
-            -var='backups-integrator={"config": {"bucket": "test"}}' \
+            -var="opensearch={\"model_uuid\": \"$MODEL_UUID\"}" \
+            -var="backups-integrator={\"config\": {\"bucket\": \"test\"}}" \
             -auto-approve
           popd
 

@@ -27,6 +27,13 @@ jobs:
           pipx install tox
           pipx install poetry
 
+      # This step is required since the configuration of aproxy on the self-hosted runner
+      # Makes the socket connections to several ip's give false positive results. This is due
+      # to the aproxy configuration that is excluding only a range of ip's
+      - name: Exclude the opensearch test host from proxy
+        run: |
+          sudo nft add element ip aproxy exclude "{ 1.1.1.1 }"
+
       - name: Run tox tests to create coverage.xml
         run: tox run -e unit
 

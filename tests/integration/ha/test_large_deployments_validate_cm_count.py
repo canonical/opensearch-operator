@@ -31,11 +31,10 @@ APP_UNITS = {MAIN_APP: 2, DATA_APP: 1}
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(charm: str, ops_test: OpsTest) -> None:
     """Build and deploy one unit of OpenSearch."""
     # it is possible for users to provide their own cluster for HA testing.
     # Hence, check if there is a pre-existing cluster.
-    my_charm = await ops_test.build_charm(".")
     await ops_test.model.set_config(MODEL_CONFIG)
 
     # Deploy TLS Certificates operator.
@@ -45,14 +44,14 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=MAIN_APP,
             num_units=APP_UNITS[MAIN_APP],
             series=SERIES,
             config={"cluster_name": CLUSTER_NAME} | CONFIG_OPTS,
         ),
         ops_test.model.deploy(
-            my_charm,
+            charm,
             application_name=DATA_APP,
             num_units=APP_UNITS[DATA_APP],
             series=SERIES,
