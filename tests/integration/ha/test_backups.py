@@ -689,8 +689,10 @@ async def test_remove_and_readd_backup_relation(
     logger.info(f"Syncing credentials for {cloud_name}")
     if cloud_name == "azure":
         await _configure_azure(ops_test, config, cloud_credentials[cloud_name])
+    elif cloud_name == "aws":
+        await _configure_s3_for_aws(ops_test, config, cloud_credentials[cloud_name])
     else:
-        await _configure_s3(ops_test, config, cloud_credentials[cloud_name])
+        await _configure_s3_for_microceph(ops_test, config, cloud_credentials[cloud_name])
 
     logger.info("Waiting for app status to be active.")
     await wait_until(
