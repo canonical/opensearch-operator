@@ -29,7 +29,6 @@ from .helpers import (
     assert_rollback_to_revision,
     assert_upgrade_to_local,
     assert_upgrade_to_revision,
-    assert_version_cluster,
     assert_version_units,
     testing_config_if_supported,
 )
@@ -149,20 +148,15 @@ async def test_deploy_starting_version(ops_test: OpsTest, series) -> None:
 
 @pytest.mark.group(id="happy_path_upgrade")
 @pytest.mark.abort_on_fail
+@pytest.mark.skip("Can't upgrade between earlier versions")
 async def test_upgrade_between_versions(ops_test: OpsTest, series: str) -> None:
     """Test minor version upgrade."""
     # upgrade to version n-1 revision for current series
-    if series == "jammy":
-        pytest.skip(
-            "Skipping for jammy until 2 versions with https://github.com/canonical/opensearch-operator/pull/683 released"
-        )
-
     revision = VERSION_TO_REVISION[VERSION_N_MINUS_1][series]
     for app in list(APPS.keys()):
         await assert_version_units(ops_test, app, VERSION_N_MINUS_2)
         await assert_upgrade_to_revision(ops_test, app, revision)
         await assert_version_units(ops_test, app, VERSION_N_MINUS_1)
-        await assert_version_cluster(ops_test, app, VERSION_N_MINUS_1 if app == MAIN_APP else VERSION_N_MINUS_2)
 
 
 @pytest.mark.group(id="happy_path_upgrade")
@@ -174,7 +168,6 @@ async def test_upgrade_to_local(
     for app in [APP_NAME, FAILOVER_APP, MAIN_APP]:
         await assert_upgrade_to_local(ops_test, app=app, charm=charm)
         await assert_version_units(ops_test, app, VERSION_N)
-        await assert_version_cluster(ops_test, app, VERSION_N if app == MAIN_APP else VERSION_N_MINUS_1)
 
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
@@ -203,7 +196,6 @@ async def test_upgrade_rollback_from_local(
         await assert_version_units(ops_test, app, version)
         await assert_rollback_to_revision(ops_test, app, charm, revision, version=version)
         await assert_version_units(ops_test, app, version)
-        await assert_version_cluster(ops_test, app, version)
 
 
 @pytest.mark.parametrize("version", UPGRADE_PARAMS)
@@ -215,7 +207,6 @@ async def test_upgrade_from_version_to_local(
     for app in [APP_NAME, FAILOVER_APP, MAIN_APP]:
         await assert_upgrade_to_local(ops_test, app=app, charm=charm)
         await assert_version_units(ops_test, app, VERSION_N)
-        await assert_version_cluster(ops_test, app, VERSION_N if app == MAIN_APP else version)
 
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)

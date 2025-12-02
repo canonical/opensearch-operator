@@ -233,8 +233,9 @@ def list_cas(store_pwd: str, store_path: str) -> Optional[dict[str, str]]:
         alias = alias.split("friendlyName:")[-1].strip()
 
         alias_split = alias.split("-")  # support for CA chains with multiple intermediate CAs
-        ca_index = int(alias_split[-1])
-        ca_alias = "-".join(alias_split[:-1])
+        last = alias_split[-1]
+        ca_index = int(last) if last.isdigit() else 0
+        ca_alias = "-".join(alias_split[:-1]) if last.isdigit() else alias
         certs.setdefault(ca_alias, []).insert(
             ca_index, f"{start_cert_marker}{cert.split(start_cert_marker)[1]}"
         )

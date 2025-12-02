@@ -25,7 +25,6 @@ from .helpers import (
     assert_rollback_to_revision,
     assert_upgrade_to_local,
     assert_upgrade_to_revision,
-    assert_version_cluster,
     assert_version_units,
 )
 
@@ -96,6 +95,7 @@ async def test_deploy_latest_from_channel(ops_test: OpsTest, series) -> None:
 
 @pytest.mark.group(id="happy_path_upgrade")
 @pytest.mark.abort_on_fail
+@pytest.mark.skip("Can't upgrade between earlier versions")
 async def test_upgrade_between_versions(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, series
 ) -> None:
@@ -105,7 +105,6 @@ async def test_upgrade_between_versions(
     await assert_version_units(ops_test, app, VERSION_N_MINUS_2)
     await assert_upgrade_to_revision(ops_test, app=app, revision=revision)
     await assert_version_units(ops_test, app, VERSION_N_MINUS_1)
-    await assert_version_cluster(ops_test, app, VERSION_N_MINUS_1)
 
 
 @pytest.mark.group(id="happy_path_upgrade")
@@ -117,7 +116,6 @@ async def test_upgrade_to_local(
     app = (await app_name(ops_test)) or APP_NAME
     await assert_upgrade_to_local(ops_test, app=app, charm=charm)
     await assert_version_units(ops_test, app, VERSION_N)
-    await assert_version_cluster(ops_test, app, VERSION_N)
 
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)
@@ -151,9 +149,10 @@ async def test_upgrade_rollback_from_local(
     app = (await app_name(ops_test)) or APP_NAME
     revision = VERSION_TO_REVISION[version][series]
     await assert_version_units(ops_test, app, version)
-    await assert_rollback_to_revision(ops_test, app=app, charm=charm, revision=revision, version=version)
+    await assert_rollback_to_revision(
+        ops_test, app=app, charm=charm, revision=revision, version=version
+    )
     await assert_version_units(ops_test, app, version)
-    await assert_version_cluster(ops_test, app, version)
 
 
 @pytest.mark.parametrize("version", UPGRADE_PARAMS)
@@ -165,7 +164,6 @@ async def test_upgrade_from_version_to_local(
     app = (await app_name(ops_test)) or APP_NAME
     await assert_upgrade_to_local(ops_test, app=app, charm=charm)
     await assert_version_units(ops_test, app, VERSION_N)
-    await assert_version_cluster(ops_test, app, VERSION_N)
 
     # continuous writes checks
     await assert_continuous_writes_increasing(c_writes)

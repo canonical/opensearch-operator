@@ -171,7 +171,7 @@ class Upgrade(abc.ABC):
             # Statuses over 120 characters are truncated in `juju status` as of juju 3.1.6 and
             # 2.9.45
             return ops.BlockedStatus(
-                f"Upgrading. Verify highest unit is healthy & run `{RESUME_ACTION_NAME}` action. To rollback, `juju refresh` to last revision"
+                f"Upgrading. Verify highest unit is healthy & run `{RESUME_ACTION_NAME}` action. Rollbacks not supported."
             )
         return ops.MaintenanceStatus(
             "Upgrading. To rollback, `juju refresh` to the previous revision"

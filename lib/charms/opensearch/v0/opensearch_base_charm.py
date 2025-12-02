@@ -1156,7 +1156,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch_peer_cm.is_consumer():
             self.peer_cluster_requirer.refresh_requirer_relation_data()
 
-        if self.opensearch.is_started():
+        if self.opensearch.is_started() and not self.opensearch.is_failed():
             try:
                 self._post_start_init(event)
             except (

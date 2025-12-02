@@ -328,6 +328,63 @@ async def _is_every_condition_met(
     return True
 
 
+async def wait_until_unit(  # noqa: C901
+    ops_test: OpsTest,
+    app: str,
+    unit_status: str,
+    expected_units_with_status: int = -1,
+    unit_name: Optional[str] = None,
+    timeout: int = 1200,
+) -> None:
+    """Block until a status on one specific unit, a number of units or a timeout is met.
+
+    Args:
+        ops_test: The ops test framework instance
+        app: The applications whose statuses to test against
+        unit_status: expected status
+        unit_name: name of unit with expected status
+        expected_units_with_status: number of units expected with status,
+            if -1 then all units are expected to have this status
+        timeout: Time to wait before giving up on waiting.
+    """
+    if not app:
+        raise ValueError("app must be specified.")
+    try:
+        logger.info("\n\n\n")
+        logger.info(
+            subprocess.check_output(
+                f"juju status --model {ops_test.model.info.name}", shell=True
+            ).decode("utf-8")
+        )
+        for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(10)):
+            with attempt:
+                units = await get_application_units(ops_test, app)
+                if unit_name:
+                    units = [unit for unit in units if unit.name == unit_name]
+                if expected_units_with_status == -1:
+                    expected_units_with_status = len(units)
+                logger.info(
+                    f"\n\n\n{now()} -- Waiting for status '{unit_status}' on {unit_name or (str(expected_units_with_status) + " units")} in '{app}'..."
+                )
+                units_with_expected_status = []
+                for unit in units:
+                    if unit.workload_status.message == unit_status:
+                        units_with_expected_status.append(unit.id)
+                if len(units_with_expected_status) == expected_units_with_status:
+                    logger.info(f"{now()} -- Waiting for status on units: complete.\n\n\n")
+                    return
+                raise Exception
+    except RetryError:
+        logger.error("wait_until -- Timed out!\n\n\n")
+        logger.info(
+            subprocess.check_output(
+                f"juju status --model {ops_test.model.info.name}", shell=True
+            ).decode("utf-8")
+        )
+        _dump_juju_logs(model=ops_test.model.info.name, lines=3000)
+        raise
+
+
 async def wait_until(  # noqa: C901
     ops_test: OpsTest,
     apps: List[str],

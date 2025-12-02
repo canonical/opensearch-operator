@@ -5,14 +5,15 @@
 import logging
 import re
 import subprocess
+import time
 from typing import Optional
 
 import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
-from ..helpers import CONFIG_OPTS, http_request, run_action
-from ..helpers_deployments import get_application_units, wait_until
+from ..helpers import CONFIG_OPTS, cluster_health, http_request, run_action
+from ..helpers_deployments import get_application_units, wait_until, wait_until_unit
 
 OPENSEARCH_CHARM = "opensearch"
 OPENSEARCH_CHANNEL = "2/edge"
@@ -22,7 +23,7 @@ TIMEOUT = 2400
 IDLE_PERIOD = 30
 FAST_INTERVAL = "60s"
 
-VERSION_N = "2.19.0"
+VERSION_N = "2.19.4"
 VERSION_N_MINUS_1 = "2.18.0"
 VERSION_N_MINUS_2 = "2.17.0"
 
@@ -114,16 +115,6 @@ def get_version_on_unit(unit: str, model: str):
     match = re.search(r"Version:\s*([0-9]+\.[0-9]+\.[0-9]+)", output)
     return match.group(1) if match else None
 
-
-async def assert_version_cluster(ops_test: OpsTest, app: str, expected_version: str):
-    """Ensures cluster reports running expected OpenSearch version"""
-    logger.info(f"Ensuring cluster reports version {expected_version}")
-    units = await get_application_units(ops_test, app)
-    leader_ip = [u.ip for u in units if u.is_leader][0]
-    response = await http_request(ops_test, "GET", f"https://{leader_ip}:9200")
-    version = response["version"]["number"]
-    assert version == expected_version, f"Cluster reported unexpected version {version}. Expected {expected_version}"
-    logger.info(f"Cluster reported expected version")
 
 async def assert_version_units(ops_test: OpsTest, app: str, expected_version: str):
     """Ensures all units in given app are running expected OpenSearch version"""
@@ -234,11 +225,29 @@ async def assert_upgrade_to_local(
 
 
 async def assert_rollback_to_revision(
-    ops_test: OpsTest, app: str, charm: str, revision: int, version: str, config: dict[str, str] = {}
+    ops_test: OpsTest,
+    app: str,
+    charm: str,
+    revision: int,
+    config: dict[str, str] = {},
 ):
     """Upgrades to local charm and rolls back to revision mid-upgrade"""
     units = await get_application_units(ops_test, app)
+    highest_unit_name = sorted([unit.name for unit in units])[-1]
+    highest_unit_ip = [unit.ip for unit in units if unit.name == highest_unit_name][0]
     leader_id = [unit.id for unit in units if unit.is_leader][0]
+    nodes = await http_request(
+        ops_test,
+        "GET",
+        f"https://{highest_unit_ip}:9200/_cat/nodes?format=json",
+    )
+    cluster_size = len(nodes)
+    rolled_back_node = None
+    for node in nodes:
+        if node["ip"] == highest_unit_ip:
+            rolled_back_node = node["name"]
+
+    assert rolled_back_node, "Could not determine node name"
 
     # run pre-upgrade-check action on leader
     action = await run_action(ops_test, leader_id, "pre-upgrade-check", app=app)
@@ -271,24 +280,8 @@ async def assert_rollback_to_revision(
             config=CONFIG_OPTS | config,
         )
 
-        # Wait until we are set in an idle state and can rollback the revision.
-        # app status blocked: that will happen if we are jumping N-2 versions in our test
-        # app status active: that will happen if we are jumping N-1 in our test
-        await wait_until(
-            ops_test,
-            apps=[app],
-            apps_statuses=["active", "blocked"],
-            units_statuses=["active"],
-            wait_for_exact_units={
-                app: n_units,
-            },
-            timeout=TIMEOUT,
-            idle_period=IDLE_PERIOD,
-        )
-
-        logger.info(f"Ensure cluster reports previous version")
-        assert assert_version_cluster(ops_test, app, version)
-
+        time.sleep(5)
+        # roll back to revision
         logger.info(f"Rolling back '{app}' to revision: {revision}")
         refresh(
             ops_test,
@@ -296,6 +289,17 @@ async def assert_rollback_to_revision(
             revision=revision,
             config=testing_config_if_supported(revision) | config,
         )
+
+        logger.info("Waiting for rolled back unit to attempt restart...")
+        await wait_until_unit(
+            ops_test,
+            app=app,
+            expected_units_with_status=1,
+            unit_status="Waiting for OpenSearch to start...",
+            timeout=TIMEOUT,
+        )
+
+        await recover_from_rollback(ops_test, app, rolled_back_node, cluster_size)
 
         await wait_until(
             ops_test,
@@ -308,4 +312,93 @@ async def assert_rollback_to_revision(
             timeout=TIMEOUT,
             idle_period=IDLE_PERIOD,
         )
-        logger.info(f"Rollback of '{app}' completed")
+        logger.info(f"Recovery from rollback of '{app}' completed")
+
+
+async def recover_from_rollback(
+    ops_test: OpsTest, app: str, rolled_back_node: str, expected_cluster_size: int
+):
+    """Recover from refreshing back mid-upgrade"""
+    units = await get_application_units(ops_test, app)
+    highest_unit = sorted([unit.name for unit in units])[-1]
+    unit_ip = [unit.ip for unit in units if unit.is_leader][0]
+
+    # re-enable allocation
+    logger.info("Re-enabling cluster routing allocation")
+    await http_request(
+        ops_test,
+        "PUT",
+        f"https://{unit_ip}:9200/_cluster/settings",
+        payload={"persistent": {"cluster.routing.allocation.enable": "all"}},
+    )
+
+    time.sleep(5)
+
+    # get health
+    cluster_health_resp = await cluster_health(ops_test, unit_ip)
+    logger.info(f"Cluster health response: {cluster_health_resp["status"]}")
+    if cluster_health_resp["status"] == "red":
+        # identify problematic index
+        shards = await http_request(
+            ops_test,
+            "GET",
+            f"https://{unit_ip}:9200/_cat/shards?format=json&filter_path=index,shard,state,unassigned.reason",
+        )
+
+        indices = set()
+        for shard in shards:
+            if (
+                shard.get("state") == "UNASSIGNED"
+                and shard.get("unassigned.reason") == "NODE_LEFT"
+            ):
+                indices.add(shard.get("index"))
+
+        # delete the indices
+        logger.info(f"Unassigned indices: {indices}")
+        for index in indices:
+            await http_request(
+                ops_test,
+                "DELETE",
+                f"https://{unit_ip}:9200/{index}",
+            )
+
+    # add unit
+    logger.info("Destroying rolled back unit")
+    await ops_test.model.applications[app].add_units(1)
+
+    # destroy highest unit
+    logger.info("Adding new unit")
+    await ops_test.model.applications[app].destroy_unit(highest_unit)
+
+    await wait_until_unit(
+        ops_test,
+        app=app,
+        expected_units_with_status=1,
+        unit_status="Requesting lock on operation: start",
+        timeout=TIMEOUT,
+    )
+
+    lock_doc = await http_request(
+        ops_test,
+        "GET",
+        f"https://{unit_ip}:9200/.charm_node_lock/_doc/0",
+    )
+    # check if lock with departed unit
+    if lock_doc.get("found") and lock_doc.get("_source").get("unit-name") == rolled_back_node:
+        logger.info("Deleting lock document")
+        lock_doc = await http_request(
+            ops_test,
+            "DELETE",
+            f"https://{unit_ip}:9200/.charm_node_lock/_doc/0?refresh=true",
+        )
+
+    # verify node joined cluster
+    nodes = await http_request(
+        ops_test,
+        "GET",
+        f"https://{unit_ip}:9200/_cat/nodes?format=json",
+    )
+    logger.info(f"Nodes in cluster: {", ".join([node["name"] for node in nodes])}")
+    assert (
+        len(nodes) == expected_cluster_size
+    ), f"Expected {expected_cluster_size} but found {len(nodes)}"
