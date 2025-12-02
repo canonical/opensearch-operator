@@ -84,8 +84,8 @@ SMALL_DEPLOYMENTS_ALL_CLOUDS = [
 LARGE_DEPLOYMENTS_ALL_CLOUDS = [
     ALL_GROUPS[(cloud, "large")] for cloud in ["aws", "microceph", "azure"]
 ]
-ALL_AWS_GROUP = "all-aws"
-ALL_MICROCEPH_GROUP = "all-microceph"
+ALL_S3_GROUP = "all-s3"
+CA_S3 = "ca-s3"
 ALL_AZURE_GROUP = "all-azure"
 
 S3_INTEGRATOR = "s3-integrator"
@@ -221,45 +221,21 @@ def remove_backups(  # noqa C901
                 logger.warning(f"Failed to clean up backups: {e}")
 
 
-async def _configure_s3_for_aws(
+async def _configure_s3(
     ops_test: OpsTest,
     config: Dict[str, str],
     credentials: Dict[str, str],
 ) -> None:
-    """Configure s3-integrator with endpoint/bucket/path/region."""
+    """Configure s3-integrator with endpoint/bucket/path/region and optional tls-ca-chain."""
     base_cfg = {
         "endpoint": config["endpoint"],
         "bucket": config["bucket"],
         "path": config["path"],
         "region": config.get("region", "") or "",
     }
-    await ops_test.model.applications[S3_INTEGRATOR].set_config(base_cfg)
-    s3_integrator_id = (await get_application_units(ops_test, S3_INTEGRATOR))[
-        0
-    ].id  # We redeploy s3-integrator once, so we may have anything >=0 as id
-    await run_action(
-        ops_test,
-        s3_integrator_id,
-        "sync-s3-credentials",
-        params=credentials,
-        app=S3_INTEGRATOR,
-    )
-    await ops_test.model.wait_for_idle(apps=[S3_INTEGRATOR], timeout=TIMEOUT)
+    if tls_ca_chain := config.get("tls-ca-chain"):
+        base_cfg["tls-ca-chain"] = tls_ca_chain
 
-
-async def _configure_s3_for_microceph(
-    ops_test: OpsTest,
-    config: Dict[str, str],
-    credentials: Dict[str, str],
-) -> None:
-    """Configure s3-integrator with endpoint/bucket/path/region and tls-ca-chain."""
-    base_cfg = {
-        "endpoint": config["endpoint"],
-        "bucket": config["bucket"],
-        "path": config["path"],
-        "region": config.get("region", "") or "",
-        "tls-ca-chain": config.get("tls-ca-chain"),
-    }
     await ops_test.model.applications[S3_INTEGRATOR].set_config(base_cfg)
     s3_integrator_id = (await get_application_units(ops_test, S3_INTEGRATOR))[
         0
@@ -476,7 +452,7 @@ async def test_large_setups_relations_with_misconfiguration(
     """Confirm expected blocked messages under misconfiguration."""
     logger.info("Set bad credentials")
     if cloud_name == "azure":
-        bad_config = {"connection-protocol": "abfss", "container": "error"}
+        bad_config = {"connection-protocol": "abfss", "container": "error", "path": "/"}
         bad_credentials = {"storage-account": "error", "secret-key": "error"}
         await _configure_azure(
             ops_test=ops_test,
@@ -488,10 +464,11 @@ async def test_large_setups_relations_with_misconfiguration(
         bad_config = {
             "endpoint": "http://localhost",
             "bucket": "error",
+            "path": "/",
             "region": "default",
         }
         bad_credentials = {"access-key": "error", "secret-key": "error"}
-        await _configure_s3_for_aws(
+        await _configure_s3(
             ops_test=ops_test,
             config=bad_config,
             credentials=bad_credentials,
@@ -502,12 +479,13 @@ async def test_large_setups_relations_with_misconfiguration(
         bad_config = {
             "endpoint": "https://localhost:445",
             "bucket": "error",
+            "path": "etcd",
             "region": "default",
             "tls-ca-chain": cfg.get("tls-ca-chain"),
         }
         bad_credentials = {"access-key": "error", "secret-key": "error"}
 
-        await _configure_s3_for_microceph(
+        await _configure_s3(
             ops_test=ops_test,
             config=bad_config,
             credentials=bad_credentials,
@@ -608,10 +586,8 @@ async def test_create_backup_and_restore(
     logger.info(f"Syncing credentials for {cloud_name}")
     if cloud_name == "azure":
         await _configure_azure(ops_test, config, cloud_credentials[cloud_name])
-    elif cloud_name == "aws":
-        await _configure_s3_for_aws(ops_test, config, cloud_credentials[cloud_name])
     else:
-        await _configure_s3_for_microceph(ops_test, config, cloud_credentials[cloud_name])
+        await _configure_s3(ops_test, config, cloud_credentials[cloud_name])
 
     await wait_until(
         ops_test,
@@ -689,10 +665,8 @@ async def test_remove_and_readd_backup_relation(
     logger.info(f"Syncing credentials for {cloud_name}")
     if cloud_name == "azure":
         await _configure_azure(ops_test, config, cloud_credentials[cloud_name])
-    elif cloud_name == "aws":
-        await _configure_s3_for_aws(ops_test, config, cloud_credentials[cloud_name])
     else:
-        await _configure_s3_for_microceph(ops_test, config, cloud_credentials[cloud_name])
+        await _configure_s3(ops_test, config, cloud_credentials[cloud_name])
 
     logger.info("Waiting for app status to be active.")
     await wait_until(
@@ -704,19 +678,6 @@ async def test_remove_and_readd_backup_relation(
         wait_for_exact_units=len(ops_test.model.applications[app].units),
         timeout=1400,
     )
-
-    logger.info(f"Syncing credentials for {cloud_name}")
-    if cloud_name == "azure":
-        await _configure_azure(ops_test, cloud_configs[cloud_name], cloud_credentials[cloud_name])
-    elif cloud_name == "aws":
-        await _configure_s3_for_aws(
-            ops_test, cloud_configs[cloud_name], cloud_credentials[cloud_name]
-        )
-    else:
-        await _configure_s3_for_microceph(
-            ops_test, cloud_configs[cloud_name], cloud_credentials[cloud_name]
-        )
-
     date_before_backup = datetime.utcnow()
 
     # Wait, we want to make sure the timestamps are different
@@ -805,10 +766,8 @@ async def test_restore_to_new_cluster(
     logger.info(f"Syncing credentials for {cloud_name}")
     if cloud_name == "azure":
         await _configure_azure(ops_test, config_cloud, cloud_credentials[cloud_name])
-    elif cloud_name == "aws":
-        await _configure_s3_for_aws(ops_test, config_cloud, cloud_credentials[cloud_name])
     else:
-        await _configure_s3_for_microceph(ops_test, config_cloud, cloud_credentials[cloud_name])
+        await _configure_s3(ops_test, config_cloud, cloud_credentials[cloud_name])
 
     await wait_until(
         ops_test,
@@ -981,8 +940,8 @@ async def _ensure_only_azure_integrator_related(ops_test: OpsTest, app: str) -> 
     logger.info("Integrated %s <-> %s.", app_endpoint, azure_endpoint)
 
 
-@pytest.mark.group(id=ALL_AWS_GROUP)
-@pytest.mark.group(id=ALL_MICROCEPH_GROUP)
+@pytest.mark.group(id=CA_S3)
+@pytest.mark.group(id=ALL_S3_GROUP)
 @pytest.mark.group(id=ALL_AZURE_GROUP)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -1017,8 +976,7 @@ async def test_build_deploy_and_test_status(ops_test: OpsTest, charm, series) ->
     )
 
 
-@pytest.mark.group(id=ALL_MICROCEPH_GROUP)
-@pytest.mark.group(id=ALL_AWS_GROUP)
+@pytest.mark.group(id=ALL_S3_GROUP)
 @pytest.mark.abort_on_fail
 async def test_repo_missing_message(ops_test: OpsTest) -> None:
     """Validate the repository missing message format from OpenSearch.
@@ -1039,9 +997,9 @@ async def test_repo_missing_message(ops_test: OpsTest) -> None:
     assert "repository_missing_exception" in resp["error"]["type"]
 
 
-@pytest.mark.group(id=ALL_AWS_GROUP)
+@pytest.mark.group(id=ALL_S3_GROUP)
 @pytest.mark.abort_on_fail
-async def test_wrong_aws_credentials(
+async def test_wrong_s3_credentials(
     ops_test: OpsTest,
     cloud_configs: Dict[str, Dict[str, str]],
     cloud_credentials: Dict[str, Dict[str, str]],
@@ -1050,84 +1008,10 @@ async def test_wrong_aws_credentials(
     # Choose provider: prefer aws if present, otherwise microceph
     if "aws" in cloud_configs and "aws" in cloud_credentials:
         provider = "aws"
-    else:
-        pytest.skip("AWS config/credentials not available for S3 integrator tests.")
-
-    app = (await app_name(ops_test)) or APP_NAME
-    await _ensure_only_s3_integrator_related(ops_test, app)
-
-    unit_ip = await get_leader_unit_ip(ops_test, app=app)
-    good_config = cloud_configs[provider]
-    bad_credentials = {"access-key": "error", "secret-key": "error"}
-
-    await _configure_s3_for_aws(ops_test, good_config, bad_credentials)
-
-    await wait_until(
-        ops_test,
-        apps=[app],
-        apps_full_statuses={app: {"blocked": [BackupCredentialIncorrect]}},
-    )
-    logger.info("Opensearch 1 app is blocked because of S3 bad credentials.")
-
-    resp = await http_request(
-        ops_test,
-        "GET",
-        f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}/_all",
-        json_resp=True,
-    )
-    logger.debug(f"Response: {resp}")
-    status = resp.get("status")
-    assert status == 404, f"Unexpected status: {status}, resp={resp}"
-    error = resp.get("error")
-    assert error is not None, f"No error field in response: {resp}"
-    err_type = error.get("type")
-    err_reason = error.get("reason", "")
-    assert (
-        "repository_missing_exception" in err_type
-    ), f"Unexpected error type: {err_type}, resp={resp}"
-    assert (
-        "[s3-repository] missing" in err_reason
-    ), f"Unexpected error reason: {err_reason}, resp={resp}"
-
-    # revert back to normal state
-    good_credentials = cloud_credentials[provider]
-    await _configure_s3_for_aws(ops_test, good_config, good_credentials)
-    await wait_until(
-        ops_test,
-        apps=[app],
-        apps_statuses=["active"],
-        units_statuses=["active"],
-        wait_for_exact_units=3,
-        idle_period=IDLE_PERIOD,
-    )
-    logger.info(
-        "Opensearch all apps and units become active after providing valid S3 credentials."
-    )
-    resp_ok = await http_request(
-        ops_test,
-        "GET",
-        f"https://{unit_ip}:9200/_snapshot/{S3_REPOSITORY}",
-        json_resp=True,
-    )
-    logger.debug(f"Repo response after fixing S3 creds: {resp_ok}")
-
-    assert isinstance(resp_ok, dict)
-    assert S3_REPOSITORY in resp_ok
-
-
-@pytest.mark.group(id=ALL_MICROCEPH_GROUP)
-@pytest.mark.abort_on_fail
-async def test_wrong_microceph_credentials(
-    ops_test: OpsTest,
-    cloud_configs: Dict[str, Dict[str, str]],
-    cloud_credentials: Dict[str, Dict[str, str]],
-) -> None:
-    """Verify blocked status and error from OpenSearch when S3 creds are wrong."""
-    # Choose provider: prefer aws if present, otherwise microceph
-    if "microceph" in cloud_configs and "microceph" in cloud_credentials:
+    elif "microceph" in cloud_configs and "microceph" in cloud_credentials:
         provider = "microceph"
     else:
-        pytest.skip("Microceph config/credentials not available for S3 integrator tests.")
+        pytest.skip("AWS/Microceph config/credentials not available for S3 integrator tests.")
 
     app = (await app_name(ops_test)) or APP_NAME
     await _ensure_only_s3_integrator_related(ops_test, app)
@@ -1136,7 +1020,7 @@ async def test_wrong_microceph_credentials(
     good_config = cloud_configs[provider]
     bad_credentials = {"access-key": "error", "secret-key": "error"}
 
-    await _configure_s3_for_microceph(ops_test, good_config, bad_credentials)
+    await _configure_s3(ops_test, good_config, bad_credentials)
 
     await wait_until(
         ops_test,
@@ -1167,7 +1051,7 @@ async def test_wrong_microceph_credentials(
 
     # revert back to normal state
     good_credentials = cloud_credentials[provider]
-    await _configure_s3_for_microceph(ops_test, good_config, good_credentials)
+    await _configure_s3(ops_test, good_config, good_credentials)
     await wait_until(
         ops_test,
         apps=[app],
@@ -1191,9 +1075,9 @@ async def test_wrong_microceph_credentials(
     assert S3_REPOSITORY in resp_ok
 
 
-@pytest.mark.group(id=ALL_MICROCEPH_GROUP)
+@pytest.mark.group(id=CA_S3)
 @pytest.mark.abort_on_fail
-async def test_wrong_microceph_ca_blocked(
+async def test_wrong_s3_ca_blocked(
     ops_test: OpsTest,
     cloud_configs: Dict[str, Dict[str, str]],
     cloud_credentials: Dict[str, Dict[str, str]],
@@ -1209,7 +1093,7 @@ async def test_wrong_microceph_ca_blocked(
     good_cfg = cloud_configs["microceph"]
     good_creds = cloud_credentials["microceph"]
 
-    await _configure_s3_for_microceph(
+    await _configure_s3(
         ops_test,
         good_cfg,
         good_creds,
@@ -1229,7 +1113,7 @@ async def test_wrong_microceph_ca_blocked(
         "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZJakNDQXdxZ0F3SUJBZ0lVRGVIRm9EbVlYTW5iRVdFd0VMN3lrL1dDbGVvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0dERVdNQlFHQTFVRUF3d05NVEF1TWpVMUxqY3lMakkwTlRBZUZ3MHlOVEV4TVRNd09ESTJNVE5hRncweQpOakV4TVRNd09ESTJNVE5hTUJneEZqQVVCZ05WQkFNTURURXdMakkxTlM0M01pNHlORFV3Z2dJaU1BMEdDU3FHClNJYjNEUUVCQVFVQUE0SUNEd0F3Z2dJS0FvSUNBUUNTTDcyMGZxNHhydGR2UHJVK3lUbzlMakF2Y0NPem5yWWQKaUMzK2ZHaFQzYmkwZCtKSitKWm5IZTR6SUM4Ti9qa3RNUjhVdk8ya2V3SnRCZ1FxbmZuZEd5cjlTd0c3OU1VaQp2WnZySHlibS9oNXd6RGo1bWxmdGpaZDRTSnNWdXJNdjlHd3VQUEg5blhQTjVjRk0rQytnVThTczdwb21XUFNIClRVL2dKQkxoNHlidVBtQW9zeVNpTnVEa29QbkJtaUtuMEQyaDViTGp5WGhSL296Yy9xdklVZ3J1a09rSTgxcGIKTmNQbzdwbHZwT25GeURydFBiMEpGak1yWWJZWmhhMk9YL3JwV0hJUWt6NjUrK3RESk5uT2JaeVAvb3NhWjR0bgpTa1pVM2U2MTNzeWFiTjdvRHp1QWxjRGVGS2N5NkRiQXp5ZGJKREdDN2xlRFQrK0JHMGNsUlFveGowUFVEck41Clg3RHVud0Z0czN0TG8vZHJIdXYvaEpZWWxucjQzU0ZEcjBybnhQK2YwZWp4SUFaR2hjYXpKalFKcHVaYlhYSjEKUVQzdEJiREM1RjM1MHZLWnJpME94UnVITTQ3bEMva3krbHpNUjlOSWxEVmVIVTM5Q3ZTUExuOU9mN3JJZFBCOQpaUzhKcTh0RlNjTWZwVzhUdmZpTktEV0RCbndEUVVYQ0d6Nk9rWkpta0g3UVdvRHJSK24rajRPcjdzQ2g1L2ljCld3TENvbjgvU3l4SVNScEJpZDN5QkVNR29NZHZrWlVXY1hheDRzN2FUMkh1cHRwT2JHa0Q2Vno4Y2tJc0ZUV3oKYThZdHNOdXRWbGZpUmgrZ0Jjc3EwRjdEWVJCK2MrdElVRzBkcHlXb2owdmp5cTAxcmlIVDFaMmhjSVFDU29QTwpza01LTXl4ck93SURBUUFCbzJRd1lqQWRCZ05WSFE0RUZnUVVCempKbm54Sy83MDYyUitkOUZ5QTlNT0ZZL2t3Ckh3WURWUjBqQkJnd0ZvQVVCempKbm54Sy83MDYyUitkOUZ5QTlNT0ZZL2t3RHdZRFZSMFRBUUgvQkFVd0F3RUIKL3pBUEJnTlZIUkVFQ0RBR2h3UUsvMGoxTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElDQVFCZUZoUHRxMnRCTUdKSgp4alhRalR1eEl1UVE3NXBmK2FxQkRvaHY0MnUwcVNCTkUyYnBVaFN5RUpIckFXNFplQVpFeVN1NlhEd1NYbnVhCnVzNWhOdklhcXhEUlV4ZXhQekE0RUR3emRCcHhpNDN4YzJObHFWaEtBQ3l6NlphSXBoN2R6VTdtUXJYZzNKbWIKVlEweGloNzkvaXFNdnNpejlKdG9ObXFpejdJdGxWeUhCVzF5T3hUdDUxNzNudFZBSzY0RnN2M0NXYWFwaFA3awpidHZDaFVnaDRHaEx5LzdScUJoZnhrb21CekZyRy82VnZKMDM1cnZzT1VHU2hSVUh2VXF5U3lhemRmejdDaUUzCnFCVVYzaUFyMkNBY3lCakQ3Mkx2UjJxd1JrZUpLN3QrdWZtc2M5bDBWNDgzVXdCbC9IWHRXZDljcm8vczExS3cKaS9CWHdsMWFsaStmYURNUkFucG56WUI3blJHUnVmZFNQUUp3anpNdGNERW84Y29ybHd0M2pPRExKK1RybjhGNQpjVDlldWM0Y2dBWXIrL2U4VXo1Mkd0V2VlOXZzZ3dlZVJkZy8rNTVhQ2VFd21oN3g5a0lmR3VicVRkT0dGa0dTCjlFdDN4Mi9YdnNlbnNwbnpDNTQ5ZmVubG1hcHRuelRpMHhkZk03bnNnQTJFQ2NQcUNwakVWZm52ZFZaa0ZnS1cKVzhlaGFQZ1ZmQnNLUDRDcmNXVnFxYXU2ZWFaU0FEOTYvYk4vZDJ5M3hyM1lIcWtBQktmYjBESE1hU2pzRkZFWQprR21TQ0FLaEtzNTBKd2dVYWsvdGxjcFBlUGp0N3JwMjYweTh5VFQ0VEZnOEVrQStpRGFOMUovZGdaL1VqVlFxCi9EeVUyN2Rrb0J5T0dQQTdNWE10cnpaQTI1MFo1QT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
     )
 
-    await _configure_s3_for_microceph(
+    await _configure_s3(
         ops_test,
         bad_cfg,
         good_creds,
@@ -1246,7 +1130,7 @@ async def test_wrong_microceph_ca_blocked(
     # it can be 500 (repo check error) or 404 (repo never created yet).
     unit_ip = await get_leader_unit_ip(ops_test, app=app)
     # restore the correct CA and ensure we recover to active.
-    await _configure_s3_for_microceph(ops_test, good_cfg, good_creds)
+    await _configure_s3(ops_test, good_cfg, good_creds)
     logger.info("Configured S3 with valid CA.")
     await wait_until(
         ops_test,
@@ -1352,8 +1236,7 @@ async def test_wrong_azure_credentials(
         assert AZURE_REPOSITORY in resp_ok
 
 
-@pytest.mark.group(id=ALL_MICROCEPH_GROUP)
-@pytest.mark.group(id=ALL_AWS_GROUP)
+@pytest.mark.group(id=ALL_S3_GROUP)
 @pytest.mark.abort_on_fail
 async def test_change_config_and_backup_restore(
     ops_test: OpsTest,
@@ -1389,10 +1272,7 @@ async def test_change_config_and_backup_restore(
 
         logger.info(f"Syncing credentials for {cloud_name}")
         config: Dict[str, str] = cloud_configs[cloud_name]
-        if cloud_name == "aws":
-            await _configure_s3_for_aws(ops_test, config, cloud_credentials[cloud_name])
-        else:
-            await _configure_s3_for_microceph(ops_test, config, cloud_credentials[cloud_name])
+        await _configure_s3(ops_test, config, cloud_credentials[cloud_name])
         await wait_until(
             ops_test,
             apps=[app],
