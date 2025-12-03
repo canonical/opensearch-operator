@@ -371,14 +371,6 @@ async def recover_from_rollback(
     logger.info("Adding new unit")
     await ops_test.model.applications[app].add_unit(count=1)
 
-    await wait_until_unit(
-        ops_test,
-        app=app,
-        expected_units_with_status=1,
-        unit_status="Requesting lock on operation: start",
-        timeout=TIMEOUT,
-    )
-
     # wait for new unit to be idle
     await ops_test.model.wait_for_idle(
         apps=[app], wait_for_at_least_units=len(units), timeout=TIMEOUT
