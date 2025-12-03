@@ -321,7 +321,7 @@ async def recover_from_rollback(
     """Recover from refreshing back mid-upgrade"""
     units = await get_application_units(ops_test, app)
     highest_unit_id = sorted([unit.id for unit in units])[-1]
-    unit_ip = [unit.ip for unit in units if unit.is_leader][0]
+    unit_ip = [unit.ip for unit in units if unit.id != highest_unit_id][0]
 
     # re-enable allocation
     logger.info("Re-enabling cluster routing allocation")
