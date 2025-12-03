@@ -676,7 +676,7 @@ def verify_s3_credentials(cfg: ObjectStorageConfig) -> bool:
     verify_param: str | bool = True
 
     # If we have a custom CA chain, write it to a temp file and pass it to boto3
-    if s3_cfg.tls_ca_chain:
+    if s3_cfg.tls_ca_chain and not s3_cfg.endpoint.endswith("amazonaws.com"):
         fd, ca_tmp_path = tempfile.mkstemp(prefix="opensearch-s3-ca-", suffix=".pem")
         with os.fdopen(fd, "w") as f:
             f.write(s3_cfg.tls_ca_chain)
