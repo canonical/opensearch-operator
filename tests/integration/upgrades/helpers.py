@@ -375,26 +375,41 @@ async def recover_from_rollback(
     await ops_test.model.wait_for_idle(
         apps=[app], wait_for_at_least_units=len(units), timeout=TIMEOUT
     )
+    
+    # in v2.18.0, rolling back will cause a hook failure due to an uncaught exception in _on_config_changed
+    # in this case the unit will not be attempting to start and will hold the lock
+    # so the new unit will acquire it and not have the Requesting lock status
+    unit_to_check_for_errors = [unit for unit in await get_application_units(ops_test, app) if unit.id == highest_unit_id][0]
+    if not unit_to_check_for_errors.workload_status.value == "error":
+        await wait_until_unit(
+            ops_test,
+            app=app,
+            expected_units_with_status=1,
+            unit_status="Requesting lock on operation: start",
+            timeout=TIMEOUT,
+        )
 
     # destroy highest unit
     logger.info(f"Destroying unit `{app}/{highest_unit_id}`")
     await ops_test.model.applications[app].destroy_unit(f"{app}/{highest_unit_id}")
 
+    # check if lock with departed unit
+    logger.info(f"Rolled back OpenSearch node: {rolled_back_node}")
     lock_doc = await http_request(
         ops_test,
         "GET",
         f"https://{unit_ip}:9200/.charm_node_lock/_doc/0",
     )
+    if node_with_lock := lock_doc.get("_source").get("unit-name"):
+        logger.info(f"Unit with lock: {node_with_lock}")
 
-    # check if lock with departed unit
-    logger.info(f"Rolled back OpenSearch node: {rolled_back_node}")
-    if lock_doc.get("found") and lock_doc.get("_source").get("unit-name") == rolled_back_node:
-        logger.info("Deleting lock document")
-        lock_doc = await http_request(
-            ops_test,
-            "DELETE",
-            f"https://{unit_ip}:9200/.charm_node_lock/_doc/0?refresh=true",
-        )
+        if node_with_lock == rolled_back_node:
+            logger.info("Deleting lock document")
+            lock_doc = await http_request(
+                ops_test,
+                "DELETE",
+                f"https://{unit_ip}:9200/.charm_node_lock/_doc/0?refresh=true",
+            )
 
     # wait for new unit to be idle
     await ops_test.model.wait_for_idle(
