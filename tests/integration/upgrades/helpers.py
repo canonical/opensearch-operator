@@ -383,7 +383,7 @@ async def recover_from_rollback(
     unit_to_check_for_errors = [
         unit for unit in await get_application_units(ops_test, app) if unit.id == highest_unit_id
     ][0]
-    if not unit_to_check_for_errors.workload_status.value == "error":
+    if unit_to_check_for_errors.workload_status.value != "error":
         await wait_until_unit(
             ops_test,
             app=app,
