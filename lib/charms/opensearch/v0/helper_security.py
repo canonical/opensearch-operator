@@ -676,7 +676,7 @@ def verify_s3_credentials(cfg: ObjectStorageConfig) -> bool:
     verify_param: str | bool = True
 
     # If we have a custom CA chain, write it to a temp file and pass it to boto3
-    if s3_cfg.tls_ca_chain and not s3_cfg.endpoint.endswith("amazonaws.com"):
+    if s3_cfg.tls_ca_chain:
         fd, ca_tmp_path = tempfile.mkstemp(prefix="opensearch-s3-ca-", suffix=".pem")
         with os.fdopen(fd, "w") as f:
             f.write(s3_cfg.tls_ca_chain)
@@ -686,6 +686,7 @@ def verify_s3_credentials(cfg: ObjectStorageConfig) -> bool:
         session = boto3.session.Session(
             aws_access_key_id=s3_cfg.credentials.access_key,
             aws_secret_access_key=s3_cfg.credentials.secret_key,
+            aws_session_token=getattr(s3_cfg.credentials, "session_token", None),
         )
 
         s3_client = session.client(
@@ -701,32 +702,12 @@ def verify_s3_credentials(cfg: ObjectStorageConfig) -> bool:
         logger.info("S3 credential validation with boto3 succeeded.")
         return True
 
-    except ClientError as e:
-        error = e.response.get("Error", {})
-        code = error.get("Code")
-        http_status = e.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
-        if code in ("AccessDenied", "AllAccessDisabled") or http_status == 403:
-            logger.error(
-                "S3 credentials are valid but do not have permission to access "
-                "bucket %s (code=%s, http=%s). Check bucket policy / user caps.",
-                s3_cfg.bucket,
-                code,
-                http_status,
-                exc_info=e,
-            )
-            return True
-        else:
-            logger.error(
-                "S3 credential validation with boto3 failed: %s (code=%s http=%s)",
-                e,
-                code,
-                http_status,
-                exc_info=e,
-            )
-        return False
-
-    except BotoCoreError as e:
-        logger.error("S3/Boto error while validating credentials: %s", e, exc_info=e)
+    except (BotoCoreError, ClientError) as e:
+        logger.error(
+            "S3 credential validation with boto3 failed: %s",
+            e,
+            exc_info=e,
+        )
         return False
 
     finally:
