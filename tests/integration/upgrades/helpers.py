@@ -343,7 +343,7 @@ async def recover_from_rollback(
         shards = await http_request(
             ops_test,
             "GET",
-            f"https://{unit_ip}:9200/_cat/shards?format=json&filter_path=index,shard,state,unassigned.reason",
+            f"https://{unit_ip}:9200/_cat/shards?format=json&h=index,shard,state,unassigned.reason",
         )
 
         indices = set()
