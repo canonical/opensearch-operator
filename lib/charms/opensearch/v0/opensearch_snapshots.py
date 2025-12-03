@@ -375,11 +375,10 @@ class OpenSearchSnapshotEvents(Object):
                 e,
                 getattr(e, "response_body", None),
             )
-            if self.charm.unit.is_leader():
-                self.charm.status.set(
-                    BlockedStatus(BackupMisconfiguration.format("azure", "azure integrator")),
-                    app=True,
-                )
+            self.charm.status.set(
+                BlockedStatus(BackupMisconfiguration.format("azure", "azure integrator")),
+                app=True,
+            )
             event.defer()
             return
 
