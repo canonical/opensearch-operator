@@ -375,11 +375,14 @@ async def recover_from_rollback(
     await ops_test.model.wait_for_idle(
         apps=[app], wait_for_at_least_units=len(units), timeout=TIMEOUT
     )
-    
-    # in v2.18.0, rolling back will cause a hook failure due to an uncaught exception in _on_config_changed
-    # in this case the unit will not be attempting to start and will hold the lock
-    # so the new unit will acquire it and not have the Requesting lock status
-    unit_to_check_for_errors = [unit for unit in await get_application_units(ops_test, app) if unit.id == highest_unit_id][0]
+
+    # in some previous revisions, rolling back will cause a hook failure
+    # due to an uncaught exception in _on_config_changed in this case the
+    # rolled back unit will not be attempting to start and will hold the lock
+    # and the new unit will acquire it without setting the Requesting lock status
+    unit_to_check_for_errors = [
+        unit for unit in await get_application_units(ops_test, app) if unit.id == highest_unit_id
+    ][0]
     if not unit_to_check_for_errors.workload_status.value == "error":
         await wait_until_unit(
             ops_test,
