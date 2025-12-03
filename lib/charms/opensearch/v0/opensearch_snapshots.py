@@ -413,8 +413,8 @@ class OpenSearchSnapshotEvents(Object):
             return
 
         if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupCredentialIncorrect, app=True)
             self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
+            self.charm.status.clear(BackupCredentialIncorrect, app=True)
 
         self._subclusters_remove_credentials(event, AZURE_RELATION)
 
