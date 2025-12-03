@@ -363,7 +363,9 @@ async def recover_from_rollback(
             )
 
         cluster_health_resp = await cluster_health(ops_test, unit_ip)
-        logger.info(f"Cluster health response after removing indices: {cluster_health_resp["status"]}")
+        logger.info(
+            f"Cluster health response after removing indices: {cluster_health_resp["status"]}"
+        )
     # add unit
     logger.info("Adding new unit")
     await ops_test.model.applications[app].add_unit(count=1)
