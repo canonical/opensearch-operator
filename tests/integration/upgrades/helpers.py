@@ -413,3 +413,9 @@ async def recover_from_rollback(
     assert (
         len(nodes) == expected_cluster_size
     ), f"Expected {expected_cluster_size} but found {len(nodes)}"
+
+    remaining_units = await get_application_units(ops_test, app)
+    if len(remaining_units) > len(units):
+        # force-remove rolled back unit if initial removal not successful
+        logger.info(f"Destroying unit `{app}/{highest_unit_id}`")
+        await ops_test.model.applications[app].destroy_unit(f"{app}/{highest_unit_id}", force=True)
