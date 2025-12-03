@@ -128,6 +128,9 @@ prepare: |
   # Install charmcraft & pipx (on lxd-vm backend)
   concierge prepare --trace
 
+  /snap/bin/juju bootstrap localhost concierge-lxd --verbose --model-default 'logging-config=<root>=INFO; unit=DEBUG' --agent-version=3.6.11
+  /snap/bin/juju add-model -c concierge-lxd testing
+
   pipx install tox poetry
 prepare-each: |
   cd "$SPREAD_PATH"
