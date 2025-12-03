@@ -12,6 +12,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
+from ..ha.helpers import storage_id
 from ..helpers import CONFIG_OPTS, cluster_health, http_request, run_action
 from ..helpers_deployments import get_application_units, wait_until, wait_until_unit
 
@@ -378,6 +379,11 @@ async def recover_from_rollback(
         timeout=TIMEOUT,
     )
 
+    # wait for new unit to be idle
+    await ops_test.model.wait_for_idle(
+        apps=[app], wait_for_at_least_units=len(units), timeout=TIMEOUT
+    )
+
     # destroy highest unit
     logger.info(f"Destroying unit `{app}/{highest_unit_id}`")
     await ops_test.model.applications[app].destroy_unit(f"{app}/{highest_unit_id}")
@@ -417,5 +423,7 @@ async def recover_from_rollback(
     remaining_units = await get_application_units(ops_test, app)
     if len(remaining_units) > len(units):
         # force-remove rolled back unit if initial removal not successful
+        unit_storage_id = storage_id(ops_test, app, highest_unit_id)
         logger.info(f"Force-removing unit `{app}/{highest_unit_id}`")
         await ops_test.model.destroy_unit(f"{app}/{highest_unit_id}", force=True)
+        await ops_test.model.remove_storage(unit_storage_id)
