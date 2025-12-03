@@ -1334,14 +1334,20 @@ async def test_wrong_azure_credentials(
         assert AZURE_REPOSITORY in resp_ok
 
 
-@pytest.mark.group(id=ALL_MICROCEPH_GROUP)
-@pytest.mark.group(id=ALL_AWS_GROUP)
+@pytest.mark.parametrize(
+    "cloud_name",
+    [
+        pytest.param(cloud, id=f"all-{cloud}", marks=pytest.mark.group(id=f"all-{cloud}"))
+        for cloud in ("aws", "microceph")
+    ],
+)
 @pytest.mark.abort_on_fail
 async def test_change_config_and_backup_restore(
     ops_test: OpsTest,
     cloud_configs: Dict[str, Dict[str, str]],
     cloud_credentials: Dict[str, Dict[str, str]],
     force_clear_cwrites_index,
+    cloud_name: str,
 ) -> None:
     """Cycle through each S3-like cloud config and perform backup and restore."""
     app: str = (await app_name(ops_test)) or APP_NAME
@@ -1351,7 +1357,6 @@ async def test_change_config_and_backup_restore(
     leader_id: int = await get_leader_unit_id(ops_test, app=app)
 
     initial_count: int = 0
-    cloud_name = test_change_config_and_backup_restore.pytestmark[0].kwargs["id"].split("-")[-1]
     logger.info(f"Starting test for cloud: {cloud_name}")
     logger.debug(
         f"Index {ContinuousWrites.INDEX_NAME} has {initial_count} documents, starting there"
