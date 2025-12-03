@@ -1351,61 +1351,59 @@ async def test_change_config_and_backup_restore(
     leader_id: int = await get_leader_unit_id(ops_test, app=app)
 
     initial_count: int = 0
-    for cloud_name in cloud_configs.keys():
-        # Azure has no different config setups at this point
-        if cloud_name == "azure":
-            continue
-        logger.debug(
-            f"Index {ContinuousWrites.INDEX_NAME} has {initial_count} documents, starting there"
+    cloud_name = test_change_config_and_backup_restore.pytestmark[0].kwargs["id"].split("-")[-1]
+    logger.info(f"Starting test for cloud: {cloud_name}")
+    logger.debug(
+        f"Index {ContinuousWrites.INDEX_NAME} has {initial_count} documents, starting there"
+    )
+    # Start the ContinuousWrites here instead of bringing as a fixture because we want to do
+    # it for every cloud config we have and we have to stop it before restore, right down.
+    writer: ContinuousWrites = ContinuousWrites(ops_test, app, initial_count=initial_count)
+
+    # store the global cwrites object
+    global global_cwrites
+    global_cwrites = writer
+
+    await writer.start()
+    time.sleep(10)
+
+    logger.info(f"Syncing credentials for {cloud_name}")
+    config: Dict[str, str] = cloud_configs[cloud_name]
+    if cloud_name == "aws":
+        await _configure_s3_for_aws(ops_test, config, cloud_credentials[cloud_name])
+    else:
+        await _configure_s3_for_microceph(ops_test, config, cloud_credentials[cloud_name])
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=len(ops_test.model.applications[app].units),
+        idle_period=IDLE_PERIOD,
+    )
+
+    date_before_backup = datetime.utcnow()
+
+    # Wait, we want to make sure the timestamps are different
+    await asyncio.sleep(5)
+
+    assert (
+        datetime.strptime(
+            backup_id := await create_backup(
+                ops_test,
+                leader_id,
+                unit_ip=unit_ip,
+            ),
+            OPENSEARCH_BACKUP_ID_FORMAT,
         )
-        # Start the ContinuousWrites here instead of bringing as a fixture because we want to do
-        # it for every cloud config we have and we have to stop it before restore, right down.
-        writer: ContinuousWrites = ContinuousWrites(ops_test, app, initial_count=initial_count)
+        > date_before_backup
+    )
 
-        # store the global cwrites object
-        global global_cwrites
-        global_cwrites = writer
-
-        await writer.start()
-        time.sleep(10)
-
-        logger.info(f"Syncing credentials for {cloud_name}")
-        config: Dict[str, str] = cloud_configs[cloud_name]
-        if cloud_name == "aws":
-            await _configure_s3_for_aws(ops_test, config, cloud_credentials[cloud_name])
-        else:
-            await _configure_s3_for_microceph(ops_test, config, cloud_credentials[cloud_name])
-        await wait_until(
-            ops_test,
-            apps=[app],
-            apps_statuses=["active"],
-            units_statuses=["active"],
-            wait_for_exact_units=len(ops_test.model.applications[app].units),
-            idle_period=IDLE_PERIOD,
-        )
-
-        date_before_backup = datetime.utcnow()
-
-        # Wait, we want to make sure the timestamps are different
-        await asyncio.sleep(5)
-
-        assert (
-            datetime.strptime(
-                backup_id := await create_backup(
-                    ops_test,
-                    leader_id,
-                    unit_ip=unit_ip,
-                ),
-                OPENSEARCH_BACKUP_ID_FORMAT,
-            )
-            > date_before_backup
-        )
-
-        # continuous writes checks
-        await assert_continuous_writes_increasing(writer)
-        await assert_continuous_writes_consistency(ops_test, writer, [app])
-        await assert_restore_indices_and_compare_consistency(
-            ops_test, app, leader_id, unit_ip, backup_id
-        )
-        # Clear the writer manually, as we are not using the conftest c_writes_runner to do so
-        await writer.clear()
+    # continuous writes checks
+    await assert_continuous_writes_increasing(writer)
+    await assert_continuous_writes_consistency(ops_test, writer, [app])
+    await assert_restore_indices_and_compare_consistency(
+        ops_test, app, leader_id, unit_ip, backup_id
+    )
+    # Clear the writer manually, as we are not using the conftest c_writes_runner to do so
+    await writer.clear()
