@@ -19,7 +19,7 @@ resource "juju_application" "opensearch" {
     base     = var.base
   }
   config             = var.config
-  model              = var.model
+  model_uuid         = var.model_uuid
   name               = var.app_name
   units              = var.units
   constraints        = var.constraints
@@ -42,7 +42,7 @@ resource "juju_application" "opensearch" {
 
   lifecycle {
     precondition {
-      condition     = local.is_main_orchestrator && (var.main_model == null || var.model == var.main_model) || !local.is_main_orchestrator && var.main_model != null
+      condition     = local.is_main_orchestrator && (var.main_model_uuid == null || var.model_uuid == var.main_model_uuid) || !local.is_main_orchestrator && var.main_model_uuid != null
       error_message = "The main_model should either be null or equal to the model for main orchestrators."
     }
   }
@@ -52,7 +52,7 @@ resource "juju_application" "opensearch" {
 resource "juju_application" "self-signed-certificates" {
   for_each = local.is_main_orchestrator ? { "deployed" = true } : {}
 
-  model = var.model
+  model_uuid = var.model_uuid
 
   charm {
     name     = "self-signed-certificates"
@@ -65,7 +65,7 @@ resource "juju_application" "self-signed-certificates" {
 
   units       = 1
   constraints = var.self-signed-certificates.constraints
-  placement   = length(var.self-signed-certificates.machines) == 1 ? var.self-signed-certificates.machines[0] : null
+  machines    = (var.self-signed-certificates.machines == null || length(var.self-signed-certificates.machines) == 0) ? null : var.self-signed-certificates.machines
 }
 
 
@@ -75,9 +75,9 @@ resource "juju_application" "self-signed-certificates" {
 
 # Integrations
 resource "juju_integration" "tls-opensearch-same-model_integration" {
-  for_each = local.is_main_orchestrator || var.model == var.main_model ? { "local" = true } : {}
+  for_each = local.is_main_orchestrator || var.model_uuid == var.main_model_uuid ? { "local" = true } : {}
 
-  model = var.model
+  model_uuid = var.model_uuid
 
   application {
     name = "self-signed-certificates" # we have to fix the name for subsequent non-main same model apps

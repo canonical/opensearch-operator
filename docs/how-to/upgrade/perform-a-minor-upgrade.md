@@ -97,7 +97,7 @@ Optionally, it is recommended to scale the application up by one unit before upg
 
 The new unit will be the first one to be updated, and it will assert that the upgrade is possible.
 In case of failure, having the extra unit will ease the rollback procedure,
-without disrupting servicem see more in [Minor rollback how-to](how-to-minor-rollback).
+without disrupting service see more in [Minor rollback how-to](how-to-minor-rollback).
 
 ```shell
 juju add-unit opensearch
