@@ -4,16 +4,21 @@
 OpenSearch does not support rolling back to a previous version.
 If a unit has already been upgraded, performing `juju refresh`
 to a previous revision will result in OpenSearch failing to start on that unit.
-In this situation, a manual recovery is required.
-This section describes how to restore the cluster to a healthy, operable state.
+In this case, a manual recovery is required.
+Follow the steps in this section to restore the cluster to a healthy, operational state.
 
 For more information, please refer to the upstream
 [OpenSearch documentation about rolling upgrades](https://docs.opensearch.org/latest/migrate-or-upgrade/rolling-upgrade/#preparing-to-upgrade).
 
-## Unit waiting to start
+## Check Juju status
 
-After running `juju refresh`, the rolled back unit may appear stuck displaying the status
-`Waiting for OpenSearch to start...`:
+Check Juju model status:
+
+```shell
+juju status
+```
+
+The rolled back unit may appear stuck displaying the status `Waiting for OpenSearch to start...`:
 
 ```text
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
@@ -33,7 +38,8 @@ Machine  State    Address        Inst id        Base          AZ  Message
 3        started  10.45.114.124  juju-1fafd0-3  ubuntu@22.04      Running
 ```
 
-This unit will not recover automatically and additional steps are required to replace it.
+Note the blocked unit; in this example, it is `opensearch/2`.
+This unit will not recover automatically, and additional steps are required to replace it.
 
 ## Check cluster health
 
@@ -102,7 +108,7 @@ For example, in the following output, `index1` cannot be recovered as its curren
 }
 ```
 
-Delete the index by replacing `index1` with the name of the index identified in the previous step:
+Delete the problematic index identified in the previous step:
 
 ```{warning}
 If you do not have a snapshot containing this index, it will not be recoverable.
@@ -125,11 +131,6 @@ Restore normal allocation by enabling all routing:
 
 ```text
 PUT _cluster/settings
-```
-
-Example response:
-
-```json
 {
   "persistent": {
     "cluster.routing.allocation.enable": "all"
@@ -139,7 +140,7 @@ Example response:
 
 ## Add a new unit
 
-Add a replacement unit to restore the desired scale for your application:
+Add a replacement unit to restore the original scale of the application:
 
 ```shell
 juju add-unit opensearch -n 1
@@ -147,12 +148,13 @@ juju add-unit opensearch -n 1
 
 ## Remove rolled back unit
 
-Remove the rolled back unit.
-Replace `opensearch/2` with the unit that was rolled back:
+Remove the rolled back unit:
 
 ```shell
 juju remove-unit opensearch/2
 ```
+
+Where `opensearch/2` is the name of the unit that was rolled back and blocked earlier.
 
 ## Remove lock
 
