@@ -12,9 +12,12 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
-from ..ha.helpers import storage_id
 from ..helpers import CONFIG_OPTS, cluster_health, http_request, run_action
-from ..helpers_deployments import get_application_units, wait_until, wait_until_unit
+from ..helpers_deployments import (
+    get_application_units,
+    wait_until,
+    wait_until_condition_on_units,
+)
 
 OPENSEARCH_CHARM = "opensearch"
 OPENSEARCH_CHANNEL = "2/edge"
@@ -234,8 +237,8 @@ async def assert_rollback_to_revision(
 ):
     """Upgrades to local charm and rolls back to revision mid-upgrade"""
     units = await get_application_units(ops_test, app)
-    highest_unit_name = sorted([unit.name for unit in units])[-1]
-    highest_unit_ip = [unit.ip for unit in units if unit.name == highest_unit_name][0]
+    highest_unit_id = sorted([unit.id for unit in units])[-1]
+    highest_unit_ip = [unit.ip for unit in units if unit.id == highest_unit_id][0]
     leader_id = [unit.id for unit in units if unit.is_leader][0]
     nodes = await http_request(
         ops_test,
@@ -292,12 +295,18 @@ async def assert_rollback_to_revision(
         )
 
         logger.info("Waiting for rolled back unit to attempt restart...")
-        await wait_until_unit(
+
+        await wait_until_condition_on_units(
             ops_test,
             app=app,
-            expected_units_with_status=1,
-            unit_status="Waiting for OpenSearch to start...",
-            timeout=TIMEOUT,
+            condition=lambda units: any(
+                unit.workload_status.message == "Waiting for OpenSearch to start..."
+                or unit.workload_status.value
+                == "error"  # the unit may be in an error state on rollback
+                for unit in units
+                if unit.id == highest_unit_id
+            ),
+            timeout=300,
         )
 
         await recover_from_rollback(ops_test, app, rolled_back_node, cluster_size)
@@ -321,8 +330,10 @@ async def recover_from_rollback(
 ):
     """Recover from refreshing back mid-upgrade"""
     units = await get_application_units(ops_test, app)
-    highest_unit_id = sorted([unit.id for unit in units])[-1]
-    unit_ip = [unit.ip for unit in units if unit.id != highest_unit_id][0]
+    rolled_back_unit_id = sorted([unit.id for unit in units])[-1]
+
+    # make calls to any unit which is not the rolled back unit
+    unit_ip = [unit.ip for unit in units if unit.id != rolled_back_unit_id][0]
 
     # re-enable allocation
     logger.info("Re-enabling cluster routing allocation")
@@ -370,31 +381,30 @@ async def recover_from_rollback(
     # add unit
     logger.info("Adding new unit")
     await ops_test.model.applications[app].add_unit(count=1)
+    time.sleep(5)
 
-    # wait for new unit to be idle
-    await ops_test.model.wait_for_idle(
-        apps=[app], wait_for_at_least_units=len(units), timeout=TIMEOUT
+    new_unit_id = sorted([unit.id for unit in await get_application_units(ops_test, app)])[-1]
+    logger.info(f"Waiting for new unit {app}/{new_unit_id}...")
+    await wait_until_condition_on_units(
+        ops_test,
+        app=app,
+        condition=lambda units: any(
+            unit.workload_status.message
+            == "Requesting lock on operation: start"  # unit may be stuck waiting for lock
+            for unit in units
+            if unit.id == new_unit_id
+        ),
+        timeout=TIMEOUT,
     )
 
-    # in some previous revisions, rolling back will cause a hook failure
-    # due to an uncaught exception in _on_config_changed in this case the
-    # rolled back unit will not be attempting to start and will hold the lock
-    # and the new unit will acquire it without setting the Requesting lock status
-    unit_to_check_for_errors = [
-        unit for unit in await get_application_units(ops_test, app) if unit.id == highest_unit_id
-    ][0]
-    if unit_to_check_for_errors.workload_status.value != "error":
-        await wait_until_unit(
-            ops_test,
-            app=app,
-            expected_units_with_status=1,
-            unit_status="Requesting lock on operation: start",
-            timeout=TIMEOUT,
-        )
-
-    # destroy highest unit
-    logger.info(f"Destroying unit `{app}/{highest_unit_id}`")
-    await ops_test.model.applications[app].destroy_unit(f"{app}/{highest_unit_id}")
+    # destroy rolled back unit
+    logger.info(f"Destroying unit `{app}/{rolled_back_unit_id}`")
+    await ops_test.model.destroy_unit(
+        f"{app}/{rolled_back_unit_id}", destroy_storage=True, force=True
+    )
+    await ops_test.model.block_until(
+        lambda: len(ops_test.model.applications[app].units) == len(units), timeout=180
+    )
 
     # check if lock with departed unit
     logger.info(f"Rolled back OpenSearch node: {rolled_back_node}")
@@ -403,7 +413,7 @@ async def recover_from_rollback(
         "GET",
         f"https://{unit_ip}:9200/.charm_node_lock/_doc/0",
     )
-    if node_with_lock := lock_doc.get("_source").get("unit-name"):
+    if node_with_lock := lock_doc.get("_source", {}).get("unit-name"):
         logger.info(f"Unit with lock: {node_with_lock}")
 
         if node_with_lock == rolled_back_node:
@@ -414,9 +424,13 @@ async def recover_from_rollback(
                 f"https://{unit_ip}:9200/.charm_node_lock/_doc/0?refresh=true",
             )
 
-    # wait for new unit to be idle
-    await ops_test.model.wait_for_idle(
-        apps=[app], wait_for_at_least_units=len(units), timeout=TIMEOUT
+    await wait_until(
+        ops_test,
+        apps=[app],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        timeout=TIMEOUT,
+        idle_period=IDLE_PERIOD,
     )
 
     # verify node joined cluster
@@ -429,11 +443,3 @@ async def recover_from_rollback(
     assert (
         len(nodes) == expected_cluster_size
     ), f"Expected cluster size of {expected_cluster_size} but found {len(nodes)}"
-
-    remaining_units = await get_application_units(ops_test, app)
-    if len(remaining_units) > len(units):
-        # force-remove rolled back unit if initial removal not successful
-        unit_storage_id = storage_id(ops_test, app, highest_unit_id)
-        logger.info(f"Force-removing unit `{app}/{highest_unit_id}`")
-        await ops_test.model.destroy_unit(f"{app}/{highest_unit_id}", force=True)
-        await ops_test.model.remove_storage(unit_storage_id)

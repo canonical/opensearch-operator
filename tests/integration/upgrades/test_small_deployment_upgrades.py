@@ -142,9 +142,7 @@ async def test_deploy_from_version(ops_test: OpsTest, version, series) -> None:
 
 @pytest.mark.parametrize("version", UPGRADE_PARAMS)
 @pytest.mark.abort_on_fail
-async def test_upgrade_rollback_from_local(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, version, charm, series
-) -> None:
+async def test_upgrade_rollback_from_local(ops_test: OpsTest, version, charm, series) -> None:
     """Test upgrade and rollback to each version available."""
     app = (await app_name(ops_test)) or APP_NAME
     revision = VERSION_TO_REVISION[version][series]
