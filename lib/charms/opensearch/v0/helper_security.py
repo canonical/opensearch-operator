@@ -686,7 +686,16 @@ def verify_s3_credentials(cfg: ObjectStorageConfig) -> bool:
         session = boto3.session.Session(
             aws_access_key_id=s3_cfg.credentials.access_key,
             aws_secret_access_key=s3_cfg.credentials.secret_key,
-            aws_session_token=getattr(s3_cfg.credentials, "session_token", None),
+            aws_session_token=getattr(s3_cfg.credentials, "session_token", ""),
+        )
+
+        logger.info(
+            "Verifying S3 with endpoint=%r bucket=%r region=%r has_ca=%r verify=%r",
+            s3_cfg.endpoint,
+            s3_cfg.bucket,
+            s3_cfg.region,
+            bool(s3_cfg.tls_ca_chain),
+            verify_param,
         )
 
         s3_client = session.client(
