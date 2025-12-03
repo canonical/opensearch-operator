@@ -398,13 +398,11 @@ async def recover_from_rollback(
             f"https://{unit_ip}:9200/.charm_node_lock/_doc/0?refresh=true",
         )
 
-    await wait_until_unit(
-        ops_test,
-        app=app,
-        expected_units_with_status=len(units),
-        unit_status="",
-        timeout=TIMEOUT,
+    # wait for new unit to be idle
+    await ops_test.model.wait_for_idle(
+        apps=[app], wait_for_at_least_units=len(units), timeout=TIMEOUT
     )
+
     # verify node joined cluster
     nodes = await http_request(
         ops_test,

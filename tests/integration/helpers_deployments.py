@@ -361,7 +361,8 @@ async def wait_until_unit(  # noqa: C901
                 units = await get_application_units(ops_test, app)
                 if unit_name:
                     units = [unit for unit in units if unit.name == unit_name]
-                if expected_units_with_status == -1:
+                    expected_units_with_status = 1
+                elif expected_units_with_status == -1:
                     expected_units_with_status = len(units)
                 logger.info(
                     f"\n\n\n{now()} -- Waiting for status '{unit_status}' on {unit_name or (str(expected_units_with_status) + " units")} in '{app}'..."
