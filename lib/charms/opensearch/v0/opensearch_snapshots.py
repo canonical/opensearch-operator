@@ -257,7 +257,7 @@ class OpenSearchSnapshotEvents(Object):
             secret_content = {"keys": keys}
             if object_storage_config.s3.tls_ca_chain:
                 secret_content.update({"tls_ca_chain": object_storage_config.s3.tls_ca_chain})
-            self._propagate_credentials_to_subclusters(
+            self._subclusters_add_credentials(
                 event, secret_content=secret_content, relation_name=S3_RELATION
             )
 
@@ -283,23 +283,17 @@ class OpenSearchSnapshotEvents(Object):
             event.defer()
             return
 
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
+
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.remove_s3_ca()
             self.charm.request_opensearch_restart(reason="clean up the object storage CA")
 
-        if not self.charm.unit.is_leader():
-            return
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupCredentialIncorrect, app=True)
 
-        self.charm.status.clear(BackupCredentialIncorrect, app=True)
-        self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
-
-        if (
-            backup_config := self.charm.state.app.plugin_config_info.get(self.secret_label)
-        ) and backup_config.relation_name == S3_RELATION:
-            remove_plugin_secret(self.charm, self.secret_label)
-
-            if self.charm.opensearch_peer_cm.is_provider(typ="main"):
-                self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+        self._subclusters_remove_credentials(event, S3_RELATION)
 
     def _on_azure_credentials_changed(  # noqa: C901
         self, event: StorageConnectionInfoChangedEvent
@@ -392,7 +386,7 @@ class OpenSearchSnapshotEvents(Object):
         self.charm.status.clear(
             BackupMisconfiguration.format("azure", "azure integrator"), app=True
         )
-        self._propagate_credentials_to_subclusters(
+        self._subclusters_add_credentials(
             event, secret_content={"keys": keys}, relation_name=AZURE_RELATION
         )
 
@@ -419,18 +413,11 @@ class OpenSearchSnapshotEvents(Object):
             event.defer()
             return
 
-        if not self.charm.unit.is_leader():
-            return
-        self.charm.status.clear(BackupCredentialIncorrect, app=True)
-        self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
+        if self.charm.unit.is_leader():
+            self.charm.status.clear(BackupCredentialIncorrect, app=True)
+            self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
 
-        if (
-            backup_config := self.charm.state.app.plugin_config_info.get(self.secret_label)
-        ) and backup_config.relation_name == AZURE_RELATION:
-            remove_plugin_secret(self.charm, self.secret_label)
-
-            if self.charm.opensearch_peer_cm.is_provider(typ="main"):
-                self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+        self._subclusters_remove_credentials(event, AZURE_RELATION)
 
     def _on_secret_changed(self, event) -> None:
         """Handles secret changes"""
@@ -463,7 +450,7 @@ class OpenSearchSnapshotEvents(Object):
 
         self.charm.snapshots_manager.update_ca(tls_ca_chain)
 
-    def _propagate_credentials_to_subclusters(self, event, secret_content, relation_name):
+    def _subclusters_add_credentials(self, event, secret_content, relation_name):
         """Propagates credentials to subclusters as a secret"""
         if not self.charm.unit.is_leader():
             return
@@ -477,6 +464,19 @@ class OpenSearchSnapshotEvents(Object):
 
         if self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event)
+
+    def _subclusters_remove_credentials(self, event, backup_relation):
+        """Propagates removal of credentials to subclusters"""
+        if not self.charm.unit.is_leader():
+            return
+
+        if (
+            backup_config := self.charm.state.app.plugin_config_info.get(self.secret_label)
+        ) and backup_config.relation_name == backup_relation:
+            remove_plugin_secret(self.charm, self.secret_label)
+
+            if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+                self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
         """Handler for s3 create backup action event."""

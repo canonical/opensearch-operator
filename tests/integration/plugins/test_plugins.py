@@ -836,7 +836,7 @@ async def test_anomaly_detection(ops_test: OpsTest, deploy_type: str) -> None:
 
     response = await http_request(ops_test, "POST", f"{detectors_url}/results/_search", payload)
     logger.info(f"Anomaly results search response: {response}")
-    assert response.get("hits").get("total").get("value", 0) > 0, "No anomalies found"
+    assert response.get("hits", {}).get("total", {}).get("value", 0) > 0, "No anomalies found"
     assert (
         response.get("hits").get("hits")[0].get("_source").get("feature_data")[0].get("data")
         == anomaly
@@ -1164,7 +1164,7 @@ async def test_neural_search_plugin(ops_test: OpsTest, deploy_type: str) -> None
         "query": {"neural": {"passage_embedding": {"query_text": "hello", "model_id": model_id}}}
     }
     response = await http_request(ops_test, "GET", f"{base_url}/{TEST_INDEX}/_search", payload)
-    assert len(response.get("hits").get("hits", [])) > 0, "Neural search did not yield results"
+    assert len(response.get("hits", {}).get("hits", [])) > 0, "Neural search did not yield results"
 
 
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
@@ -1225,7 +1225,7 @@ async def test_ltr_plugin(ops_test: OpsTest, deploy_type: str) -> None:
     response = await http_request(ops_test, "POST", f"{base_url}/{TEST_INDEX}/_search", payload)
     logger.info(f"LTR search response: {response}")
     assert (
-        len(response.get("hits").get("hits", [])) == 1
+        len(response.get("hits", {}).get("hits", [])) == 1
     ), "Scoring with LTR did not yield a result"
     await delete_index(ops_test, APP_NAME, leader_unit_ip, TEST_INDEX)
 

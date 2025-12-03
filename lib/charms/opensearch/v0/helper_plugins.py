@@ -12,6 +12,16 @@ from ops import ModelError, SecretNotFoundError
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
+# The unique Charmhub library identifier, never change it
+LIBID = "f74617010c314bb7807475d9f4de6e09"
+
+# Increment this major API version when introducing breaking changes
+LIBAPI = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
+
 logger = logging.getLogger(__name__)
 
 
