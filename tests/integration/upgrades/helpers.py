@@ -320,7 +320,7 @@ async def recover_from_rollback(
 ):
     """Recover from refreshing back mid-upgrade"""
     units = await get_application_units(ops_test, app)
-    highest_unit = sorted([unit.name for unit in units])[-1]
+    highest_unit_id = sorted([unit.id for unit in units])[-1]
     unit_ip = [unit.ip for unit in units if unit.is_leader][0]
 
     # re-enable allocation
@@ -362,13 +362,11 @@ async def recover_from_rollback(
                 f"https://{unit_ip}:9200/{index}",
             )
 
+        cluster_health_resp = await cluster_health(ops_test, unit_ip)
+        logger.info(f"Cluster health response after removing indices: {cluster_health_resp["status"]}")
     # add unit
-    logger.info("Destroying rolled back unit")
-    await ops_test.model.applications[app].add_units(1)
-
-    # destroy highest unit
     logger.info("Adding new unit")
-    await ops_test.model.applications[app].destroy_unit(highest_unit)
+    await ops_test.model.applications[app].add_unit(count=1)
 
     await wait_until_unit(
         ops_test,
@@ -378,12 +376,18 @@ async def recover_from_rollback(
         timeout=TIMEOUT,
     )
 
+    # destroy highest unit
+    logger.info(f"Destroying unit `{app}/{highest_unit_id}`")
+    await ops_test.model.applications[app].destroy_unit(f"{app}/{highest_unit_id}")
+
     lock_doc = await http_request(
         ops_test,
         "GET",
         f"https://{unit_ip}:9200/.charm_node_lock/_doc/0",
     )
+
     # check if lock with departed unit
+    logger.info(f"Rolled back OpenSearch node: {rolled_back_node}")
     if lock_doc.get("found") and lock_doc.get("_source").get("unit-name") == rolled_back_node:
         logger.info("Deleting lock document")
         lock_doc = await http_request(
@@ -392,6 +396,13 @@ async def recover_from_rollback(
             f"https://{unit_ip}:9200/.charm_node_lock/_doc/0?refresh=true",
         )
 
+    await wait_until_unit(
+        ops_test,
+        app=app,
+        expected_units_with_status=len(units),
+        unit_status="",
+        timeout=TIMEOUT,
+    )
     # verify node joined cluster
     nodes = await http_request(
         ops_test,
