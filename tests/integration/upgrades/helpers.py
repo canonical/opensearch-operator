@@ -239,6 +239,13 @@ async def assert_rollback_to_revision(
     units = await get_application_units(ops_test, app)
     highest_unit_id = sorted([unit.id for unit in units])[-1]
     leader_id = [unit.id for unit in units if unit.is_leader][0]
+    leader_ip = [unit.ip for unit in units if unit.id == leader_id][0]
+    nodes = await http_request(
+        ops_test,
+        "GET",
+        f"https://{leader_ip}:9200/_cat/nodes?format=json",
+    )
+    cluster_size = len(nodes)
 
     # run pre-upgrade-check action on leader
     action = await run_action(ops_test, leader_id, "pre-upgrade-check", app=app)
@@ -296,7 +303,7 @@ async def assert_rollback_to_revision(
             timeout=300,
         )
 
-        await recover_from_rollback(ops_test, app, expected_cluster_size=n_units)
+        await recover_from_rollback(ops_test, app, expected_cluster_size=cluster_size)
 
         await wait_until(
             ops_test,
