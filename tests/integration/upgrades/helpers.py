@@ -385,7 +385,7 @@ async def recover_from_rollback(ops_test: OpsTest, app: str, expected_cluster_si
         condition=lambda units: any(
             unit.workload_status.message
             == "Requesting lock on operation: start"  # unit may be stuck waiting for lock
-            or unit.workload_status.value == "active"
+            or unit.agent_status.value == "idle"
             for unit in units
             if unit.id == new_unit_id
         ),
@@ -415,6 +415,7 @@ async def recover_from_rollback(ops_test: OpsTest, app: str, expected_cluster_si
         apps=[app],
         apps_statuses=["active"],
         units_statuses=["active"],
+        wait_for_exact_units=len(remaining_units),
         timeout=TIMEOUT,
         idle_period=IDLE_PERIOD,
     )
@@ -425,7 +426,11 @@ async def recover_from_rollback(ops_test: OpsTest, app: str, expected_cluster_si
         "GET",
         f"https://{unit_ip}:9200/_cat/nodes?format=json",
     )
-    logger.info(f"Nodes in cluster: {", ".join([node["name"] for node in nodes])}")
+    node_names = [node["name"] for node in nodes]
+    logger.info(f"Nodes in cluster: {", ".join(node_names)}")
+
+    new_node_name = [unit.name for unit in remaining_units if unit.id == new_unit_id][0]
+    assert new_node_name in node_names, f"Replacement node '{new_node_name}' not found in cluster."
     assert (
         len(nodes) == expected_cluster_size
     ), f"Expected cluster size of {expected_cluster_size} but found {len(nodes)}"
