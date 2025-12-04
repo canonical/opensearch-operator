@@ -230,9 +230,10 @@ class OpenSearchSnapshotEvents(Object):
             logger.info("S3 CA removed.")
             self.charm.request_opensearch_restart(reason="clean up the object storage CA")
 
+        if not self.charm.unit.is_leader():
+            return
+
         try:
-            if not self.charm.unit.is_leader():
-                return
             self.charm.snapshots_manager.ensure_repository(
                 object_storage_type, object_storage_config
             )
@@ -245,23 +246,21 @@ class OpenSearchSnapshotEvents(Object):
                 e,
                 getattr(e, "response_body", None),
             )
-            if self.charm.unit.is_leader():
-                self.charm.status.set(
-                    BlockedStatus(BackupMisconfiguration.format("s3", "s3 integrator")), app=True
-                )
+            self.charm.status.set(
+                BlockedStatus(BackupMisconfiguration.format("s3", "s3 integrator")), app=True
+            )
             event.defer()
             return
 
-        if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupMisconfiguration.format("s3", "s3 integrator"), app=True)
+        self.charm.status.clear(BackupMisconfiguration.format("s3", "s3 integrator"), app=True)
 
-            # propagate credentials to subclusters
-            secret_content = {"keys": keys}
-            if object_storage_config.s3.tls_ca_chain:
-                secret_content.update({"tls_ca_chain": object_storage_config.s3.tls_ca_chain})
-            self._subclusters_add_credentials(
-                event, secret_content=secret_content, relation_name=S3_RELATION
-            )
+        # propagate credentials to subclusters
+        secret_content = {"keys": keys}
+        if object_storage_config.s3.tls_ca_chain:
+            secret_content.update({"tls_ca_chain": object_storage_config.s3.tls_ca_chain})
+        self._subclusters_add_credentials(
+            event, secret_content=secret_content, relation_name=S3_RELATION
+        )
 
     def _on_s3_credentials_gone(self, event: CredentialsGoneEvent) -> None:
         """Handler for s3 credentials gone event."""
