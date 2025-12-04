@@ -31,10 +31,12 @@ from charms.opensearch.v0.constants_charm import (
     BackupRelConflict,
     BackupRelDataIncomplete,
     BackupRelShouldNotExist,
+    PClusterMissingStorageRelations,
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
     RestoreInProgress,
 )
+from charms.opensearch.v0.helper_charm import Status
 from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.helper_security import (
     list_cas,
@@ -57,6 +59,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
 )
 from charms.opensearch.v0.opensearch_health import HealthColors
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from ops import (
     ActionEvent,
@@ -203,6 +206,35 @@ class OpenSearchSnapshotEvents(Object):
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupCredentialIncorrect, app=True)
+            if missing_relations := self.charm.state.app.relation_data.get(
+                Scope.APP, "missing_relations"
+            ):
+                if "s3-integrator" in missing_relations:
+                    missing_relations.remove("s3-integrator")
+                if len(missing_relations) < 1:
+                    self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
+                    self.charm.status.clear(
+                        PClusterMissingStorageRelations,
+                        pattern=Status.CheckPattern.Interpolated,
+                        app=True,
+                    )
+                else:
+                    self.charm.state.app.relation_data.put(
+                        Scope.APP, "missing_relations", missing_relations
+                    )
+                    self.charm.status.set(
+                        BlockedStatus(
+                            PClusterMissingStorageRelations.format(", ".join(missing_relations))
+                        ),
+                        app=True,
+                    )
+            else:
+                self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
+                self.charm.status.clear(
+                    PClusterMissingStorageRelations,
+                    pattern=Status.CheckPattern.Interpolated,
+                    app=True,
+                )
 
         # apply locally (leader does cluster-level config)
         self.charm.keystore_manager.put_entries(
@@ -355,6 +387,29 @@ class OpenSearchSnapshotEvents(Object):
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupCredentialIncorrect, app=True)
+            if missing_relations := self.charm.state.app.relation_data.get(
+                Scope.APP, "missing_relations"
+            ):
+                if "azure-storage-integrator" in missing_relations:
+                    missing_relations.remove("azure-storage-integrator")
+                if len(missing_relations) < 1:
+                    self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
+                    self.charm.status.clear(
+                        PClusterMissingStorageRelations,
+                        pattern=Status.CheckPattern.Interpolated,
+                        app=True,
+                    )
+                else:
+                    self.charm.state.app.relation_data.put(
+                        Scope.APP, "missing_relations", missing_relations
+                    )
+            else:
+                self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
+                self.charm.status.clear(
+                    PClusterMissingStorageRelations,
+                    pattern=Status.CheckPattern.Interpolated,
+                    app=True,
+                )
 
         self.charm.keystore_manager.put_entries(
             {
