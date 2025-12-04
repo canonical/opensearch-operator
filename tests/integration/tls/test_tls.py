@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
-TLS_STABLE_CHANNEL = "1/stable"
+TLS_STABLE_CHANNEL = "latest/stable"
 # The expiry time of the secret carrying the certificate is set to 3 minutes for testing
 SECRET_EXPIRY_TIME = 180
 # Wait time for the secret to expire and be renewed
