@@ -231,6 +231,8 @@ class OpenSearchSnapshotEvents(Object):
             self.charm.request_opensearch_restart(reason="clean up the object storage CA")
 
         try:
+            if not self.charm.unit.is_leader():
+                return
             self.charm.snapshots_manager.ensure_repository(
                 object_storage_type, object_storage_config
             )
