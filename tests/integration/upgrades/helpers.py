@@ -238,20 +238,7 @@ async def assert_rollback_to_revision(
     """Upgrades to local charm and rolls back to revision mid-upgrade"""
     units = await get_application_units(ops_test, app)
     highest_unit_id = sorted([unit.id for unit in units])[-1]
-    highest_unit_ip = [unit.ip for unit in units if unit.id == highest_unit_id][0]
     leader_id = [unit.id for unit in units if unit.is_leader][0]
-    nodes = await http_request(
-        ops_test,
-        "GET",
-        f"https://{highest_unit_ip}:9200/_cat/nodes?format=json",
-    )
-    cluster_size = len(nodes)
-    rolled_back_node = None
-    for node in nodes:
-        if node["ip"] == highest_unit_ip:
-            rolled_back_node = node["name"]
-
-    assert rolled_back_node, "Could not determine node name"
 
     # run pre-upgrade-check action on leader
     action = await run_action(ops_test, leader_id, "pre-upgrade-check", app=app)
@@ -309,7 +296,7 @@ async def assert_rollback_to_revision(
             timeout=300,
         )
 
-        await recover_from_rollback(ops_test, app, rolled_back_node, cluster_size)
+        await recover_from_rollback(ops_test, app, expected_cluster_size=n_units)
 
         await wait_until(
             ops_test,
@@ -325,14 +312,13 @@ async def assert_rollback_to_revision(
         logger.info(f"Recovery from rollback of '{app}' completed")
 
 
-async def recover_from_rollback(
-    ops_test: OpsTest, app: str, rolled_back_node: str, expected_cluster_size: int
-):
+async def recover_from_rollback(ops_test: OpsTest, app: str, expected_cluster_size: int):
     """Recover from refreshing back mid-upgrade"""
     units = await get_application_units(ops_test, app)
     rolled_back_unit_id = sorted([unit.id for unit in units])[-1]
     # make calls to any unit which is not the rolled back unit
     unit_ip = [unit.ip for unit in units if unit.id != rolled_back_unit_id][0]
+    rolled_back_node = [unit.name for unit in units if unit.id == rolled_back_unit_id][0]
 
     # re-enable allocation
     logger.info("Re-enabling cluster routing allocation")

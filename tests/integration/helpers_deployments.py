@@ -341,7 +341,7 @@ async def wait_until_condition_on_units(
         )
         for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(10)):
             with attempt:
-                logger.info(f"Waiting for condition...")
+                logger.info("Waiting for condition...")
                 units = await get_application_units(ops_test, app)
                 if condition(units):
                     logger.info(f"{now()} -- Waiting for condition: complete.\n\n\n")
