@@ -73,7 +73,7 @@ BackupRelShouldNotExist = "This unit should not be related to backup relation"
 BackupRelDataIncomplete = "Backup relation data missing or incomplete."
 BackupCredentialIncorrect = "Backup configuration error: bad credentials, permissions, invalid CA, or unsupported configuration."
 BackupCredentialCleanupFailed = (
-    "Failed to remove keystore credentials, repo removal.Please check the logs for more details."
+    "Failed to remove keystore credentials or snapshot repository. Please check the logs for more details."
 )
 BackupRelConflict = "Too many object storage relations. Only one is supported."
 BackupMisconfiguration = "opensearch {} repository setup failed. Check the {} config."
