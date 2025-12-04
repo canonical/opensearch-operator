@@ -809,7 +809,10 @@ class OpenSearchTLS(Object):
                     if relation.data[unit].get("tls_ca_renewing"):
                         rotation_happening = True
 
-                    if not relation.data[unit].get("tls_ca_renewed"):
+                    if (
+                        "tls_ca_renewed" in relation.data[unit]
+                        and not relation.data[unit]["tls_ca_renewed"]
+                    ):
                         logger.debug(
                             f"TLS CA rotation ongoing in unit {unit}, will not update tls certificates."
                         )
