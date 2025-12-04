@@ -5,6 +5,7 @@
 import hashlib
 import json
 import logging
+from ast import literal_eval
 from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional, Tuple
@@ -206,12 +207,29 @@ class OpenSearchSnapshotEvents(Object):
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupCredentialIncorrect, app=True)
-            if missing_relations := self.charm.state.app.relation_data.get(
+            missing_relations_raw = self.charm.state.app.relation_data.get(
                 Scope.APP, "missing_relations"
-            ):
+            )
+
+            if not missing_relations_raw:
+                self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
+                self.charm.status.clear(
+                    PClusterMissingStorageRelations,
+                    pattern=Status.CheckPattern.Interpolated,
+                    app=True,
+                )
+            else:
+                # We have some stored missing_relations, parse and update them
+                try:
+                    # e.g. "['azure-storage-integrator', 's3-integrator']"
+                    missing_relations = list(literal_eval(missing_relations_raw))
+                except (SyntaxError, ValueError, TypeError):
+                    missing_relations = [missing_relations_raw]
+
                 if "s3-integrator" in missing_relations:
                     missing_relations.remove("s3-integrator")
-                if len(missing_relations) < 1:
+
+                if not missing_relations:
                     self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
                     self.charm.status.clear(
                         PClusterMissingStorageRelations,
@@ -220,21 +238,10 @@ class OpenSearchSnapshotEvents(Object):
                     )
                 else:
                     self.charm.state.app.relation_data.put(
-                        Scope.APP, "missing_relations", missing_relations
+                        Scope.APP,
+                        "missing_relations",
+                        missing_relations,
                     )
-                    self.charm.status.set(
-                        BlockedStatus(
-                            PClusterMissingStorageRelations.format(", ".join(missing_relations))
-                        ),
-                        app=True,
-                    )
-            else:
-                self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
-                self.charm.status.clear(
-                    PClusterMissingStorageRelations,
-                    pattern=Status.CheckPattern.Interpolated,
-                    app=True,
-                )
 
         # apply locally (leader does cluster-level config)
         self.charm.keystore_manager.put_entries(
@@ -387,12 +394,29 @@ class OpenSearchSnapshotEvents(Object):
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupCredentialIncorrect, app=True)
-            if missing_relations := self.charm.state.app.relation_data.get(
+            missing_relations_raw = self.charm.state.app.relation_data.get(
                 Scope.APP, "missing_relations"
-            ):
+            )
+
+            if not missing_relations_raw:
+                self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
+                self.charm.status.clear(
+                    PClusterMissingStorageRelations,
+                    pattern=Status.CheckPattern.Interpolated,
+                    app=True,
+                )
+            else:
+                # We have some stored missing_relations, parse and update them
+                try:
+                    # e.g. "['azure-storage-integrator', 's3-integrator']"
+                    missing_relations = list(literal_eval(missing_relations_raw))
+                except (SyntaxError, ValueError, TypeError):
+                    missing_relations = [missing_relations_raw]
+
                 if "azure-storage-integrator" in missing_relations:
                     missing_relations.remove("azure-storage-integrator")
-                if len(missing_relations) < 1:
+
+                if not missing_relations:
                     self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
                     self.charm.status.clear(
                         PClusterMissingStorageRelations,
@@ -401,15 +425,10 @@ class OpenSearchSnapshotEvents(Object):
                     )
                 else:
                     self.charm.state.app.relation_data.put(
-                        Scope.APP, "missing_relations", missing_relations
+                        Scope.APP,
+                        "missing_relations",
+                        missing_relations,
                     )
-            else:
-                self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
-                self.charm.status.clear(
-                    PClusterMissingStorageRelations,
-                    pattern=Status.CheckPattern.Interpolated,
-                    app=True,
-                )
 
         self.charm.keystore_manager.put_entries(
             {
