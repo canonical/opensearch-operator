@@ -90,7 +90,7 @@ The charm relies on the `tls-certificates` interface.
 #### Example with Self-signed certificates
 ```shell
 # Deploy the self-signed TLS Certificates Operator.
-juju deploy self-signed-certificates --channel=latest/stable
+juju deploy self-signed-certificates --channel=1/stable
 
 # Add the necessary configurations for TLS.
 juju config \

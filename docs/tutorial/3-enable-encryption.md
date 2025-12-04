@@ -42,7 +42,7 @@ tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:39:22Z
 
 App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
 opensearch                         blocked      3  opensearch                2/stable         168  no       Missing TLS relation with this cluster.
-self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
+self-signed-certificates           active       1  self-signed-certificates  1/stable         317  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports  Message
 opensearch/0*                blocked   idle   0        10.95.38.94            Missing TLS relation with this cluster.
@@ -78,7 +78,7 @@ tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:41:22Z
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
 opensearch                         active      3  opensearch                2/stable         168  no
-self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
+self-signed-certificates           active      1  self-signed-certificates  1/stable         317  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
 opensearch/0*                active    idle   0        10.95.38.94     9200/tcp

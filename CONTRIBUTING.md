@@ -93,7 +93,7 @@ juju model-config update-status-hook-interval=1m
 You can then deploy the charm with a TLS relation.
 ```bash
 # Deploy the self-signed-certificates operator
-juju deploy self-signed-certificates --channel=latest/stable --show-log --verbose
+juju deploy self-signed-certificates --channel=1/stable --show-log --verbose
 
 # generate a CA certificate
 juju config \

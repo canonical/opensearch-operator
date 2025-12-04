@@ -69,7 +69,7 @@ dev    development  localhost/localhost  3.5.3    unsupported  10:16:46Z
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
 opensearch                         active      3  opensearch                2/edge         144  no
-self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
+self-signed-certificates           active      1  self-signed-certificates  1/stable       317  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
 opensearch/0                 active    idle   0        10.214.176.180  9200/tcp
@@ -183,7 +183,7 @@ dev    development  localhost/localhost  3.5.3    unsupported  10:29:07Z
 
 App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
 opensearch                         blocked      4  opensearch                2/edge         145  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
-self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
+self-signed-certificates           active       1  self-signed-certificates  2/stable       317  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
 opensearch/0                 active    idle   0        10.214.176.180  9200/tcp  OpenSearch 2.15.0 running; Snap rev 56 (outdated); Charmed operator 1+e686854
@@ -228,7 +228,7 @@ dev    development  localhost/localhost  3.5.3    unsupported  10:39:06Z
 
 App                       Version  Status       Scale  Charm                     Channel        Rev  Exposed  Message
 opensearch                         maintenance      4  opensearch                2/edge         145  no       Upgrading. To rollback, `juju refresh` to the previous revision
-self-signed-certificates           active           1  self-signed-certificates  latest/stable  155  no
+self-signed-certificates           active           1  self-signed-certificates  1/stable       317  no
 
 Unit                         Workload  Agent      Machine  Public address  Ports     Message
 opensearch/0                 active    idle       0        10.214.176.180  9200/tcp  OpenSearch 2.15.0 running; Snap rev 56 (outdated); Charmed operator 1+e686854
@@ -254,7 +254,7 @@ dev    development  localhost/localhost  3.5.3    unsupported  10:43:41Z
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
 opensearch                         active      4  opensearch                2/edge         145  no
-self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
+self-signed-certificates           active      1  self-signed-certificates  2/stable       317  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
 opensearch/0                 active    idle   0        10.214.176.180  9200/tcp
@@ -298,7 +298,7 @@ dev    development  localhost/localhost  3.5.3    unsupported  10:45:39Z
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
 opensearch                         active      3  opensearch                2/edge         145  no
-self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
+self-signed-certificates           active      1  self-signed-certificates  2/stable       317  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
 opensearch/0                 active    idle   0        10.214.176.180  9200/tcp

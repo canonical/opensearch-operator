@@ -167,7 +167,7 @@ as it is assumed the deployment happens on a single LXD cluster.
     data-hot                           blocked      3  opensearch                2/edge         159  no       Cannot start. Waiting for peer cluster relation...
     failover                           blocked      3  opensearch                2/edge         159  no       Cannot start. Waiting for peer cluster relation...
     main                               blocked      3  opensearch                2/edge         159  no       Missing TLS relation with this cluster.
-    self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
+    self-signed-certificates           active       1  self-signed-certificates  1/stable       317  no
 
     Unit                         Workload  Agent  Machine  Public address  Ports  Message
     data-hot/0                   active    idle   6        10.214.176.165
@@ -224,7 +224,7 @@ App                       Version  Status   Scale  Charm                     Cha
 data-hot                           blocked      3  opensearch                2/edge         159  no       Cannot start. Waiting for peer cluster relation...
 failover                           blocked      3  opensearch                2/edge         159  no       Cannot start. Waiting for peer cluster relation...
 main                               active       3  opensearch                2/edge         159  no
-self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
+self-signed-certificates           active       1  self-signed-certificates  1/stable       317  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
 data-hot/0                   active    idle   6        10.214.176.165
@@ -281,7 +281,7 @@ App                       Version  Status  Scale  Charm                     Chan
 data-hot                           active      3  opensearch                2/edge         159  no
 failover                           active      3  opensearch                2/edge         159  no
 main                               active      3  opensearch                2/edge         159  no
-self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
+self-signed-certificates           active      1  self-signed-certificates  1/stable       317  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
 data-hot/0                   active    idle   6        10.214.176.165  9200/tcp

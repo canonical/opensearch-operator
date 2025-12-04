@@ -112,7 +112,7 @@ jwt-integrator                     active       1  jwt-integrator            1/e
 opensearch-data                    blocked      3  opensearch                                 3  no       JWT relation must be created with Main-cluster-orchestrator
 opensearch-failover                active       1  opensearch                                 1  no       
 opensearch-main                    active       1  opensearch                                 2  no       
-self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable         317  no       
 ```
 
 ## Enabling JWT authentication with OpenSearch Dashboards

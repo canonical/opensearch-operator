@@ -40,7 +40,7 @@ tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:43:22Z
 App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
 data-integrator                    blocked      1  data-integrator           latest/stable     79  no       Please relate the data-integrator with the desired product
 opensearch                         active       3  opensearch                2/stable         168  no
-self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
+self-signed-certificates           active       1  self-signed-certificates  1/stable         317  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
 data-integrator/0*           blocked   idle   4        10.95.38.22               Please relate the data-integrator with the desired product
@@ -88,7 +88,7 @@ tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:44:43Z
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
 data-integrator                    active      1  data-integrator           latest/stable     79  no
 opensearch                         active      3  opensearch                2/stable         168  no
-self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
+self-signed-certificates           active      1  self-signed-certificates  1/stable         317  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
 data-integrator/0*           active    idle   4        10.95.38.22
@@ -368,7 +368,7 @@ tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  13:48:08Z
 App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
 data-integrator                    blocked      1  data-integrator           latest/stable     79  no       Please relate the data-integrator with the desired product
 opensearch                         active       3  opensearch                2/stable         168  no
-self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
+self-signed-certificates           active       1  self-signed-certificates  1/stable         317 no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
 data-integrator/0*           blocked   idle   4        10.95.38.22               Please relate the data-integrator with the desired product

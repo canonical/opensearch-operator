@@ -32,7 +32,7 @@ tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  14:29:04Z
 App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
 data-integrator                    active       1  data-integrator           latest/edge     59  no
 opensearch                         blocked      1  opensearch                2/beta         117  no       1 or more 'replica' shards are not assigned, please scale your application up.
-self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
+self-signed-certificates           active       1  self-signed-certificates  1/stable       317  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
 data-integrator/0*           active    idle   2        10.95.38.174

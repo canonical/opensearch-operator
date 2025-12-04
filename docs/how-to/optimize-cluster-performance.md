@@ -32,7 +32,7 @@ TLS is still required, as it is a first-class requirement for all OpenSearch dep
 For example, to deploy a self-signed certificates operator and integrate it with OpenSearch:
 
 ```shell
-juju deploy self-signed-certificates --channel=latest/stable
+juju deploy self-signed-certificates --channel=1/stable
 juju integrate self-signed-certificates opensearch
 ```
 
@@ -41,7 +41,7 @@ After deployment, the application status should look similar to:
 ```
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
 opensearch                         active      1  opensearch                2/edge         274  no
-self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no
+self-signed-certificates           active      1  self-signed-certificates  1/stable       317  no
 ```
 
 If you inspect the logs using `juju debug-log --include opensearch/0 --level WARNING`  you will see a warning indicating that the **`testing` profile** is in use:
@@ -54,7 +54,7 @@ unit-opensearch-0: 07:42:00 WARNING unit.opensearch/0.juju-log opensearch-peers:
 
 ```shell
 juju deploy opensearch --channel=2/edge --config profile=production
-juju deploy self-signed-certificates --channel=latest/stable
+juju deploy self-signed-certificates --channel=1/stable
 juju integrate self-signed-certificates opensearch
 ```
 

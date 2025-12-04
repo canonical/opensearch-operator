@@ -37,7 +37,7 @@ opensearch  localhost-localhost  localhost/localhost  3.5.3    unsupported  16:4
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
 opensearch                         active      3  opensearch                2/edge         164  no       
-self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable       317  no       
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
 opensearch/0*                active    idle   1        10.81.173.18    9200/tcp  
@@ -113,7 +113,7 @@ opensearch  localhost-localhost  localhost/localhost  3.5.3    unsupported  16:5
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
 opensearch                         active      3  opensearch                2/edge         164  no       
-self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable       317  no       
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
 opensearch/1*                active    idle   2        10.81.173.167   9200/tcp  
