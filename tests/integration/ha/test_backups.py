@@ -607,11 +607,11 @@ async def test_create_backup_and_restore(
 
     await wait_until(
         ops_test,
-        apps=[app],
+        apps=apps,
         apps_statuses=["active"],
         units_statuses=["active"],
         idle_period=IDLE_PERIOD,
-        wait_for_exact_units=len(ops_test.model.applications[app].units),
+        wait_for_exact_units={ap: len(ops_test.model.applications[ap].units) for ap in apps},
     )
 
     date_before_backup = datetime.utcnow()
@@ -667,10 +667,10 @@ async def test_remove_and_readd_backup_relation(
 
     await wait_until(
         ops_test,
-        apps=[app],
+        apps=apps,
         units_statuses=["active"],
         apps_statuses=["active"],
-        wait_for_exact_units=len(ops_test.model.applications[app].units),
+        wait_for_exact_units={ap: len(ops_test.model.applications[ap].units) for ap in apps},
         idle_period=IDLE_PERIOD,
         timeout=1400,
     )
@@ -679,11 +679,11 @@ async def test_remove_and_readd_backup_relation(
     logger.info("Waiting for app status to be active.")
     await wait_until(
         ops_test,
-        apps=[app],
+        apps=apps,
         units_statuses=["active"],
         apps_statuses=["active"],
         idle_period=IDLE_PERIOD,
-        wait_for_exact_units=len(ops_test.model.applications[app].units),
+        wait_for_exact_units={ap: len(ops_test.model.applications[ap].units) for ap in apps},
         timeout=1400,
     )
 
