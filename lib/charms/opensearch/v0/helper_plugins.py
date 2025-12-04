@@ -53,7 +53,7 @@ def remove_plugin_secret(charm: "OpenSearchBaseCharm", label: str) -> None:
 def decode_plugin_secret_content(content: dict, label: str) -> Optional[dict]:
     """Decodes JSON payload from plugin secret"""
     if not (raw := content.get(label)):
-        logger.warning("Key '%s' not found in secret content", label, label)
+        logger.warning("Key '%s' not found in secret content", label)
         return None
 
     try:

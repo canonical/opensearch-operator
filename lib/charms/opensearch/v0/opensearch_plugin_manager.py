@@ -108,8 +108,8 @@ class SmtpEvents(Object):
             f"opensearch.notifications.core.email.{user}.password": f"{parameters.password}",
         }
 
-        self.charm.keystore.put_entries(entries)
-        if not self.charm.keystore.reload():
+        self.charm.keystore_manager.put_entries(entries)
+        if not self.charm.keystore_manager.reload():
             logger.debug("Could not reload secure settings. Deferring event.")
             event.defer()
             return
@@ -149,9 +149,9 @@ class SmtpEvents(Object):
         plugin_config = self.charm.state.unit.plugin_config_info.get(self.secret_label)
         keys = plugin_config.cleanup.get("keys")
 
-        self.charm.keystore.remove_entries(keys)
+        self.charm.keystore_manager.remove_entries(keys)
 
-        if not self.charm.keystore.reload():
+        if not self.charm.keystore_manager.reload():
             logger.debug("Could not reload secure settings. Deferring event.")
             event.defer()
             return
@@ -186,8 +186,8 @@ class SmtpEvents(Object):
             cleanup={"keys": list(keys.keys())},
         )
 
-        self.charm.keystore.put_entries(keys)
-        if not self.charm.keystore.reload():
+        self.charm.keystore_manager.put_entries(keys)
+        if not self.charm.keystore_manager.reload():
             logger.debug("Could not reload secure settings. Deferring event.")
             event.defer()
             return
@@ -227,7 +227,7 @@ class OpenSearchPluginEvents(Object):
             keys_to_add = plugin_config.get("keys")
             ca_to_add = plugin_config.get("tls_ca_chain")
 
-            self.charm.keystore.put_entries(keys_to_add)
+            self.charm.keystore_manager.put_entries(keys_to_add)
             cleanup = {"keys": list(keys_to_add.keys())}
             if ca_to_add:
                 self.charm.snapshots_manager.update_ca(ca_to_add)
@@ -242,12 +242,12 @@ class OpenSearchPluginEvents(Object):
             cleanup = unit_plugins[label].cleanup
             for key, items in cleanup.items():
                 if key == "keys":
-                    self.charm.keystore.remove_entries(items)
+                    self.charm.keystore_manager.remove_entries(items)
                 if key == "tls_ca_chain":
                     self.charm.snapshots_manager.update_ca(None)
 
         # reload keystore
-        if not self.charm.keystore.reload():
+        if not self.charm.keystore_manager.reload():
             logger.debug("Could not reload secure settings. Deferring event.")
             event.defer()
             return

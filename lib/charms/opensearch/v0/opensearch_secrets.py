@@ -390,7 +390,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
         try:
             secret = self._charm.model.get_secret(id=secret_id, label=label)
         except SecretNotFoundError:
-            logger.info("Could not find secret: %s - %", key, secret_id)
+            logger.info("Could not find secret: %s - %s", key, secret_id)
             return None
 
         self.cached_secrets.set_meta(scope, label, secret)

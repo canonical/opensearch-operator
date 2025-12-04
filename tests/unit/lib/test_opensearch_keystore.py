@@ -20,7 +20,7 @@ class TestOpenSearchKeystore(unittest.TestCase):
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
         self.charm = self.harness.charm
-        self.keystore = self.charm.keystore
+        self.keystore = self.charm.keystore_manager
 
     def test_keystore_add_keypair(self) -> None:
         """Add data to keystore."""

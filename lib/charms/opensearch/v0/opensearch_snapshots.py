@@ -441,8 +441,8 @@ class OpenSearchSnapshotEvents(Object):
             cleanup=cleanup,
         )
 
-        self.charm.keystore.put_entries(keys)
-        if not self.charm.keystore.reload():
+        self.charm.keystore_manager.put_entries(keys)
+        if not self.charm.keystore_manager.reload():
             logger.debug("Could not reload secure settings. Deferring event.")
             event.defer()
             return

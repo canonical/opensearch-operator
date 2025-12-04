@@ -226,7 +226,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.health = OpenSearchHealth(self)
         self.node_lock = OpenSearchNodeLock(self)
 
-        self.keystore = OpenSearchKeystore(self.opensearch)
         self.plugin_manager = OpenSearchPluginManager(self.state)
         self.plugin_events = OpenSearchPluginEvents(self)
         self.smtp_events = SmtpEvents(self)
