@@ -122,14 +122,14 @@ def get_version_on_unit(unit: str, model: str):
 
 async def assert_version_units(ops_test: OpsTest, app: str, expected_version: str):
     """Ensures all units in given app are running expected OpenSearch version"""
-    logger.info(f"Ensuring units in '{app}' running version {expected_version}")
+    logger.info("Ensuring units in '%s' running version %s", app, expected_version)
 
     units = [f"{app}/{unit.id}" for unit in await get_application_units(ops_test, app)]
     versions = [get_version_on_unit(unit, ops_test.model.info.name) for unit in units]
     assert all(
         version == expected_version for version in versions
     ), f"Expected {expected_version} on all units, found versions: {list(zip(units, versions))}"
-    logger.info(f"All units in '{app}' running version {expected_version}")
+    logger.info("All units in '%s' running version %s", app, expected_version)
 
 
 async def assert_upgrade_to_revision(
@@ -144,11 +144,11 @@ async def assert_upgrade_to_revision(
 
     # run pre-upgrade-check action on leader
     action = await run_action(ops_test, leader_id, "pre-upgrade-check", app=app)
-    logger.info(f"pre-upgrade-check: {action}")
+    logger.info("pre-upgrade-check: %s", action)
     assert action.status == "completed"
 
     async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
-        logger.info(f"Refreshing '{app}' to revision {revision}")
+        logger.info("Refreshing '%s' to revision %s", app, revision)
         refresh(
             ops_test,
             app,
@@ -170,7 +170,7 @@ async def assert_upgrade_to_revision(
 
         # run resume-upgrade action on leader
         action = await run_action(ops_test, leader_id, "resume-upgrade", app=app)
-        logger.info(f"resume-upgrade: {action}")
+        logger.info("resume-upgrade: %s", action)
         assert action.status == "completed"
 
         await wait_until(
@@ -181,7 +181,7 @@ async def assert_upgrade_to_revision(
             timeout=TIMEOUT,
             idle_period=IDLE_PERIOD,
         )
-        logger.info(f"Upgrade of '{app}' completed")
+        logger.info("Upgrade of '%s' completed", app)
 
 
 async def assert_upgrade_to_local(
@@ -193,11 +193,11 @@ async def assert_upgrade_to_local(
 
     # run pre-upgrade-check action on leader
     action = await run_action(ops_test, leader_id, "pre-upgrade-check", app=app)
-    logger.info(f"pre-upgrade-check: {action}")
+    logger.info("pre-upgrade-check: %s", action)
     assert action.status == "completed"
 
     async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
-        logger.info(f"Refreshing '{app}' local charm")
+        logger.info("Refreshing '%s' local charm", app)
         refresh(ops_test, app, path=charm, config=CONFIG_OPTS | config)
 
         await wait_until(
@@ -214,7 +214,7 @@ async def assert_upgrade_to_local(
 
         # run resume-upgrade action on leader
         action = await run_action(ops_test, leader_id, "resume-upgrade", app=app)
-        logger.info(f"resume-upgrade: {action}")
+        logger.info("resume-upgrade: %s", action)
         assert action.status == "completed"
 
         await wait_until(
@@ -225,7 +225,7 @@ async def assert_upgrade_to_local(
             timeout=TIMEOUT,
             idle_period=IDLE_PERIOD,
         )
-        logger.info(f"Upgrade of '{app}' completed")
+        logger.info("Upgrade of '%s' completed", app)
 
 
 async def assert_rollback_to_revision(
@@ -249,12 +249,12 @@ async def assert_rollback_to_revision(
 
     # run pre-upgrade-check action on leader
     action = await run_action(ops_test, leader_id, "pre-upgrade-check", app=app)
-    logger.info(f"pre-upgrade-check: {action}")
+    logger.info("pre-upgrade-check: %s", action)
     assert action.status == "completed"
 
     n_units = len(units)
     async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
-        logger.info(f"Refreshing '{app}' to local charm")
+        logger.info("Refreshing '%s' to local charm", app)
         refresh(ops_test, app, path=charm, config=CONFIG_OPTS | config)
 
         await wait_until(
@@ -280,7 +280,7 @@ async def assert_rollback_to_revision(
 
         time.sleep(5)
         # roll back to revision
-        logger.info(f"Rolling back '{app}' to revision: {revision}")
+        logger.info("Rolling back '%s' to revision: %s", app, revision)
         refresh(
             ops_test,
             app,
@@ -316,7 +316,7 @@ async def assert_rollback_to_revision(
             timeout=TIMEOUT,
             idle_period=IDLE_PERIOD,
         )
-        logger.info(f"Recovery from rollback of '{app}' completed")
+        logger.info("Recovery from rollback of '%s' completed", app)
 
 
 async def recover_from_rollback(ops_test: OpsTest, app: str, expected_cluster_size: int):
@@ -340,7 +340,7 @@ async def recover_from_rollback(ops_test: OpsTest, app: str, expected_cluster_si
 
     # get health
     cluster_health_resp = await cluster_health(ops_test, unit_ip)
-    logger.info(f"Cluster health response: {cluster_health_resp["status"]}")
+    logger.info("Cluster health response: %s", cluster_health_resp["status"])
     if cluster_health_resp["status"] == "red":
         # identify problematic index
         shards = await http_request(
@@ -358,7 +358,7 @@ async def recover_from_rollback(ops_test: OpsTest, app: str, expected_cluster_si
                 indices.add(shard.get("index"))
 
         # delete the indices
-        logger.info(f"Unassigned indices: {indices}")
+        logger.info("Unassigned indices: %s", indices)
         for index in indices:
             await http_request(
                 ops_test,
@@ -368,14 +368,14 @@ async def recover_from_rollback(ops_test: OpsTest, app: str, expected_cluster_si
 
         cluster_health_resp = await cluster_health(ops_test, unit_ip)
         logger.info(
-            f"Cluster health response after removing indices: {cluster_health_resp["status"]}"
+            "Cluster health response after removing indices: %s", cluster_health_resp["status"]
         )
     # add unit
     logger.info("Adding new unit")
     await ops_test.model.applications[app].add_unit(count=1)
 
     # destroy rolled back unit
-    logger.info(f"Destroying unit `{app}/{rolled_back_unit_id}`")
+    logger.info("Destroying unit '%s/%s'", app, rolled_back_unit_id)
     await ops_test.model.destroy_unit(
         f"{app}/{rolled_back_unit_id}", destroy_storage=True, force=True
     )
@@ -385,7 +385,7 @@ async def recover_from_rollback(ops_test: OpsTest, app: str, expected_cluster_si
 
     remaining_units = await get_application_units(ops_test, app)
     new_unit_id = sorted([unit.id for unit in remaining_units])[-1]
-    logger.info(f"Waiting for new unit {app}/{new_unit_id}...")
+    logger.info("Waiting for new unit '%s/%s'...", app, new_unit_id)
     await wait_until_condition_on_units(
         ops_test,
         app=app,
@@ -400,18 +400,18 @@ async def recover_from_rollback(ops_test: OpsTest, app: str, expected_cluster_si
     )
 
     # check if lock with departed unit
-    logger.info(f"Rolled back OpenSearch node: {rolled_back_node}")
+    logger.info("Rolled back OpenSearch node: %s", rolled_back_node)
     lock_doc = await http_request(
         ops_test,
         "GET",
         f"https://{unit_ip}:9200/.charm_node_lock/_doc/0",
     )
     if node_with_lock := lock_doc.get("_source", {}).get("unit-name"):
-        logger.info(f"Unit with lock: {node_with_lock}")
+        logger.info("Unit with lock: %s", node_with_lock)
 
         if node_with_lock == rolled_back_node:
             logger.info("Deleting lock document")
-            lock_doc = await http_request(
+            await http_request(
                 ops_test,
                 "DELETE",
                 f"https://{unit_ip}:9200/.charm_node_lock/_doc/0?refresh=true",
@@ -434,7 +434,7 @@ async def recover_from_rollback(ops_test: OpsTest, app: str, expected_cluster_si
         f"https://{unit_ip}:9200/_cat/nodes?format=json",
     )
     node_names = [node["name"] for node in nodes]
-    logger.info(f"Nodes in cluster: {", ".join(node_names)}")
+    logger.info("Nodes in cluster: %s", ", ".join(node_names))
 
     new_node_name = [unit.name for unit in remaining_units if unit.id == new_unit_id][0]
     assert new_node_name in node_names, f"Replacement node '{new_node_name}' not found in cluster."
