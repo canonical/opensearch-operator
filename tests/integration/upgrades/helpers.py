@@ -381,7 +381,9 @@ async def recover_from_rollback(
     # add unit
     logger.info("Adding new unit")
     await ops_test.model.applications[app].add_unit(count=1)
-    time.sleep(5)
+    await ops_test.model.block_until(
+        lambda: len(ops_test.model.applications[app].units) == len(units) + 1, timeout=TIMEOUT
+    )
 
     new_unit_id = sorted([unit.id for unit in await get_application_units(ops_test, app)])[-1]
     logger.info(f"Waiting for new unit {app}/{new_unit_id}...")
