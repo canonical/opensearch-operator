@@ -239,6 +239,8 @@ class OpenSearchSnapshotEvents(Object):
             self.charm.request_opensearch_restart(reason="clean up the object storage CA")
 
         try:
+            if not self.charm.unit.is_leader():
+                return
             self.charm.snapshots_manager.ensure_repository(
                 object_storage_type, object_storage_config
             )
@@ -638,8 +640,6 @@ class OpenSearchSnapshotEvents(Object):
 
     def _read_s3_from_peer_cluster_rel(self) -> dict[str, str] | None:
         payload = self._get_provider_rel_payload()
-        logger.debug("provided payload: %s", payload)
-
         if not payload or not payload.credentials or not payload.credentials.s3:
             logger.warning("no S3 credentials found.")
             return
@@ -649,7 +649,7 @@ class OpenSearchSnapshotEvents(Object):
             return
 
         # CA chain may be published separately
-        logger.info("S3 CA secret: %s", payload.credentials.s3.s3_tls_ca_chain)
+        logger.debug("S3 CA secret: %s", payload.credentials.s3.s3_tls_ca_chain)
         return {
             "access_key": payload.credentials.s3.access_key,
             "secret_key": payload.credentials.s3.secret_key,
@@ -658,8 +658,6 @@ class OpenSearchSnapshotEvents(Object):
 
     def _read_azure_from_peer_cluster_rel(self) -> dict[str, str] | None:
         payload = self._get_provider_rel_payload()
-        logger.debug("provided payload: %s", payload)
-
         if not payload or not payload.credentials or not payload.credentials.azure:
             logger.warning("no azure credentials found.")
             return
