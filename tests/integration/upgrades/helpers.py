@@ -331,7 +331,6 @@ async def recover_from_rollback(
     """Recover from refreshing back mid-upgrade"""
     units = await get_application_units(ops_test, app)
     rolled_back_unit_id = sorted([unit.id for unit in units])[-1]
-
     # make calls to any unit which is not the rolled back unit
     unit_ip = [unit.ip for unit in units if unit.id != rolled_back_unit_id][0]
 
@@ -381,23 +380,6 @@ async def recover_from_rollback(
     # add unit
     logger.info("Adding new unit")
     await ops_test.model.applications[app].add_unit(count=1)
-    await ops_test.model.block_until(
-        lambda: len(ops_test.model.applications[app].units) == len(units) + 1, timeout=TIMEOUT
-    )
-
-    new_unit_id = sorted([unit.id for unit in await get_application_units(ops_test, app)])[-1]
-    logger.info(f"Waiting for new unit {app}/{new_unit_id}...")
-    await wait_until_condition_on_units(
-        ops_test,
-        app=app,
-        condition=lambda units: any(
-            unit.workload_status.message
-            == "Requesting lock on operation: start"  # unit may be stuck waiting for lock
-            for unit in units
-            if unit.id == new_unit_id
-        ),
-        timeout=TIMEOUT,
-    )
 
     # destroy rolled back unit
     logger.info(f"Destroying unit `{app}/{rolled_back_unit_id}`")
@@ -405,7 +387,23 @@ async def recover_from_rollback(
         f"{app}/{rolled_back_unit_id}", destroy_storage=True, force=True
     )
     await ops_test.model.block_until(
-        lambda: len(ops_test.model.applications[app].units) == len(units), timeout=180
+        lambda: len(ops_test.model.applications[app].units) == len(units), timeout=300
+    )
+
+    remaining_units = await get_application_units(ops_test, app)
+    new_unit_id = sorted([unit.id for unit in remaining_units])[-1]
+    logger.info(f"Waiting for new unit {app}/{new_unit_id}...")
+    await wait_until_condition_on_units(
+        ops_test,
+        app=app,
+        condition=lambda units: any(
+            unit.workload_status.message
+            == "Requesting lock on operation: start"  # unit may be stuck waiting for lock
+            or unit.workload_status.value == "active"
+            for unit in units
+            if unit.id == new_unit_id
+        ),
+        timeout=TIMEOUT,
     )
 
     # check if lock with departed unit
