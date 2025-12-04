@@ -333,7 +333,7 @@ class OpenSearchSnapshotEvents(Object):
             or not object_storage_config.azure
             or not object_storage_config.azure.credentials
         ):
-            logger.warning("No S3 object storage configuration.")
+            logger.warning("No Azure object storage configuration.")
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelDataIncomplete), app=True)
             return
