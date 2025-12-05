@@ -552,7 +552,9 @@ async def create_backup(
     logger.debug(f"create-backup output: {action}")
     await wait_for_backup_system_to_settle(ops_test, leader_id, unit_ip, app=app)
     assert action.status == "completed"
-    assert action.response["status"] == "Backup is running."
+    st = str(action.response.get("status", ""))
+    assert st in {"in_progress", "success"}, f"unexpected snapshot state: {st}"
+    assert action.response.get("backup-id"), "backup-id is missing in response"
     return action.response["backup-id"]
 
 

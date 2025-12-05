@@ -57,7 +57,6 @@ from charms.opensearch.v0.models import (
     DeploymentDescription,
     DeploymentType,
 )
-from charms.opensearch.v0.opensearch_backups import backup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -76,7 +75,10 @@ from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
 from charms.opensearch.v0.opensearch_jwt import JwtHandler
-from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyError
+from charms.opensearch.v0.opensearch_keystore import (
+    OpenSearchKeystore,
+    OpenSearchKeystoreNotReadyError,
+)
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
 from charms.opensearch.v0.opensearch_oauth import OAuthHandler
@@ -95,6 +97,10 @@ from charms.opensearch.v0.opensearch_relation_peer_cluster import (
 )
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
+from charms.opensearch.v0.opensearch_snapshots import (
+    OpenSearchSnapshotEvents,
+    OpenSearchSnapshotsManager,
+)
 from charms.opensearch.v0.opensearch_tls import OLD_CA_ALIAS, OpenSearchTLS
 from charms.opensearch.v0.opensearch_users import (
     OpenSearchUserManager,
@@ -209,6 +215,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.opensearch_config = OpenSearchConfig(self.opensearch)
         self.opensearch_exclusions = OpenSearchExclusions(self)
         self.opensearch_fixes = OpenSearchFixes(self)
+        self.keystore_manager = OpenSearchKeystore(self.opensearch)
 
         self.peers_data = RelationDataStore(self, PeerRelationName)
         self.secrets = OpenSearchSecrets(self, PeerRelationName)
@@ -222,9 +229,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.node_lock = OpenSearchNodeLock(self)
 
         self.plugin_manager = OpenSearchPluginManager(self)
-
-        self.backup = backup(self)
-
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
         self.peer_cluster_provider = OpenSearchPeerClusterProvider(self)
@@ -232,6 +236,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         # Managers
         self.profiles_manager = ProfilesManager(self.state, self.opensearch)
+        self.snapshots_manager = OpenSearchSnapshotsManager(self, self.opensearch)
+        self.snapshot_events = OpenSearchSnapshotEvents(self)
 
         self.framework.observe(self._start_opensearch_event, self._start_opensearch)
         self.framework.observe(self._restart_opensearch_event, self._restart_opensearch)
@@ -694,7 +700,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # No cluster managers left in the cluster fleet
             # raise so we do not lose the cluster state
             if (
-                len(
+                self.opensearch.is_node_up()
+                and len(
                     [
                         app
                         for app in self.opensearch_peer_cm.apps_in_fleet()
@@ -2024,6 +2031,20 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 for app in cluster_fleet_apps
             )
         )
+
+    def request_opensearch_restart(
+        self,
+        reason: str | None = None,
+    ) -> None:
+        """Ask the charm to restart OpenSearch via its internal restart event.
+
+        Args:
+            reason: the reason for the restart.
+        """
+        if reason:
+            msg = f"Requesting OpenSearch restart for {reason}"
+            logger.info(msg)
+        self._restart_opensearch_event.emit()
 
     @property
     def unit_ip(self) -> str:

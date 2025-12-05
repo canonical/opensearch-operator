@@ -22,7 +22,7 @@ import logging
 import typing
 from enum import Enum
 from json import JSONDecodeError
-from typing import Dict, Optional, Set
+from typing import Any, Dict, Optional, Set
 
 from charms.data_platform_libs.v0.data_interfaces import (
     IndexRequestedEvent,
@@ -460,7 +460,7 @@ class OpenSearchProvider(Object):
             self.opensearch_provides.set_credentials(relation.id, KibanaserverUser, pwd)
 
     def _put_relation_user(
-        self, user: str, permissions: dict[str], hashed_pwd: str, relation_id: int
+        self, user: str, permissions: dict[str, Any], hashed_pwd: str, relation_id: int
     ):
         """Create a relation user.
 

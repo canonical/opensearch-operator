@@ -7,8 +7,8 @@ variable "opensearch" {
     app_name          = optional(string, "opensearch")
     model_uuid        = string
     config            = optional(map(string), { "cluster_name" : "opensearch" })
-    channel           = optional(string, "2/stable")
-    base              = optional(string, "ubuntu@22.04")
+    channel           = optional(string, "2/edge")
+    base              = optional(string, "ubuntu@24.04")
     revision          = optional(string, null)
     units             = optional(number, 3)
     constraints       = optional(string, "arch=amd64")
@@ -24,8 +24,8 @@ variable "opensearch-dashboards" {
   type = object({
     app_name          = optional(string, "opensearch-dashboards")
     config            = optional(map(string), {})
-    channel           = optional(string, "2/stable")
-    base              = optional(string, "ubuntu@22.04")
+    channel           = optional(string, "2/edge")
+    base              = optional(string, "ubuntu@24.04")
     revision          = optional(string, null)
     units             = optional(number, 1)
     constraints       = optional(string, "arch=amd64")
@@ -40,9 +40,9 @@ variable "opensearch-dashboards" {
 variable "self-signed-certificates" {
   description = "Configuration for the self-signed-certificates app"
   type = object({
-    channel     = optional(string, "latest/stable")
+    channel     = optional(string, "1/stable")
     revision    = optional(string, null)
-    base        = optional(string, "ubuntu@22.04")
+    base        = optional(string, "ubuntu@24.04")
     constraints = optional(string, "arch=amd64")
     machines    = optional(list(string), [])
     config      = optional(map(string), { "ca-common-name" : "CA" })
@@ -60,7 +60,7 @@ variable "grafana-agent" {
   type = object({
     channel     = optional(string, "1/stable")
     revision    = optional(string, null)
-    base        = optional(string, "ubuntu@22.04")
+    base        = optional(string, "ubuntu@24.04")
     constraints = optional(string, "arch=amd64")
     config      = optional(map(string), {})
   })

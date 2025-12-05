@@ -197,7 +197,9 @@ async def test_invalid_conditions(ops_test: OpsTest) -> None:
 
     # delete the invalid app name
     await ops_test.model.remove_application(
-        INVALID_APP, block_until_done=True, force=True, destroy_storage=True, no_wait=True
+        INVALID_APP,
+        block_until_done=True,
+        timeout=1000,
     )
 
 

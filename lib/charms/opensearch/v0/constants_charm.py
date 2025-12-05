@@ -67,9 +67,14 @@ PClusterWrongNodesCountForQuorum = (
     "Less than 3 cluster-manager-eligible units in this cluster. Add more units."
 )
 PluginConfigError = "Unexpected error during plugin configuration, check the logs"
+PClusterMissingStorageRelations = "Found credentials with missing storage relations. Add relation for {} and any client applications."
 BackupSetupFailed = "Backup setup failed, check logs for details"
-BackupRelShouldNotExist = "This unit should not be related to backup relation"
+BackupRelShouldNotExist = "This application should not be related to backup relation"
 BackupRelDataIncomplete = "Backup relation data missing or incomplete."
+BackupCredentialIncorrect = "Backup configuration error: bad credentials, permissions, invalid CA, or unsupported configuration."
+BackupCredentialCleanupFailed = "Failed to remove keystore credentials or snapshot repository. Please check the logs for more details."
+BackupRelConflict = "Too many object storage relations. Only one is supported."
+BackupMisconfiguration = "opensearch {} repository setup failed. Check the {} config."
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
 SecretAccessError = "Failed to access secret, please check permissions."
 JWTAuthConfigInvalid = (
@@ -100,6 +105,7 @@ HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."
 WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on their service."
 NewIndexRequested = "new index {index} requested"
 RestoreInProgress = "Restore in progress..."
+BackupInProgress = "Backup in progress..."
 BackupSetupStart = "Backup setup started."
 BackupConfigureStart = "Configuring backup service..."
 BackupInDisabling = "Disabling backup service..."
@@ -136,6 +142,7 @@ OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 S3_RELATION = "s3-credentials"
 AZURE_RELATION = "azure-credentials"
+GCS_RELATION = "gcs-credentials"
 
 OAUTH_RELATION = "oauth"
 

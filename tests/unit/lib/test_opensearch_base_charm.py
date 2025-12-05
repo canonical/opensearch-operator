@@ -431,8 +431,12 @@ class TestOpenSearchBaseCharm(unittest.TestCase):
         f"{BASE_LIB_PATH}.opensearch_profile.ProfilesManager.check_missing_system_requirements",
         return_value=[],
     )
-    @patch(f"{BASE_LIB_PATH}.opensearch_backups.BackupManager.is_backup_in_progress")
-    @patch(f"{BASE_LIB_PATH}.opensearch_backups.BackupManager.is_restore_in_progress")
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_snapshots.OpenSearchSnapshotsManager.is_snapshot_in_progress"
+    )
+    @patch(
+        f"{BASE_LIB_PATH}.opensearch_snapshots.OpenSearchSnapshotsManager.is_restore_in_progress"
+    )
     @patch(f"{BASE_CHARM_CLASS}._stop_opensearch")
     @patch(f"{BASE_LIB_PATH}.opensearch_base_charm.cert_expiration_remaining_hours")
     @patch(

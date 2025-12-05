@@ -537,19 +537,62 @@ class OpenSearchPeerClustersManager:
             is not None
         )
 
-    def rel_data(self, peek_secrets: bool = False) -> Optional[PeerClusterRelData]:
-        """Return the peer cluster rel data if any."""
+    def get_rel_data_from_main_orchestrator(self) -> str | None:
+        """Get the data from the main orchestrator relation.
+
+        Returns:
+            data: peer cluster rel data if any.
+
+        """
         if not self.is_consumer(of="main"):
             return None
 
-        orchestrators = PeerClusterOrchestrators.from_dict(
-            self._charm.peers_data.get_object(Scope.APP, "orchestrators")
-        )
+        if not (
+            orchestrators := PeerClusterOrchestrators.from_dict(
+                self._charm.peers_data.get_object(Scope.APP, "orchestrators")
+            )
+        ):
+            logger.info("no orchestrators found")
+            return None
+
+        if orchestrators.main_rel_id is None:
+            logger.info("orchestrators has no main_rel_id yet")
+            return None
 
         rel = self._charm.model.get_relation(
             PeerClusterOrchestratorRelationName, orchestrators.main_rel_id
         )
-        if not (data := rel.data[rel.app].get("data")):
+        if rel is None:
+            logger.info(
+                "no %s relation found for id=%s",
+                PeerClusterOrchestratorRelationName,
+                orchestrators.main_rel_id,
+            )
+            return None
+
+        app_data = rel.data.get(rel.app)
+        if not app_data:
+            logger.info(
+                "no relation data for app %s on relation id=%s",
+                rel.app,
+                orchestrators.main_rel_id,
+            )
+            return None
+
+        data = app_data.get("data")
+        if data is None:
+            logger.info(
+                "relation data for app %s on relation id=%s has no data key",
+                rel.app,
+                orchestrators.main_rel_id,
+            )
+            return None
+
+        return data
+
+    def rel_data(self, peek_secrets: bool = False) -> Optional[PeerClusterRelData]:
+        """Return the up-to-date peer cluster rel data."""
+        if not (data := self.get_rel_data_from_main_orchestrator()):
             return None
 
         if peek_secrets:
@@ -650,20 +693,20 @@ class OpenSearchPeerClustersManager:
             .get(self._charm.secrets.hash_key(KibanaserverUser))
         )
 
-        if "monitor_password" in credentials:
+        if credentials.get("monitor_password"):
             credentials["monitor_password"] = (
                 self._charm.model.get_secret(id=credentials["monitor_password"])
                 .peek_content()
                 .get(self._charm.secrets.password_key(COSUser))
             )
 
-        if "admin_tls" in credentials:
+        if credentials.get("admin_tls"):
             credentials["admin_tls"] = self._charm.model.get_secret(
                 id=credentials["admin_tls"]
             ).peek_content()
 
         if (
-            "s3" in credentials
+            credentials.get("s3")
             and credentials["s3"].get("access-key")
             and credentials["s3"].get("secret-key")
         ):
@@ -677,8 +720,14 @@ class OpenSearchPeerClustersManager:
                 .peek_content()
                 .get("s3-secret-key")
             )
+        if credentials.get("s3", {}).get("s3-tls-ca-chain"):
+            credentials["s3"]["s3-tls-ca-chain"] = (
+                self._charm.model.get_secret(id=credentials["s3"]["s3-tls-ca-chain"])
+                .peek_content()
+                .get("s3-tls-ca-chain")
+            )
         if (
-            "azure" in credentials
+            credentials.get("azure")
             and credentials["azure"].get("storage-account")
             and credentials["azure"].get("secret-key")
         ):
@@ -755,6 +804,10 @@ class OpenSearchPeerClustersManager:
             credentials["s3"]["secret-key"] = self._resolve_credential(
                 credentials["s3"]["secret-key"], content_key="s3-secret-key"
             )
+            if credentials["s3"].get("s3-tls-ca-chain"):
+                credentials["s3"]["s3-tls-ca-chain"] = self._resolve_credential(
+                    credentials["s3"]["s3-tls-ca-chain"], content_key="s3-tls-ca-chain"
+                )
         if (
             credentials.get("azure")
             and credentials["azure"].get("storage-account")
