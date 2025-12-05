@@ -67,7 +67,9 @@ PClusterWrongNodesCountForQuorum = (
     "Less than 3 cluster-manager-eligible units in this cluster. Add more units."
 )
 PluginConfigError = "Unexpected error during plugin configuration, check the logs"
-PClusterMissingRelations = "Found credentials with missing relations. Add relation for {} and any client applications."
+PClusterMissingRelations = (
+    "Found credentials with missing relations. Add relation for {} and any client applications."
+)
 BackupSetupFailed = "Backup setup failed, check logs for details"
 BackupRelShouldNotExist = "This unit should not be related to backup relation"
 BackupRelDataIncomplete = "Backup relation data missing or incomplete."
