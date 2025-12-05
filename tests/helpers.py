@@ -23,7 +23,7 @@ def patch_wait_fixed() -> Callable:
         """
         return tenacity.wait.wait_fixed(0.1)
 
-    return patch("charms.opensearch.v0.opensearch_backups.wait_fixed", _wait_fixed)
+    return patch("charms.opensearch.v0.opensearch_snapshots.wait_fixed", _wait_fixed)
 
 
 def copy_file_content_to_tmp(config_dir_path: str, source_path: str) -> str:

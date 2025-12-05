@@ -8,9 +8,13 @@ import re
 from abc import ABC
 from datetime import datetime
 from hashlib import md5
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
-from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS
+from charms.opensearch.v0.constants_secrets import (
+    AZURE_CREDENTIALS,
+    GCS_CREDENTIALS,
+    S3_CREDENTIALS,
+)
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from pydantic import BaseModel, Field, root_validator, validator
 from pydantic.utils import ROOT_KEY
@@ -57,7 +61,7 @@ class Model(ABC, BaseModel):
         return cls.parse_raw(input_str_dict)
 
     @staticmethod
-    def sort_payload(payload: any) -> any:
+    def sort_payload(payload: Any) -> Any:
         """Sort input payloads to avoid rel-changed events for same unordered objects."""
         if isinstance(payload, dict):
             # Sort dictionary by keys
@@ -276,11 +280,25 @@ class S3RelDataCredentials(Model):
 
     access_key: str = Field(alias="access-key", default=None)
     secret_key: str = Field(alias="secret-key", default=None)
+    s3_tls_ca_chain: Optional[Union[str, List[str]]] = Field(default=None, alias="s3-tls-ca-chain")
 
     class Config:
         """Model config of this pydantic model."""
 
         allow_population_by_field_name = True
+
+
+class JWTAuthConfiguration(Model):
+    """Model class for the configuration parameters of JWT authentication."""
+
+    signing_key: str
+    jwt_header: Optional[str] = None
+    jwt_url_parameter: Optional[str] = None
+    roles_key: str
+    subject_key: Optional[str] = None
+    required_audience: Optional[str] = None
+    required_issuer: Optional[str] = None
+    jwt_clock_skew_tolerance_seconds: Optional[int] = None
 
 
 class S3RelData(Model):
@@ -295,8 +313,8 @@ class S3RelData(Model):
     base_path: Optional[str] = Field(alias="path", default=None)
     protocol: Optional[str] = None
     storage_class: Optional[str] = Field(alias="storage-class", default=None)
-    tls_ca_chain: Optional[str] = Field(alias="tls-ca-chain", default=None)
-    credentials: S3RelDataCredentials = Field(alias=S3_CREDENTIALS, default=S3RelDataCredentials())
+    tls_ca_chain: Optional[Union[str, List[str]]] = Field(default=None, alias="tls-ca-chain")
+    credentials: S3RelDataCredentials = Field(alias=S3_CREDENTIALS)
     path_style_access: bool = Field(alias="s3-uri-style", default=False)
 
     class Config:
@@ -330,6 +348,22 @@ class S3RelData(Model):
         values["base_path"] = base_path or None
 
         return values
+
+    @validator("tls_ca_chain", pre=True)
+    def _tls_chain(cls, v):  # noqa: N805
+        if v is None:
+            return None
+        if isinstance(v, (bytes, bytearray)):
+            v = v.decode()
+        if isinstance(v, list):
+            return "\n".join(s.strip() for s in v if s)
+        if isinstance(v, dict):
+            chain = v.get("chain")
+            if isinstance(chain, list):
+                return "\n".join(s.strip() for s in chain if s)
+
+            return json.dumps(v)
+        return str(v)
 
     @validator("path_style_access", pre=True)
     def change_path_style_type(cls, value) -> bool:  # noqa: N805
@@ -457,17 +491,35 @@ class AzureRelData(Model):
         return cls.from_dict(dict(input_dict) | {AZURE_CREDENTIALS: creds.dict()})
 
 
-class JWTAuthConfiguration(Model):
-    """Model class for the configuration parameters of JWT authentication."""
+class GcsRelDataCredentials(Model):
+    """Model class for credentials passed on the gcs relation."""
 
-    signing_key: str
-    jwt_header: Optional[str] = None
-    jwt_url_parameter: Optional[str] = None
-    roles_key: str
-    subject_key: Optional[str] = None
-    required_audience: Optional[str] = None
-    required_issuer: Optional[str] = None
-    jwt_clock_skew_tolerance_seconds: Optional[int] = None
+    secret_key: str = Field(alias="secret-key", default=None)
+
+    class Config:
+        """Model config of this pydantic model."""
+
+        allow_population_by_field_name = True
+
+
+class GcsRelData(Model):
+    """Model class for the GCS relation data.
+
+    This model should receive the data directly from the relation and map it to a model.
+    """
+
+    bucket: str = Field(default="")
+    base_path: Optional[str] = Field(alias="path", default=None)
+    storage_class: Optional[str] = Field(alias="storage-class", default=None)
+    credentials: GcsRelDataCredentials = Field(alias=GCS_CREDENTIALS, default=None)
+
+
+class ObjectStorageConfig(Model):
+    """Model class for the object storage config - for all clouds."""
+
+    s3: S3RelData | None = None
+    azure: AzureRelData | None = None
+    gcs: GcsRelData | None = None
 
 
 class PeerClusterRelDataCredentials(Model):
@@ -482,6 +534,7 @@ class PeerClusterRelDataCredentials(Model):
     admin_tls: Optional[Dict[str, Optional[str]]]
     s3: Optional[S3RelDataCredentials]
     azure: Optional[AzureRelDataCredentials]
+    gcs: Optional[GcsRelData]
 
 
 class PeerClusterApp(Model):
