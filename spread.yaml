@@ -98,6 +98,7 @@ backends:
       GCP_ACCESS_KEY: '$(HOST: echo $GCP_ACCESS_KEY)'
       GCP_SECRET_KEY: '$(HOST: echo $GCP_SECRET_KEY)'
       GCP_SERVICE_ACCOUNT: '$(HOST: echo $GCP_SERVICE_ACCOUNT)'
+      DOCKERHUB_MIRROR: '$(HOST: echo $DOCKERHUB_MIRROR)'
       # To install pipx on self-hosted runners
       CONCIERGE_EXTRA_DEBS: pipx
     systems:
@@ -125,6 +126,45 @@ prepare: |
   cd "$SPREAD_PATH"
   snap install --classic concierge
 
+  if [[ -n "$DOCKERHUB_MIRROR" ]] && ([[ $SPREAD_TASK == *"oauth"* ]])
+  then
+    # Running on IS-hosted runner; configure microk8s to use Docker Hub mirror
+    # Run before concierge prepare because of https://github.com/canonical/concierge/issues/75
+    sudo snap install microk8s  --classic
+    sudo snap install kubectl --classic 
+    sudo snap install yq
+    
+    # Wait for microk8s to populate iptables
+    # https://chat.canonical.com/canonical/pl/jo5cg6wqjjrudqd5ybj6hhttee
+    until [[ -n $(iptables --list | grep -i "microk8s") ]]
+    do
+      echo "MicroK8s has not yet configured iptables."
+      sleep 10
+    done
+    tee /var/snap/microk8s/current/args/certs.d/docker.io/hosts.toml << EOF
+    server = "$DOCKERHUB_MIRROR"
+    [host."${DOCKERHUB_MIRROR#'https://'}"]
+    capabilities = ["pull", "resolve"]
+  EOF
+    microk8s stop
+    microk8s start
+    microk8s enable dns
+    microk8s enable hostpath-storage
+    microk8s enable metallb:10.64.140.43-10.64.140.49
+    mkdir -p ~/.kube
+    microk8s config > ~/.kube/config
+
+    
+    echo "Waiting for all pods to be in 'Running' phase..."
+    until kubectl get po -A --field-selector=status.phase!=Running 2>&1 | grep -q "No resources found"; do
+      echo "Some pods are not running. Retrying in 5 seconds..."
+      sleep 5
+    done
+    echo "Success: All pods are running!"
+  fi
+
+  juju add-k8s uk8s $(juju show-controller | yq "keys | .[0]")
+
   # Install charmcraft & pipx (on lxd-vm backend)
   concierge prepare --trace
 
@@ -144,4 +184,4 @@ prepare-each: |
   # https://bugs.launchpad.net/juju/+bug/2065050
   juju set-model-constraints arch="$(dpkg --print-architecture)"
 
-# Only restore on lxd backend—no need to restore on CI
+# Only restore on lxd backend. No need to restore on CI
