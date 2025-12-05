@@ -10,13 +10,13 @@ variable "app_name" {
 variable "channel" {
   description = "Charm channel"
   type        = string
-  default     = "2/stable"
+  default     = "2/edge"
 }
 
 variable "base" {
   description = "Charm base (old name: series)"
   type        = string
-  default     = "ubuntu@22.04"
+  default     = "ubuntu@24.04"
 }
 
 variable "config" {
