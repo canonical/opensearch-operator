@@ -700,7 +700,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # No cluster managers left in the cluster fleet
             # raise so we do not lose the cluster state
             if (
-                self.opensearch.is_started()
+                self.opensearch.is_node_up()
                 and len(
                     [
                         app
