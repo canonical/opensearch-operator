@@ -71,7 +71,7 @@ PClusterMissingRelations = (
     "Found credentials with missing relations. Add relation for {} and any client applications."
 )
 BackupSetupFailed = "Backup setup failed, check logs for details"
-BackupRelShouldNotExist = "This unit should not be related to backup relation"
+BackupRelShouldNotExist = "This application should not be related to backup relation"
 BackupRelDataIncomplete = "Backup relation data missing or incomplete."
 BackupCredentialIncorrect = "Backup configuration error: bad credentials, permissions, invalid CA, or unsupported configuration."
 BackupCredentialCleanupFailed = "Failed to remove keystore credentials or snapshot repository. Please check the logs for more details."
