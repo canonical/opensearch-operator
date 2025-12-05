@@ -126,6 +126,10 @@ prepare: |
   cd "$SPREAD_PATH"
   snap install --classic concierge
 
+
+  # Install charmcraft & pipx (on lxd-vm backend)
+  concierge prepare --trace
+
   if [[ -n "$DOCKERHUB_MIRROR" ]] && ([[ $SPREAD_TASK == *"oauth"* ]])
   then
     # Running on IS-hosted runner; configure microk8s to use Docker Hub mirror
@@ -164,9 +168,6 @@ prepare: |
   fi
 
   /snap/bin/juju add-k8s uk8s $(/snap/bin/juju show-controller | yq "keys | .[0]")
-
-  # Install charmcraft & pipx (on lxd-vm backend)
-  concierge prepare --trace
 
   pipx install tox poetry
 prepare-each: |
