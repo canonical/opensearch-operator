@@ -49,11 +49,7 @@ class PrecheckFailed(status_exception.StatusException):
 
     def __init__(self, message: str):
         self.message = message
-        super().__init__(
-            ops.BlockedStatus(
-                f"Rollback with `juju refresh`. Pre-upgrade check failed: {self.message}"
-            )
-        )
+        super().__init__(ops.BlockedStatus(f"Pre-upgrade check failed: {self.message}"))
 
 
 class UnitState(str, enum.Enum):
@@ -173,9 +169,7 @@ class Upgrade(abc.ABC):
             return ops.BlockedStatus(
                 f"Upgrading. Verify highest unit is healthy & run `{RESUME_ACTION_NAME}` action. Rollbacks not supported."
             )
-        return ops.MaintenanceStatus(
-            "Upgrading. To rollback, `juju refresh` to the previous revision"
-        )
+        return ops.MaintenanceStatus("Upgrading.")
 
     @property
     def versions_set(self) -> bool:

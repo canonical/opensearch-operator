@@ -14,6 +14,7 @@ from ..ha.helpers import (
     assert_continuous_writes_increasing,
 )
 from ..helpers import APP_NAME, CONFIG_OPTS, MODEL_CONFIG, set_watermark
+from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 from .helpers import (
     PROFILES_REVISION,
@@ -67,11 +68,11 @@ async def _build_env(ops_test: OpsTest, version: str, series) -> None:
 
     # Relate it to OpenSearch to set up TLS.
     await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.wait_for_idle(
+    await wait_until(
+        ops_test,
         apps=[TLS_CERTIFICATES_APP_NAME, APP_NAME],
-        status="active",
+        apps_statuses=["active"],
         timeout=1400,
-        idle_period=30,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 
@@ -96,6 +97,7 @@ async def test_deploy_latest_from_channel(ops_test: OpsTest, series) -> None:
 @pytest.mark.group(id="happy_path_upgrade")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip("Can't upgrade between earlier versions")
+# TODO: re-enable after two versions available
 async def test_upgrade_between_versions(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, series
 ) -> None:

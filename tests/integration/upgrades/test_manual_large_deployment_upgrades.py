@@ -94,9 +94,6 @@ async def _build_env(ops_test: OpsTest, version: str, series: str) -> None:
         ),
     )
 
-    # wait until the TLS operator is ready
-    await ops_test.model.wait_for_idle(apps=[TLS_CERTIFICATES_APP_NAME], timeout=TIMEOUT)
-
     # integrate TLS to all applications
     for app in list(APPS.keys()):
         await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
@@ -149,6 +146,7 @@ async def test_deploy_starting_version(ops_test: OpsTest, series) -> None:
 @pytest.mark.group(id="happy_path_upgrade")
 @pytest.mark.abort_on_fail
 @pytest.mark.skip("Can't upgrade between earlier versions")
+# TODO: re-enable after two versions available
 async def test_upgrade_between_versions(ops_test: OpsTest, series: str) -> None:
     """Test minor version upgrade."""
     # upgrade to version n-1 revision for current series

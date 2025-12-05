@@ -331,7 +331,7 @@ async def _is_every_condition_met(
 async def wait_until_condition_on_units(
     ops_test, app: str, condition, timeout: int = 1200
 ) -> None:
-    """Block and wait until a condition is met or timeout."""
+    """Block and wait until a condition is met on the units in `app` or timeout."""
     try:
         logger.info("\n\n\n")
         logger.info(
@@ -348,7 +348,7 @@ async def wait_until_condition_on_units(
                     return
                 raise Exception
     except RetryError:
-        logger.error("wait_until_condition -- Timed out!\n\n\n")
+        logger.error("wait_until_condition_on_units -- Timed out!\n\n\n")
         logger.info(
             subprocess.check_output(
                 f"juju status --model {ops_test.model.info.name}", shell=True
