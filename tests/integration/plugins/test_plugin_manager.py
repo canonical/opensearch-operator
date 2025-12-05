@@ -3,10 +3,12 @@
 # See LICENSE file for licensing details.
 
 import asyncio
+import json
 import logging
 from typing import Tuple
 
 import pytest
+from charms.opensearch.v0.constants_charm import PeerRelationName
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
@@ -14,6 +16,7 @@ from ..helpers import (
     MODEL_CONFIG,
 )
 from ..helpers_deployments import wait_until
+from ..relations.helpers import get_application_relation_data
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +53,20 @@ async def list_keystore_keys(ops_test: OpsTest, app: str, unit_id: int) -> Tuple
     )
 
     return f"{app}/{unit_id}", stdout.split("\n")
+
+
+async def get_secret_data(ops_test, secret_uri):
+    """Get secret data from secret uri"""
+    secret_unique_id = secret_uri.split("/")[-1]
+    complete_command = f"show-secret {secret_uri} --reveal --format=json"
+    _, stdout, _ = await ops_test.juju(*complete_command.split())
+    return json.loads(stdout)[secret_unique_id]["content"]["Data"]
+
+
+SMTP_KEYS = [
+    "opensearch.notifications.core.email.smtp.user.password",
+    "opensearch.notifications.core.email.smtp.user.username",
+]
 
 
 @pytest.mark.skip_if_deployed
@@ -108,8 +125,8 @@ async def test_smtp_credentials_written_to_keystore(ops_test: OpsTest) -> None:
     """Test that SMTP credentials are written to the OpenSearch keystore."""
     config = {"user": "smtp.user", "password": "supersecret", "host": "smtp.host"}
     await ops_test.model.applications[SMTP_INTEGRATOR].set_config(config)
-
     await ops_test.model.integrate(f"{SMTP_INTEGRATOR}:smtp", MAIN_APP)
+
     await wait_until(
         ops_test,
         apps=[MAIN_APP, DATA_APP, SMTP_INTEGRATOR],
@@ -117,10 +134,6 @@ async def test_smtp_credentials_written_to_keystore(ops_test: OpsTest) -> None:
         units_statuses=["active"],
         wait_for_exact_units=APP_UNITS | {SMTP_INTEGRATOR: 1},
     )
-    expected_keys = [
-        "opensearch.notifications.core.email.smtp.user.password",
-        "opensearch.notifications.core.email.smtp.user.username",
-    ]
 
     # ensure keys are written on all units
     check_keys = []
@@ -131,10 +144,42 @@ async def test_smtp_credentials_written_to_keystore(ops_test: OpsTest) -> None:
     results = await asyncio.gather(*check_keys)
     logger.info("Checking if expected keys written to all nodes")
     for unit_id, keys in results:
-        for expected_key in expected_keys:
+        for expected_key in SMTP_KEYS:
             assert expected_key in keys, f"{unit_id} is missing expected key {expected_key}"
     logger.info("All keys written")
 
+
+@pytest.mark.abort_on_fail
+async def test_smtp_credentials_changed(ops_test: OpsTest) -> None:
+    """Test that SMTP credentials secret is updated."""
+    new_password = "moresecret"
+    config = {"password": new_password}
+    await ops_test.model.applications[SMTP_INTEGRATOR].set_config(config)
+
+    await wait_until(
+        ops_test,
+        apps=[MAIN_APP, DATA_APP, SMTP_INTEGRATOR],
+        apps_statuses=["active"],
+        units_statuses=["active"],
+        wait_for_exact_units=APP_UNITS | {SMTP_INTEGRATOR: 1},
+    )
+    plugins = await get_application_relation_data(
+        ops_test, f"{DATA_APP}/0", PeerRelationName, "plugin_config_info"
+    )
+
+    label = "plugin-notifications"
+    secret_uri = json.loads(plugins).get(label).get("secret_id")
+    secret_content = await get_secret_data(ops_test, secret_uri)
+    data = json.loads(secret_content.get(label))
+
+    password_key = "opensearch.notifications.core.email.smtp.user.password"
+    password = data.get("keys").get(password_key)
+    assert password == new_password, f"Expected password {new_password} but found {password}"
+
+
+@pytest.mark.abort_on_fail
+async def test_smtp_credentials_removed_from_keystore(ops_test: OpsTest) -> None:
+    """Test that SMTP credentials are removed from the OpenSearch keystore."""
     # remove stmp relation
     await ops_test.model.applications[MAIN_APP].destroy_relation(
         f"{SMTP_INTEGRATOR}:smtp", MAIN_APP
@@ -155,6 +200,6 @@ async def test_smtp_credentials_written_to_keystore(ops_test: OpsTest) -> None:
     results = await asyncio.gather(*check_keys)
     logger.info("Checking if keys removed from all nodes")
     for unit_id, keys in results:
-        for expected_key in expected_keys:
+        for expected_key in SMTP_KEYS:
             assert expected_key not in keys, f"{unit_id} still has key {expected_key}"
     logger.info("All keys removed.")
