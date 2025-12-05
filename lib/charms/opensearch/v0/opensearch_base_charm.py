@@ -594,6 +594,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # Recompute the node roles in case self-healing didn't trigger leader related event
             self._recompute_roles_if_needed(event)
             if self.peers_data.get(Scope.APP, "missing_relations"):
+                # for failover promotions: this flag indicates that the user needs
+                # to relate integrators to this new main orchestrator
                 self.peer_cluster_provider.check_credentials_with_missing_relations()
             if self.model.relations[PeerClusterRelationName]:
                 self.peer_cluster_requirer.apply_orchestrator_status()
