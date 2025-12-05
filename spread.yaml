@@ -163,7 +163,7 @@ prepare: |
     echo "Success: All pods are running!"
   fi
 
-  juju add-k8s uk8s $(juju show-controller | yq "keys | .[0]")
+  /snap/bin/juju add-k8s uk8s $(/snap/bin/juju show-controller | yq "keys | .[0]")
 
   # Install charmcraft & pipx (on lxd-vm backend)
   concierge prepare --trace
