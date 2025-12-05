@@ -69,4 +69,5 @@ tutorial/index
 how-to/index
 reference/index
 explanation/index
+Dashboards charm docs<https://canonical-charmed-opensearch-dashboards.readthedocs-hosted.com/>
 ```
