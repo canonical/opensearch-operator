@@ -125,6 +125,7 @@ class OpenSearchSnapshotEvents(Object):
         self.azure_requirer = AzureStorageRequires(charm, AZURE_RELATION)
 
         # simple deployments or main orchestrator
+        self.framework.observe(self.charm.on.config_changed, self._on_config_changed)
         self.framework.observe(
             self.s3_requirer.on.credentials_changed, self._on_s3_credentials_changed
         )
@@ -269,6 +270,8 @@ class OpenSearchSnapshotEvents(Object):
             self.charm.status.clear(BackupRelDataIncomplete, app=True)
             self.charm.status.clear(BackupMisconfiguration.format("s3", "s3 integrator"), app=True)
 
+        self._subclusters_remove_credentials(event, S3_RELATION)
+
         keystore_entries = ["s3.client.default.access_key", "s3.client.default.secret_key"]
         if not self.charm.snapshots_manager.cleanup(
             object_storage_type=ObjectStorageType.S3,
@@ -293,8 +296,6 @@ class OpenSearchSnapshotEvents(Object):
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupCredentialIncorrect, app=True)
-
-        self._subclusters_remove_credentials(event, S3_RELATION)
 
     def _on_azure_credentials_changed(  # noqa: C901
         self, event: StorageConnectionInfoChangedEvent
@@ -399,6 +400,8 @@ class OpenSearchSnapshotEvents(Object):
                 BackupMisconfiguration.format("azure", "azure integrator"), app=True
             )
 
+        self._subclusters_remove_credentials(event, AZURE_RELATION)
+
         keystore_entries = ["azure.client.default.account", "azure.client.default.key"]
         if not self.charm.snapshots_manager.cleanup(
             object_storage_type=ObjectStorageType.AZURE,
@@ -416,8 +419,6 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
             self.charm.status.clear(BackupCredentialIncorrect, app=True)
-
-        self._subclusters_remove_credentials(event, AZURE_RELATION)
 
     def _on_secret_changed(self, event) -> None:
         """Handles secret changes"""
@@ -476,7 +477,48 @@ class OpenSearchSnapshotEvents(Object):
             remove_plugin_secret(self.charm, self.secret_label)
 
             if self.charm.opensearch_peer_cm.is_provider(typ="main"):
-                self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
+                self.charm.peer_cluster_provider.refresh_relation_data(event)
+
+    def _on_config_changed(self, event):
+        """On config changed event handler."""
+        # if this charm was upgraded and already had a backup relation,
+        # the credentials will not exist yet in this charm's stored plugin_config_info.
+        # This handler creates and stores the secret containing the credentials
+        if not self.charm.unit.is_leader():
+            return
+
+        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
+            logger.debug("Deployment description not ready; deferring %s", event)
+            event.defer()
+            return
+
+        if deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR:
+            return
+
+        # check if a backup relation exists with no secret
+        if (
+            object_storage_config := self.charm.snapshots_manager.get_storage_config()
+        ) and not self.charm.secrets.has(Scope.APP, self.secret_label):
+            object_storage_type = self.charm.snapshots_manager.get_storage_type()
+            if object_storage_type == ObjectStorageType.S3:
+                keys = {
+                    "s3.client.default.access_key": object_storage_config.s3.credentials.access_key,
+                    "s3.client.default.secret_key": object_storage_config.s3.credentials.secret_key,
+                }
+                secret_content = {"keys": keys}
+                if object_storage_config.s3.tls_ca_chain:
+                    secret_content.update({"tls_ca_chain": object_storage_config.s3.tls_ca_chain})
+                self._subclusters_add_credentials(event, secret_content, S3_RELATION)
+
+            if object_storage_type == ObjectStorageType.AZURE:
+                keys = {
+                    "azure.client.default.account": object_storage_config.azure.credentials.storage_account,
+                    "azure.client.default.key": object_storage_config.azure.credentials.secret_key,
+                }
+                self._subclusters_add_credentials(event, {"keys": keys}, AZURE_RELATION)
+            if object_storage_type == ObjectStorageType.GCS:
+                # TODO: implement this
+                pass
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
         """Handler for s3 create backup action event."""
