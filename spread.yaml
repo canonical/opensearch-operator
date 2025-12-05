@@ -168,13 +168,13 @@ prepare: |
 
   # Install charmcraft & pipx (on lxd-vm backend)
   concierge prepare --trace
+  pipx install tox poetry
 
   if [[ $SPREAD_TASK == *"oauth"* ]]
   then
     /snap/bin/juju add-k8s uk8s --client --controller $(/snap/bin/juju show-controller | yq "keys | .[0]")
   fi
 
-  pipx install tox poetry
 prepare-each: |
   cd "$SPREAD_PATH"
   if [[ $SPREAD_VARIANT == *"juju29"* ]]
