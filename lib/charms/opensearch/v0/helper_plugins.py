@@ -28,10 +28,14 @@ logger = logging.getLogger(__name__)
 def store_plugin_secret(
     charm: "OpenSearchBaseCharm", content: dict, label: str, relation_name: Optional[str] = None
 ) -> None:
-    """Creates/updates app-scoped plugin secret and stores id in peers data."""
-    if not charm.unit.is_leader():
-        return
+    """Creates/updates app-scoped plugin secret and stores id in peers data.
 
+    Args:
+        charm: charm instance
+        content: dictionary of the secret payload
+        label: label of the secret to store
+        relation_name: name of the relation from which the secret content came
+    """
     charm.secrets.put(Scope.APP, label, json.dumps(content))
     secret_id = charm.secrets.get_secret_id(Scope.APP, label)
     charm.plugin_manager.put_plugin_config(
@@ -40,24 +44,37 @@ def store_plugin_secret(
 
 
 def remove_plugin_secret(charm: "OpenSearchBaseCharm", label: str) -> None:
-    """Deletes app-scoped plugin secret and removes id from peers data."""
+    """Deletes app-scoped plugin secret and removes id from peers data.
+
+    Args:
+        charm: charm instance
+        label: label of the secret to remove
+    """
     try:
         charm.secrets.delete(Scope.APP, label)
     except SecretNotFoundError:
-        logger.debug("Can't find secret '%s'", label)
+        logger.error("Can't find secret '%s'", label)
     except ModelError as e:
-        logger.debug("Cannot delete secret %s", label, e)
+        logger.error("Cannot delete secret %s: %s", label, e)
     charm.plugin_manager.remove_plugin_config(Scope.APP, label)
 
 
 def decode_plugin_secret_content(content: dict, label: str) -> Optional[dict]:
-    """Decodes JSON payload from plugin secret"""
+    """Decodes JSON payload from plugin secret
+
+    Args:
+        content: dictionary of the secret content
+        label: label of the secfet
+
+    Returns:
+        A decoded dictionary if successful, else None
+    """
     if not (raw := content.get(label)):
         logger.warning("Key '%s' not found in secret content", label)
         return None
 
     try:
         return json.loads(raw)
-    except json.JSONDecodeError:
-        logger.error("Malformed JSON in secret %s", label)
+    except json.JSONDecodeError as e:
+        logger.error("Malformed JSON in secret %s: %s", label, e)
         return None
