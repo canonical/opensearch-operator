@@ -13,7 +13,7 @@ from charms.opensearch.v0.constants_charm import (
     COSUser,
     KibanaserverUser,
     PClusterMainIsRequirer,
-    PClusterMissingStorageRelations,
+    PClusterMissingRelations,
     PClusterOrchestratorsRemoved,
     PClusterWaitingForFailoverPromotion,
     PeerClusterOrchestratorRelationName,
@@ -396,7 +396,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         ]:
             self.charm.status.set(
                 BlockedStatus(
-                    PClusterMissingStorageRelations.format(", ".join(missing_relations))
+                    PClusterMissingRelations.format(", ".join(missing_relations))
                 ),
                 app=True,
             )
@@ -405,7 +405,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
         self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
         self.charm.status.clear(
-            PClusterMissingStorageRelations, pattern=Status.CheckPattern.Interpolated, app=True
+            PClusterMissingRelations, pattern=Status.CheckPattern.Interpolated, app=True
         )
 
     def refresh_relation_data(  # noqa: C901
@@ -632,12 +632,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
     def _plugin_config_info(self) -> dict[str, PluginConfigInfo]:
         """Returns managed plugin configurations and grants related secrets to subclusters"""
         plugins = self.charm.state.app.plugin_config_info
-        granted = dict(plugins)
-        # grant secrets to subsclusters
-        for label, plugin in plugins.items():
-            if plugin.secret_id and not self._grant_secret_to_subclusters(plugin.secret_id):
-                del granted[label]
-        return granted
+        return {
+            label: plugin
+            for label, plugin in plugins.items()
+            if plugin.secret_id and self._grant_secret_to_subclusters(plugin.secret_id)
+        }
 
     def _grant_secret_to_subclusters(self, secret_id: str) -> bool:
         """Returns True if secret is successfully granted to all subclusters"""
