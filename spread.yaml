@@ -167,7 +167,7 @@ prepare: |
     echo "Success: All pods are running!"
   fi
 
-  /snap/bin/juju add-k8s uk8s $(/snap/bin/juju show-controller | yq "keys | .[0]")
+  /snap/bin/juju add-k8s uk8s --client --controller $(/snap/bin/juju show-controller | yq "keys | .[0]")
 
   pipx install tox poetry
 prepare-each: |
