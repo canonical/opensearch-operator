@@ -130,9 +130,9 @@ prepare: |
   then
     # Running on IS-hosted runner; configure microk8s to use Docker Hub mirror
     # Run before concierge prepare because of https://github.com/canonical/concierge/issues/75
-    sudo snap install microk8s  --classic
-    sudo snap install kubectl --classic 
-    sudo snap install yq
+    snap install microk8s  --classic
+    snap install kubectl --classic 
+    snap install yq
     
     if [[ -n "$DOCKERHUB_MIRROR" ]]
     then
@@ -144,9 +144,9 @@ prepare: |
         sleep 10
       done
       tee /var/snap/microk8s/current/args/certs.d/docker.io/hosts.toml << EOF
-      server = "$DOCKERHUB_MIRROR"
-      [host."${DOCKERHUB_MIRROR#'https://'}"]
-      capabilities = ["pull", "resolve"]
+  server = "$DOCKERHUB_MIRROR"
+  [host."${DOCKERHUB_MIRROR#'https://'}"]
+  capabilities = ["pull", "resolve"]
   EOF
     fi
 
