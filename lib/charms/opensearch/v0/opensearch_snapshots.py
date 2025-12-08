@@ -59,6 +59,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
 )
 from charms.opensearch.v0.opensearch_health import HealthColors
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from ops import (
     ActionEvent,
@@ -68,8 +69,6 @@ from ops import (
 )
 from pydantic import ValidationError
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
-
-from lib.charms.opensearch.v0.opensearch_internal_data import Scope
 
 # The unique Charmhub library identifier, never change it
 LIBID = "89db18e639c64a6ea223c63172c04dc6."
