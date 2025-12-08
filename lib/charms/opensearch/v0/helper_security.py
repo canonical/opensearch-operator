@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Helpers for security related operations, such as password generation etc."""
+import json
 import logging
 import math
 import os
@@ -23,6 +24,8 @@ from charms.opensearch.v0.helper_charm import run_cmd
 from charms.opensearch.v0.models import ObjectStorageConfig
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from cryptography import x509
+from google.api_core.exceptions import GoogleAPIError
+from google.cloud import storage
 
 # The unique Charmhub library identifier, never change it
 LIBID = "224ce9884b0d47b997357fec522f11c7"
@@ -775,6 +778,89 @@ def verify_azure_credentials(cfg: ObjectStorageConfig) -> bool:
     except AzureError as e:
         logger.error(
             "Azure Storage credential validation failed: %s",
+            e,
+            exc_info=e,
+        )
+        return False
+
+
+def verify_gcs_credentials(cfg: ObjectStorageConfig) -> bool:  # noqa: C901
+    """Validate GCS credentials using google-cloud-storage.
+
+    Args:
+        cfg: ObjectStorageConfig object
+
+    Returns:
+        True if we can access the configured bucket, False otherwise.
+
+    cfg.gcs.credentials.secret_key to contain a service-account JSON
+    (as a string), and cfg.gcs.bucket to contain the bucket name.
+    """
+    gcs_cfg = cfg.gcs
+
+    if not getattr(gcs_cfg, "credentials", None):
+        logger.error("GCS credential validation failed: missing credentials block.")
+        return False
+
+    service_account_json = getattr(gcs_cfg.credentials, "secret_key", None)
+    bucket_name = getattr(gcs_cfg, "bucket", None)
+
+    if not service_account_json:
+        logger.error("GCS credential validation failed: secret_key is empty.")
+        return False
+    if not bucket_name:
+        logger.error("GCS credential validation failed: bucket name is missing.")
+        return False
+
+    try:
+        sa_info = json.loads(service_account_json)
+    except (TypeError, ValueError) as e:
+        logger.error(
+            "GCS credential validation failed: secret_key is not valid JSON: %s",
+            e,
+        )
+        return False
+
+    project_id = sa_info.get("project_id")
+
+    client_kwargs: dict = {}
+    if project_id:
+        client_kwargs["project"] = project_id
+
+    endpoint = getattr(gcs_cfg, "endpoint", None)
+    client_options = {"api_endpoint": endpoint} if endpoint else None
+
+    try:
+        if client_options:
+            client = storage.Client.from_service_account_info(
+                sa_info,
+                client_options=client_options,
+                **client_kwargs,
+            )
+        else:
+            client = storage.Client.from_service_account_info(
+                sa_info,
+                **client_kwargs,
+            )
+
+        # list_blobs will raise if credentials are wrong or bucket is not accessible.
+        blobs_iter = client.list_blobs(bucket_name, max_results=1)
+        # Fetch one page
+        _ = next(iter(blobs_iter), None)
+
+        logger.info("GCS credential validation succeeded.")
+        return True
+
+    except GoogleAPIError as e:
+        logger.error(
+            "GCS credential validation with Google Cloud Storage failed: %s",
+            e,
+            exc_info=e,
+        )
+        return False
+    except Exception as e:  # noqa: BLE001
+        logger.error(
+            "Unexpected error during GCS credential validation: %s",
             e,
             exc_info=e,
         )

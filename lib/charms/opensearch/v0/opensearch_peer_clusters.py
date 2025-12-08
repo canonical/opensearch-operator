@@ -741,6 +741,12 @@ class OpenSearchPeerClustersManager:
                 .peek_content()
                 .get("azure-secret-key")
             )
+        if credentials.get("gcs", {}).get("secret-key"):
+            credentials["gcs"]["secret-key"] = (
+                self._charm.model.get_secret(id=credentials["gcs"]["secret-key"])
+                .peek_content()
+                .get("gcs-secret-key")
+            )
         return PeerClusterRelData.from_dict(content)
 
     def _resolve_credential(
@@ -818,6 +824,11 @@ class OpenSearchPeerClustersManager:
             )
             credentials["azure"]["secret-key"] = self._resolve_credential(
                 credentials["azure"]["secret-key"], content_key="azure-secret-key"
+            )
+
+        if credentials.get("gcs") and credentials["gcs"].get("secret-key"):
+            credentials["gcs"]["secret-key"] = self._resolve_credential(
+                credentials["gcs"]["secret-key"], content_key="gcs-secret-key"
             )
 
         return PeerClusterRelData.from_dict(content)

@@ -511,7 +511,52 @@ class GcsRelData(Model):
     bucket: str = Field(default="")
     base_path: Optional[str] = Field(alias="path", default=None)
     storage_class: Optional[str] = Field(alias="storage-class", default=None)
-    credentials: GcsRelDataCredentials = Field(alias=GCS_CREDENTIALS, default=None)
+    credentials: GcsRelDataCredentials = Field(
+        alias=GCS_CREDENTIALS, default=GcsRelDataCredentials()
+    )
+
+    @root_validator
+    def validate_core_fields(cls, values):  # noqa: N805
+        """Validate the core fields of the gcs relation data."""
+        if not (creds := values.get("credentials")) or not creds.secret_key:
+            raise ValueError("Missing fields: secret_key")
+
+        if not values.get("bucket"):
+            raise ValueError("Missing field: bucket")
+
+        # remove any duplicate, prefix or trailing "/" characters
+        if base_path := values.get("base_path"):
+            base_path = re.sub(r"/+", "/", base_path).strip().strip("/")
+        values["base_path"] = base_path or None
+
+        return values
+
+    @validator(GCS_CREDENTIALS, check_fields=False)
+    def ensure_secret_content(cls, conf: Dict[str, str] | GcsRelDataCredentials):  # noqa: N805
+        """Ensure the secret content is set."""
+        if not conf:
+            return None
+
+        data = conf
+        if isinstance(conf, dict):
+            data = GcsRelDataCredentials.from_dict(conf)
+
+        for value in data.dict().values():
+            if value.startswith("secret://"):
+                raise ValueError(f"The secret content must be passed, received {value} instead")
+        return data
+
+    @classmethod
+    def from_relation(cls, input_dict: Optional[Dict[str, Any]]):
+        """Create a new instance of this class from a json/dict repr.
+
+        This method creates a nested GcsRelDataCredentials object from the input dict.
+        """
+        if not input_dict:
+            return cls()
+
+        creds = GcsRelDataCredentials(**input_dict)
+        return cls.from_dict(dict(input_dict) | {GCS_CREDENTIALS: creds.dict()})
 
 
 class ObjectStorageConfig(Model):
