@@ -4,7 +4,7 @@
 """Utility functions for plugin secrets related operations."""
 import json
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from ops import ModelError, SecretNotFoundError
@@ -26,7 +26,10 @@ logger = logging.getLogger(__name__)
 
 
 def store_plugin_secret(
-    charm: "OpenSearchBaseCharm", content: dict, label: str, relation_name: Optional[str] = None
+    charm: "OpenSearchBaseCharm",
+    content: dict[str, Any],
+    label: str,
+    relation_name: Optional[str] = None,
 ) -> None:
     """Creates/updates app-scoped plugin secret and stores id in peers data.
 
