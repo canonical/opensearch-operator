@@ -4,7 +4,7 @@ December 8, 2025
 
 This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Numbat), upgrades OpenSearch and OpenSearch Dashboards version to 2.19.4, and introduces significant features including OAuth and JWT authentication, and full Terraform support.
 
-[Charmhub](https://charmhub.io/opensearch) | [Deploy guide](https://canonical-charmed-opensearch.readthedocs-hosted.com/2/tutorial/) | [Upgrade instructions](https://canonical-charmed-opensearch.readthedocs-hosted.com/2/how-to/upgrade/) | [System requirements](https://canonical-charmed-opensearch.readthedocs-hosted.com/2/reference/system-requirements/) 
+[Charmhub](https://charmhub.io/opensearch) | [Deploy guide](https://canonical-charmed-opensearch.readthedocs-hosted.com/2/how-to/deploy/deploy-on-lxd/) | [Upgrade instructions](https://canonical-charmed-opensearch.readthedocs-hosted.com/2/how-to/upgrade/perform-a-minor-upgrade/) | [System requirements](https://canonical-charmed-opensearch.readthedocs-hosted.com/2/reference/system-requirements/) 
 
 ## Charmed OpenSearch
 
@@ -96,7 +96,7 @@ This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Num
 
 ## Compatibility 
 
-| Charm                         | Revision | Hardware architecture | OpenSearch version | Minimum Juju version |
-| :---------------------------- | :------- | :-------------------- | :----------------- | :------------------- |
-| Charmed OpenSearch            | 307      | AMD64                 | v2.19.4            | 3.5+                 |
-| Charmed OpenSearch Dashboards | 60       | AMD64                 | v2.19.4            | 3.5+                 |
+| Charm                         | Revision                                                                     | Hardware architecture | OpenSearch version | Minimum Juju version | Artifacts                                                       |
+| :---------------------------- | :--------------------------------------------------------------------------- | :-------------------- | :----------------- | :------------------- | --------------------------------------------------------------- |
+| Charmed OpenSearch            | [307](https://github.com/canonical/opensearch-operator/tree/rev307)          | AMD64                 | v2.19.4            | 3.5+                 | Snap: [revision 98](https://snapcraft.io/opensearch)            |
+| Charmed OpenSearch Dashboards | [60](https://github.com/canonical/opensearch-dashboards-operator/tree/rev60) | AMD64                 | v2.19.4            | 3.5+                 | Snap: [revision 54](https://snapcraft.io/opensearch-dashboards) |
