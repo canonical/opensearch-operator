@@ -398,7 +398,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if self._has_secret_and_no_relation(info["key"], info["relation_name"])
         ]
         if missing_relations:
-            missing_str = ", ".join(missing_relations)
+            missing_str = ", ".join(sorted(missing_relations))
 
             self.charm.status.set(
                 BlockedStatus(PClusterMissingStorageRelations.format(missing_str)),
