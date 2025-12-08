@@ -180,7 +180,7 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelConflict, app=True)
             self.charm.status.clear(
-                PClusterMissingStorageRelations.format(", ".join("s3-integrator")),
+                PClusterMissingStorageRelations.format(", ".join(["s3-integrator"])),
                 pattern=Status.CheckPattern.Equal,
                 app=True,
             )
@@ -335,7 +335,7 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelConflict, app=True)
             self.charm.status.clear(
-                PClusterMissingStorageRelations.format(", ".join("azure-storage-integrator")),
+                PClusterMissingStorageRelations.format(", ".join(["azure-storage-integrator"])),
                 pattern=Status.CheckPattern.Equal,
                 app=True,
             )
