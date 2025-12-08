@@ -37,7 +37,8 @@ def store_plugin_secret(
         relation_name: name of the relation from which the secret content came
     """
     charm.secrets.put(Scope.APP, label, json.dumps(content))
-    secret_id = charm.secrets.get_secret_id(Scope.APP, label)
+    if not (secret_id := charm.secrets.get_secret_id(Scope.APP, label)):
+        logger.error("Could not create secret with label: %s", label)
     charm.plugin_manager.put_plugin_config(
         Scope.APP, label=label, secret_id=secret_id, relation_name=relation_name
     )

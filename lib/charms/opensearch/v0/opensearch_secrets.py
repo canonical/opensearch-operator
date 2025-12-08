@@ -202,6 +202,9 @@ class OpenSearchSecrets(Object, RelationDataStore):
             secret = self._charm.model.get_secret(label=label)
         except SecretNotFoundError:
             return None
+        except ModelError:
+            logger.error("No permission to access secret: %s", label)
+            return None
 
         self.cached_secrets.set_meta(scope, label, secret)
         return secret
@@ -388,7 +391,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
             # already tracking
             return cached_secret_meta
         try:
-            secret = self._charm.model.get_secret(id=secret_id, label=label)
+            secret = self._charm.model.get_secret(id=secret_id)
         except SecretNotFoundError:
             logger.info("Could not find secret: %s - %s", key, secret_id)
             return None

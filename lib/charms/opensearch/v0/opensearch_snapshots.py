@@ -99,7 +99,6 @@ SYSTEM_INDICES = {
     OpenSearchNodeLock.OPENSEARCH_INDEX,
 }
 
-
 class ObjectStorageType(str, Enum):
     """The object storage types."""
 
@@ -125,7 +124,6 @@ class OpenSearchSnapshotEvents(Object):
         self.azure_requirer = AzureStorageRequires(charm, AZURE_RELATION)
 
         # simple deployments or main orchestrator
-        self.framework.observe(self.charm.on.config_changed, self._on_config_changed)
         self.framework.observe(
             self.s3_requirer.on.credentials_changed, self._on_s3_credentials_changed
         )
@@ -270,7 +268,7 @@ class OpenSearchSnapshotEvents(Object):
             self.charm.status.clear(BackupRelDataIncomplete, app=True)
             self.charm.status.clear(BackupMisconfiguration.format("s3", "s3 integrator"), app=True)
 
-        self._subclusters_remove_credentials(event, S3_RELATION)
+        self._subclusters_remove_credentials(event)
 
         keystore_entries = ["s3.client.default.access_key", "s3.client.default.secret_key"]
         if not self.charm.snapshots_manager.cleanup(
@@ -387,6 +385,7 @@ class OpenSearchSnapshotEvents(Object):
         self.charm.status.clear(
             BackupMisconfiguration.format("azure", "azure integrator"), app=True
         )
+
         self._subclusters_add_credentials(
             event, secret_content={"keys": keys}, relation_name=AZURE_RELATION
         )
@@ -400,7 +399,7 @@ class OpenSearchSnapshotEvents(Object):
                 BackupMisconfiguration.format("azure", "azure integrator"), app=True
             )
 
-        self._subclusters_remove_credentials(event, AZURE_RELATION)
+        self._subclusters_remove_credentials(event)
 
         keystore_entries = ["azure.client.default.account", "azure.client.default.key"]
         if not self.charm.snapshots_manager.cleanup(
@@ -422,11 +421,10 @@ class OpenSearchSnapshotEvents(Object):
 
     def _on_secret_changed(self, event) -> None:
         """Handles secret changes"""
-        label = self.charm.secrets.label(Scope.APP, self.secret_label)
-        if label != event.secret.label:
+        content = event.secret.get_content(refresh=True)
+        if self.secret_label not in content.keys():
             return
 
-        content = event.secret.get_content(refresh=True)
         if not (plugin_config := decode_plugin_secret_content(content, self.secret_label)):
             return
 
@@ -466,59 +464,15 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event)
 
-    def _subclusters_remove_credentials(self, event, backup_relation):
+    def _subclusters_remove_credentials(self, event):
         """Propagates removal of credentials to subclusters"""
         if not self.charm.unit.is_leader():
             return
 
-        if (
-            backup_config := self.charm.state.app.plugin_config_info.get(self.secret_label)
-        ) and backup_config.relation_name == backup_relation:
-            remove_plugin_secret(self.charm, self.secret_label)
+        remove_plugin_secret(self.charm, self.secret_label)
 
-            if self.charm.opensearch_peer_cm.is_provider(typ="main"):
-                self.charm.peer_cluster_provider.refresh_relation_data(event)
-
-    def _on_config_changed(self, event):
-        """On config changed event handler."""
-        # if this charm was upgraded and already had a backup relation,
-        # the credentials will not exist yet in this charm's stored plugin_config_info.
-        # This handler creates and stores the secret containing the credentials
-        if not self.charm.unit.is_leader():
-            return
-
-        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
-            logger.debug("Deployment description not ready; deferring %s", event)
-            event.defer()
-            return
-
-        if deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR:
-            return
-
-        # check if a backup relation exists with no secret
-        if (
-            object_storage_config := self.charm.snapshots_manager.get_storage_config()
-        ) and not self.charm.secrets.has(Scope.APP, self.secret_label):
-            object_storage_type = self.charm.snapshots_manager.get_storage_type()
-            if object_storage_type == ObjectStorageType.S3:
-                keys = {
-                    "s3.client.default.access_key": object_storage_config.s3.credentials.access_key,
-                    "s3.client.default.secret_key": object_storage_config.s3.credentials.secret_key,
-                }
-                secret_content = {"keys": keys}
-                if object_storage_config.s3.tls_ca_chain:
-                    secret_content.update({"tls_ca_chain": object_storage_config.s3.tls_ca_chain})
-                self._subclusters_add_credentials(event, secret_content, S3_RELATION)
-
-            if object_storage_type == ObjectStorageType.AZURE:
-                keys = {
-                    "azure.client.default.account": object_storage_config.azure.credentials.storage_account,
-                    "azure.client.default.key": object_storage_config.azure.credentials.secret_key,
-                }
-                self._subclusters_add_credentials(event, {"keys": keys}, AZURE_RELATION)
-            if object_storage_type == ObjectStorageType.GCS:
-                # TODO: implement this
-                pass
+        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+            self.charm.peer_cluster_provider.refresh_relation_data(event)
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
         """Handler for s3 create backup action event."""
@@ -751,7 +705,7 @@ class OpenSearchSnapshotsManager:
 
     def __init__(self, charm: "OpenSearchBaseCharm", opensearch: "OpenSearchDistribution"):
         self.charm = charm  # todo this will need to be replaced by the clusterState
-        self.backup_label = "backup-credentials"
+        self.secret_label = "backup-credentials"
         self.opensearch = opensearch
 
     def get_storage_type(self) -> Optional[ObjectStorageType]:  # noqa: C901
@@ -786,7 +740,7 @@ class OpenSearchSnapshotsManager:
                 return ObjectStorageType.GCS
 
         # non-main orchestrator
-        if not (backup_config := self.charm.state.app.plugin_config_info.get(self.backup_label)):
+        if not (backup_config := self.charm.state.app.plugin_config_info.get(self.secret_label)):
             return None
         if backup_config.relation_name == S3_RELATION:
             return ObjectStorageType.S3
@@ -1519,3 +1473,49 @@ class OpenSearchSnapshotsManager:
             # If we had a custom CA but peer no longer provides one, clean it up
             self.remove_s3_ca()
             self.charm.request_opensearch_restart(reason="clean up the object storage CA")
+
+    def ensure_snapshot_secrets(self):
+        """Checks if backup relation exists without entry in stored plugins"""
+        # if this charm was upgraded and already had a backup relation,
+        # the credentials will not exist yet in this charm's stored plugin_config_info.
+        # This handler creates and stores the secret containing the credentials
+        if not self.charm.unit.is_leader():
+            return
+
+        if self.charm.opensearch_peer_cm.deployment_desc().typ != DeploymentType.MAIN_ORCHESTRATOR:
+            return
+
+        # check if a backup relation exists with no secret
+        if (
+            object_storage_config := self.get_storage_config()
+        ) and not self.charm.state.app.plugin_config_info.get(self.secret_label):
+            object_storage_type = self.get_storage_type()
+            if object_storage_type == ObjectStorageType.S3:
+                keys = {
+                    "s3.client.default.access_key": object_storage_config.s3.credentials.access_key,
+                    "s3.client.default.secret_key": object_storage_config.s3.credentials.secret_key,
+                }
+                secret_content = {"keys": keys}
+                if object_storage_config.s3.tls_ca_chain:
+                    secret_content.update({"tls_ca_chain": object_storage_config.s3.tls_ca_chain})
+                store_plugin_secret(
+                    self.charm,
+                    content=secret_content,
+                    label=self.secret_label,
+                    relation_name=S3_RELATION,
+                )
+
+            if object_storage_type == ObjectStorageType.AZURE:
+                keys = {
+                    "azure.client.default.account": object_storage_config.azure.credentials.storage_account,
+                    "azure.client.default.key": object_storage_config.azure.credentials.secret_key,
+                }
+                store_plugin_secret(
+                    self.charm,
+                    content={"keys": keys},
+                    label=self.secret_label,
+                    relation_name=AZURE_RELATION,
+                )
+            if object_storage_type == ObjectStorageType.GCS:
+                # TODO: implement this
+                pass

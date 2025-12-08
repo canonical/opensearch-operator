@@ -630,11 +630,18 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
     def _plugin_config_info(self) -> dict[str, PluginConfigInfo]:
         """Returns managed plugin configurations and grants related secrets to subclusters"""
         plugins = self.charm.state.app.plugin_config_info
+        self.charm.snapshots_manager.ensure_snapshot_secrets()
         return {
             label: plugin
             for label, plugin in plugins.items()
             if plugin.secret_id and self._grant_secret_to_subclusters(plugin.secret_id)
         }
+
+    def _remove_plugin_configs(self):
+        """Removes stored plugin configurations"""
+        plugins_labels = self.charm.state.app.plugin_config_info.keys()
+        for label in plugins_labels:
+            remove_plugin_secret(self.charm, label)
 
     def _grant_secret_to_subclusters(self, secret_id: str) -> bool:
         """Returns True if secret is successfully granted to all subclusters"""
@@ -964,12 +971,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         # fetch the success data
         data = self.peer_cm.rel_data_from_str(data["data"])
 
-        # we need to differentiate between plugins being None and {}
-        # when an empty dict, plugins have been removed from the main orchestrator
-        # and we need to also remove them in subclusters
-        if (plugin_configs := data.plugins) is not None:
-            self._update_plugin_configs(plugin_configs)
-
         # check errors that can only be figured out from the requirer side
         if self._error_set_from_requirer(orchestrators, deployment_desc, data, event.relation.id):
             logger.debug("Error from requirer")
@@ -979,9 +980,16 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             self.charm.opensearch_peer_cm.demote_deployment_type()
             deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
+            self._remove_plugin_configs()
             self.charm.peer_cluster_provider.refresh_relation_data(
                 event, event.relation.id, can_defer=False
             )
+
+        # we need to differentiate between plugins being None and {}
+        # when an empty dict, plugins have been removed from the main orchestrator
+        # and we need to also remove them in subclusters
+        if (plugin_configs := data.plugins) is not None:
+            self._update_plugin_configs(plugin_configs)
 
         # broadcast that this cluster is a failover candidate, and let the main CM elect it or not
         if deployment_desc.typ == DeploymentType.FAILOVER_ORCHESTRATOR:
@@ -1041,6 +1049,18 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                     secret_id=plugin.secret_id,
                     relation_name=plugin.relation_name,
                 )
+
+    def _remove_plugin_secret_ids(self):
+        """Removes secret IDs from the stored plugin confis"""
+        plugins = self.charm.state.app.plugin_config_info
+        for label, plugin in plugins.items():
+            self.charm.plugin_manager.put_plugin_config(
+                scope=Scope.APP,
+                label=label,
+                secret_id=None,
+                relation_name=plugin.relation_name,
+            )
+
 
     def apply_orchestrator_status(self) -> None:
         """Sets or clears status based on presence of local orchestrators."""
@@ -1274,6 +1294,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
             elif self.charm.peer_cluster_provider.should_promote_failover_to_main():
                 logger.info("Promoting failover orchestrator to main orchestrator")
                 self.charm.peer_cluster_provider._promote_failover()
+                self._remove_plugin_secret_ids()
                 self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
         # clear previously set errors due to this relation
