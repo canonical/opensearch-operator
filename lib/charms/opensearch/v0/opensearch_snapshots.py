@@ -102,6 +102,7 @@ SYSTEM_INDICES = {
     OpenSearchNodeLock.OPENSEARCH_INDEX,
 }
 
+
 class ObjectStorageType(str, Enum):
     """The object storage types."""
 
@@ -397,7 +398,7 @@ class OpenSearchSnapshotEvents(Object):
 
         store_plugin_secret(
             self.charm,
-            content={"keys":keys},
+            content={"keys": keys},
             label=AZURE_LABEL,
             relation_name=AZURE_RELATION,
         )
@@ -1483,6 +1484,7 @@ class OpenSearchSnapshotsManager:
             self.charm.request_opensearch_restart(reason="clean up the object storage CA")
 
     def get_backup_label(self, object_storage_type):
+        """Returns plugin label associated with object storage type"""
         if object_storage_type == ObjectStorageType.S3:
             return S3_LABEL
         if object_storage_type == ObjectStorageType.AZURE:
@@ -1502,9 +1504,14 @@ class OpenSearchSnapshotsManager:
         # check if a backup relation exists with no secret
         if not (object_storage_config := self.get_storage_config()):
             return
-        
+
         object_storage_type = self.get_storage_type()
-        label = self.get_backup_label(object_storage_type)
+        if not (label := self.get_backup_label(object_storage_type)):
+            logger.warning(
+                "Could not determine label for object storage type: %s", object_storage_type
+            )
+            return
+
         if (
             object_storage_config := self.get_storage_config()
         ) and not self.charm.state.app.plugin_config_info.get(label):

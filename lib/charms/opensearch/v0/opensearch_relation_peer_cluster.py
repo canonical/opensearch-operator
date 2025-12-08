@@ -1061,7 +1061,6 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 relation_name=plugin.relation_name,
             )
 
-
     def apply_orchestrator_status(self) -> None:
         """Sets or clears status based on presence of local orchestrators."""
         if not self.charm.unit.is_leader():
