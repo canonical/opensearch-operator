@@ -67,6 +67,9 @@ from ops import (
 from pydantic import ValidationError
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
+from lib.charms.opensearch.v0.constants_charm import PClusterMissingStorageRelations
+from lib.charms.opensearch.v0.helper_charm import Status
+
 # The unique Charmhub library identifier, never change it
 LIBID = "89db18e639c64a6ea223c63172c04dc6."
 
@@ -177,6 +180,11 @@ class OpenSearchSnapshotEvents(Object):
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelConflict, app=True)
+            self.charm.status.clear(
+                PClusterMissingStorageRelations.format(", ".join("s3-integrator")),
+                pattern=Status.CheckPattern.Equal,
+                app=True,
+            )
 
         object_storage_config = self.charm.snapshots_manager.get_storage_config(
             ObjectStorageType.S3
@@ -327,6 +335,11 @@ class OpenSearchSnapshotEvents(Object):
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelConflict, app=True)
+            self.charm.status.clear(
+                PClusterMissingStorageRelations.format(", ".join("azure-storage-integrator")),
+                pattern=Status.CheckPattern.Equal,
+                app=True,
+            )
 
         object_storage_config = self.charm.snapshots_manager.get_storage_config(
             ObjectStorageType.AZURE
