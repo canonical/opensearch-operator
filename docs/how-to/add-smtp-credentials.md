@@ -57,7 +57,7 @@ juju integrate smtp-integrator:smtp opensearch
 
 In large deployments, the SMTP integrator must be integrated with the main orchestrator application.
 
-You can identity which applications is the main-orchestrator
+You can identify which applications is the main-orchestrator
 by inspecting the `integrations` section of `juju status`:
 
 ```shell
