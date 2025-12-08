@@ -69,6 +69,8 @@ from ops import (
 from pydantic import ValidationError
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
+from lib.charms.opensearch.v0.opensearch_internal_data import Scope
+
 # The unique Charmhub library identifier, never change it
 LIBID = "89db18e639c64a6ea223c63172c04dc6."
 
@@ -179,11 +181,35 @@ class OpenSearchSnapshotEvents(Object):
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelConflict, app=True)
-            self.charm.status.clear(
-                PClusterMissingStorageRelations.format(", ".join(["s3-integrator"])),
-                pattern=Status.CheckPattern.Equal,
+
+            raw = self.charm.state.app.relation_data.get(Scope.APP, "missing_relations")
+            if not raw:
+                return
+
+            missing_relations = [r.strip() for r in raw.split(",") if r.strip()]
+
+            if "s3-integrator" not in missing_relations:
+                return
+
+            missing_relations.remove("s3-integrator")
+
+            if not missing_relations:
+                # no missing relations left: clear status
+                self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
+                self.charm.status.clear(
+                    PClusterMissingStorageRelations,
+                    pattern=Status.CheckPattern.Interpolated,
+                    app=True,
+                )
+                return
+
+            # Still have others missing: update status and stored string
+            missing_str = ", ".join(missing_relations)
+            self.charm.status.set(
+                BlockedStatus(PClusterMissingStorageRelations.format(missing_str)),
                 app=True,
             )
+            self.charm.state.app.relation_data.put(Scope.APP, "missing_relations", missing_str)
 
         object_storage_config = self.charm.snapshots_manager.get_storage_config(
             ObjectStorageType.S3
@@ -334,11 +360,35 @@ class OpenSearchSnapshotEvents(Object):
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelConflict, app=True)
-            self.charm.status.clear(
-                PClusterMissingStorageRelations.format(", ".join(["azure-storage-integrator"])),
-                pattern=Status.CheckPattern.Equal,
+
+            raw = self.charm.state.app.relation_data.get(Scope.APP, "missing_relations")
+            if not raw:
+                return
+
+            missing_relations = [r.strip() for r in raw.split(",") if r.strip()]
+
+            if "azure-storage-integrator" not in missing_relations:
+                return
+
+            missing_relations.remove("azure-storage-integrator")
+
+            if not missing_relations:
+                # no missing relations left: clear status
+                self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
+                self.charm.status.clear(
+                    PClusterMissingStorageRelations,
+                    pattern=Status.CheckPattern.Interpolated,
+                    app=True,
+                )
+                return
+
+            # still have others missing: update status and stored string
+            missing_str = ", ".join(missing_relations)
+            self.charm.status.set(
+                BlockedStatus(PClusterMissingStorageRelations.format(missing_str)),
                 app=True,
             )
+            self.charm.state.app.relation_data.put(Scope.APP, "missing_relations", missing_str)
 
         object_storage_config = self.charm.snapshots_manager.get_storage_config(
             ObjectStorageType.AZURE
