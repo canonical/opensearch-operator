@@ -637,12 +637,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if plugin.secret_id and self._grant_secret_to_subclusters(plugin.secret_id)
         }
 
-    def _remove_plugin_configs(self):
-        """Removes stored plugin configurations"""
-        plugins_labels = self.charm.state.app.plugin_config_info.keys()
-        for label in plugins_labels:
-            remove_plugin_secret(self.charm, label)
-
     def _grant_secret_to_subclusters(self, secret_id: str) -> bool:
         """Returns True if secret is successfully granted to all subclusters"""
         for relation in self.charm.model.relations[self.relation_name]:
@@ -980,6 +974,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             self.charm.opensearch_peer_cm.demote_deployment_type()
             deployment_desc = self.charm.opensearch_peer_cm.deployment_desc()
+            # demoted main orchestrator should remove secrets it created for plugins
             self._remove_plugin_configs()
             self.charm.peer_cluster_provider.refresh_relation_data(
                 event, event.relation.id, can_defer=False
@@ -1060,6 +1055,12 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 secret_id=None,
                 relation_name=plugin.relation_name,
             )
+
+    def _remove_plugin_configs(self):
+        """Removes stored plugin configurations"""
+        plugins_labels = self.charm.state.app.plugin_config_info.keys()
+        for label in plugins_labels:
+            remove_plugin_secret(self.charm, label)
 
     def apply_orchestrator_status(self) -> None:
         """Sets or clears status based on presence of local orchestrators."""
