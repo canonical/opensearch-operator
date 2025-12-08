@@ -355,7 +355,7 @@ class OpenSearchSnapshotEvents(Object):
 
             if raw := self.charm.state.app.relation_data.get(Scope.APP, "missing_relations"):
                 missing_relations = [r.strip() for r in raw.split(",") if r.strip()]
-                if "azure-store-integrator" in missing_relations:
+                if "azure-storage-integrator" in missing_relations:
                     missing_relations.remove("azure-storage-integrator")
                     # still have others missing: update status and stored string
                     if missing_relations:
