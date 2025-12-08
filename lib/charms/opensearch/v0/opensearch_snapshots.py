@@ -415,7 +415,7 @@ class OpenSearchSnapshotEvents(Object):
                 BackupMisconfiguration.format("azure", "azure integrator"), app=True
             )
 
-        self._subclusters_remove_credentials(event)
+        self._subclusters_remove_credentials(event, AZURE_LABEL)
 
         keystore_entries = ["azure.client.default.account", "azure.client.default.key"]
         if not self.charm.snapshots_manager.cleanup(
