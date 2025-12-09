@@ -1533,8 +1533,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         elif storage_type := self.charm.snapshots_manager.get_storage_type():
             try:
-                if not self.charm.snapshots_manager.verify_repository(storage_type):
-                    blocked_msg = "Object storage related but storage configuration is not completed in main orchestator yet."
+                self.charm.snapshots_manager.verify_repository(storage_type)
             except OpenSearchHttpError as e:
                 logger.warning(
                     "Failed to create/verify snapshot repository for %s. "
@@ -1543,6 +1542,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                     e,
                     getattr(e, "response_body", None),
                 )
+                blocked_msg = "Object storage related but storage configuration is not completed in main orchestrator yet."
 
         if not blocked_msg:
             self._clear_errors(f"error_from_requirer-{event_rel_id}")

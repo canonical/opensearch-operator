@@ -1621,7 +1621,7 @@ class OpenSearchSnapshotsManager:
             return "gcs"
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
-    def verify_repository(self, object_storage_type: ObjectStorageType) -> bool:
+    def verify_repository(self, object_storage_type: ObjectStorageType) -> None:
         """Verify repository by listing snapshots.
 
         Args:
@@ -1641,7 +1641,6 @@ class OpenSearchSnapshotsManager:
             alt_hosts=self.charm.alt_hosts,
             timeout=30,
         )
-        return True
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def should_restart_for_full_setup(
