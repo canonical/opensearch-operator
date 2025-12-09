@@ -608,7 +608,12 @@ class OpenSearchSnapshotEvents(Object):
             event.defer()
             return
 
-        if self.charm.state.app.orchestrators and self.charm.state.app.orchestrators.main_rel_id:
+        if (
+            self.charm.state.app.orchestrators
+            and self.charm.state.app.orchestrators.main_app
+            and self.charm.state.app.orchestrators.main_app.name == event.relation.app.name
+            and len(event.relation.units) > 0
+        ):
             logger.debug(
                 "Main orchestrator still accessible; do not cleanup as it can be scale down"
             )
