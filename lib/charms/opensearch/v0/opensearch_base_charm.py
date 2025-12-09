@@ -1061,6 +1061,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                         logger.info("on_tls_conf_set: Detected CA rotation complete in cluster")
                         self.tls.on_ca_certs_rotation_complete()
             else:
+                logger.debug("TLS not fully configured yet, deferring event.")
                 event.defer()
                 return
 
