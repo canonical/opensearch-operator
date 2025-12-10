@@ -162,7 +162,7 @@ class OpenSearchSnapshotEvents(Object):
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
 
-    def _on_backup_credentials_changed(
+    def _on_backup_credentials_changed(  # noqa C901
         self, event: Union[CredentialsChangedEvent, StorageConnectionInfoChangedEvent]
     ) -> None:
         """Handler for backup credentials changed event."""
@@ -525,7 +525,6 @@ class OpenSearchSnapshotEvents(Object):
 
     def _on_verify_backup_credentials(self, event: VerifyBackupCredentialsEvent) -> None:
         """Verify that stored backup credentials are still valid."""
-
         credential_dict = {}
         object_storage_type = self.charm.snapshots_manager.get_storage_type()
         object_storage_config = self.charm.snapshots_manager.get_storage_config(
