@@ -398,16 +398,21 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if self._has_secret_and_no_relation(info["key"], info["relation_name"])
         ]
         if missing_relations:
-            details = ", ".join(sorted(missing_relations))
-            extra = f" Missing relations for: {details}"
-            extra = extra[:120]
-            full_msg = f"{PClusterMissingStorageRelations}{extra}"
-            logger.warning(full_msg)
-            self.charm.status.set(BlockedStatus(full_msg), app=True)
+            missing_str = ", ".join(sorted(missing_relations))
+
+            self.charm.status.set(
+                BlockedStatus(PClusterMissingStorageRelations.format(missing_str)),
+                app=True,
+            )
+            self.charm.state.app.relation_data.put(Scope.APP, "missing_relations", missing_str)
             return
 
+        # No missing relations, clean up any previous state
+        self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
         self.charm.status.clear(
-            PClusterMissingStorageRelations, pattern=Status.CheckPattern.Start, app=True
+            PClusterMissingStorageRelations,
+            pattern=Status.CheckPattern.Interpolated,
+            app=True,
         )
 
     def _has_secret_and_no_relation(self, key: str, relation_name: str) -> bool:
@@ -1533,8 +1538,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
 
         elif storage_type := self.charm.snapshots_manager.get_storage_type():
             try:
-                if not self.charm.snapshots_manager.verify_repository(storage_type):
-                    blocked_msg = "Object storage related but storage configuration is not completed in main orchestator yet."
+                self.charm.snapshots_manager.verify_repository(storage_type)
             except OpenSearchHttpError as e:
                 logger.warning(
                     "Failed to create/verify snapshot repository for %s. "
@@ -1543,6 +1547,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                     e,
                     getattr(e, "response_body", None),
                 )
+                blocked_msg = "Object storage related but storage configuration is not completed in main orchestrator yet."
 
         if not blocked_msg:
             self._clear_errors(f"error_from_requirer-{event_rel_id}")
