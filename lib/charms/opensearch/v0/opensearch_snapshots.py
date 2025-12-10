@@ -519,9 +519,6 @@ class OpenSearchSnapshotEvents(Object):
         # clean S3 CA if it was stored
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.remove_s3_ca()
-            self.charm.request_opensearch_restart(
-                reason="clean up object storage CA after peer-clusters departed"
-            )
 
     def _on_verify_backup_credentials(self, event: VerifyBackupCredentialsEvent) -> None:
         """Verify that stored backup credentials are still valid."""
@@ -1624,35 +1621,6 @@ class OpenSearchSnapshotsManager:
             timeout=30,
         )
         return True
-
-    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
-    def should_restart_for_full_setup(
-        self, object_storage_type: ObjectStorageType, object_storage_config: ObjectStorageConfig
-    ) -> bool:
-        """Check if a restart is needed for full setup."""
-        if not self.charm.unit.is_leader():
-            return False
-        if not self.opensearch.is_started():
-            return False
-
-        try:
-            test_repository = (
-                f"tmp-{self.charm.unit_name}-{self.repository_name(object_storage_type)}"
-            )
-            self.create_repository(
-                object_storage_type, object_storage_config, name=test_repository
-            )
-            # best effort clean up
-            try:
-                self.remove_repository(object_storage_type, name=test_repository)
-            except Exception:
-                pass
-            # creation succeeded, no restart needed
-            return False
-        except OpenSearchHttpError as e:
-            if e.response_body.get("error", {}).get("type") == "repository_verification_exception":
-                return True
-            raise
 
     def ca_changed(self, new_chain: str | None) -> bool:
         """Return True if the installed CA differs from new_chain."""
