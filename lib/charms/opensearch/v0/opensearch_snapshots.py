@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 
 """OpenSearch Snapshots."""
-import hashlib
 import json
 import logging
 from datetime import datetime
@@ -1674,26 +1673,3 @@ class OpenSearchSnapshotsManager:
             alt_hosts=self.charm.alt_hosts,
             timeout=30,
         )
-
-    def ca_changed(self, new_chain: str | None) -> bool:
-        """Return True if the installed CA differs from new_chain."""
-        current_chain = self.charm.snapshots_manager.find_s3_chain_in_store()
-        # No CA installed and nothing new: no change
-        if not current_chain and not new_chain:
-            logger.debug("No CA installed and nothing new: no change")
-            return False
-
-        # Only one side has a chain: definitely changed
-        if bool(current_chain) != bool(new_chain):
-            logger.debug("The CA is added or removed: definitely changed")
-            return True
-
-        # Both non-empty: compare as unordered sets of normalized cert blocks
-        current_blocks = normalize_certificate_chain_unordered(current_chain)
-        new_blocks = normalize_certificate_chain_unordered(new_chain)
-        is_different = (
-            hashlib.sha256("".join(current_blocks).encode("utf-8")).hexdigest()
-            != hashlib.sha256("".join(new_blocks).encode("utf-8")).hexdigest()
-        )
-        logger.debug("The old and new CA chains are different: %s", is_different)
-        return is_different
