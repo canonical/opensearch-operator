@@ -112,7 +112,7 @@ class ObjectStorageType(str, Enum):
 
 
 class VerifyBackupCredentialsEvent(EventBase):
-    """Event for cleaning up old CAs."""
+    """Event to verify backup credentials on main orchestrator leader unit."""
 
 
 class OpenSearchSnapshotEvents(Object):
