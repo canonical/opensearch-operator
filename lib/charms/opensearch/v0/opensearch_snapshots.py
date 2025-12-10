@@ -236,7 +236,6 @@ class OpenSearchSnapshotEvents(Object):
             }
         )
         logger.info("S3 credentials are added to keystore.")
-        self.charm.keystore_manager.reload()
 
         needs_custom_ca = self.charm.snapshots_manager.requires_custom_s3_ca(
             object_storage_type, object_storage_config
@@ -254,6 +253,8 @@ class OpenSearchSnapshotEvents(Object):
             # No CA configured now. If we had one, remove it
             self.charm.snapshots_manager.remove_s3_ca()
             logger.info("S3 CA removed.")
+
+        self.charm.keystore_manager.reload()
 
         try:
             if not self.charm.unit.is_leader():
@@ -507,7 +508,7 @@ class OpenSearchSnapshotEvents(Object):
                     "s3.client.default.secret_key": s3_info["secret_key"],
                 }
             )
-            self.charm.keystore_manager.reload()
+
             logger.info("S3 credentials are added to keystore.")
 
             # Optional CA chain
@@ -518,6 +519,8 @@ class OpenSearchSnapshotEvents(Object):
             elif self.charm.snapshots_manager.is_custom_s3_ca_stored():
                 # If we had a custom CA but peer no longer provides one, clean it up
                 self.charm.snapshots_manager.remove_s3_ca()
+
+            self.charm.keystore_manager.reload()
 
             return
 
