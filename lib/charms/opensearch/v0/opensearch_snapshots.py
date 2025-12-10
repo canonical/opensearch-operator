@@ -199,25 +199,35 @@ class OpenSearchSnapshotEvents(Object):
             self.charm.status.clear(BackupRelConflict, app=True)
             if raw := self.charm.state.app.relation_data.get(Scope.APP, "missing_relations"):
                 missing_relations = [r.strip() for r in raw.split(",") if r.strip()]
-                if "azure-storage-integrator" in missing_relations:
+
+                if (
+                    "azure-storage-integrator" in missing_relations
+                    and object_storage_type == ObjectStorageType.AZURE
+                ):
                     missing_relations.remove("azure-storage-integrator")
-                    # still have others missing: update status and stored string
-                    if missing_relations:
-                        missing_str = ", ".join(sorted(missing_relations))
-                        self.charm.status.set(
-                            BlockedStatus(PClusterMissingStorageRelations.format(missing_str)),
-                            app=True,
-                        )
-                        self.charm.state.app.relation_data.put(
-                            Scope.APP, "missing_relations", missing_str
-                        )
-                    else:
-                        self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
-                        self.charm.status.clear(
-                            PClusterMissingStorageRelations,
-                            pattern=Status.CheckPattern.Interpolated,
-                            app=True,
-                        )
+                if (
+                    "s3-integrator" in missing_relations
+                    and object_storage_type == ObjectStorageType.S3
+                ):
+                    missing_relations.remove("s3-integrator")
+
+                # still have others missing: update status and stored string
+                if missing_relations:
+                    missing_str = ", ".join(sorted(missing_relations))
+                    self.charm.status.set(
+                        BlockedStatus(PClusterMissingStorageRelations.format(missing_str)),
+                        app=True,
+                    )
+                    self.charm.state.app.relation_data.put(
+                        Scope.APP, "missing_relations", missing_str
+                    )
+                else:
+                    self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
+                    self.charm.status.clear(
+                        PClusterMissingStorageRelations,
+                        pattern=Status.CheckPattern.Interpolated,
+                        app=True,
+                    )
 
         object_storage_config = self.charm.snapshots_manager.get_storage_config(
             object_storage_type
