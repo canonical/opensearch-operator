@@ -31,10 +31,12 @@ from charms.opensearch.v0.constants_charm import (
     BackupRelConflict,
     BackupRelDataIncomplete,
     BackupRelShouldNotExist,
+    PClusterMissingStorageRelations,
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
     RestoreInProgress,
 )
+from charms.opensearch.v0.helper_charm import Status
 from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.helper_security import (
     list_cas,
@@ -57,6 +59,7 @@ from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchHttpError,
 )
 from charms.opensearch.v0.opensearch_health import HealthColors
+from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from ops import (
     ActionEvent,
@@ -194,6 +197,27 @@ class OpenSearchSnapshotEvents(Object):
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelConflict, app=True)
+            if raw := self.charm.state.app.relation_data.get(Scope.APP, "missing_relations"):
+                missing_relations = [r.strip() for r in raw.split(",") if r.strip()]
+                if "azure-storage-integrator" in missing_relations:
+                    missing_relations.remove("azure-storage-integrator")
+                    # still have others missing: update status and stored string
+                    if missing_relations:
+                        missing_str = ", ".join(sorted(missing_relations))
+                        self.charm.status.set(
+                            BlockedStatus(PClusterMissingStorageRelations.format(missing_str)),
+                            app=True,
+                        )
+                        self.charm.state.app.relation_data.put(
+                            Scope.APP, "missing_relations", missing_str
+                        )
+                    else:
+                        self.charm.state.app.relation_data.delete(Scope.APP, "missing_relations")
+                        self.charm.status.clear(
+                            PClusterMissingStorageRelations,
+                            pattern=Status.CheckPattern.Interpolated,
+                            app=True,
+                        )
 
         object_storage_config = self.charm.snapshots_manager.get_storage_config(
             object_storage_type
@@ -470,7 +494,12 @@ class OpenSearchSnapshotEvents(Object):
             event.defer()
             return
 
-        if self.charm.state.app.orchestrators and self.charm.state.app.orchestrators.main_rel_id:
+        if (
+            self.charm.state.app.orchestrators
+            and self.charm.state.app.orchestrators.main_app
+            and self.charm.state.app.orchestrators.main_app.name == event.relation.app.name
+            and len(event.relation.units) > 0
+        ):
             logger.debug(
                 "Main orchestrator still accessible; do not cleanup as it can be scale down"
             )
