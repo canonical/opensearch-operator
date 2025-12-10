@@ -348,6 +348,8 @@ class OpenSearchSnapshotEvents(Object):
             self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
             self.charm.status.clear(BackupCredentialIncorrect, app=True)
 
+        self.charm.keystore_manager.reload()
+
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
     def _on_peer_clusters_relation_changed_for_snapshots(self, event) -> None:  # noqa C901
@@ -458,6 +460,7 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.remove_s3_ca()
 
+        self.charm.keystore_manager.reload()
         self.charm.snapshots_manager.set_credentials_saved(None)
 
     def _on_peer_clusters_relation_departed_for_snapshots(self, event) -> None:  # noqa C901
@@ -519,6 +522,8 @@ class OpenSearchSnapshotEvents(Object):
         # clean S3 CA if it was stored
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.remove_s3_ca()
+
+        self.charm.keystore_manager.reload()
 
     def _on_verify_backup_credentials(self, event: VerifyBackupCredentialsEvent) -> None:
         """Verify that stored backup credentials are still valid."""
