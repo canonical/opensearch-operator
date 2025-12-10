@@ -7,7 +7,7 @@ import json
 import logging
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Optional, Tuple, Union
 
 from charms.data_platform_libs.v0.azure_storage import (
     AzureStorageRequires,
@@ -124,17 +124,17 @@ class OpenSearchSnapshotEvents(Object):
         self.azure_requirer = AzureStorageRequires(charm, AZURE_RELATION)
 
         # simple deployments or main orchestrator
-        self.framework.observe(
-            self.s3_requirer.on.credentials_changed, self._on_s3_credentials_changed
-        )
-        self.framework.observe(self.s3_requirer.on.credentials_gone, self._on_s3_credentials_gone)
-        self.framework.observe(
+        for event in [
+            self.s3_requirer.on.credentials_changed,
             self.azure_requirer.on.storage_connection_info_changed,
-            self._on_azure_credentials_changed,
-        )
-        self.framework.observe(
-            self.azure_requirer.on.storage_connection_info_gone, self._on_azure_credentials_gone
-        )
+        ]:
+            self.framework.observe(event, self._on_backup_credentials_changed)
+
+        for event in [
+            self.s3_requirer.on.credentials_gone,
+            self.azure_requirer.on.storage_connection_info_gone,
+        ]:
+            self.framework.observe(event, self._on_backup_credentials_gone)
 
         # large deployments with non-main orchestrator
         self.framework.observe(
@@ -151,12 +151,15 @@ class OpenSearchSnapshotEvents(Object):
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
 
-    def _on_s3_credentials_changed(self, event: CredentialsChangedEvent) -> None:  # noqa: C901
-        """Handler for s3 credentials changed event."""
+    def _on_backup_credentials_changed(
+        self, event: Union[CredentialsChangedEvent, StorageConnectionInfoChangedEvent]
+    ) -> None:
+        """Handler for backup credentials changed event."""
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             logger.debug("Deployment description not ready; deferring %s", event)
             event.defer()
             return
+
         # block non-main orchestrators only when they are in a multi-app topology.
         if (
             deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
@@ -168,7 +171,6 @@ class OpenSearchSnapshotEvents(Object):
 
         object_storage_type = self.charm.snapshots_manager.get_storage_type()
 
-        logger.info(f"S3 credentials changed for object storage type {object_storage_type}")
         if object_storage_type == ObjectStorageType.CONFLICT:
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelConflict), app=True)
@@ -179,24 +181,37 @@ class OpenSearchSnapshotEvents(Object):
             self.charm.status.clear(BackupRelConflict, app=True)
 
         object_storage_config = self.charm.snapshots_manager.get_storage_config(
-            ObjectStorageType.S3
+            object_storage_type
         )
-        # handle case where this was deferred, then the S3 relation was severed
+
         if (
             not object_storage_config
-            or not object_storage_config.s3
-            or not object_storage_config.s3.credentials
+            or (
+                object_storage_type == ObjectStorageType.S3
+                and (not object_storage_config.s3 or not object_storage_config.s3.credentials)
+            )
+            or (
+                object_storage_type == ObjectStorageType.AZURE
+                and (
+                    not object_storage_config.azure or not object_storage_config.azure.credentials
+                )
+            )
         ):
-            logger.warning("No S3 object storage configuration.")
+            logger.warning("No %s object storage configuration.", object_storage_type)
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupRelDataIncomplete), app=True)
             return
-
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelDataIncomplete, app=True)
 
-        if not verify_s3_credentials(object_storage_config):
-            logger.warning("S3 object storage credentials not verified.")
+        if (
+            object_storage_type == ObjectStorageType.AZURE
+            and not verify_azure_credentials(object_storage_config)
+        ) or (
+            object_storage_type == ObjectStorageType.S3
+            and not verify_s3_credentials(object_storage_config)
+        ):
+            logger.warning("%s object storage credentials not verified.", object_storage_type)
             if self.charm.unit.is_leader():
                 self.charm.status.set(BlockedStatus(BackupCredentialIncorrect), app=True)
             return
@@ -204,168 +219,38 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupCredentialIncorrect, app=True)
 
-        # apply locally (leader does cluster-level config)
-        self.charm.keystore_manager.put_entries(
-            {
-                "s3.client.default.access_key": object_storage_config.s3.credentials.access_key,
-                "s3.client.default.secret_key": object_storage_config.s3.credentials.secret_key,
-            }
-        )
-        logger.info("S3 credentials are added to keystore.")
-        self.charm.keystore_manager.reload()
+        if object_storage_type == ObjectStorageType.S3:
+            self.charm.keystore_manager.put_entries(
+                {
+                    "s3.client.default.access_key": object_storage_config.s3.credentials.access_key,
+                    "s3.client.default.secret_key": object_storage_config.s3.credentials.secret_key,
+                }
+            )
 
-        needs_custom_ca = self.charm.snapshots_manager.requires_custom_s3_ca(
-            object_storage_type, object_storage_config
-        )
-
-        if needs_custom_ca:
-            if not self.charm.snapshots_manager.is_custom_s3_ca_stored(
-                object_storage_config.s3.tls_ca_chain
-            ):
-                # Content differs: rotate / store new chain
-                self.charm.snapshots_manager.store_s3_ca(object_storage_config.s3.tls_ca_chain)
-                logger.info("S3 CA stored/updated.")
-                if not self.charm.unit.is_leader():
-                    return
-                if self.charm.snapshots_manager.should_restart_for_full_setup(
-                    object_storage_type, object_storage_config
+            if object_storage_config.s3.tls_ca_chain:
+                if not self.charm.snapshots_manager.is_custom_s3_ca_stored(
+                    object_storage_config.s3.tls_ca_chain
                 ):
-                    self.charm.request_opensearch_restart(reason="apply object storage CA change")
+                    # Content differs: rotate / store new chain
+                    self.charm.snapshots_manager.store_s3_ca(object_storage_config.s3.tls_ca_chain)
+                    logger.info("S3 CA stored/updated.")
+            else:
+                self.charm.snapshots_manager.remove_s3_ca()
 
-        elif self.charm.snapshots_manager.is_custom_s3_ca_stored():
-            # No CA configured now. If we had one, remove it
-            self.charm.snapshots_manager.remove_s3_ca()
-            logger.info("S3 CA removed.")
-            self.charm.request_opensearch_restart(reason="clean up the object storage CA")
-
-        try:
-            if not self.charm.unit.is_leader():
-                return
-            self.charm.snapshots_manager.ensure_repository(
-                object_storage_type, object_storage_config
+        elif object_storage_type == ObjectStorageType.AZURE:
+            self.charm.keystore_manager.put_entries(
+                {
+                    "azure.client.default.account": object_storage_config.azure.credentials.storage_account,
+                    "azure.client.default.key": object_storage_config.azure.credentials.secret_key,
+                }
             )
-            self.charm.snapshots_manager.verify_repository(ObjectStorageType.S3)
-        except OpenSearchHttpError as e:
-            logger.error(
-                "Failed to create/verify snapshot repository for %s. "
-                "Error: %s, response_body=%r",
-                object_storage_type,
-                e,
-                getattr(e, "response_body", None),
-            )
-            if self.charm.unit.is_leader():
-                self.charm.status.set(
-                    BlockedStatus(BackupMisconfiguration.format("s3", "s3 integrator")), app=True
-                )
-            event.defer()
-            return
 
-        if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupMisconfiguration.format("s3", "s3 integrator"), app=True)
-
-        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
-
-    def _on_s3_credentials_gone(self, event: CredentialsGoneEvent) -> None:
-        """Handler for s3 credentials gone event."""
-        if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupRelShouldNotExist, app=True)
-            self.charm.status.clear(BackupRelDataIncomplete, app=True)
-            self.charm.status.clear(BackupMisconfiguration.format("s3", "s3 integrator"), app=True)
-
-        keystore_entries = ["s3.client.default.access_key", "s3.client.default.secret_key"]
-        if not self.charm.snapshots_manager.cleanup(
-            object_storage_type=ObjectStorageType.S3,
-            keystore_entries=keystore_entries,
-            remove_repository=True,
-        ):
-            logger.warning("Cleanup for s3 credentials are failed.")
-            if self.charm.unit.is_leader():
-                self.charm.status.set(
-                    BlockedStatus(BackupCredentialCleanupFailed),
-                    app=True,
-                )
-            event.defer()
-            return
-
-        if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
-
-        if self.charm.snapshots_manager.is_custom_s3_ca_stored():
-            self.charm.snapshots_manager.remove_s3_ca()
-            self.charm.request_opensearch_restart(reason="clean up the object storage CA")
-
-        if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupCredentialIncorrect, app=True)
-
-        self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
-
-    def _on_azure_credentials_changed(  # noqa: C901
-        self, event: StorageConnectionInfoChangedEvent
-    ) -> None:
-        """Handler for azure credentials changed event."""
-        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
-            logger.debug("Deployment description not ready; deferring %s", event)
-            event.defer()
-            return
-
-        # block non-main orchestrators only when they are in a multi-app topology.
-        if (
-            deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR
-            and self._is_part_of_large_deployment()
-        ):
-            if self.charm.unit.is_leader():
-                self.charm.status.set(BlockedStatus(BackupRelShouldNotExist), app=True)
-            return
-
-        object_storage_type = self.charm.snapshots_manager.get_storage_type()
-
-        if object_storage_type == ObjectStorageType.CONFLICT:
-            if self.charm.unit.is_leader():
-                self.charm.status.set(BlockedStatus(BackupRelConflict), app=True)
-            event.defer()
-            return
-
-        if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupRelConflict, app=True)
-
-        object_storage_config = self.charm.snapshots_manager.get_storage_config(
-            ObjectStorageType.AZURE
-        )
-        if (
-            not object_storage_config
-            or not object_storage_config.azure
-            or not object_storage_config.azure.credentials
-        ):
-            logger.warning("No Azure object storage configuration.")
-            if self.charm.unit.is_leader():
-                self.charm.status.set(BlockedStatus(BackupRelDataIncomplete), app=True)
-            return
-
-        if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupRelDataIncomplete, app=True)
-
-        if not verify_azure_credentials(object_storage_config):
-            logger.warning("Azure object storage credentials not verified.")
-            if self.charm.unit.is_leader():
-                self.charm.status.set(
-                    BlockedStatus(BackupCredentialIncorrect),
-                    app=True,
-                )
-            return
-
-        if self.charm.unit.is_leader():
-            self.charm.status.clear(BackupCredentialIncorrect, app=True)
-
-        self.charm.keystore_manager.put_entries(
-            {
-                "azure.client.default.account": object_storage_config.azure.credentials.storage_account,
-                "azure.client.default.key": object_storage_config.azure.credentials.secret_key,
-            }
-        )
         self.charm.keystore_manager.reload()
+
+        if not self.charm.unit.is_leader():
+            return
+
         try:
-            if not self.charm.unit.is_leader():
-                return
             self.charm.snapshots_manager.ensure_repository(
                 object_storage_type, object_storage_config
             )
@@ -378,36 +263,50 @@ class OpenSearchSnapshotEvents(Object):
                 e,
                 getattr(e, "response_body", None),
             )
-            if self.charm.unit.is_leader():
-                self.charm.status.set(
-                    BlockedStatus(BackupMisconfiguration.format("azure", "azure integrator")),
-                    app=True,
-                )
+            self.charm.status.set(
+                BlockedStatus(BackupMisconfiguration.format("azure", "azure integrator")),
+                app=True,
+            )
             event.defer()
             return
 
-        if self.charm.unit.is_leader():
-            self.charm.status.clear(
-                BackupMisconfiguration.format("azure", "azure integrator"), app=True
-            )
+        self.charm.status.clear(
+            BackupMisconfiguration.format("azure", "azure integrator"), app=True
+        )
 
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
-    def _on_azure_credentials_gone(self, event: StorageConnectionInfoGoneEvent) -> None:
-        """Handler for azure credentials gone event."""
+    def _on_backup_credentials_gone(
+        self, event: CredentialsGoneEvent | StorageConnectionInfoGoneEvent
+    ) -> None:
+        """Handler for s3 credentials gone event."""
+        object_storage_type = self.charm.snapshots_manager.get_storage_type()
+
+        if not object_storage_type:
+            return
+
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelShouldNotExist, app=True)
             self.charm.status.clear(BackupRelDataIncomplete, app=True)
             self.charm.status.clear(
-                BackupMisconfiguration.format("azure", "azure integrator"), app=True
+                BackupMisconfiguration.format(
+                    object_storage_type.value, f"{object_storage_type.value} integrator"
+                ),
+                app=True,
             )
 
-        keystore_entries = ["azure.client.default.account", "azure.client.default.key"]
+        keystore_entries = []
+        if object_storage_type == ObjectStorageType.S3:
+            keystore_entries = ["s3.client.default.access_key", "s3.client.default.secret_key"]
+        elif object_storage_type == ObjectStorageType.AZURE:
+            keystore_entries = ["azure.client.default.account", "azure.client.default.key"]
+
         if not self.charm.snapshots_manager.cleanup(
-            object_storage_type=ObjectStorageType.AZURE,
+            object_storage_type=object_storage_type,
             keystore_entries=keystore_entries,
             remove_repository=True,
         ):
+            logger.warning("Cleanup for %s credentials are failed.", object_storage_type)
             if self.charm.unit.is_leader():
                 self.charm.status.set(
                     BlockedStatus(BackupCredentialCleanupFailed),
@@ -415,6 +314,12 @@ class OpenSearchSnapshotEvents(Object):
                 )
             event.defer()
             return
+
+        if (
+            object_storage_type == ObjectStorageType.S3
+            and self.charm.snapshots_manager.is_custom_s3_ca_stored()
+        ):
+            self.charm.snapshots_manager.remove_s3_ca()
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
@@ -1081,13 +986,12 @@ class OpenSearchSnapshotsManager:
             logger.error("Repository should be created by main orchestrator.")
             return False
 
-        if not self.is_repository_created(storage_type):
-            logger.info("Repository is missing; attempting to create.")
-            self.create_repository(
-                object_storage_type=storage_type,
-                object_storage_config=storage_cfg,
-            )
-            logger.info("Created snapshot repository for %s", storage_type)
+        logger.info("Creating/Updating snapshot repository for %s", storage_type)
+        self.create_repository(
+            object_storage_type=storage_type,
+            object_storage_config=storage_cfg,
+        )
+        logger.info("Created/Updated snapshot repository for %s", storage_type)
         return self.is_repository_created(storage_type)
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
