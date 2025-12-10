@@ -250,18 +250,11 @@ class OpenSearchSnapshotEvents(Object):
                 # Content differs: rotate / store new chain
                 self.charm.snapshots_manager.store_s3_ca(object_storage_config.s3.tls_ca_chain)
                 logger.info("S3 CA stored/updated.")
-                if not self.charm.unit.is_leader():
-                    return
-                if self.charm.snapshots_manager.should_restart_for_full_setup(
-                    object_storage_type, object_storage_config
-                ):
-                    self.charm.request_opensearch_restart(reason="apply object storage CA change")
 
         elif self.charm.snapshots_manager.is_custom_s3_ca_stored():
             # No CA configured now. If we had one, remove it
             self.charm.snapshots_manager.remove_s3_ca()
             logger.info("S3 CA removed.")
-            self.charm.request_opensearch_restart(reason="clean up the object storage CA")
 
         try:
             if not self.charm.unit.is_leader():
@@ -317,7 +310,6 @@ class OpenSearchSnapshotEvents(Object):
 
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.remove_s3_ca()
-            self.charm.request_opensearch_restart(reason="clean up the object storage CA")
 
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupCredentialIncorrect, app=True)
@@ -522,15 +514,11 @@ class OpenSearchSnapshotEvents(Object):
             # Optional CA chain
             if s3_info.get("s3_tls_ca_chain"):
                 logger.info("S3 TLS CA Chain detected.")
-                ca_changed = self.charm.snapshots_manager.ca_changed(s3_info["s3_tls_ca_chain"])
                 self.charm.snapshots_manager.store_s3_ca(s3_info["s3_tls_ca_chain"])
-                if ca_changed:
-                    self.charm.request_opensearch_restart(reason="apply object storage CA change")
 
             elif self.charm.snapshots_manager.is_custom_s3_ca_stored():
                 # If we had a custom CA but peer no longer provides one, clean it up
                 self.charm.snapshots_manager.remove_s3_ca()
-                self.charm.request_opensearch_restart(reason="clean up the object storage CA")
 
             return
 
@@ -557,7 +545,6 @@ class OpenSearchSnapshotEvents(Object):
 
             if self.charm.snapshots_manager.is_custom_s3_ca_stored():
                 self.charm.snapshots_manager.remove_s3_ca()
-                self.charm.request_opensearch_restart(reason="clean up the object storage CA")
 
             # apply Azure credentials
             self.charm.keystore_manager.put_entries(
@@ -597,9 +584,6 @@ class OpenSearchSnapshotEvents(Object):
         # clean S3 CA
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.remove_s3_ca()
-            self.charm.request_opensearch_restart(
-                reason="clean up object storage CA after backend removal"
-            )
 
     def _on_peer_clusters_relation_departed_for_snapshots(self, event) -> None:  # noqa C901
         """Cleanup snapshot config if the orchestrator we depended on is gone."""
@@ -665,9 +649,6 @@ class OpenSearchSnapshotEvents(Object):
         # clean S3 CA if it was stored
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.remove_s3_ca()
-            self.charm.request_opensearch_restart(
-                reason="clean up object storage CA after peer-clusters departed"
-            )
 
     def _get_provider_rel_payload(self) -> PeerClusterRelData | None:  # noqa: C901
         """Return the payload from the main orchestrator relation, if any."""
@@ -1693,35 +1674,6 @@ class OpenSearchSnapshotsManager:
             alt_hosts=self.charm.alt_hosts,
             timeout=30,
         )
-
-    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
-    def should_restart_for_full_setup(
-        self, object_storage_type: ObjectStorageType, object_storage_config: ObjectStorageConfig
-    ) -> bool:
-        """Check if a restart is needed for full setup."""
-        if not self.charm.unit.is_leader():
-            return False
-        if not self.opensearch.is_started():
-            return False
-
-        try:
-            test_repository = (
-                f"tmp-{self.charm.unit_name}-{self.repository_name(object_storage_type)}"
-            )
-            self.create_repository(
-                object_storage_type, object_storage_config, name=test_repository
-            )
-            # best effort clean up
-            try:
-                self.remove_repository(object_storage_type, name=test_repository)
-            except Exception:
-                pass
-            # creation succeeded, no restart needed
-            return False
-        except OpenSearchHttpError as e:
-            if e.response_body.get("error", {}).get("type") == "repository_verification_exception":
-                return True
-            raise
 
     def ca_changed(self, new_chain: str | None) -> bool:
         """Return True if the installed CA differs from new_chain."""

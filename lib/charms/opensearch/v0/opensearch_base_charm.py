@@ -2049,20 +2049,6 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             )
         )
 
-    def request_opensearch_restart(
-        self,
-        reason: str | None = None,
-    ) -> None:
-        """Ask the charm to restart OpenSearch via its internal restart event.
-
-        Args:
-            reason: the reason for the restart.
-        """
-        if reason:
-            msg = f"Requesting OpenSearch restart for {reason}"
-            logger.info(msg)
-        self._restart_opensearch_event.emit()
-
     @property
     def unit_ip(self) -> str:
         """IP address of the current unit."""
