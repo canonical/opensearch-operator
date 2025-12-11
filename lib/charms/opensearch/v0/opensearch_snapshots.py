@@ -324,7 +324,10 @@ class OpenSearchSnapshotEvents(Object):
             return
 
         self.charm.status.clear(
-            BackupMisconfiguration.format("azure", "azure integrator"), app=True
+            BackupMisconfiguration.format(
+                object_storage_type.value, f"{object_storage_type.value} integrator"
+            ),
+            app=True,
         )
 
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
