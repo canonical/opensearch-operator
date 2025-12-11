@@ -26,6 +26,7 @@ from ..helpers import (
     set_watermark,
 )
 from ..helpers_deployments import wait_until
+from ..profiles.test_profiles import get_constraints
 from ..plugins.helpers import (
     bulk_encode,
     create_index_and_bulk_insert,
@@ -151,6 +152,7 @@ async def test_build_and_deploy_small_deployment(
     #  test_prometheus_exporter_disabled_by_cos_relation_gone
     model_conf["update-status-hook-interval"] = "1m"
     await ops_test.model.set_config(model_conf)
+    constraints = await get_constraints(ops_test)
 
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
@@ -159,7 +161,7 @@ async def test_build_and_deploy_small_deployment(
             charm,
             num_units=3,
             series=series,
-            constraints="mem=8G",
+            constraints=constraints,
             config={"profile": "production"},
         ),
         ops_test.model.deploy(
