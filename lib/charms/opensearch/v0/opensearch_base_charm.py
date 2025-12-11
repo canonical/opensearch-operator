@@ -73,7 +73,7 @@ from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
 from charms.opensearch.v0.opensearch_jwt import JwtHandler
-from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
+from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore, OpenSearchKeystoreEvents
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
 from charms.opensearch.v0.opensearch_oauth import OAuthHandler
@@ -233,10 +233,11 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.opensearch_provider = OpenSearchProvider(self)
         self.peer_cluster_provider = OpenSearchPeerClusterProvider(self)
         self.peer_cluster_requirer = OpenSearchPeerClusterRequirer(self)
-
-        # Managers
         self.profiles_manager = ProfilesManager(self.state, self.opensearch)
         self.snapshots_manager = OpenSearchSnapshotsManager(self, self.opensearch)
+
+        # Events
+        self.opensearch_keystore_events = OpenSearchKeystoreEvents(self)
         self.snapshot_events = OpenSearchSnapshotEvents(self)
 
         self.framework.observe(self._start_opensearch_event, self._start_opensearch)
