@@ -560,6 +560,22 @@ class PeerClusterFleetApps(Model):
         return self.__root__[item]
 
 
+class PluginConfigInfo(Model):
+    """Model class for representing data needed to add or remove plugin configuration"""
+
+    relation_name: Optional[str] = None
+    secret_id: Optional[str] = None
+    cleanup: dict[str, list[str]] = Field(default_factory=dict)
+
+    def add_cleanup_items(self, cleanup: dict[str, list[str]]) -> None:
+        """Merge items into cleanup dictionary avoiding duplicates."""
+        for key, items in cleanup.items():
+            current = self.cleanup.setdefault(key, [])
+            for item in items:
+                if item not in current:
+                    current.append(item)
+
+
 class PeerClusterRelData(Model):
     """Model class for the PCluster relation data."""
 
@@ -569,6 +585,7 @@ class PeerClusterRelData(Model):
     deployment_desc: Optional[DeploymentDescription]
     security_index_initialised: bool = False
     first_data_node: Optional[str] = None
+    plugins: Optional[Dict[str, PluginConfigInfo]] = None
 
 
 class PeerClusterRelErrorData(Model):

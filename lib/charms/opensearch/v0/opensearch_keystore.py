@@ -14,6 +14,7 @@ from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchError,
+    OpenSearchHttpError,
 )
 
 # The unique Charmhub library identifier, never change it
@@ -28,14 +29,6 @@ LIBPATCH = 1
 
 
 logger = logging.getLogger(__name__)
-
-
-class OpenSearchKeystoreError(OpenSearchError):
-    """Exception thrown when an opensearch keystore is invalid."""
-
-
-class OpenSearchKeystoreNotReadyError(OpenSearchKeystoreError):
-    """Exception thrown when the keystore is not ready yet."""
 
 
 class OpenSearchKeystore:
@@ -84,85 +77,23 @@ class OpenSearchKeystore:
         self._create_if_needed()
         return self._opensearch.run_bin("keystore", "list").splitlines()
 
-    def reload(self) -> None:
+    def reload(self) -> bool:
         """Reload the keystore."""
         self._create_if_needed()
         self._opensearch.run_bin("keystore", "upgrade")
 
+        if not self._opensearch.is_started():
+            # service not running, settings will be picked up at startup
+            logger.debug("Opensearch not running. Keystore settings will be loaded at start time.")
+            return True
+
         if self._opensearch.is_node_up():
-            self._opensearch.request("POST", "_nodes/reload_secure_settings")
-            logger.debug("keystore reloaded.")
+            try:
+                response = self._opensearch.request("POST", "_nodes/reload_secure_settings")
+            except OpenSearchHttpError as e:
+                logger.error("Could not reload secure settings: %s", e)
+                return False
 
-    # TODO delete once backups rework fully merged
-    def update(self, entries: Dict[str, Any]) -> None:
-        """Updates the keystore value (adding or removing) and reload.
-
-        Raises:
-            OpenSearchHttpError: If the reload fails.
-        """
-        if not os.path.exists(self._keystore_path):
-            raise OpenSearchKeystoreNotReadyError()
-
-        if not entries:
-            return
-
-        for key, value in entries.items():
-            if value:
-                self._add(key, value)
-            else:
-                self._delete(key)
-
-    # TODO delete once backups rework fully merged
-    @functools.cached_property
-    def list(self) -> List[str]:
-        """Lists the keys available in opensearch's keystore."""
-        if not os.path.exists(self._keystore_path):
-            raise OpenSearchKeystoreNotReadyError()
-        try:
-            return self._opensearch.run_bin(self._keystore, "list").split("\n")
-        except OpenSearchCmdError as e:
-            raise OpenSearchKeystoreError(str(e))
-
-    # TODO delete once backups rework fully merged
-    def _add(self, key: str, value: str):
-        try:
-            # Add newline to the end of the key, if missing
-            value += "" if value.endswith("\n") else "\n"
-            self._opensearch.run_bin(self._keystore, f"add --force {key}", stdin=value)
-
-            self._clean_cache_if_needed()
-        except OpenSearchCmdError as e:
-            raise OpenSearchKeystoreError(str(e))
-
-    # TODO delete once backups rework fully merged
-    def _delete(self, key: str) -> None:
-        try:
-            self._opensearch.run_bin(self._keystore, f"remove {key}")
-
-            self._clean_cache_if_needed()
-        except OpenSearchCmdError as e:
-            if "does not exist in the keystore" in str(e):
-                logger.info(
-                    "opensearch_keystore._delete:"
-                    f" Key {key} not found in keystore, continuing..."
-                )
-                return
-            raise OpenSearchKeystoreError(str(e))
-
-    # TODO delete once backups rework fully merged
-    def reload_keystore(self) -> None:
-        """Updates the keystore value (adding or removing) and reload.
-
-        This method targets only the local unit as alt_hosts is not set.
-
-        Raises:
-            OpenSearchHttpError: If the reload fails.
-        """
-        response = self._opensearch.request("POST", "_nodes/reload_secure_settings")
-        logger.debug(f"_update_keystore_and_reload: response received {response}")
-
-    # TODO delete once backups rework fully merged
-    def _clean_cache_if_needed(self):
-        """Delete keystore content cached property."""
-        if self.list:
-            del self.list
+        success = response.get("_nodes", {}).get("failed", -1) == 0
+        logger.debug("keystore reloaded: %s", success)
+        return success

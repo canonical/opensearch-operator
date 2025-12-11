@@ -30,8 +30,6 @@ from charms.opensearch.v0.constants_charm import (
     PClusterNoRelation,
     PeerClusterRelationName,
     PeerRelationName,
-    PluginConfigChangeError,
-    PluginConfigCheck,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -75,10 +73,7 @@ from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
 from charms.opensearch.v0.opensearch_jwt import JwtHandler
-from charms.opensearch.v0.opensearch_keystore import (
-    OpenSearchKeystore,
-    OpenSearchKeystoreNotReadyError,
-)
+from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystore
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
 from charms.opensearch.v0.opensearch_oauth import OAuthHandler
@@ -86,8 +81,11 @@ from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchPeerClustersManager,
     StartMode,
 )
-from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager
-from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginError
+from charms.opensearch.v0.opensearch_plugin_manager import (
+    OpenSearchPluginEvents,
+    OpenSearchPluginManager,
+    SmtpEvents,
+)
 from charms.opensearch.v0.opensearch_profile import (
     ProfilesManager,
 )
@@ -228,7 +226,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.health = OpenSearchHealth(self)
         self.node_lock = OpenSearchNodeLock(self)
 
-        self.plugin_manager = OpenSearchPluginManager(self)
+        self.plugin_manager = OpenSearchPluginManager(self.state)
+        self.plugin_events = OpenSearchPluginEvents(self)
+        self.smtp_events = SmtpEvents(self)
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
         self.peer_cluster_provider = OpenSearchPeerClusterProvider(self)
@@ -592,6 +592,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.unit.is_leader():
             # Recompute the node roles in case self-healing didn't trigger leader related event
             self._recompute_roles_if_needed(event)
+            if self.peers_data.get(Scope.APP, "missing_relations"):
+                # for failover promotions: this flag indicates that the user needs
+                # to relate integrators to this new main orchestrator
+                self.peer_cluster_provider.check_credentials_with_missing_relations()
             if self.model.relations[PeerClusterRelationName]:
                 self.peer_cluster_requirer.apply_orchestrator_status()
         elif event.relation.data.get(event.app):
@@ -877,54 +881,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 Scope.UNIT, PERFORMANCE_PROFILE, config_profile.type.value
             )
 
-        if not self.opensearch.is_node_up():
-            logger.debug("Node not up yet, deferring plugin check")
-            # possible enhancement:
-            # currently we wait for Opensearch to be started before applying any plugin
-            # this could be improved as some plugins don't require the service to run
-            event.defer()
-            return
-
-        plugin_needs_restart = False
-
-        try:
-            original_status = None
-            if self.unit.status.message not in [
-                PluginConfigChangeError,
-                PluginConfigCheck,
-            ]:
-                logger.debug(f"Plugin manager: storing status {self.unit.status.message}")
-                original_status = self.unit.status
-                self.status.set(MaintenanceStatus(PluginConfigCheck))
-
-            plugin_needs_restart = self.plugin_manager.run()
-        except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
-            if isinstance(e, OpenSearchNotFullyReadyError):
-                logger.warning("Plugin management: cluster not ready yet at config changed")
-            else:
-                logger.warning(f"{PluginConfigChangeError}: {str(e)}")
-                self.status.set(BlockedStatus(PluginConfigChangeError))
-            event.defer()
-            self.status.clear(PluginConfigCheck)
-        except OpenSearchKeystoreNotReadyError:
-            logger.warning("Keystore not ready yet")
-            # defer, and let it finish the status clearing down below
-            event.defer()
-        else:
-            self.status.clear(PluginConfigChangeError)
-            self.status.clear(PluginConfigCheck)
-            if original_status:
-                self.status.set(original_status)
-
         if not self.opensearch_provider.update_relations_roles_mapping():
             event.defer()
 
-        if self.opensearch.is_service_started() and (
-            plugin_needs_restart or profile_restart_needed
-        ):
+        if self.opensearch.is_service_started() and profile_restart_needed:
             logger.debug(
-                "Restarting opensearch due to config change: plugin_needs_restart=%s, profile_restart_needed=%s",
-                plugin_needs_restart,
+                "Restarting opensearch due to config change: profile_restart_needed=%s",
                 profile_restart_needed,
             )
             self._restart_opensearch_event.emit()
@@ -2061,7 +2023,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if reason:
             msg = f"Requesting OpenSearch restart for {reason}"
             logger.info(msg)
-        self._restart_opensearch_event.emit()
+        # self._restart_opensearch_event.emit()
 
     @property
     def unit_ip(self) -> str:

@@ -47,7 +47,6 @@ ClusterHealthRedUpgrade = (
 )
 IndexCreationFailed = "failed to create {index} index - deferring index-requested event..."
 UserCreationFailed = "failed to create users for {rel_name} relation {id}"
-PluginConfigChangeError = "Failed to apply config changes on the plugin."
 
 CmVoRolesProvidedInvalid = (
     "cluster_manager and voting_only roles cannot be both set on the same nodes."
@@ -66,8 +65,7 @@ PClusterNoDataNode = "Cannot run cluster with current roles. Waiting for data no
 PClusterWrongNodesCountForQuorum = (
     "Less than 3 cluster-manager-eligible units in this cluster. Add more units."
 )
-PluginConfigError = "Unexpected error during plugin configuration, check the logs"
-PClusterMissingStorageRelations = "Found credentials with missing storage relations. Add relation for {} and any client applications."
+PClusterMissingRelations = "Found credentials with missing relations. Add relation for {} and any client applications."
 BackupSetupFailed = "Backup setup failed, check logs for details"
 BackupRelShouldNotExist = "This application should not be related to backup relation"
 BackupRelDataIncomplete = "Backup relation data missing or incomplete."
@@ -77,6 +75,7 @@ BackupRelConflict = "Too many object storage relations. Only one is supported."
 BackupMisconfiguration = "opensearch {} repository setup failed. Check the {} config."
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
 SecretAccessError = "Failed to access secret, please check permissions."
+SmtpRelationInvalid = "SMTP relation must be created with the main-orchestrator cluster."
 JWTAuthConfigInvalid = (
     "Configuration for JWT authentication is invalid. Check and correct parameters."
 )
@@ -109,7 +108,6 @@ BackupInProgress = "Backup in progress..."
 BackupSetupStart = "Backup setup started."
 BackupConfigureStart = "Configuring backup service..."
 BackupInDisabling = "Disabling backup service..."
-PluginConfigCheck = "Plugin configuration check."
 
 # Relation Interfaces
 ClientRelationName = "opensearch-client"
