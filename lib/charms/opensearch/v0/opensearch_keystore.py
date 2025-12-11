@@ -7,8 +7,10 @@ This module manages OpenSearch keystore access and lifecycle.
 """
 import logging
 import os
+from typing import TYPE_CHECKING
 
-from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
+if TYPE_CHECKING:
+    from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
