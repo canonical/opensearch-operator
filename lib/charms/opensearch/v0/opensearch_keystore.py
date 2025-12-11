@@ -92,12 +92,11 @@ class OpenSearchKeystore:
             logger.debug("Opensearch not running. Keystore settings will be loaded at start time.")
             return True
 
-        if self._opensearch.is_node_up():
-            try:
-                response = self._opensearch.request("POST", "_nodes/reload_secure_settings")
-            except OpenSearchHttpError as e:
-                logger.error("Could not reload secure settings: %s", e)
-                return False
+        try:
+            response = self._opensearch.request("POST", "_nodes/reload_secure_settings")
+        except OpenSearchHttpError as e:
+            logger.error("Could not reload secure settings: %s", e)
+            return False
 
         success = response.get("_nodes", {}).get("failed", -1) == 0
         logger.debug("keystore reloaded: %s", success)
