@@ -159,7 +159,8 @@ async def test_build_and_deploy_small_deployment(
             charm,
             num_units=3,
             series=series,
-            config=CONFIG_OPTS,
+            constraints="mem=8G",
+            config={"profile": "production"},
         ),
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
