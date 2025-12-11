@@ -26,7 +26,6 @@ from ..helpers import (
     set_watermark,
 )
 from ..helpers_deployments import wait_until
-from ..profiles.test_profiles import get_constraints
 from ..plugins.helpers import (
     bulk_encode,
     create_index_and_bulk_insert,
@@ -35,6 +34,7 @@ from ..plugins.helpers import (
     poll_until,
     run_knn_training,
 )
+from ..profiles.test_profiles import get_constraints
 from ..relations.helpers import get_unit_relation_data
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 
