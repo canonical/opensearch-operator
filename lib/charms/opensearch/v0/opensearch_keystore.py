@@ -8,6 +8,9 @@ This module manages OpenSearch keystore access and lifecycle.
 import logging
 import os
 
+from ops import EventBase, EventSource, Object
+
+from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
@@ -26,6 +29,10 @@ LIBPATCH = 1
 
 
 logger = logging.getLogger(__name__)
+
+
+class ReloadKeystoreEvent(EventBase):
+    """Event to signal that the keystore should be reloaded."""
 
 
 class OpenSearchKeystore:
@@ -94,3 +101,25 @@ class OpenSearchKeystore:
         success = response.get("_nodes", {}).get("failed", -1) == 0
         logger.debug("keystore reloaded: %s", success)
         return success
+
+
+class OpenSearchKeystoreEvents(Object):
+    """Keystore events."""
+
+    reload_event = EventSource(ReloadKeystoreEvent)
+
+    def __init__(
+        self,
+        charm: "OpenSearchBaseCharm",
+    ) -> None:
+        """Initialize keystore events."""
+        super().__init__(charm, key="opensearch_keystore_events")
+        self.charm = charm
+
+        self.framework.observe(self.reload_event, self._on_reload)
+
+    def _on_reload(self, event: ReloadKeystoreEvent) -> None:
+        """Handle keystore reload event."""
+        if not self.charm.keystore_manager.reload():
+            logger.error("Keystore reload failed.")
+            event.defer()

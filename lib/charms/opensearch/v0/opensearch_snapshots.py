@@ -260,7 +260,7 @@ class OpenSearchSnapshotEvents(Object):
                 }
             )
 
-        self.charm.keystore_manager.reload()
+        self.charm.opensearch_keystore_events.reload_event.emit()
 
         if not self.charm.unit.is_leader():
             return
@@ -351,7 +351,7 @@ class OpenSearchSnapshotEvents(Object):
             self.charm.status.clear(BackupCredentialCleanupFailed, app=True)
             self.charm.status.clear(BackupCredentialIncorrect, app=True)
 
-        self.charm.keystore_manager.reload()
+        self.charm.opensearch_keystore_events.reload_event.emit()
 
         self.charm.peer_cluster_provider.refresh_relation_data(event, can_defer=False)
 
@@ -430,7 +430,8 @@ class OpenSearchSnapshotEvents(Object):
                 # If we had a custom CA but peer no longer provides one, clean it up
                 self.charm.snapshots_manager.remove_s3_ca()
 
-            self.charm.keystore_manager.reload()
+            self.charm.opensearch_keystore_events.reload_event.emit()
+
             logger.info("%s credentials are added to keystore.", "S3" if s3_info else "Azure")
             self.charm.snapshots_manager.set_credentials_saved(info_to_save)
             return
@@ -463,7 +464,8 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.remove_s3_ca()
 
-        self.charm.keystore_manager.reload()
+        self.charm.opensearch_keystore_events.reload_event.emit()
+
         self.charm.snapshots_manager.set_credentials_saved(None)
 
     def _on_peer_clusters_relation_departed_for_snapshots(self, event) -> None:  # noqa C901
@@ -531,7 +533,7 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.snapshots_manager.is_custom_s3_ca_stored():
             self.charm.snapshots_manager.remove_s3_ca()
 
-        self.charm.keystore_manager.reload()
+        self.charm.opensearch_keystore_events.reload_event.emit()
 
     def _on_verify_backup_credentials(self, event: VerifyBackupCredentialsEvent) -> None:
         """Verify that stored backup credentials are still valid."""
@@ -1485,7 +1487,7 @@ class OpenSearchSnapshotsManager:
         """
         try:
             self.charm.keystore_manager.remove_entries(keystore_entries)
-            self.charm.keystore_manager.reload()
+            self.charm.opensearch_keystore_events.reload_event.emit()
             logger.info("Removed keystore entries for %s", object_storage_type)
         except OpenSearchCmdError as e:
             parts = [

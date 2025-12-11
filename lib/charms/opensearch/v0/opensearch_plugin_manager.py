@@ -109,10 +109,7 @@ class SmtpEvents(Object):
         }
 
         self.charm.keystore_manager.put_entries(entries)
-        if not self.charm.keystore_manager.reload():
-            logger.debug("Could not reload secure settings. Deferring event.")
-            event.defer()
-            return
+        self.charm.opensearch_keystore_events.reload_event.emit()
 
         # store keys to remove later
         self.charm.plugin_manager.put_plugin_config(
@@ -151,10 +148,7 @@ class SmtpEvents(Object):
 
         self.charm.keystore_manager.remove_entries(keys)
 
-        if not self.charm.keystore_manager.reload():
-            logger.debug("Could not reload secure settings. Deferring event.")
-            event.defer()
-            return
+        self.charm.opensearch_keystore_events.reload_event.emit()
 
         self.charm.plugin_manager.remove_plugin_config(scope=Scope.UNIT, label=self.secret_label)
 
@@ -187,10 +181,7 @@ class SmtpEvents(Object):
         )
 
         self.charm.keystore_manager.put_entries(keys)
-        if not self.charm.keystore_manager.reload():
-            logger.debug("Could not reload secure settings. Deferring event.")
-            event.defer()
-            return
+        self.charm.opensearch_keystore_events.reload_event.emit()
 
 
 class OpenSearchPluginEvents(Object):
@@ -241,10 +232,7 @@ class OpenSearchPluginEvents(Object):
                     self.charm.keystore_manager.remove_entries(items)
 
         # reload keystore
-        if not self.charm.keystore_manager.reload():
-            logger.debug("Could not reload secure settings. Deferring event.")
-            event.defer()
-            return
+        self.charm.opensearch_keystore_events.reload_event.emit()
 
         for label in removed:
             self.charm.plugin_manager.remove_plugin_config(scope=Scope.UNIT, label=label)
