@@ -535,7 +535,6 @@ class OpenSearchSnapshotEvents(Object):
 
     def _on_verify_backup_credentials(self, event: VerifyBackupCredentialsEvent) -> None:
         """Verify that stored backup credentials are still valid."""
-
         credential_dict = {}
         object_storage_type = self.charm.snapshots_manager.get_storage_type()
         object_storage_config = self.charm.snapshots_manager.get_storage_config(
