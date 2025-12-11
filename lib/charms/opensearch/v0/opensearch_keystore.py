@@ -5,15 +5,12 @@
 
 This module manages OpenSearch keystore access and lifecycle.
 """
-import functools
 import logging
 import os
-from typing import Any, Dict, List
 
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
-    OpenSearchError,
     OpenSearchHttpError,
 )
 

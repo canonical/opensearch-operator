@@ -65,7 +65,9 @@ PClusterNoDataNode = "Cannot run cluster with current roles. Waiting for data no
 PClusterWrongNodesCountForQuorum = (
     "Less than 3 cluster-manager-eligible units in this cluster. Add more units."
 )
-PClusterMissingRelations = "Found credentials with missing relations. Add relation for {} and any client applications."
+PClusterMissingRelations = (
+    "Found credentials with missing relations. Add relation for {} and any client applications."
+)
 BackupSetupFailed = "Backup setup failed, check logs for details"
 BackupRelShouldNotExist = "This application should not be related to backup relation"
 BackupRelDataIncomplete = "Backup relation data missing or incomplete."

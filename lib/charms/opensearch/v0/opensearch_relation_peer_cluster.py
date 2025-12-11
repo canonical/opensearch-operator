@@ -38,8 +38,8 @@ from charms.opensearch.v0.models import (
     PeerClusterRelData,
     PeerClusterRelDataCredentials,
     PeerClusterRelErrorData,
-    S3RelDataCredentials,
     PluginConfigInfo,
+    S3RelDataCredentials,
     StartMode,
 )
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
@@ -405,9 +405,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(relation)
         ]:
             self.charm.status.set(
-                BlockedStatus(
-                    PClusterMissingRelations.format(", ".join(missing_relations))
-                ),
+                BlockedStatus(PClusterMissingRelations.format(", ".join(missing_relations))),
                 app=True,
             )
             self.charm.state.app.relation_data.put(Scope.APP, "missing_relations", True)

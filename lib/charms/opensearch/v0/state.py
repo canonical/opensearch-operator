@@ -82,6 +82,7 @@ class OpenSearchApp:
             for label, plugin in plugin_config_info.items()
         }
 
+
 class OpenSearchUnit:
     """State/Relation data collection for an opensearch node (juju unit)."""
 
@@ -108,6 +109,7 @@ class OpenSearchUnit:
         """Returns configuration information for plugins this unit is managing"""
         plugin_configs = self.relation_data.get_object(self.scope, "plugin_config_info") or {}
         return {label: PluginConfigInfo.from_dict(info) for label, info in plugin_configs.items()}
+
 
 class OpenSearchClusterState(Object):
     """Global state object for an opensearch cluster"""
