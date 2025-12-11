@@ -1061,6 +1061,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                         logger.info("on_tls_conf_set: Detected CA rotation complete in cluster")
                         self.tls.on_ca_certs_rotation_complete()
             else:
+                logger.debug("TLS not fully configured yet, deferring event.")
                 event.defer()
                 return
 
@@ -1489,7 +1490,23 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.status.set(WaitingStatus(ServiceIsStopping))
             return
 
-        self._start_opensearch_event.emit()
+        # Ignore the lock if you are the only data node and restarting
+        deployment_desc = self.opensearch_peer_cm.deployment_desc()
+        ignore_lock = (
+            self.unit.is_leader()
+            and (
+                "data" in deployment_desc.config.roles
+                or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+            )
+            and sum(
+                app.planned_units
+                for app in self.state.app.cluster_fleet_apps.values()
+                if "data" in app.roles
+            )
+            == 1
+        )
+        logger.debug("Restarting OpenSearch with ignore_lock=%s", ignore_lock)
+        self._start_opensearch_event.emit(ignore_lock=ignore_lock)
 
     def _upgrade_opensearch(self, event: _UpgradeOpenSearch) -> None:  # noqa: C901
         """Upgrade OpenSearch."""

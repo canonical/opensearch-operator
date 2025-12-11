@@ -287,7 +287,18 @@ class OpenSearchSecrets(Object, RelationDataStore):
             logging.warning(f"Secret {scope}:{key} can't be deleted as it doesn't exist")
             return None
 
-        secret.remove_all_revisions()
+        try:
+            secret.remove_all_revisions()
+        except SecretNotFoundError:
+            # the secret doesn't exist anymore
+            logging.info(
+                "Secret %s:%s already absent in Juju, ignoring remove_all_revisions.", scope, key
+            )
+            # clean up the local cache so we don't keep a stale reference
+            self.cached_secrets.delete(scope, self.label(scope, key))
+            return
+
+        # If we got here, removal in Juju succeeded; clean cache.
         self.cached_secrets.delete(scope, self.label(scope, key))
 
     @override
