@@ -166,3 +166,26 @@ async def poll_until(
     except RetryError:
         logger.info("Polling timed out")
         return False
+
+
+async def get_cloud_type(ops_test: OpsTest) -> str:
+    """Return current cloud type of the selected controller.
+
+    Args:
+        ops_test (OpsTest): ops_test plugin
+
+    Returns:
+        string: current type of the underlying cloud
+    """
+    assert ops_test.model, "Model must be present"
+    controller = await ops_test.model.get_controller()
+    cloud = await controller.cloud()
+    return cloud.cloud.type_
+
+
+async def get_constraints(ops_test: OpsTest) -> str | None:
+    """Get constraints for the OpenSearch charm based on the cloud type."""
+    cloud_type = await get_cloud_type(ops_test)
+    if cloud_type == "lxd":
+        return "mem=8G"
+    return None
