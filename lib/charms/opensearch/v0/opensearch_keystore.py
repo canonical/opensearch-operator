@@ -8,14 +8,13 @@ This module manages OpenSearch keystore access and lifecycle.
 import logging
 import os
 
-from ops import EventBase, EventSource, Object
-
 from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
     OpenSearchCmdError,
     OpenSearchHttpError,
 )
+from ops import EventBase, EventSource, Object
 
 # The unique Charmhub library identifier, never change it
 LIBID = "de98efa151804b699d5d6128fa100807"
