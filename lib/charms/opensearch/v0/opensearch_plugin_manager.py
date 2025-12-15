@@ -13,18 +13,13 @@ config-changed, upgrade, s3-credentials-changed, etc.
 import logging
 from typing import TYPE_CHECKING, Dict, List, Optional
 
-from charms.opensearch.v0.constants_charm import PeerRelationName, SmtpRelationInvalid
-from charms.opensearch.v0.helper_charm import Status, diff
+from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.helper_charm import diff
 from charms.opensearch.v0.helper_plugins import (
     decode_plugin_secret_content,
-    remove_plugin_secret,
-    store_plugin_secret,
 )
-from charms.opensearch.v0.models import DeploymentType, PluginConfigInfo
+from charms.opensearch.v0.models import PluginConfigInfo
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from charms.smtp_integrator.v0.smtp import DEFAULT_RELATION_NAME as SMTP_RELATION
-from charms.smtp_integrator.v0.smtp import SmtpRequires
-from ops import BlockedStatus
 from ops.framework import Object
 
 # The unique Charmhub library identifier, never change it
@@ -42,146 +37,6 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
-
-SMTP_SECRET_LABEL = "plugin-notifications"
-
-SmtpNoRelationData = "No relation data found. Please check the relation with smtp-integrator."
-SmtpMissingRequiredParameters = "Parameters missing from smtp-integrator: {}."
-
-
-class SmtpEvents(Object):
-    """Events handler for smtp events"""
-
-    relation_name = SMTP_RELATION
-    secret_label = SMTP_SECRET_LABEL
-
-    def __init__(self, charm: "OpenSearchBaseCharm"):
-        super().__init__(charm, "plugin:notifications")
-        self.charm = charm
-        self.smtp = SmtpRequires(self.charm, self.relation_name)
-
-        self.framework.observe(self.smtp.on.smtp_data_available, self._on_smtp_credentials_changed)
-        self.framework.observe(self.charm.on.smtp_relation_broken, self._on_smtp_credentials_gone)
-        self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
-
-    def _on_smtp_credentials_changed(self, event) -> None:
-        """Creates secret containing key, value pairs for keystore"""
-        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
-            logger.debug("Deployment not ready. Deferring event.")
-            event.defer()
-            return
-
-        if deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR:
-            if self.charm.unit.is_leader():
-                self.charm.status.set(BlockedStatus(SmtpRelationInvalid), app=True)
-            return
-
-        if not self.charm.opensearch.is_started():
-            # node must be reachable to reload settings after adding keys
-            event.defer()
-            return
-
-        # return if no relation data
-        if not (parameters := self.smtp.get_relation_data()):
-            logger.debug("Missing relation data from %s", self.relation_name)
-            self.charm.status.set(BlockedStatus(SmtpNoRelationData))
-            return
-
-        self.charm.status.clear(SmtpNoRelationData)
-
-        # validate data
-        required_params = ["user", "password"]
-        if missing_parameters := [p for p in required_params if not getattr(parameters, p)]:
-            msg = SmtpMissingRequiredParameters.format(", ".join(missing_parameters))
-            logger.error(msg)
-            self.charm.status.set(BlockedStatus(msg))
-            return
-
-        self.charm.status.clear(
-            SmtpMissingRequiredParameters, pattern=Status.CheckPattern.Interpolated
-        )
-
-        # create keys for keystore
-        user = parameters.user
-        entries = {
-            f"opensearch.notifications.core.email.{user}.username": f"{user}",
-            f"opensearch.notifications.core.email.{user}.password": f"{parameters.password}",
-        }
-
-        self.charm.keystore_manager.put_entries(entries)
-        self.charm.opensearch_keystore_events.reload_event.emit()
-
-        # store keys to remove later
-        self.charm.plugin_manager.put_plugin_config(
-            scope=Scope.UNIT,
-            label=self.secret_label,
-            cleanup={"keys": list(entries.keys())},
-        )
-        if not self.charm.unit.is_leader():
-            return
-
-        store_plugin_secret(
-            self.charm,
-            content={"keys": entries},
-            label=self.secret_label,
-            relation_name=self.relation_name,
-        )
-
-        # if unit is main orchestrator leader, transfer keys to subclusters
-        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
-            self.charm.peer_cluster_provider.refresh_relation_data(event)
-
-    def _on_smtp_credentials_gone(self, event) -> None:
-        """Removes secret when credentials are gone"""
-        if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
-            logger.debug("Deployment not ready. Deferring event.")
-            event.defer()
-            return
-
-        if deployment_desc.typ != DeploymentType.MAIN_ORCHESTRATOR:
-            if self.charm.unit.is_leader():
-                self.charm.status.clear(SmtpRelationInvalid, app=True)
-            return
-
-        plugin_config = self.charm.state.unit.plugin_config_info.get(self.secret_label)
-        keys = plugin_config.cleanup.get("keys")
-
-        self.charm.keystore_manager.remove_entries(keys)
-
-        self.charm.opensearch_keystore_events.reload_event.emit()
-
-        self.charm.plugin_manager.remove_plugin_config(scope=Scope.UNIT, label=self.secret_label)
-
-        if not self.charm.unit.is_leader():
-            return
-
-        remove_plugin_secret(self.charm, self.secret_label)
-        # if unit is main orchestrator leader, remove secrets transferred to subclusters
-        if self.charm.opensearch_peer_cm.is_provider(typ="main"):
-            self.charm.peer_cluster_provider.refresh_relation_data(event)
-
-    def _on_secret_changed(self, event) -> None:
-        """Handles secret changes"""
-        label = self.charm.secrets.label(Scope.APP, self.secret_label)
-        if label != event.secret.label:
-            return
-
-        content = event.secret.get_content(refresh=True)
-        if not (plugin_config := decode_plugin_secret_content(content, self.secret_label)):
-            return
-
-        if not (keys := plugin_config.get("keys")):
-            return
-
-        # the keys to remove (user) may be changed here, add them to removal info for cleanup later
-        self.charm.plugin_manager.put_plugin_config(
-            scope=Scope.UNIT,
-            label=self.secret_label,
-            cleanup={"keys": list(keys.keys())},
-        )
-
-        self.charm.keystore_manager.put_entries(keys)
-        self.charm.opensearch_keystore_events.reload_event.emit()
 
 
 class OpenSearchPluginEvents(Object):
