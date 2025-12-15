@@ -1,0 +1,844 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'opensearch': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'active', 'since': '15 Dec 2025 08:27:29Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/0': {'workload-status': {'current': 'active', 'since': '15 Dec 2025 08:05:40Z'}, 'juju-status': {'current': 'idle', 'since': '15 Dec 2025 08:29:46Z', 'version': '3.6.12'}, 'leader': True, 'machine': '1', 'open-ports': ['9200/tcp'], 'public-address': '10.87.207.125'}, 'opensearch/2': {'workload-status': {'current': 'active', 'since': '15 Dec 2025 08:12:04Z'}, 'juju-status': {'current': 'idle', 'since': '15 Dec 2025 08:29:48Z', 'version': '3.6.12'}, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.87.207.149'}, 'opensearch/3': {'workload-status': {'current': 'active', 'since': '15 Dec 2025 08:16:35Z'}, 'juju-status': {'current': 'idle', 'since': '15 Dec 2025 08:29:41Z', 'version': '3.6.12'}, 'machine': '4', 'open-ports': ['9200/tcp'], 'public-address': '10.87.207.73'}, 'opensearch/4': {'workload-status': {'current': 'active', 'since': '15 Dec 2025 08:27:34Z'}, 'juju-status': {'current': 'idle', 'since': '15 Dec 2025 08:27:57Z', 'version': '3.6.12'}, 'machine': '5', 'open-ports': ['9200/tcp'], 'public-address': '10.87.207.118'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 317, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '15 Dec 2025 08:03:07Z'}, 'relations': {'certificates': [{'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '15 Dec 2025 08:03:07Z'}, 'juju-status': {'current': 'idle', 'since': '15 Dec 2025 08:23:57Z', 'version': '3.6.12'}, 'leader': True, 'machine': '0', 'public-address': '10.87.207.78'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  08:29:51Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active    4/5  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent       Machine  Public address  Ports     Message
+opensearch/0*                active    idle        1        10.87.207.125   9200/tcp  
+opensearch/2                 active    idle        3        10.87.207.149   9200/tcp  
+opensearch/3                 active    idle        4        10.87.207.73    9200/tcp  
+opensearch/4                 active    idle        5        10.87.207.118   9200/tcp  
+opensearch/5                 waiting   allocating  6                                  waiting for machine
+self-signed-certificates/0*  active    idle        0        10.87.207.78              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.87.207.78   juju-5ea9db-0  ubuntu@24.04  github-runner  Running
+1        started  10.87.207.125  juju-5ea9db-1  ubuntu@24.04  github-runner  Running
+3        started  10.87.207.149  juju-5ea9db-3  ubuntu@24.04  github-runner  Running
+4        started  10.87.207.73   juju-5ea9db-4  ubuntu@24.04  github-runner  Running
+5        started  10.87.207.118  juju-5ea9db-5  ubuntu@24.04  github-runner  Running
+6        pending                 pending        ubuntu@24.04                 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:29:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 5 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:30:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [idle (since: 08:29:46)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:29:48)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:29:50)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:27:57)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [allocating (since: 08:29:51)] waiting: waiting for machine
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:30:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [idle (since: 08:29:46)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:29:48)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:29:50)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:27:57)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [executing (since: 08:30:22)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:30:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [idle (since: 08:29:46)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:29:48)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:29:50)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:27:57)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [executing (since: 08:30:22)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:30:50 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [idle (since: 08:29:46)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:29:48)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:29:50)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:27:57)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [executing (since: 08:30:22)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:31:01 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [idle (since: 08:29:46)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:29:48)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:29:50)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:27:57)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [executing (since: 08:30:22)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:31:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [idle (since: 08:29:46)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:29:48)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:29:50)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:27:57)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [executing (since: 08:30:22)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:31:23 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [idle (since: 08:29:46)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:29:48)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:29:50)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:27:57)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [executing (since: 08:30:22)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:31:34 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [executing (since: 08:31:33)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [executing (since: 08:31:33)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [executing (since: 08:31:33)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [executing (since: 08:31:33)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [executing (since: 08:31:34)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:31:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [executing (since: 08:31:43)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:31:45)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:31:45)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:31:45)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [executing (since: 08:31:42)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:31:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [idle (since: 08:31:46)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:31:45)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:31:45)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:31:45)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [executing (since: 08:31:42)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:32:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [executing (since: 08:32:07)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:32:07)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:32:07)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:32:07)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [executing (since: 08:32:01)] maintenance: Plugin configuration check.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:32:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [idle (since: 08:32:08)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:32:07)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:32:07)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:32:07)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [executing (since: 08:32:18)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:32:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [idle (since: 08:32:08)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:32:07)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:32:07)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:32:07)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [executing (since: 08:32:29)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:32:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [idle (since: 08:32:08)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:32:07)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:32:07)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:32:07)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:32:40)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:32:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [idle (since: 08:32:08)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:32:07)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:32:07)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:32:07)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:32:40)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:33:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [idle (since: 08:32:08)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:32:07)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:32:07)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:32:07)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:32:40)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:33:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [idle (since: 08:32:08)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:32:07)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:32:07)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:32:07)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:32:40)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:33:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [idle (since: 08:32:08)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:32:07)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:32:07)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:32:07)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:32:40)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:33:35 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [idle (since: 08:32:08)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:32:07)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:32:07)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:32:07)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:32:40)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:33:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.3a8* -- (10.87.207.125) -- [idle (since: 08:32:08)] active: 
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:32:07)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:32:07)] active: 
+		opensearch-4.3a8  -- (10.87.207.118) -- [idle (since: 08:32:07)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:32:40)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:33:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 08:33:58 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  08:33:58Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      5  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch/0*                active    executing  1        10.87.207.125   9200/tcp  
+opensearch/2                 active    executing  3        10.87.207.149   9200/tcp  
+opensearch/3                 active    executing  4        10.87.207.73    9200/tcp  
+opensearch/4                 active    executing  5        10.87.207.118   9200/tcp  
+opensearch/5                 active    executing  6        10.87.207.142   9200/tcp  
+self-signed-certificates/0*  active    executing  0        10.87.207.78              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.87.207.78   juju-5ea9db-0  ubuntu@24.04  github-runner  Running
+1        started  10.87.207.125  juju-5ea9db-1  ubuntu@24.04  github-runner  Running
+3        started  10.87.207.149  juju-5ea9db-3  ubuntu@24.04  github-runner  Running
+4        started  10.87.207.73   juju-5ea9db-4  ubuntu@24.04  github-runner  Running
+5        started  10.87.207.118  juju-5ea9db-5  ubuntu@24.04  github-runner  Running
+6        started  10.87.207.142  juju-5ea9db-6  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:33:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 4 -- current: 5
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:34:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 4 -- current: 5
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:34:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 4 -- current: 5
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:34:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:34:14)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:34:14)] active: 
+		opensearch-4.3a8* -- (10.87.207.118) -- [idle (since: 08:34:27)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:34:14)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:34:41 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:34:14)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:34:14)] active: 
+		opensearch-4.3a8* -- (10.87.207.118) -- [idle (since: 08:34:27)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:34:14)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:34:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:34:14)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:34:14)] active: 
+		opensearch-4.3a8* -- (10.87.207.118) -- [idle (since: 08:34:27)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:34:14)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:35:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:34:14)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:34:14)] active: 
+		opensearch-4.3a8* -- (10.87.207.118) -- [idle (since: 08:34:27)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:34:14)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:35:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:34:14)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:34:14)] active: 
+		opensearch-4.3a8* -- (10.87.207.118) -- [idle (since: 08:34:27)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:34:14)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:35:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:34:14)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:34:14)] active: 
+		opensearch-4.3a8* -- (10.87.207.118) -- [idle (since: 08:34:27)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:34:14)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:35:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:34:14)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:34:14)] active: 
+		opensearch-4.3a8* -- (10.87.207.118) -- [idle (since: 08:34:27)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:34:14)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:35:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:35:40)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:35:40)] active: 
+		opensearch-4.3a8* -- (10.87.207.118) -- [idle (since: 08:35:40)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:35:40)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:35:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:35:40)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:35:40)] active: 
+		opensearch-4.3a8* -- (10.87.207.118) -- [idle (since: 08:35:40)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:35:40)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:36:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:35:40)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:35:40)] active: 
+		opensearch-4.3a8* -- (10.87.207.118) -- [idle (since: 08:35:40)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:35:40)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:36:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:35:40)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:35:40)] active: 
+		opensearch-4.3a8* -- (10.87.207.118) -- [idle (since: 08:35:40)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:35:40)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:36:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:35:40)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:35:40)] active: 
+		opensearch-4.3a8* -- (10.87.207.118) -- [idle (since: 08:35:40)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:35:40)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:36:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:35:40)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:35:40)] active: 
+		opensearch-4.3a8* -- (10.87.207.118) -- [idle (since: 08:35:40)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:35:40)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:36:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:35:40)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:35:40)] active: 
+		opensearch-4.3a8* -- (10.87.207.118) -- [idle (since: 08:35:40)] active: 
+		opensearch-5.3a8  -- (10.87.207.142) -- [idle (since: 08:35:40)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:37:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 08:37:05 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.87.207.118:9200/_cluster/state/cluster_manager_node
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.87.207.118:9200/_nodes
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  08:37:09Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      4  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch/2                 active    executing  3        10.87.207.149   9200/tcp  
+opensearch/3                 active    executing  4        10.87.207.73    9200/tcp  
+opensearch/4*                active    executing  5        10.87.207.118   9200/tcp  
+opensearch/5                 active    executing  6        10.87.207.142   9200/tcp  
+self-signed-certificates/0*  active    executing  0        10.87.207.78              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.87.207.78   juju-5ea9db-0  ubuntu@24.04  github-runner  Running
+3        started  10.87.207.149  juju-5ea9db-3  ubuntu@24.04  github-runner  Running
+4        started  10.87.207.73   juju-5ea9db-4  ubuntu@24.04  github-runner  Running
+5        started  10.87.207.118  juju-5ea9db-5  ubuntu@24.04  github-runner  Running
+6        started  10.87.207.142  juju-5ea9db-6  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:37:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:37:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:37:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:37:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:37:23)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:37:23)] active: 
+		opensearch-5.3a8* -- (10.87.207.142) -- [idle (since: 08:37:34)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:37:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:37:23)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:37:23)] active: 
+		opensearch-5.3a8* -- (10.87.207.142) -- [idle (since: 08:37:34)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:38:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:37:23)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:37:23)] active: 
+		opensearch-5.3a8* -- (10.87.207.142) -- [idle (since: 08:37:34)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:38:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:37:23)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:37:23)] active: 
+		opensearch-5.3a8* -- (10.87.207.142) -- [idle (since: 08:37:34)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:38:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:37:23)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:37:23)] active: 
+		opensearch-5.3a8* -- (10.87.207.142) -- [idle (since: 08:37:34)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:38:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:37:23)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:37:23)] active: 
+		opensearch-5.3a8* -- (10.87.207.142) -- [idle (since: 08:37:34)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:38:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8  -- (10.87.207.149) -- [idle (since: 08:37:23)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:37:23)] active: 
+		opensearch-5.3a8* -- (10.87.207.142) -- [idle (since: 08:37:34)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:38:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 08:38:59 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.87.207.142:9200/_cluster/state/cluster_manager_node
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.87.207.142:9200/_nodes
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.87.207.142:9200/_cluster/health?wait_for_status=green&timeout=1m
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.87.207.142:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  08:39:06Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      3  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch/2                 active    executing  3        10.87.207.149   9200/tcp  
+opensearch/3                 active    executing  4        10.87.207.73    9200/tcp  
+opensearch/5*                active    executing  6        10.87.207.142   9200/tcp  
+self-signed-certificates/0*  active    executing  0        10.87.207.78              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.87.207.78   juju-5ea9db-0  ubuntu@24.04  github-runner  Running
+3        started  10.87.207.149  juju-5ea9db-3  ubuntu@24.04  github-runner  Running
+4        started  10.87.207.73   juju-5ea9db-4  ubuntu@24.04  github-runner  Running
+6        started  10.87.207.142  juju-5ea9db-6  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:39:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 2 -- current: 3
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:39:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 2 -- current: 3
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:39:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8* -- (10.87.207.149) -- [idle (since: 08:39:27)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:39:18)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:39:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8* -- (10.87.207.149) -- [idle (since: 08:39:27)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:39:18)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:39:50 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8* -- (10.87.207.149) -- [idle (since: 08:39:27)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:39:18)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:40:01 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8* -- (10.87.207.149) -- [idle (since: 08:39:27)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:39:18)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:40:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8* -- (10.87.207.149) -- [idle (since: 08:39:27)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:39:18)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:40:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8* -- (10.87.207.149) -- [idle (since: 08:39:27)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:39:18)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:40:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-2.3a8* -- (10.87.207.149) -- [idle (since: 08:39:27)] active: 
+		opensearch-3.3a8  -- (10.87.207.73) -- [idle (since: 08:39:18)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+08:40:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 08:40:45 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.87.207.149:9200/series_index/_search_shards
+[32mINFO    [0m integration.ha.helpers:helpers.py:248 Continuous writes result: namespace(max_stored_id=755, count=756, last_expected_id=755)
+[32mINFO    [0m integration.helpers:helpers.py:369 Calling: GET -- https://10.87.207.149:9200/series_index/_search_shards
+[32mINFO    [0m integration.ha.conftest:conftest.py:55 
+
+
+
+The writes have been cleared.
+
+
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  08:41:09Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      2  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/2*                active    idle   3        10.87.207.149   9200/tcp  
+opensearch/3                 active    idle   4        10.87.207.73    9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.87.207.78              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.87.207.78   juju-5ea9db-0  ubuntu@24.04  github-runner  Running
+3        started  10.87.207.149  juju-5ea9db-3  ubuntu@24.04  github-runner  Running
+4        started  10.87.207.73   juju-5ea9db-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 08:03:01 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 08:03:01 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 08:03:06 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 08:03:06 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 08:04:52 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 08:04:59 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+machine-3: 08:06:36 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 08:06:36 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 08:06:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 08:06:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 08:07:07 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 08:08:17 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 08:08:20 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 08:08:24 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 08:08:26 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 08:12:36 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+machine-4: 08:14:39 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 08:14:39 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 08:15:58 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 08:15:59 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 08:18:13 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+machine-5: 08:22:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 08:22:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-3: 08:24:00 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-2: 08:24:13 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-0: 08:24:47 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 08:27:34 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 08:27:34 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-4: 08:27:47 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+machine-6: 08:30:15 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 08:30:15 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 08:30:45 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-3: 08:31:35 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-5: 08:31:45 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-4: 08:32:02 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-0: 08:32:02 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-5: 08:32:36 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-0: 08:34:02 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-4: 08:34:13 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-2: 08:34:13 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+machine-5: 08:37:08 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-4: 08:37:20 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-2: 08:37:22 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+machine-6: 08:37:33 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+machine-4: 08:37:33 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+machine-3: 08:37:33 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-5: 08:39:16 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-3: 08:39:18 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
