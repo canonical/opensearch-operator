@@ -31,12 +31,12 @@ This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Num
 * [[DPE-7545](https://warthogs.atlassian.net/browse/DPE-7545)] Fix s3-uri-style handling ([PR \#654](https://github.com/canonical/opensearch-operator/pull/654))
 * [[DPE-5460](https://warthogs.atlassian.net/browse/DPE-5460)] Restart data only nodes without lock ([PR \#460](https://github.com/canonical/opensearch-operator/pull/460))
 * [[DPE-5671](https://warthogs.atlassian.net/browse/DPE-5671)] Logic change in how check if CA rotation in complete in cluster ([PR \#486](https://github.com/canonical/opensearch-operator/pull/486))
-* only data node ignores lock if restarting ([PR \#762](https://github.com/canonical/opensearch-operator/pull/762))
+* Only data node ignores lock if restarting ([PR \#762](https://github.com/canonical/opensearch-operator/pull/762))
 * Fixing Terraform Flaky Tests due to Limited storage on github runners ([PR \#765](https://github.com/canonical/opensearch-operator/pull/765))
 * Fix CA rotation edge case on small deployments ([PR \#767](https://github.com/canonical/opensearch-operator/pull/767))
 * Set blocked message on verify repository fail ([PR \#769](https://github.com/canonical/opensearch-operator/pull/769))
 * Clear missing relations ([PR \#763](https://github.com/canonical/opensearch-operator/pull/763))
-* remove verify repository from requirer error checks ([PR \#772](https://github.com/canonical/opensearch-operator/pull/772))
+* Remove verify repository from requirer error checks ([PR \#772](https://github.com/canonical/opensearch-operator/pull/772))
 
 ### Other improvements 
 
@@ -53,6 +53,7 @@ This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Num
 * Replace Discourse docs with a charm description on Charmhub ([PR \#760](https://github.com/canonical/opensearch-operator/pull/760))
 * Refactor code and verify repository after all units save credentials ([PR \#774](https://github.com/canonical/opensearch-operator/pull/774))
 * Rework Plugins ([PR \#775](https://github.com/canonical/opensearch-operator/pull/775))
+* Rework Snapshots ([PR \#718](https://github.com/canonical/opensearch-operator/pull/718))
 
 ## Charmed OpenSearch Dashboards
 
@@ -60,9 +61,8 @@ This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Num
 
 * [[DPE-5867](https://warthogs.atlassian.net/browse/DPE-5867)] Add terraform module  ([PR \#134](https://github.com/canonical/opensearch-dashboards-operator/pull/134))
 * [[DPE-6091](https://warthogs.atlassian.net/browse/DPE-6091)] Add oauth integration ([PR \#180](https://github.com/canonical/opensearch-dashboards-operator/pull/180))
-* [[DPE-6936](https://warthogs.atlassian.net/browse/DPE-6936)] - Update to 2.19.1 ([PR \#182](https://github.com/canonical/opensearch-dashboards-operator/pull/182))
-* [[DPE-7927](https://warthogs.atlassian.net/browse/DPE-7927)] - Disable TLS on relation broken ([PR \#213](https://github.com/canonical/opensearch-dashboards-operator/pull/213))
-* [[DPE-8018](https://warthogs.atlassian.net/browse/DPE-8018)] add JWT authentication ([PR \#217](https://github.com/canonical/opensearch-dashboards-operator/pull/217))
+* [[DPE-6936](https://warthogs.atlassian.net/browse/DPE-6936)] Update to 2.19.1 ([PR \#182](https://github.com/canonical/opensearch-dashboards-operator/pull/182))
+* [[DPE-8018](https://warthogs.atlassian.net/browse/DPE-8018)] Add JWT authentication ([PR \#217](https://github.com/canonical/opensearch-dashboards-operator/pull/217))
 * [[DPE-5832](https://warthogs.atlassian.net/browse/DPE-5832)][[DPE-6252](https://warthogs.atlassian.net/browse/DPE-6252)] Add 24.04 support ([PR \#138](https://github.com/canonical/opensearch-dashboards-operator/pull/138))
 * Add new Prometheus Rules using the python exporter ([PR \#159](https://github.com/canonical/opensearch-dashboards-operator/pull/159))
 * Bump version to 2.19.2 ([PR \#198](https://github.com/canonical/opensearch-dashboards-operator/pull/198))
@@ -72,10 +72,10 @@ This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Num
 
 * [[DPE-7774](https://warthogs.atlassian.net/browse/DPE-7774)] Raise if error on install ([PR \#214](https://github.com/canonical/opensearch-dashboards-operator/pull/214))
 * [[DPE-7002](https://warthogs.atlassian.net/browse/DPE-7002)] Update opensearch health checks ([PR \#215](https://github.com/canonical/opensearch-dashboards-operator/pull/215))
-* [[DPE-7928](https://warthogs.atlassian.net/browse/DPE-7928)] block if we fail to get the provider info from the oauth relation ([PR \#218](https://github.com/canonical/opensearch-dashboards-operator/pull/218))
+* [[DPE-7928](https://warthogs.atlassian.net/browse/DPE-7928)] Block if we fail to get the provider info from the oauth relation ([PR \#218](https://github.com/canonical/opensearch-dashboards-operator/pull/218))
 * [[DPE-6600](https://warthogs.atlassian.net/browse/DPE-6600)] Move away from `libjuju` and `add_machine` ([PR \#167](https://github.com/canonical/opensearch-dashboards-operator/pull/167))
 * [[DPE-6598](https://warthogs.atlassian.net/browse/DPE-6598)][[DPE-6786](https://warthogs.atlassian.net/browse/DPE-6786)] Update to 2.18 and fix CI ([PR \#169](https://github.com/canonical/opensearch-dashboards-operator/pull/169))
-* [[DPE-5699](https://warthogs.atlassian.net/browse/DPE-5699)] - Update CI workflow versions, add juju 3.6, and remove build wrapper ([PR \#124](https://github.com/canonical/opensearch-dashboards-operator/pull/124))
+* [[DPE-5699](https://warthogs.atlassian.net/browse/DPE-5699)] Update CI workflow versions, add juju 3.6, and remove build wrapper ([PR \#124](https://github.com/canonical/opensearch-dashboards-operator/pull/124))
 * Fix branch release on CI ([PR \#123](https://github.com/canonical/opensearch-dashboards-operator/pull/123))
 * Remove dependency breaking ccc-hub ([PR \#136](https://github.com/canonical/opensearch-dashboards-operator/pull/136))
 * Rollback Cache use ([PR \#139](https://github.com/canonical/opensearch-dashboards-operator/pull/139))
@@ -84,7 +84,7 @@ This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Num
 
 * [[DPE-6922](https://warthogs.atlassian.net/browse/DPE-6922)] Integrate TiCS ([PR \#176](https://github.com/canonical/opensearch-dashboards-operator/pull/176))
 * [[DPE-4307](https://warthogs.atlassian.net/browse/DPE-4307)] HA process interrupt tests ([PR \#114](https://github.com/canonical/opensearch-dashboards-operator/pull/114))
-* [[DPE-6876](https://warthogs.atlassian.net/browse/DPE-6876)] - Migration to spread ([PR \#178](https://github.com/canonical/opensearch-dashboards-operator/pull/178))
+* [[DPE-6876](https://warthogs.atlassian.net/browse/DPE-6876)] Migration to spread ([PR \#178](https://github.com/canonical/opensearch-dashboards-operator/pull/178))
 * [[DPE-6217](https://warthogs.atlassian.net/browse/DPE-6217)] Remove channel + revision mentions ([PR \#145](https://github.com/canonical/opensearch-dashboards-operator/pull/145))
 * [[DPE-6536](https://warthogs.atlassian.net/browse/DPE-6536)] Improve terraform charm module ([PR \#164](https://github.com/canonical/opensearch-dashboards-operator/pull/164))
 * [[DPE-6687](https://warthogs.atlassian.net/browse/DPE-6687)][[DPE-6690](https://warthogs.atlassian.net/browse/DPE-6690)][[DPE-6691](https://warthogs.atlassian.net/browse/DPE-6691)] Extend TF charm modules ([PR \#168](https://github.com/canonical/opensearch-dashboards-operator/pull/168))
