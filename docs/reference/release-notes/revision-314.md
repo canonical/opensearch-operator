@@ -51,7 +51,7 @@ This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Num
 * [[DPE-6787](https://warthogs.atlassian.net/browse/DPE-6787)] Add smoke test ([PR \#588](https://github.com/canonical/opensearch-operator/pull/588))
 * [[DPE-5667](https://warthogs.atlassian.net/browse/DPE-5667)] Move away from ops\_test's wait\_for\_idle to wait\_until ([PR \#479](https://github.com/canonical/opensearch-operator/pull/479))
 * Replace Discourse docs with a charm description on Charmhub ([PR \#760](https://github.com/canonical/opensearch-operator/pull/760))
-* Refactor code and verify repository after all units save creds ([PR \#774](https://github.com/canonical/opensearch-operator/pull/774))
+* Refactor code and verify repository after all units save credentials ([PR \#774](https://github.com/canonical/opensearch-operator/pull/774))
 * Rework Plugins ([PR \#775](https://github.com/canonical/opensearch-operator/pull/775))
 
 ## Charmed OpenSearch Dashboards
