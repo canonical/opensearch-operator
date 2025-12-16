@@ -1,7 +1,7 @@
-(reference-release-notes-revision-314)=
-# Revision 314
+(reference-release-notes-revision-315)=
+# Revision 315
 
-December 15, 2025
+December 16, 2025
 
 This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Numbat), upgrades OpenSearch and OpenSearch Dashboards version to 2.19.4, and introduces significant features including OAuth and JWT authentication, and full Terraform support.
 
@@ -111,5 +111,5 @@ This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Num
 
 | Charm                         | Revision                                                                     | Hardware architecture | OpenSearch version                                                              | Minimum Juju version | Artifacts                                                       |
 | :---------------------------- | :--------------------------------------------------------------------------- | :-------------------- | :------------------------------------------------------------------------------ | :------------------- | --------------------------------------------------------------- |
-| Charmed OpenSearch            | [314](https://github.com/canonical/opensearch-operator/tree/rev314)          | AMD64                 | [v2.19.4](https://github.com/opensearch-project/OpenSearch/releases/tag/2.19.4) | 3.5+                 | Snap: [revision 98](https://snapcraft.io/opensearch)            |
+| Charmed OpenSearch            | [315](https://github.com/canonical/opensearch-operator/tree/rev315)          | AMD64                 | [v2.19.4](https://github.com/opensearch-project/OpenSearch/releases/tag/2.19.4) | 3.5+                 | Snap: [revision 98](https://snapcraft.io/opensearch)            |
 | Charmed OpenSearch Dashboards | [60](https://github.com/canonical/opensearch-dashboards-operator/tree/rev60) | AMD64                 | [v2.19.4](https://github.com/opensearch-project/OpenSearch/releases/tag/2.19.4) | 3.5+                 | Snap: [revision 54](https://snapcraft.io/opensearch-dashboards) |
