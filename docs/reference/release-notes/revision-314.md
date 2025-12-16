@@ -1,7 +1,7 @@
-(reference-release-notes-revision-307)=
-# Revision 307
+(reference-release-notes-revision-314)=
+# Revision 314
 
-December 8, 2025
+December 15, 2025
 
 This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Numbat), upgrades OpenSearch and OpenSearch Dashboards version to 2.19.4, and introduces significant features including OAuth and JWT authentication, and full Terraform support.
 
@@ -31,6 +31,12 @@ This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Num
 * [[DPE-7545](https://warthogs.atlassian.net/browse/DPE-7545)] Fix s3-uri-style handling ([PR \#654](https://github.com/canonical/opensearch-operator/pull/654))
 * [[DPE-5460](https://warthogs.atlassian.net/browse/DPE-5460)] Restart data only nodes without lock ([PR \#460](https://github.com/canonical/opensearch-operator/pull/460))
 * [[DPE-5671](https://warthogs.atlassian.net/browse/DPE-5671)] Logic change in how check if CA rotation in complete in cluster ([PR \#486](https://github.com/canonical/opensearch-operator/pull/486))
+* only data node ignores lock if restarting ([PR \#762](https://github.com/canonical/opensearch-operator/pull/762))
+* Fixing Terraform Flaky Tests due to Limited storage on github runners ([PR \#765](https://github.com/canonical/opensearch-operator/pull/765))
+* Fix CA rotation edge case on small deployments ([PR \#767](https://github.com/canonical/opensearch-operator/pull/767))
+* Set blocked message on verify repository fail ([PR \#769](https://github.com/canonical/opensearch-operator/pull/769))
+* Clear missing relations ([PR \#763](https://github.com/canonical/opensearch-operator/pull/763))
+* remove verify repository from requirer error checks ([PR \#772](https://github.com/canonical/opensearch-operator/pull/772))
 
 ### Other improvements 
 
@@ -44,6 +50,9 @@ This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Num
 * [[DPE-6878](https://warthogs.atlassian.net/browse/DPE-6878)] Stabilize upgrade tests ([PR \#626](https://github.com/canonical/opensearch-operator/pull/626))
 * [[DPE-6787](https://warthogs.atlassian.net/browse/DPE-6787)] Add smoke test ([PR \#588](https://github.com/canonical/opensearch-operator/pull/588))
 * [[DPE-5667](https://warthogs.atlassian.net/browse/DPE-5667)] Move away from ops\_test's wait\_for\_idle to wait\_until ([PR \#479](https://github.com/canonical/opensearch-operator/pull/479))
+* Replace Discourse docs with a charm description on Charmhub ([PR \#760](https://github.com/canonical/opensearch-operator/pull/760))
+* Refactor code and verify repository after all units save creds ([PR \#774](https://github.com/canonical/opensearch-operator/pull/774))
+* Rework Plugins ([PR \#775](https://github.com/canonical/opensearch-operator/pull/775))
 
 ## Charmed OpenSearch Dashboards
 
@@ -102,5 +111,5 @@ This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Num
 
 | Charm                         | Revision                                                                     | Hardware architecture | OpenSearch version                                                              | Minimum Juju version | Artifacts                                                       |
 | :---------------------------- | :--------------------------------------------------------------------------- | :-------------------- | :------------------------------------------------------------------------------ | :------------------- | --------------------------------------------------------------- |
-| Charmed OpenSearch            | [307](https://github.com/canonical/opensearch-operator/tree/rev307)          | AMD64                 | [v2.19.4](https://github.com/opensearch-project/OpenSearch/releases/tag/2.19.4) | 3.5+                 | Snap: [revision 98](https://snapcraft.io/opensearch)            |
+| Charmed OpenSearch            | [314](https://github.com/canonical/opensearch-operator/tree/rev314)          | AMD64                 | [v2.19.4](https://github.com/opensearch-project/OpenSearch/releases/tag/2.19.4) | 3.5+                 | Snap: [revision 98](https://snapcraft.io/opensearch)            |
 | Charmed OpenSearch Dashboards | [60](https://github.com/canonical/opensearch-dashboards-operator/tree/rev60) | AMD64                 | [v2.19.4](https://github.com/opensearch-project/OpenSearch/releases/tag/2.19.4) | 3.5+                 | Snap: [revision 54](https://snapcraft.io/opensearch-dashboards) |
