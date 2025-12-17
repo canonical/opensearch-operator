@@ -34,7 +34,11 @@ from charms.opensearch.v0.constants_charm import (
     BackupCredentialIncorrect,
     BackupRelShouldNotExist,
 )
-from charms.opensearch.v0.opensearch_snapshots import AZURE_REPOSITORY, S3_REPOSITORY
+from charms.opensearch.v0.opensearch_snapshots import (
+    AZURE_REPOSITORY,
+    GCS_REPOSITORY,
+    S3_REPOSITORY,
+)
 from pytest_operator.plugin import OpsTest
 
 from ..ha.continuous_writes import ContinuousWrites
@@ -72,20 +76,21 @@ ALL_GROUPS = {
         id=f"{cloud_name}-{deploy_type}",
         marks=[pytest.mark.group(id=f"{cloud_name}-{deploy_type}")],
     )
-    for cloud_name in ["microceph", "aws", "azure"]
+    for cloud_name in ["microceph", "aws", "azure", "gcs"]
     for deploy_type in ["large", "small"]
 }
 
 ALL_DEPLOYMENTS_ALL_CLOUDS = list(ALL_GROUPS.values())
 SMALL_DEPLOYMENTS_ALL_CLOUDS = [
-    ALL_GROUPS[(cloud, "small")] for cloud in ["aws", "microceph", "azure"]
+    ALL_GROUPS[(cloud, "small")] for cloud in ["aws", "microceph", "azure", "gcs"]
 ]
 LARGE_DEPLOYMENTS_ALL_CLOUDS = [
-    ALL_GROUPS[(cloud, "large")] for cloud in ["aws", "microceph", "azure"]
+    ALL_GROUPS[(cloud, "large")] for cloud in ["aws", "microceph", "azure", "gcs"]
 ]
 ALL_AWS_GROUP = "all-aws"
 ALL_MICROCEPH_GROUP = "all-microceph"
 ALL_AZURE_GROUP = "all-azure"
+ALL_GCS_GROUP = "all-gcs"
 
 S3_INTEGRATOR = "s3-integrator"
 S3_INTEGRATOR_CHANNEL = "1/stable"
@@ -93,6 +98,9 @@ S3_RELATION = "s3-credentials"
 AZURE_INTEGRATOR = "azure-storage-integrator"
 AZURE_INTEGRATOR_CHANNEL = "latest/edge"
 AZURE_RELATION = "azure-credentials"
+GCS_INTEGRATOR = "gcs-integrator"
+GCS_INTEGRATOR_CHANNEL = "1/edge"
+GCS_RELATION = "gcs-credentials"
 
 TIMEOUT = 30 * 60
 BackupsPath = f"opensearch/{uuid.uuid4()}"
@@ -138,6 +146,12 @@ def cloud_configs(microceph_config: Dict[str, str]) -> Dict[str, Dict[str, str]]
             "container": "data-charms-testing",
             "path": BackupsPath,
         }
+    if os.environ.get("GCP_SERVICE_ACCOUNT"):
+        results["gcs"] = {
+            "bucket": "data-charms-testing",
+            "path": BackupsPath,
+        }
+
     return results
 
 
@@ -156,6 +170,10 @@ def cloud_credentials(
         results["azure"] = {
             "secret-key": os.environ["AZURE_SECRET_KEY"],
             "storage-account": os.environ["AZURE_STORAGE_ACCOUNT"],
+        }
+    if os.environ.get("GCP_SERVICE_ACCOUNT"):
+        results["gcs"] = {
+            "secret-key": os.environ["GCP_SERVICE_ACCOUNT"],
         }
     return results
 
@@ -306,6 +324,31 @@ async def _configure_azure(
     await ops_test.model.wait_for_idle(apps=[AZURE_INTEGRATOR], timeout=TIMEOUT)
 
 
+async def _configure_gcs(
+    ops_test: OpsTest,
+    config: Dict[str, str],
+    credentials: Dict[str, str],
+) -> None:
+    """Configure gcs-integrator with bucket/path and service account JSON (via Juju secret)."""
+    logger.info("Adding Juju secret for GCS service account JSON")
+
+    local_label = "".join(random.choice(string.ascii_letters) for _ in range(10))
+    credentials_secret_uri = await add_juju_secret(
+        ops_test,
+        GCS_INTEGRATOR,
+        local_label,
+        {"secret-key": credentials["secret-key"]},
+    )
+    logger.info(f"Juju secret for GCS credentials added. Secret URI: {credentials_secret_uri}")
+
+    full_cfg = deepcopy(config)
+    full_cfg.update({"credentials": credentials_secret_uri})
+
+    logger.info("Setting up configuration for gcs-integrator charm...")
+    await ops_test.model.applications[GCS_INTEGRATOR].set_config(full_cfg)
+    await ops_test.model.wait_for_idle(apps=[GCS_INTEGRATOR], timeout=TIMEOUT)
+
+
 def _is_related_with(ops_test: OpsTest, app_name: str, target_app_name: str) -> bool:
     """Check if app_name has a relation with target_app_name."""
     app = ops_test.model.applications.get(app_name)
@@ -332,10 +375,15 @@ async def test_small_deployment_build_and_deploy(
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
 
-    backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
-    backup_integrator_channel = (
-        AZURE_INTEGRATOR_CHANNEL if cloud_name == "azure" else S3_INTEGRATOR_CHANNEL
-    )
+    if cloud_name == "azure":
+        backup_integrator = AZURE_INTEGRATOR
+        backup_integrator_channel = AZURE_INTEGRATOR_CHANNEL
+    elif cloud_name == "gcs":
+        backup_integrator = GCS_INTEGRATOR
+        backup_integrator_channel = GCS_INTEGRATOR_CHANNEL
+    else:
+        backup_integrator = S3_INTEGRATOR
+        backup_integrator_channel = S3_INTEGRATOR_CHANNEL
 
     await asyncio.gather(
         ops_test.model.deploy(
@@ -397,10 +445,15 @@ async def test_large_deployment_build_and_deploy(
         "roles": "data.hot",
     }
 
-    backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
-    backup_integrator_channel = (
-        AZURE_INTEGRATOR_CHANNEL if cloud_name == "azure" else S3_INTEGRATOR_CHANNEL
-    )
+    if cloud_name == "azure":
+        backup_integrator = AZURE_INTEGRATOR
+        backup_integrator_channel = AZURE_INTEGRATOR_CHANNEL
+    elif cloud_name == "gcs":
+        backup_integrator = GCS_INTEGRATOR
+        backup_integrator_channel = GCS_INTEGRATOR_CHANNEL
+    else:
+        backup_integrator = S3_INTEGRATOR
+        backup_integrator_channel = S3_INTEGRATOR_CHANNEL
 
     await asyncio.gather(
         ops_test.model.deploy(
@@ -476,12 +529,15 @@ async def test_large_setups_relations_with_misconfiguration(
     if cloud_name == "azure":
         bad_config = {"connection-protocol": "abfss", "container": "error", "path": "/"}
         bad_credentials = {"storage-account": "error", "secret-key": "error"}
-        await _configure_azure(
-            ops_test=ops_test,
-            config=bad_config,
-            credentials=bad_credentials,
-        )
+        await _configure_azure(ops_test=ops_test, config=bad_config, credentials=bad_credentials)
         logger.info("Azure cloud is selected.")
+    elif cloud_name == "gcs":
+        if "gcs" not in cloud_configs or "gcs" not in cloud_credentials:
+            pytest.skip("GCS config/credentials not available.")
+        bad_config = {"bucket": "error", "path": BackupsPath}
+        bad_credentials = {"secret-key": "not-json"}
+        await _configure_gcs(ops_test=ops_test, config=bad_config, credentials=bad_credentials)
+        logger.info("GCS cloud is selected.")
     elif cloud_name == "aws":
         bad_config = {
             "endpoint": "http://localhost",
@@ -491,9 +547,7 @@ async def test_large_setups_relations_with_misconfiguration(
         }
         bad_credentials = {"access-key": "error", "secret-key": "error"}
         await _configure_s3_for_aws(
-            ops_test=ops_test,
-            config=bad_config,
-            credentials=bad_credentials,
+            ops_test=ops_test, config=bad_config, credentials=bad_credentials
         )
         logger.info("AWS cloud is selected.")
     else:
@@ -506,7 +560,6 @@ async def test_large_setups_relations_with_misconfiguration(
             "tls-ca-chain": cfg.get("tls-ca-chain"),
         }
         bad_credentials = {"access-key": "error", "secret-key": "error"}
-
         await _configure_s3_for_microceph(
             ops_test=ops_test,
             config=bad_config,
@@ -520,8 +573,15 @@ async def test_large_setups_relations_with_misconfiguration(
     )
     logger.info("Opensearch is blocked by invalid config/credentials.")
 
-    backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
-    backup_relation = AZURE_RELATION if cloud_name == "azure" else S3_RELATION
+    if cloud_name == "azure":
+        backup_integrator = AZURE_INTEGRATOR
+        backup_relation = AZURE_RELATION
+    elif cloud_name == "gcs":
+        backup_integrator = GCS_INTEGRATOR
+        backup_relation = GCS_RELATION
+    else:
+        backup_integrator = S3_INTEGRATOR
+        backup_relation = S3_RELATION
 
     # Now, relate failover cluster to backup-integrator and review the status
     await ops_test.model.integrate(f"failover:{backup_relation}", backup_integrator)
@@ -550,10 +610,6 @@ async def test_large_setups_relations_with_misconfiguration(
         apps_full_statuses={"main": {"blocked": [BackupCredentialIncorrect]}},
         idle_period=IDLE_PERIOD,
     )
-
-    # Clean up for subsequent tests: drop backup-integrator relation
-    backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
-    backup_relation = AZURE_RELATION if cloud_name == "azure" else S3_RELATION
 
     try:
         await ops_test.model.applications["main"].destroy_relation(
@@ -590,6 +646,8 @@ async def test_create_backup_and_restore(
     logger.info(f"Ensuring only correct backup integrator is related for {cloud_name}")
     if cloud_name == "azure":
         await _ensure_only_azure_integrator_related(ops_test, app)
+    elif cloud_name == "gcs":
+        await _ensure_only_gcs_integrator_related(ops_test, app)
     else:
         await _ensure_only_s3_integrator_related(ops_test, app)
 
@@ -600,6 +658,8 @@ async def test_create_backup_and_restore(
     logger.info(f"Syncing credentials for {cloud_name}")
     if cloud_name == "azure":
         await _configure_azure(ops_test, config, cloud_credentials[cloud_name])
+    elif cloud_name == "gcs":
+        await _configure_gcs(ops_test, config, cloud_credentials[cloud_name])
     elif cloud_name == "aws":
         await _configure_s3_for_aws(ops_test, config, cloud_credentials[cloud_name])
     else:
@@ -656,8 +716,15 @@ async def test_remove_and_readd_backup_relation(
     leader_id: int = await get_leader_unit_id(ops_test, app=app)
     unit_ip: str = await get_leader_unit_ip(ops_test, app=app)
 
-    backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
-    backup_relation = AZURE_RELATION if cloud_name == "azure" else S3_RELATION
+    if cloud_name == "azure":
+        backup_integrator = AZURE_INTEGRATOR
+        backup_relation = AZURE_RELATION
+    elif cloud_name == "gcs":
+        backup_integrator = GCS_INTEGRATOR
+        backup_relation = GCS_RELATION
+    else:
+        backup_integrator = S3_INTEGRATOR
+        backup_relation = S3_RELATION
 
     logger.info("Remove backup relation")
     # Remove relation
@@ -690,6 +757,8 @@ async def test_remove_and_readd_backup_relation(
     logger.info(f"Syncing credentials for {cloud_name}")
     if cloud_name == "azure":
         await _configure_azure(ops_test, cloud_configs[cloud_name], cloud_credentials[cloud_name])
+    elif cloud_name == "gcs":
+        await _configure_gcs(ops_test, cloud_configs[cloud_name], cloud_credentials[cloud_name])
     elif cloud_name == "aws":
         await _configure_s3_for_aws(
             ops_test, cloud_configs[cloud_name], cloud_credentials[cloud_name]
@@ -743,10 +812,15 @@ async def test_restore_to_new_cluster(
     2) Try to write to that new index.
     """
     app = (await app_name(ops_test) or APP_NAME) if deploy_type == "small" else "main"
-    backup_integrator = AZURE_INTEGRATOR if cloud_name == "azure" else S3_INTEGRATOR
-    backup_integrator_channel = (
-        AZURE_INTEGRATOR_CHANNEL if cloud_name == "azure" else S3_INTEGRATOR_CHANNEL
-    )
+    if cloud_name == "azure":
+        backup_integrator = AZURE_INTEGRATOR
+        backup_integrator_channel = AZURE_INTEGRATOR_CHANNEL
+    elif cloud_name == "gcs":
+        backup_integrator = GCS_INTEGRATOR
+        backup_integrator_channel = GCS_INTEGRATOR_CHANNEL
+    else:
+        backup_integrator = S3_INTEGRATOR
+        backup_integrator_channel = S3_INTEGRATOR_CHANNEL
 
     logging.info("Destroying the application")
     await asyncio.gather(
@@ -787,6 +861,8 @@ async def test_restore_to_new_cluster(
     logger.info(f"Syncing credentials for {cloud_name}")
     if cloud_name == "azure":
         await _configure_azure(ops_test, config_cloud, cloud_credentials[cloud_name])
+    elif cloud_name == "gcs":
+        await _configure_gcs(ops_test, config_cloud, cloud_credentials[cloud_name])
     elif cloud_name == "aws":
         await _configure_s3_for_aws(ops_test, config_cloud, cloud_credentials[cloud_name])
     else:
@@ -911,6 +987,32 @@ async def _drop_azure_relation_if_any(ops_test: OpsTest, app: str) -> None:
     logger.info("Dropped Azure relation %s -> %s.", app_endpoint, azure_endpoint)
 
 
+async def _drop_gcs_relation_if_any(ops_test: OpsTest, app: str) -> None:
+    """If app is related to GCS_INTEGRATOR via GCS_RELATION, drop that relation."""
+    if GCS_INTEGRATOR not in ops_test.model.applications:
+        return
+    if not _is_related_with(ops_test, app, GCS_INTEGRATOR):
+        return
+
+    await ops_test.model.applications[app].destroy_relation(
+        f"{app}:{GCS_RELATION}", GCS_INTEGRATOR, block_until_done=True
+    )
+    await wait_until(
+        ops_test,
+        apps=[app],
+        units_statuses=["active"],
+        apps_statuses=["active"],
+        wait_for_exact_units=len(ops_test.model.applications[app].units),
+        idle_period=IDLE_PERIOD,
+        timeout=TIMEOUT,
+    )
+    logger.info(
+        "Dropped GCS relation %s -> %s.",
+        f"{app}:{GCS_RELATION}",
+        f"{GCS_INTEGRATOR}:{GCS_RELATION}",
+    )
+
+
 async def _ensure_only_s3_integrator_related(
     ops_test: OpsTest,
     app: str,
@@ -963,9 +1065,35 @@ async def _ensure_only_azure_integrator_related(ops_test: OpsTest, app: str) -> 
     logger.info("Integrated %s <-> %s.", app_endpoint, azure_endpoint)
 
 
+async def _ensure_only_gcs_integrator_related(ops_test: OpsTest, app: str) -> None:
+    """Ensure GCS integrator is deployed and related to app (S3/Azure relation removed)."""
+    await _drop_s3_relation_if_any(ops_test, app)
+    await _drop_azure_relation_if_any(ops_test, app)
+
+    if GCS_INTEGRATOR not in ops_test.model.applications:
+        await ops_test.model.deploy(GCS_INTEGRATOR, channel=GCS_INTEGRATOR_CHANNEL)
+        await wait_until(
+            ops_test,
+            apps=[GCS_INTEGRATOR],
+            units_statuses=["blocked"],
+            wait_for_exact_units=1,
+            idle_period=10,
+            timeout=1400,
+        )
+
+    if _is_related_with(ops_test, app, GCS_INTEGRATOR):
+        return
+
+    await ops_test.model.integrate(app, GCS_INTEGRATOR)
+    logger.info(
+        "Integrated %s <-> %s.", f"{app}:{GCS_RELATION}", f"{GCS_INTEGRATOR}:{GCS_RELATION}"
+    )
+
+
 @pytest.mark.group(id=ALL_AWS_GROUP)
 @pytest.mark.group(id=ALL_MICROCEPH_GROUP)
 @pytest.mark.group(id=ALL_AZURE_GROUP)
+@pytest.mark.group(id=ALL_GCS_GROUP)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_deploy_and_test_status(ops_test: OpsTest, charm, series) -> None:
@@ -1332,6 +1460,75 @@ async def test_wrong_azure_credentials(
     else:
         assert isinstance(resp_ok, dict)
         assert AZURE_REPOSITORY in resp_ok
+
+
+@pytest.mark.group(id=ALL_GCS_GROUP)
+@pytest.mark.abort_on_fail
+async def test_wrong_gcs_credentials(
+    ops_test: OpsTest,
+    cloud_configs: Dict[str, Dict[str, str]],
+    cloud_credentials: Dict[str, Dict[str, str]],
+) -> None:
+    """Verify blocked status and recovery when GCS credentials are wrong."""
+    if "gcs" not in cloud_configs or "gcs" not in cloud_credentials:
+        pytest.skip("GCS config/credentials not available for GCS integrator tests.")
+
+    app = (await app_name(ops_test)) or APP_NAME
+
+    # ensure only GCS integrator is related
+    await _ensure_only_gcs_integrator_related(ops_test, app)
+    unit_ip = await get_leader_unit_ip(ops_test, app=app)
+
+    good_cfg = cloud_configs["gcs"]
+    good_creds = cloud_credentials["gcs"]
+
+    # make creds invalid: not valid JSON (service account should be JSON)
+    bad_creds = deepcopy(good_creds)
+    bad_creds["secret-key"] = "invalid-json"
+
+    # apply bad credentials
+    await _configure_gcs(ops_test, good_cfg, bad_creds)
+
+    # charm should report blocked
+    await wait_until(
+        ops_test,
+        apps=[app],
+        units_statuses=["active"],
+        apps_statuses=["blocked"],
+        apps_full_statuses={app: {"blocked": [BackupCredentialIncorrect]}},
+        idle_period=IDLE_PERIOD,
+    )
+    logger.info("Opensearch app is blocked because of invalid GCS credentials.")
+
+    # restore correct credentials
+    await _configure_gcs(ops_test, good_cfg, good_creds)
+
+    # should recover to active
+    await wait_until(
+        ops_test,
+        apps=[app],
+        units_statuses=["active"],
+        apps_statuses=["active"],
+        wait_for_exact_units=3,
+        idle_period=IDLE_PERIOD,
+    )
+    logger.info("Opensearch recovered after providing valid GCS credentials.")
+    # check that the repository endpoint is reachable (via OpenSearch API)
+    resp_ok = await http_request(
+        ops_test,
+        "GET",
+        f"https://{unit_ip}:9200/_snapshot/{GCS_REPOSITORY}",
+        json_resp=True,
+    )
+    logger.debug(f"Repo response after fixing GCS credentials: {resp_ok}")
+
+    # if repo doesn't exist, OpenSearch returns 404 (often in {"status": 404, ...})
+    if isinstance(resp_ok, dict) and resp_ok.get("status") == 404:
+        assert resp_ok["status"] == 404
+    else:
+        # if it exists, OpenSearch returns an object keyed by repo name
+        assert isinstance(resp_ok, dict)
+        assert GCS_REPOSITORY in resp_ok
 
 
 @pytest.mark.parametrize(

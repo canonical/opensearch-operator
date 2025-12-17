@@ -852,16 +852,5 @@ def verify_gcs_credentials(cfg: ObjectStorageConfig) -> bool:  # noqa: C901
         return True
 
     except GoogleAPIError as e:
-        logger.error(
-            "GCS credential validation with Google Cloud Storage failed: %s",
-            e,
-            exc_info=e,
-        )
-        return False
-    except Exception as e:  # noqa: BLE001
-        logger.error(
-            "Unexpected error during GCS credential validation: %s",
-            e,
-            exc_info=e,
-        )
+        logger.error("GCS credential validation failed: %s", e, exc_info=True)
         return False
