@@ -20,6 +20,7 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.constants_secrets import (
     AZURE_CREDENTIALS,
+    GCS_CREDENTIALS,
     HASH_POSTFIX,
     PW_POSTFIX,
     S3_CREDENTIALS,
@@ -106,6 +107,7 @@ class OpenSearchSecrets(Object, RelationDataStore):
             self._charm.secrets.password_key(KibanaserverUser),
             S3_CREDENTIALS,
             AZURE_CREDENTIALS,
+            GCS_CREDENTIALS,
         ]
 
         # Variables for better readability
