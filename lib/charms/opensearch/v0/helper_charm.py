@@ -262,7 +262,6 @@ def diff(desired: Iterable[str], current: Iterable[str]) -> tuple[set[str], set[
 
 
 def write_gcs_service_account_json(
-    *,
     secret_key: str,
     dst: str = "/tmp/service_account.json",
     mode: int = 0o600,
