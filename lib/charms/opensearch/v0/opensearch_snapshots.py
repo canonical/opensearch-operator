@@ -334,9 +334,9 @@ class OpenSearchSnapshotEvents(Object):
         """Handler for s3 credentials gone event."""
         if isinstance(event, CredentialsGoneEvent):
             object_storage_type = ObjectStorageType.S3
-        elif event.relation == GCS_RELATION:
+        elif event.relation.name == GCS_RELATION:
             object_storage_type = ObjectStorageType.GCS
-        elif event.relation == AZURE_RELATION:
+        elif event.relation.name == AZURE_RELATION:
             object_storage_type = ObjectStorageType.AZURE
         else:
             logger.debug("The object storage type could not be determined.")
@@ -390,7 +390,6 @@ class OpenSearchSnapshotEvents(Object):
 
     def _on_peer_clusters_relation_changed_for_snapshots(self, event) -> None:  # noqa C901
         """Apply snapshots config when the orchestrator broadcasts over peer-clusters."""
-        global keystore_entries_to_clean
         if not self.charm.opensearch_peer_cm.deployment_desc():
             logger.debug("Deployment description not ready; deferring %s", event)
             event.defer()
@@ -529,7 +528,7 @@ class OpenSearchSnapshotEvents(Object):
 
         # clean GCS-related config
         self.charm.snapshots_manager.cleanup(
-            object_storage_type="gcs",
+            object_storage_type=ObjectStorageType.GCS,
             keystore_entries=[
                 "gcs.client.default.secret_key",
             ],
@@ -970,7 +969,11 @@ class OpenSearchSnapshotEvents(Object):
             f"[snapshots] precheck: type={object_storage_type} repo={repo_name} alt_hosts={self.charm.alt_hosts}"
         )
 
-        pcluster_types = {"s3-pcluster", "azure-pcluster", "gcs-pcluster"}
+        pcluster_types = {
+            ObjectStorageType.S3_PCLUSTER,
+            ObjectStorageType.AZURE_PCLUSTER,
+            ObjectStorageType.GCS_PCLUSTER,
+        }
         if object_storage_type not in pcluster_types:
             try:
                 if not self.charm.snapshots_manager.get_storage_config():
@@ -1501,13 +1504,13 @@ class OpenSearchSnapshotsManager:
         Returns:
             repository name
         """
-        if object_storage_type in {"s3", "s3-pcluster"}:
+        if object_storage_type in {ObjectStorageType.S3, ObjectStorageType.S3_PCLUSTER}:
             return S3_REPOSITORY
-
-        if object_storage_type in {"azure", "azure-pcluster"}:
+        if object_storage_type in {ObjectStorageType.AZURE, ObjectStorageType.AZURE_PCLUSTER}:
             return AZURE_REPOSITORY
-
-        return GCS_REPOSITORY
+        if object_storage_type in {ObjectStorageType.GCS, ObjectStorageType.GCS_PCLUSTER}:
+            return GCS_REPOSITORY
+        raise ValueError(f"Unknown object storage type: {object_storage_type}")
 
     def find_s3_chain_in_store(self) -> str:
         """Return the currently stored S3 CA chain from cacerts, or ''.
@@ -1610,7 +1613,7 @@ class OpenSearchSnapshotsManager:
         try:
             self.charm.keystore_manager.remove_entries(keystore_entries)
             self.charm.opensearch_keystore_events.reload_event.emit()
-            if object_storage_type == ObjectStorageType.GCS:
+            if object_storage_type == ObjectStorageType.GCS or str(object_storage_type) == "gcs":
                 remove_gcs_service_account_json()
             logger.info("Removed keystore entries for %s", object_storage_type)
         except OpenSearchCmdError as e:
@@ -1687,12 +1690,13 @@ class OpenSearchSnapshotsManager:
         Returns:
             repository_type
         """
-        if object_storage_type in {"s3", "s3-pcluster"}:
+        if object_storage_type in {ObjectStorageType.S3, ObjectStorageType.S3_PCLUSTER}:
             return "s3"
-        if object_storage_type in {"azure", "azure-pcluster"}:
+        if object_storage_type in {ObjectStorageType.AZURE, ObjectStorageType.AZURE_PCLUSTER}:
             return "azure"
-        if object_storage_type in {"gcs", "gcs-pcluster"}:
+        if object_storage_type in {ObjectStorageType.GCS, ObjectStorageType.GCS_PCLUSTER}:
             return "gcs"
+        raise ValueError(f"Unknown object storage type: {object_storage_type}")
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True)
     def verify_repository(self, object_storage_type: ObjectStorageType) -> bool:
