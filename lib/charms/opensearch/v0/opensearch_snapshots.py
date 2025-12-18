@@ -287,9 +287,7 @@ class OpenSearchSnapshotEvents(Object):
                 secret_key=object_storage_config.gcs.credentials.secret_key
             )
             self.charm.keystore_manager.put_file_entry(
-                {
-                    "gcs.client.default.secret_key": str(sa_path),
-                }
+                key="gcs.client.default.secret_key", filename=sa_path
             )
 
         self.charm.opensearch_keystore_events.reload_event.emit()
@@ -487,9 +485,7 @@ class OpenSearchSnapshotEvents(Object):
             elif gcs_info:
                 sa_path = write_gcs_service_account_json(secret_key=gcs_info["secret_key"])
                 self.charm.keystore_manager.put_file_entry(
-                    {
-                        "gcs.client.default.secret_key": str(sa_path),
-                    }
+                    key="gcs.client.default.secret_key", filename=sa_path
                 )
 
             # Optional CA chain
@@ -1102,7 +1098,8 @@ class OpenSearchSnapshotsManager:
 
         if object_storage_type == ObjectStorageType.GCS:
             # TODO: Do not get data from the events
-            info = self.charm.snapshot_events.gcs_requirer.get_storage_connection_info()
+            gcs_rel = self.charm.model.get_relation(GCS_RELATION)
+            info = self.charm.snapshot_events.gcs_requirer.get_storage_connection_info(gcs_rel)
             try:
                 gcs = GcsRelData.from_relation(info) if info else None
             except ValidationError as e:
