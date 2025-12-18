@@ -519,7 +519,7 @@ class GcsRelData(Model):
     def validate_core_fields(cls, values):  # noqa: N805
         """Validate the core fields of the gcs relation data."""
         if not (creds := values.get("credentials")) or not creds.secret_key:
-            raise ValueError("Missing fields: secret_key")
+            raise ValueError("Missing fields: secret-key")
 
         if not values.get("bucket"):
             raise ValueError("Missing field: bucket")
@@ -541,8 +541,8 @@ class GcsRelData(Model):
         if isinstance(conf, dict):
             data = GcsRelDataCredentials.from_dict(conf)
 
-        for value in data.dict().values():
-            if value.startswith("secret://"):
+        for value in data.dict(exclude_none=True).values():
+            if isinstance(value, str) and value.startswith("secret://"):
                 raise ValueError(f"The secret content must be passed, received {value} instead")
         return data
 
@@ -555,8 +555,12 @@ class GcsRelData(Model):
         if not input_dict:
             return cls()
 
-        creds = GcsRelDataCredentials(**input_dict)
-        return cls.from_dict(dict(input_dict) | {GCS_CREDENTIALS: creds.dict()})
+        creds_raw = input_dict.get(GCS_CREDENTIALS) or {}
+        creds = GcsRelDataCredentials.parse_obj(creds_raw)
+
+        merged = dict(input_dict)
+        merged[GCS_CREDENTIALS] = creds.dict(by_alias=True, exclude_none=True)
+        return cls.parse_obj(merged)
 
 
 class ObjectStorageConfig(Model):
