@@ -619,11 +619,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(GCS_RELATION):
                 return None
 
-            cfg = (
+            object_storage_config = (
                 self.charm.snapshots_manager.get_storage_config(ObjectStorageType.GCS)
                 or ObjectStorageConfig()
             )
-            gcs = cfg.gcs
+            gcs = object_storage_config.gcs
             if not (gcs and gcs.credentials and gcs.credentials.secret_key):
                 return None
 
@@ -635,7 +635,9 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
 
             return GcsRelDataCredentials(secret_key=secret_key)
 
-        if not self.charm.secrets.get(Scope.APP, "gcs-secret-key"):
+        # Non-main orchestrators: only return creds if we already have them
+        secret_key = self.charm.secrets.get(Scope.APP, "gcs-secret-key")
+        if not secret_key:
             return None
 
         # Return what we have received from the peer relation
