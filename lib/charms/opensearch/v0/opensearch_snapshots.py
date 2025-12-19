@@ -296,10 +296,10 @@ class OpenSearchSnapshotEvents(Object):
             return
 
         try:
-            self.charm.snapshots_manager.ensure_repository(
+            if self.charm.snapshots_manager.ensure_repository(
                 object_storage_type, object_storage_config
-            )
-            self.verify_backup_credentials_event.emit()
+            ):
+                self.verify_backup_credentials_event.emit()
         except OpenSearchHttpError as e:
             logger.error(
                 "Failed to create/verify snapshot repository for %s. "

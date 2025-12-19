@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Utility functions for charms related operations."""
+import base64
 import json
 import logging
 import os
@@ -261,6 +262,31 @@ def diff(desired: Iterable[str], current: Iterable[str]) -> tuple[set[str], set[
     return add, remove
 
 
+def b64decode_to_text(content: str) -> str:
+    """If content looks like base64-encoded text, decode it; otherwise return as-is.
+
+    Args:
+        content: The string to decode.
+
+    Returns:
+        decoded_text: The decoded string.
+
+    Only returns decoded text if decoding works *and* the result is valid UTF-8.
+    """
+    s_stripped = content.strip()
+
+    # if it already looks like JSON, don't try base64.
+    if s_stripped.startswith("{") and s_stripped.endswith("}"):
+        return content
+
+    try:
+        decoded_bytes = base64.b64decode(s_stripped, validate=True)
+        decoded_text = decoded_bytes.decode("utf-8")
+        return decoded_text
+    except (ValueError, UnicodeDecodeError):
+        return content
+
+
 def write_gcs_service_account_json(
     secret_key: str,
     dst: str = "/var/snap/opensearch/common/home/snap_daemon/service_account.json",
@@ -270,7 +296,6 @@ def write_gcs_service_account_json(
     Args:
         secret_key: JSON string content of the service account.
         dst: Destination path.
-        mode: File permissions.
 
     Returns:
         Path to the written file.
@@ -279,11 +304,13 @@ def write_gcs_service_account_json(
         ValueError: if secret_key is empty or not valid JSON.
         OSError: if writing fails.
     """
-    if not secret_key:
+    if not secret_key or not secret_key.strip():
         raise ValueError("Missing GCS secret_key (service account JSON).")
 
+    candidate = b64decode_to_text(secret_key)
+
     try:
-        obj = json.loads(secret_key)
+        obj = json.loads(candidate)
         content = json.dumps(obj)
     except json.JSONDecodeError as e:
         raise ValueError("GCS secret_key is not valid JSON.") from e
