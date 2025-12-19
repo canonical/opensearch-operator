@@ -494,7 +494,7 @@ class AzureRelData(Model):
 class GcsRelDataCredentials(Model):
     """Model class for credentials passed on the gcs relation."""
 
-    secret_key: str = Field(alias="secret-key", default=None)
+    secret_key: Optional[str] = Field(alias="secret-key", default=None)
 
     class Config:
         """Model config of this pydantic model."""
@@ -512,13 +512,19 @@ class GcsRelData(Model):
     base_path: Optional[str] = Field(alias="path", default=None)
     storage_class: Optional[str] = Field(alias="storage-class", default=None)
     credentials: GcsRelDataCredentials = Field(
-        alias=GCS_CREDENTIALS, default=GcsRelDataCredentials()
+        alias=GCS_CREDENTIALS, default_factory=GcsRelDataCredentials
     )
+
+    class Config:
+        """Model config of this pydantic model."""
+
+        allow_population_by_field_name = True
 
     @root_validator
     def validate_core_fields(cls, values):  # noqa: N805
         """Validate the core fields of the gcs relation data."""
-        if not (creds := values.get("credentials")) or not creds.secret_key:
+        creds = values.get("credentials")
+        if not creds or not creds.secret_key:
             raise ValueError("Missing fields: secret-key")
 
         if not values.get("bucket"):
@@ -532,19 +538,16 @@ class GcsRelData(Model):
         return values
 
     @validator(GCS_CREDENTIALS, check_fields=False)
-    def ensure_secret_content(cls, conf: Dict[str, str] | GcsRelDataCredentials):  # noqa: N805
+    def ensure_secret_content(cls, conf: Dict[str, str] | GcsRelDataCredentials):  # noqa: N805):
         """Ensure the secret content is set."""
         if not conf:
             return None
 
-        data = conf
-        if isinstance(conf, dict):
-            data = GcsRelDataCredentials.from_dict(conf)
-
-        for value in data.dict(exclude_none=True).values():
-            if isinstance(value, str) and value.startswith("secret://"):
-                raise ValueError(f"The secret content must be passed, received {value} instead")
-        return data
+        data = conf if isinstance(conf, dict) else conf.dict(by_alias=True, exclude_none=True)
+        for v in data.values():
+            if isinstance(v, str) and v.startswith("secret://"):
+                raise ValueError(f"The secret content must be passed, received {v} instead")
+        return conf
 
     @classmethod
     def from_relation(cls, input_dict: Optional[Dict[str, Any]]):
@@ -553,11 +556,8 @@ class GcsRelData(Model):
         This method creates a nested GcsRelDataCredentials object from the input dict.
         """
         if not input_dict:
-            return cls()
-
-        creds_raw = input_dict.get(GCS_CREDENTIALS) or {}
-        creds = GcsRelDataCredentials.parse_obj(creds_raw)
-
+            return None
+        creds = GcsRelDataCredentials(**input_dict)
         merged = dict(input_dict)
         merged[GCS_CREDENTIALS] = creds.dict(by_alias=True, exclude_none=True)
         return cls.parse_obj(merged)
@@ -583,7 +583,7 @@ class PeerClusterRelDataCredentials(Model):
     admin_tls: Optional[Dict[str, Optional[str]]]
     s3: Optional[S3RelDataCredentials]
     azure: Optional[AzureRelDataCredentials]
-    gcs: Optional[GcsRelData]
+    gcs: Optional[GcsRelDataCredentials]
 
 
 class PeerClusterApp(Model):

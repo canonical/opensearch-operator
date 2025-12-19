@@ -263,7 +263,7 @@ def diff(desired: Iterable[str], current: Iterable[str]) -> tuple[set[str], set[
 
 def write_gcs_service_account_json(
     secret_key: str,
-    dst: str = "/var/snap/opensearch/common/service_account.json",
+    dst: str = "/var/snap/opensearch/common/home/snap_daemon/service_account.json",
 ) -> Path:
     """Write GCS service account JSON (from relation secret_key) to a file.
 
@@ -294,7 +294,7 @@ def write_gcs_service_account_json(
 
 
 def remove_gcs_service_account_json(
-    dst: str = "/var/snap/opensearch/common/service_account.json",
+    dst: str = "/var/snap/opensearch/common/home/snap_daemon/service_account.json",
 ) -> None:
     """Remove the GCS service account JSON file.
 

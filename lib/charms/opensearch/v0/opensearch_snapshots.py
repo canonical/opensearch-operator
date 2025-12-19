@@ -287,7 +287,7 @@ class OpenSearchSnapshotEvents(Object):
                 secret_key=object_storage_config.gcs.credentials.secret_key
             )
             self.charm.keystore_manager.put_file_entry(
-                key="gcs.client.default.secret_key", filename=sa_path
+                key="gcs.client.default.credentials_file", filename=sa_path
             )
 
         self.charm.opensearch_keystore_events.reload_event.emit()
@@ -358,7 +358,7 @@ class OpenSearchSnapshotEvents(Object):
         elif object_storage_type == ObjectStorageType.AZURE:
             keystore_entries = ["azure.client.default.account", "azure.client.default.key"]
         else:
-            keystore_entries = ["gcs.client.default.secret_key"]
+            keystore_entries = ["gcs.client.default.credentials_file"]
 
         if not self.charm.snapshots_manager.cleanup(
             object_storage_type=object_storage_type,
@@ -435,6 +435,7 @@ class OpenSearchSnapshotEvents(Object):
         else:
             object_storage_type_to_clean = []
 
+        keystore_entries_to_clean = []
         if info_to_save:
             for type_to_clean in object_storage_type_to_clean:
                 if type_to_clean == ObjectStorageType.AZURE:
@@ -449,7 +450,7 @@ class OpenSearchSnapshotEvents(Object):
                     ]
                 elif type_to_clean == ObjectStorageType.GCS:
                     keystore_entries_to_clean = [
-                        "gcs.client.default.secret_key",
+                        "gcs.client.default.credentials_file",
                     ]
                 if not self.charm.snapshots_manager.cleanup(
                     object_storage_type=type_to_clean,
@@ -484,7 +485,7 @@ class OpenSearchSnapshotEvents(Object):
             elif gcs_info:
                 sa_path = write_gcs_service_account_json(secret_key=gcs_info["secret_key"])
                 self.charm.keystore_manager.put_file_entry(
-                    key="gcs.client.default.secret_key", filename=sa_path
+                    key="gcs.client.default.credentials_file", filename=sa_path
                 )
 
             # Optional CA chain
@@ -530,7 +531,7 @@ class OpenSearchSnapshotEvents(Object):
         self.charm.snapshots_manager.cleanup(
             object_storage_type=ObjectStorageType.GCS,
             keystore_entries=[
-                "gcs.client.default.secret_key",
+                "gcs.client.default.credentials_file",
             ],
         )
 
@@ -607,7 +608,7 @@ class OpenSearchSnapshotEvents(Object):
         if not self.charm.snapshots_manager.cleanup(
             object_storage_type=ObjectStorageType.GCS,
             keystore_entries=[
-                "gcs.client.default.secret_key",
+                "gcs.client.default.credentials_file",
             ],
         ):
             if self.charm.unit.is_leader():
@@ -1106,7 +1107,7 @@ class OpenSearchSnapshotsManager:
             try:
                 gcs = GcsRelData.from_relation(info) if info else None
             except ValidationError as e:
-                logger.warning("validation error while building azure payload: %s", e)
+                logger.warning("validation error while building gcs payload: %s", e)
                 gcs = None
             return ObjectStorageConfig(gcs=gcs) if gcs else None
 
