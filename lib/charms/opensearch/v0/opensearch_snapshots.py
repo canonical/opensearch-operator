@@ -427,17 +427,17 @@ class OpenSearchSnapshotEvents(Object):
             info_to_save = None
 
         if s3_info:
-            object_storage_type_to_clean = [ObjectStorageType.AZURE, ObjectStorageType.GCS]
+            object_storage_types_to_clean = [ObjectStorageType.AZURE, ObjectStorageType.GCS]
         elif azure_info:
-            object_storage_type_to_clean = [ObjectStorageType.S3, ObjectStorageType.GCS]
+            object_storage_types_to_clean = [ObjectStorageType.S3, ObjectStorageType.GCS]
         elif gcs_info:
-            object_storage_type_to_clean = [ObjectStorageType.S3, ObjectStorageType.AZURE]
+            object_storage_types_to_clean = [ObjectStorageType.S3, ObjectStorageType.AZURE]
         else:
-            object_storage_type_to_clean = []
+            object_storage_types_to_clean = []
 
         keystore_entries_to_clean = []
         if info_to_save:
-            for type_to_clean in object_storage_type_to_clean:
+            for type_to_clean in object_storage_types_to_clean:
                 if type_to_clean == ObjectStorageType.AZURE:
                     keystore_entries_to_clean = [
                         "azure.client.default.account",

@@ -2,6 +2,8 @@
 # See LICENSE file for licensing details.
 
 """Cluster-related data structures / model classes."""
+import base64
+import binascii
 import json
 import logging
 import re
@@ -500,6 +502,32 @@ class GcsRelDataCredentials(Model):
         """Model config of this pydantic model."""
 
         allow_population_by_field_name = True
+
+    @validator("secret_key", pre=True)
+    def _normalize_secret_key(cls, v):  # noqa: N805
+        """Accept either raw JSON or base64-encoded JSON"""
+        if v is None:
+            return None
+
+        content = v.decode() if isinstance(v, (bytes, bytearray)) else str(v)
+        content = content.strip()
+        if not content:
+            return None
+
+        # already JSON
+        if content.startswith("{") and content.endswith("}"):
+            # validate JSON shape
+            json.loads(content)
+            return content
+
+        # base64 (urlsafe)
+        try:
+            decoded_bytes = base64.b64decode(content, altchars=b"-_", validate=True)
+            decoded_text = decoded_bytes.decode("utf-8").strip()
+            json.loads(decoded_text)
+            return decoded_text
+        except (binascii.Error, ValueError, UnicodeDecodeError, json.JSONDecodeError) as e:
+            raise ValueError("secret-key is not valid JSON (raw or base64-encoded)") from e
 
 
 class GcsRelData(Model):
