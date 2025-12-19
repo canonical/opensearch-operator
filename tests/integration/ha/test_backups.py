@@ -541,7 +541,7 @@ async def test_large_setups_relations_with_misconfiguration(
                 {
                     "type": "service_account",
                     "project_id": "fake-project",
-                    "private_key_id": "deadbeef",
+                    "private_key_id": "fake-id",
                     "private_key": "-----BEGIN PRIVATE KEY-----\nFAKE\n-----END PRIVATE KEY-----\n",
                     "client_email": "fake@fake-project.iam.gserviceaccount.com",
                     "client_id": "1234567890",
