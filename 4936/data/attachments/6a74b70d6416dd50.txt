@@ -1,0 +1,1243 @@
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  02:00:06Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch-data                    active       1  opensearch                            2  no       
+opensearch-failover                waiting      1  opensearch                            1  no       TLS not fully configured in related 'main-orchestrator'.
+opensearch-main                    active       3  opensearch                            0  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch-data/0*           active    executing  2        10.204.149.183  9200/tcp  
+opensearch-failover/0*       active    executing  1        10.204.149.58   9200/tcp  
+opensearch-main/0            active    executing  3        10.204.149.241  9200/tcp  
+opensearch-main/1*           active    executing  4        10.204.149.144  9200/tcp  
+opensearch-main/2            active    executing  5        10.204.149.22   9200/tcp  
+self-signed-certificates/0*  active    executing  0        10.204.149.52             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.204.149.52   juju-204a28-0  ubuntu@24.04  github-runner  Running
+1        started  10.204.149.58   juju-204a28-1  ubuntu@24.04  github-runner  Running
+2        started  10.204.149.183  juju-204a28-2  ubuntu@24.04  github-runner  Running
+3        started  10.204.149.241  juju-204a28-3  ubuntu@24.04  github-runner  Running
+4        started  10.204.149.144  juju-204a28-4  ubuntu@24.04  github-runner  Running
+5        started  10.204.149.22   juju-204a28-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:00:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:00:06)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:00:06)] active: 
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:00:06)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:00:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:00:07)] waiting: The OpenSearch service is stopping.
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:00:17)] maintenance: Applying new CA certificate...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:00:15)] maintenance: Applying new CA certificate...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:00:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:00:07)] waiting: The OpenSearch service stopped.
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:00:27)] maintenance: Applying new CA certificate...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:00:28)] maintenance: Applying new CA certificate...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:00:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:00:07)] waiting: The OpenSearch service stopped.
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:00:37)] maintenance: Applying new CA certificate...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:00:39)] maintenance: Applying new CA certificate...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:00:50 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:00:07)] waiting: The OpenSearch service stopped.
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:00:51)] maintenance: Applying new CA certificate...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:00:45)] maintenance: Applying new CA certificate...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:01:01 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:00:07)] waiting: The OpenSearch service stopped.
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:00:55)] maintenance: Applying new CA certificate...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:00:45)] maintenance: Applying new CA certificate...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:01:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:00:07)] waiting: The OpenSearch service stopped.
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:00:55)] maintenance: Applying new CA certificate...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:00:45)] maintenance: Applying new CA certificate...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:01:23 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:00:07)] waiting: Waiting for OpenSearch to start...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:00:55)] maintenance: Applying new CA certificate...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:00:45)] maintenance: Applying new CA certificate...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:01:34 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:00:07)] waiting: Waiting for OpenSearch to start...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:00:55)] maintenance: Applying new CA certificate...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:00:45)] maintenance: Applying new CA certificate...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:01:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:01:44)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:01:42)] maintenance: Applying new CA certificate...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:01:36)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:01:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:01:56)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:01:49)] maintenance: Applying new CA certificate...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:01:36)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:02:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:02:00)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:01:58)] maintenance: Applying new CA certificate...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:01:36)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:02:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:02:00)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:01:58)] maintenance: Applying new CA certificate...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:01:36)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:02:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:02:00)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:01:58)] maintenance: Applying new CA certificate...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:01:36)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:02:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:02:00)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:01:58)] maintenance: Applying new CA certificate...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:01:36)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:02:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:02:00)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:01:58)] maintenance: Applying new CA certificate...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:01:36)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:03:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:02:00)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:01:58)] maintenance: Applying new CA certificate...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:01:36)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:03:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:03:09)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:03:04)] waiting: The OpenSearch service is stopping.
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:03:13)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:03:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:03:09)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:03:04)] waiting: The OpenSearch service stopped.
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:03:22)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:03:35 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:03:09)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:03:04)] waiting: The OpenSearch service stopped.
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:03:22)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:03:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:03:09)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:03:04)] waiting: The OpenSearch service stopped.
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:03:22)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:03:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:03:09)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:03:04)] waiting: The OpenSearch service stopped.
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:03:22)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:04:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:03:09)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:03:04)] waiting: The OpenSearch service stopped.
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:03:22)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:04:19 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:03:09)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:03:04)] waiting: Waiting for OpenSearch to start...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:03:22)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:04:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:03:09)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:03:04)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:03:22)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:04:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:04:39)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:04:39)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:04:39)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:04:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:04:42)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:04:49)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:04:42)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:05:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:05:00)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:05:02)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:05:01)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:05:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:05:00)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:05:02)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:05:01)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:05:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:05:00)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:05:02)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:05:01)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:05:35 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:05:00)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:05:02)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:05:01)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:05:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:05:00)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:05:02)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:05:01)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:05:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:05:00)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:05:02)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:05:01)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:06:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:06:01)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:06:06)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:06:01)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:06:19 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:06:01)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:06:06)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:06:01)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:06:30 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:06:01)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:06:06)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:06:01)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:06:41 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:06:01)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:06:06)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:06:01)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:06:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:06:01)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:06:06)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:06:01)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:07:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:06:01)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:06:06)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:06:01)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:07:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:06:01)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:06:06)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:06:01)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:07:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:06:01)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:06:06)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:06:01)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:07:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:07:30)] waiting: The OpenSearch service is stopping.
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:07:30)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:07:36)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:07:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:07:30)] waiting: The OpenSearch service stopped.
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:07:48)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:07:47)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:07:59 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:07:30)] waiting: The OpenSearch service stopped.
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:07:48)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:07:47)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:08:10 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:07:30)] waiting: The OpenSearch service stopped.
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:07:48)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:07:47)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:08:21 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:07:30)] waiting: The OpenSearch service stopped.
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:07:48)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:07:47)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:08:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:07:30)] waiting: The OpenSearch service stopped.
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:07:48)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:07:47)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:08:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:07:30)] waiting: Waiting for OpenSearch to start...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:07:48)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:07:47)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:08:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:07:30)] waiting: Waiting for OpenSearch to start...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:07:48)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:07:47)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:09:05 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:09:05)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:09:05)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:09:00)] waiting: The OpenSearch service is stopping.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:09:16 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [executing (since: 02:09:16)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:09:14)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:09:00)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:09:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:09:18)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:09:14)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:09:00)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:09:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:09:31)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:09:33)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:09:00)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:09:50 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:09:31)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:09:33)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:09:00)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:10:01 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:09:31)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:09:33)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:09:00)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:10:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:09:31)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:09:33)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:09:00)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:10:23 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:10:21)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:10:20)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:09:00)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:10:34 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:10:34)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:10:34)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [executing (since: 02:10:33)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:10:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:10:40)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:10:43)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:10:41)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:10:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:10:40)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:10:43)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:10:41)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:11:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:10:40)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:10:43)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:10:41)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:11:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:10:40)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:10:43)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:10:41)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:11:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:10:40)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:10:43)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:10:41)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:11:41 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:10:40)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:10:43)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:10:41)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:11:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:10:40)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:10:43)] maintenance: Waiting for TLS to be fully configured...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:10:41)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:12:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:12:01)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:12:00)] waiting: The OpenSearch service is stopping.
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:12:01)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:12:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:12:01)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:12:00)] waiting: The OpenSearch service stopped.
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:12:01)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:12:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:12:01)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:12:00)] waiting: The OpenSearch service stopped.
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:12:01)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:12:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:12:01)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:12:00)] waiting: The OpenSearch service stopped.
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:12:01)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:12:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:12:01)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:12:00)] waiting: The OpenSearch service stopped.
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:12:01)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:12:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:12:01)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:12:00)] waiting: The OpenSearch service stopped.
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:12:01)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:13:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:12:01)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:12:00)] waiting: The OpenSearch service stopped.
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:12:01)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:13:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:12:01)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [executing (since: 02:12:00)] waiting: Waiting for OpenSearch to start...
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:12:01)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:13:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:13:30)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:13:28)] active: 
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:13:30)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:13:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:13:30)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:13:28)] active: 
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:13:30)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:13:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:13:30)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:13:28)] active: 
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:13:30)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:14:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:13:30)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:13:28)] active: 
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:13:30)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:14:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:13:30)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:13:28)] active: 
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:13:30)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:14:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:13:30)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:13:28)] active: 
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:13:30)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:14:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:13:30)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:13:28)] active: 
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:13:30)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:14:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-data - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-data-0.5c8* -- (10.204.149.183) -- [executing (since: 02:13:28)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:14:59 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-data - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-data-0.5c8* -- (10.204.149.183) -- [executing (since: 02:13:28)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:15:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:15:06)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:15:07)] active: 
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:15:06)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:15:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:15:06)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:15:07)] active: 
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:15:06)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:15:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:15:06)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:15:07)] active: 
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:15:06)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:15:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:15:06)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:15:07)] active: 
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:15:06)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:15:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:15:06)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:15:07)] active: 
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:15:06)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:16:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:15:06)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:15:07)] active: 
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:15:06)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:16:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.42c  -- (10.204.149.241) -- [idle (since: 02:15:06)] active: 
+		opensearch-main-1.42c* -- (10.204.149.144) -- [idle (since: 02:15:07)] active: 
+		opensearch-main-2.42c  -- (10.204.149.22) -- [idle (since: 02:15:06)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:16:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-data - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-data-0.5c8* -- (10.204.149.183) -- [idle (since: 02:15:35)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:16:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-data - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-data-0.5c8* -- (10.204.149.183) -- [idle (since: 02:15:35)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+02:16:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 02:16:54 -- Waiting for model: complete.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  02:17:46Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch-data                    active      1  opensearch                            2  no       
+opensearch-failover                active      1  opensearch                            1  no       
+opensearch-main                    active      3  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch-data/0*           active    idle   2        10.204.149.183  9200/tcp  
+opensearch-failover/0*       active    idle   1        10.204.149.58   9200/tcp  
+opensearch-main/0            active    idle   3        10.204.149.241  9200/tcp  
+opensearch-main/1*           active    idle   4        10.204.149.144  9200/tcp  
+opensearch-main/2            active    idle   5        10.204.149.22   9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.204.149.52             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.204.149.52   juju-204a28-0  ubuntu@24.04  github-runner  Running
+1        started  10.204.149.58   juju-204a28-1  ubuntu@24.04  github-runner  Running
+2        started  10.204.149.183  juju-204a28-2  ubuntu@24.04  github-runner  Running
+3        started  10.204.149.241  juju-204a28-3  ubuntu@24.04  github-runner  Running
+4        started  10.204.149.144  juju-204a28-4  ubuntu@24.04  github-runner  Running
+5        started  10.204.149.22   juju-204a28-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 01:52:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:52:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:52:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:52:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:52:36 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:52:36 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:52:39 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:52:39 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:52:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:52:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:52:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:52:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:53:53 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:54:03 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:54:20 ERROR unit.self-signed-certificates/0.juju-log certificates:10: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:54:42 ERROR unit.self-signed-certificates/0.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 01:54:47 ERROR unit.opensearch-data/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:54:47 ERROR unit.opensearch-data/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:54:48 ERROR unit.opensearch-data/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:54:48 ERROR unit.opensearch-data/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:54:49 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:54:49 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:54:49 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:54:49 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:55:00 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:55:01 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:55:01 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:55:01 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 01:55:05 ERROR unit.self-signed-certificates/0.juju-log certificates:10: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 01:55:11 ERROR unit.opensearch-data/0.juju-log certificates:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:55:11 ERROR unit.opensearch-data/0.juju-log certificates:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:55:12 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:55:12 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:55:12 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:55:12 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 01:55:13 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:55:17 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 01:55:22 ERROR unit.opensearch-data/0.juju-log certificates:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:55:22 ERROR unit.opensearch-data/0.juju-log certificates:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:55:23 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:55:23 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:55:23 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:55:23 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:55:33 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:55:33 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:55:33 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:55:33 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 01:55:33 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:55:35 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 01:55:43 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:55:43 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:55:43 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:55:43 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:55:52 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:55:52 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:55:52 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:55:52 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:56:02 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:56:02 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:56:02 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:56:02 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:56:12 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:56:12 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:56:14 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:56:14 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:56:14 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:56:14 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 01:56:28 ERROR unit.self-signed-certificates/0.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:56:49 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:59:59 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:00:03 ERROR unit.self-signed-certificates/0.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:00:05 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:00:07 ERROR unit.self-signed-certificates/0.juju-log certificates:10: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:00:09 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:00:11 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:01:37 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:01:59 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:03:05 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:04:33 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:05:59 ERROR unit.self-signed-certificates/0.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:06:57 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:07:31 ERROR unit.self-signed-certificates/0.juju-log certificates:10: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-main-0: 02:07:34 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:13: Error reloading TLS certificates via API: HTTP error self.response_code=500
+self.response_body={'error': {'root_cause': [{'type': 'exception', 'reason': 'java.security.cert.CertificateException: New certificates do not have valid Issuer DNs. Current Issuer DNs: [CN=CN_CA] new Issuer DNs: [CN=NEW_CA]'}], 'type': 'exception', 'reason': 'java.security.cert.CertificateException: New certificates do not have valid Issuer DNs. Current Issuer DNs: [CN=CN_CA] new Issuer DNs: [CN=NEW_CA]', 'caused_by': {'type': 'certificate_exception', 'reason': 'New certificates do not have valid Issuer DNs. Current Issuer DNs: [CN=CN_CA] new Issuer DNs: [CN=NEW_CA]'}}, 'status': 500}
+unit-opensearch-main-0: 02:07:34 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:13: Could not reload TLS certificates via API, will restart.
+unit-opensearch-main-2: 02:07:34 ERROR unit.opensearch-main/2.juju-log peer-cluster-orchestrator:13: Error reloading TLS certificates via API: HTTP error self.response_code=500
+self.response_body={'error': {'root_cause': [{'type': 'exception', 'reason': 'java.security.cert.CertificateException: New certificates do not have valid Issuer DNs. Current Issuer DNs: [CN=CN_CA] new Issuer DNs: [CN=NEW_CA]'}], 'type': 'exception', 'reason': 'java.security.cert.CertificateException: New certificates do not have valid Issuer DNs. Current Issuer DNs: [CN=CN_CA] new Issuer DNs: [CN=NEW_CA]', 'caused_by': {'type': 'certificate_exception', 'reason': 'New certificates do not have valid Issuer DNs. Current Issuer DNs: [CN=CN_CA] new Issuer DNs: [CN=NEW_CA]'}}, 'status': 500}
+unit-opensearch-main-2: 02:07:34 ERROR unit.opensearch-main/2.juju-log peer-cluster-orchestrator:13: Could not reload TLS certificates via API, will restart.
+unit-opensearch-main-1: 02:07:35 ERROR unit.opensearch-main/1.juju-log peer-cluster-orchestrator:13: Error reloading TLS certificates via API: HTTP error self.response_code=500
+self.response_body={'error': {'root_cause': [{'type': 'exception', 'reason': 'java.security.cert.CertificateException: New certificates do not have valid Issuer DNs. Current Issuer DNs: [CN=CN_CA] new Issuer DNs: [CN=NEW_CA]'}], 'type': 'exception', 'reason': 'java.security.cert.CertificateException: New certificates do not have valid Issuer DNs. Current Issuer DNs: [CN=CN_CA] new Issuer DNs: [CN=NEW_CA]', 'caused_by': {'type': 'certificate_exception', 'reason': 'New certificates do not have valid Issuer DNs. Current Issuer DNs: [CN=CN_CA] new Issuer DNs: [CN=NEW_CA]'}}, 'status': 500}
+unit-opensearch-main-1: 02:07:35 ERROR unit.opensearch-main/1.juju-log peer-cluster-orchestrator:13: Could not reload TLS certificates via API, will restart.
+unit-opensearch-main-2: 02:07:41 ERROR unit.opensearch-main/2.juju-log opensearch-peers:0: Error reloading TLS certificates via API: HTTP error self.response_code=500
+self.response_body={'error': {'root_cause': [{'type': 'exception', 'reason': 'java.security.cert.CertificateException: New certificates do not have valid Issuer DNs. Current Issuer DNs: [CN=CN_CA] new Issuer DNs: [CN=NEW_CA]'}], 'type': 'exception', 'reason': 'java.security.cert.CertificateException: New certificates do not have valid Issuer DNs. Current Issuer DNs: [CN=CN_CA] new Issuer DNs: [CN=NEW_CA]', 'caused_by': {'type': 'certificate_exception', 'reason': 'New certificates do not have valid Issuer DNs. Current Issuer DNs: [CN=CN_CA] new Issuer DNs: [CN=NEW_CA]'}}, 'status': 500}
+unit-opensearch-main-2: 02:07:41 ERROR unit.opensearch-main/2.juju-log opensearch-peers:0: Could not reload TLS certificates via API, will restart.
+unit-opensearch-main-1: 02:07:42 ERROR unit.opensearch-main/1.juju-log opensearch-peers:0: Error reloading TLS certificates via API: HTTP error self.response_code=500
+self.response_body={'error': {'root_cause': [{'type': 'exception', 'reason': 'java.security.cert.CertificateException: New certificates do not have valid Issuer DNs. Current Issuer DNs: [CN=CN_CA] new Issuer DNs: [CN=NEW_CA]'}], 'type': 'exception', 'reason': 'java.security.cert.CertificateException: New certificates do not have valid Issuer DNs. Current Issuer DNs: [CN=CN_CA] new Issuer DNs: [CN=NEW_CA]', 'caused_by': {'type': 'certificate_exception', 'reason': 'New certificates do not have valid Issuer DNs. Current Issuer DNs: [CN=CN_CA] new Issuer DNs: [CN=NEW_CA]'}}, 'status': 500}
+unit-opensearch-main-1: 02:07:42 ERROR unit.opensearch-main/1.juju-log opensearch-peers:0: Could not reload TLS certificates via API, will restart.
+unit-self-signed-certificates-0: 02:09:01 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-failover-0: 02:09:25 ERROR unit.opensearch-failover/0.juju-log peer-cluster:13: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.58:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-failover-0: 02:09:25 ERROR unit.opensearch-failover/0.juju-log peer-cluster:13: Keystore reload failed.
+unit-opensearch-failover-0: 02:09:26 ERROR unit.opensearch-failover/0.juju-log Error reloading TLS certificates via API: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.58:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-failover-0: 02:09:26 ERROR unit.opensearch-failover/0.juju-log Could not reload TLS certificates via API, will restart.
+unit-opensearch-failover-0: 02:09:28 ERROR unit.opensearch-failover/0.juju-log Error reloading TLS certificates via API: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.58:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-failover-0: 02:09:28 ERROR unit.opensearch-failover/0.juju-log Could not reload TLS certificates via API, will restart.
+unit-opensearch-failover-0: 02:09:29 ERROR unit.opensearch-failover/0.juju-log Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.58:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-failover-0: 02:09:29 ERROR unit.opensearch-failover/0.juju-log Keystore reload failed.
+unit-opensearch-failover-0: 02:09:31 ERROR unit.opensearch-failover/0.juju-log peer-cluster:13: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.58:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-failover-0: 02:09:31 ERROR unit.opensearch-failover/0.juju-log peer-cluster:13: Keystore reload failed.
+unit-opensearch-failover-0: 02:09:43 ERROR unit.opensearch-failover/0.juju-log Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.58:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-failover-0: 02:09:43 ERROR unit.opensearch-failover/0.juju-log Keystore reload failed.
+unit-opensearch-failover-0: 02:09:46 ERROR unit.opensearch-failover/0.juju-log peer-cluster:13: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.58:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-failover-0: 02:09:46 ERROR unit.opensearch-failover/0.juju-log peer-cluster:13: Keystore reload failed.
+unit-opensearch-failover-0: 02:09:58 ERROR unit.opensearch-failover/0.juju-log opensearch-peers:5: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.58:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-failover-0: 02:09:58 ERROR unit.opensearch-failover/0.juju-log opensearch-peers:5: Keystore reload failed.
+unit-opensearch-failover-0: 02:10:01 ERROR unit.opensearch-failover/0.juju-log opensearch-peers:5: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.58:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-failover-0: 02:10:01 ERROR unit.opensearch-failover/0.juju-log opensearch-peers:5: Keystore reload failed.
+unit-opensearch-data-0: 02:10:16 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.183:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-data-0: 02:10:16 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Keystore reload failed.
+unit-opensearch-data-0: 02:10:17 ERROR unit.opensearch-data/0.juju-log Error reloading TLS certificates via API: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.183:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-data-0: 02:10:17 ERROR unit.opensearch-data/0.juju-log Could not reload TLS certificates via API, will restart.
+unit-opensearch-data-0: 02:10:18 ERROR unit.opensearch-data/0.juju-log Error reloading TLS certificates via API: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.183:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-data-0: 02:10:18 ERROR unit.opensearch-data/0.juju-log Could not reload TLS certificates via API, will restart.
+unit-opensearch-data-0: 02:10:19 ERROR unit.opensearch-data/0.juju-log Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.183:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-data-0: 02:10:19 ERROR unit.opensearch-data/0.juju-log Keystore reload failed.
+unit-opensearch-data-0: 02:10:22 ERROR unit.opensearch-data/0.juju-log opensearch-peers:7: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.183:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-failover-0: 02:10:22 ERROR unit.opensearch-failover/0.juju-log peer-cluster-orchestrator:14: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.58:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-data-0: 02:10:22 ERROR unit.opensearch-data/0.juju-log opensearch-peers:7: Keystore reload failed.
+unit-opensearch-failover-0: 02:10:22 ERROR unit.opensearch-failover/0.juju-log peer-cluster-orchestrator:14: Keystore reload failed.
+unit-opensearch-data-0: 02:10:25 ERROR unit.opensearch-data/0.juju-log Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.183:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-data-0: 02:10:25 ERROR unit.opensearch-data/0.juju-log Keystore reload failed.
+unit-opensearch-failover-0: 02:10:25 ERROR unit.opensearch-failover/0.juju-log peer-cluster:13: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.58:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-failover-0: 02:10:25 ERROR unit.opensearch-failover/0.juju-log peer-cluster:13: Keystore reload failed.
+unit-opensearch-data-0: 02:10:28 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.183:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-data-0: 02:10:28 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Keystore reload failed.
+unit-self-signed-certificates-0: 02:10:29 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 02:10:41 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.183:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-data-0: 02:10:41 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Keystore reload failed.
+unit-opensearch-data-0: 02:10:53 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.183:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-data-0: 02:10:53 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Keystore reload failed.
+unit-opensearch-data-0: 02:11:05 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.183:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-data-0: 02:11:05 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Keystore reload failed.
+unit-opensearch-data-0: 02:11:17 ERROR unit.opensearch-data/0.juju-log opensearch-peers:7: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.183:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-data-0: 02:11:17 ERROR unit.opensearch-data/0.juju-log opensearch-peers:7: Keystore reload failed.
+unit-opensearch-data-0: 02:11:19 ERROR unit.opensearch-data/0.juju-log opensearch-peers:7: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.183:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-data-0: 02:11:19 ERROR unit.opensearch-data/0.juju-log opensearch-peers:7: Keystore reload failed.
+unit-opensearch-data-0: 02:11:38 ERROR unit.opensearch-data/0.juju-log Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.183:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-data-0: 02:11:38 ERROR unit.opensearch-data/0.juju-log Keystore reload failed.
+unit-opensearch-data-0: 02:12:02 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.183:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-data-0: 02:12:02 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Keystore reload failed.
+unit-self-signed-certificates-0: 02:12:03 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 02:12:15 ERROR unit.opensearch-data/0.juju-log opensearch-peers:7: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.183:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-data-0: 02:12:15 ERROR unit.opensearch-data/0.juju-log opensearch-peers:7: Keystore reload failed.
+unit-opensearch-data-0: 02:12:18 ERROR unit.opensearch-data/0.juju-log opensearch-peers:7: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.183:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-data-0: 02:12:18 ERROR unit.opensearch-data/0.juju-log opensearch-peers:7: Keystore reload failed.
+unit-opensearch-data-0: 02:13:29 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Could not reload secure settings: HTTP error self.response_code=None
+self.response_text='Host 10.204.149.183:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-data-0: 02:13:29 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Keystore reload failed.
+unit-self-signed-certificates-0: 02:16:24 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
