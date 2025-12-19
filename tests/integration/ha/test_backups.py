@@ -16,6 +16,7 @@ different cloud.
 """
 
 import asyncio
+import json
 import logging
 import os
 import random
@@ -535,7 +536,19 @@ async def test_large_setups_relations_with_misconfiguration(
         if "gcs" not in cloud_configs or "gcs" not in cloud_credentials:
             pytest.skip("GCS config/credentials not available.")
         bad_config = {"bucket": "error", "path": BackupsPath}
-        bad_credentials = {"secret-key": "not-json"}
+        bad_credentials = {
+            "secret-key": json.dumps(
+                {
+                    "type": "service_account",
+                    "project_id": "fake-project",
+                    "private_key_id": "deadbeef",
+                    "private_key": "-----BEGIN PRIVATE KEY-----\nFAKE\n-----END PRIVATE KEY-----\n",
+                    "client_email": "fake@fake-project.iam.gserviceaccount.com",
+                    "client_id": "1234567890",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                }
+            )
+        }
         await _configure_gcs(ops_test=ops_test, config=bad_config, credentials=bad_credentials)
         logger.info("GCS cloud is selected.")
     elif cloud_name == "aws":
