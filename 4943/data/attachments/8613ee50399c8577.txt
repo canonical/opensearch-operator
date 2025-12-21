@@ -1,0 +1,394 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  02:11:58Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch-data                    active      1  opensearch                            2  no       
+opensearch-failover                active      1  opensearch                            1  no       
+opensearch-main                    active      3  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch-data/0*           error     idle   1        10.149.237.131            hook failed: "peer-cluster-relation-changed"
+opensearch-failover/0*       active    idle   2        10.149.237.136  9200/tcp  
+opensearch-main/0            active    idle   3        10.149.237.59   9200/tcp  
+opensearch-main/1*           active    idle   4        10.149.237.68   9200/tcp  
+opensearch-main/2            active    idle   5        10.149.237.74   9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.149.237.79             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.149.237.79   juju-039803-0  ubuntu@24.04  github-runner  Running
+1        started  10.149.237.131  juju-039803-1  ubuntu@24.04  github-runner  Running
+2        started  10.149.237.136  juju-039803-2  ubuntu@24.04  github-runner  Running
+3        started  10.149.237.59   juju-039803-3  ubuntu@24.04  github-runner  Running
+4        started  10.149.237.68   juju-039803-4  ubuntu@24.04  github-runner  Running
+5        started  10.149.237.74   juju-039803-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 01:52:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:52:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:52:23 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:52:23 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:52:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:52:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:52:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:52:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:52:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:52:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:52:36 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:52:36 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:53:39 ERROR unit.self-signed-certificates/0.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 01:53:45 ERROR unit.opensearch-data/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:53:45 ERROR unit.opensearch-data/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:53:46 ERROR unit.opensearch-data/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:53:46 ERROR unit.opensearch-data/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:53:47 ERROR unit.opensearch-data/0.juju-log certificates:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:53:47 ERROR unit.opensearch-data/0.juju-log certificates:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:53:48 ERROR unit.opensearch-data/0.juju-log certificates:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:53:48 ERROR unit.opensearch-data/0.juju-log certificates:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:53:49 ERROR unit.opensearch-data/0.juju-log upgrade-version-a:0: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:53:49 ERROR unit.opensearch-data/0.juju-log upgrade-version-a:0: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:53:50 ERROR unit.opensearch-data/0.juju-log opensearch-peers:1: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:53:50 ERROR unit.opensearch-data/0.juju-log opensearch-peers:1: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:53:50 ERROR unit.opensearch-data/0.juju-log opensearch-peers:1: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:53:50 ERROR unit.opensearch-data/0.juju-log opensearch-peers:1: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 01:53:51 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 01:53:51 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:53:51 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:53:52 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:53:52 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:53:52 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:53:52 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 01:53:53 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 01:54:03 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:54:03 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:54:04 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:54:04 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:54:04 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:54:04 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 01:54:04 ERROR unit.self-signed-certificates/0.juju-log certificates:10: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 01:54:13 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:54:13 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:54:14 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:54:14 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:54:14 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:54:14 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 01:54:16 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:54:26 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:54:27 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:54:28 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 01:55:13 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/src/charm.py", line 217, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 475, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 459, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 403, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 438, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1162, in _on_peer_cluster_relation_changed
+    self._set_security_conf(data)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1278, in _set_security_conf
+    self.charm.tls.store_new_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 630, in store_new_tls_resources
+    store_key_pair(
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/helper_security.py", line 535, in store_key_pair
+    tmp_cert.write(cert)
+  File "/usr/lib/python3.12/tempfile.py", line 638, in func_wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+TypeError: write() argument must be str, not None
+unit-opensearch-data-0: 01:55:14 ERROR juju.worker.uniter.operation hook "peer-cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-data-0: 01:55:20 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/src/charm.py", line 217, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 475, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 459, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 403, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 438, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1162, in _on_peer_cluster_relation_changed
+    self._set_security_conf(data)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1278, in _set_security_conf
+    self.charm.tls.store_new_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 630, in store_new_tls_resources
+    store_key_pair(
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/helper_security.py", line 535, in store_key_pair
+    tmp_cert.write(cert)
+  File "/usr/lib/python3.12/tempfile.py", line 638, in func_wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+TypeError: write() argument must be str, not None
+unit-opensearch-data-0: 01:55:20 ERROR juju.worker.uniter.operation hook "peer-cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-data-0: 01:55:32 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/src/charm.py", line 217, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 475, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 459, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 403, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 438, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1162, in _on_peer_cluster_relation_changed
+    self._set_security_conf(data)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1278, in _set_security_conf
+    self.charm.tls.store_new_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 630, in store_new_tls_resources
+    store_key_pair(
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/helper_security.py", line 535, in store_key_pair
+    tmp_cert.write(cert)
+  File "/usr/lib/python3.12/tempfile.py", line 638, in func_wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+TypeError: write() argument must be str, not None
+unit-opensearch-data-0: 01:55:32 ERROR juju.worker.uniter.operation hook "peer-cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-self-signed-certificates-0: 01:55:37 ERROR unit.self-signed-certificates/0.juju-log certificates:10: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 01:55:53 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/src/charm.py", line 217, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 475, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 459, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 403, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 438, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1162, in _on_peer_cluster_relation_changed
+    self._set_security_conf(data)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1278, in _set_security_conf
+    self.charm.tls.store_new_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 630, in store_new_tls_resources
+    store_key_pair(
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/helper_security.py", line 535, in store_key_pair
+    tmp_cert.write(cert)
+  File "/usr/lib/python3.12/tempfile.py", line 638, in func_wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+TypeError: write() argument must be str, not None
+unit-opensearch-data-0: 01:55:53 ERROR juju.worker.uniter.operation hook "peer-cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-data-0: 01:56:35 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/src/charm.py", line 217, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 475, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 459, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 403, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 438, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1162, in _on_peer_cluster_relation_changed
+    self._set_security_conf(data)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1278, in _set_security_conf
+    self.charm.tls.store_new_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 630, in store_new_tls_resources
+    store_key_pair(
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/helper_security.py", line 535, in store_key_pair
+    tmp_cert.write(cert)
+  File "/usr/lib/python3.12/tempfile.py", line 638, in func_wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+TypeError: write() argument must be str, not None
+unit-opensearch-data-0: 01:56:35 ERROR juju.worker.uniter.operation hook "peer-cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-self-signed-certificates-0: 01:56:49 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 01:57:56 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/src/charm.py", line 217, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 475, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 459, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 403, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 438, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1162, in _on_peer_cluster_relation_changed
+    self._set_security_conf(data)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1278, in _set_security_conf
+    self.charm.tls.store_new_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 630, in store_new_tls_resources
+    store_key_pair(
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/helper_security.py", line 535, in store_key_pair
+    tmp_cert.write(cert)
+  File "/usr/lib/python3.12/tempfile.py", line 638, in func_wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+TypeError: write() argument must be str, not None
+unit-opensearch-data-0: 01:57:57 ERROR juju.worker.uniter.operation hook "peer-cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-data-0: 02:00:39 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/src/charm.py", line 217, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 475, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 459, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 403, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 438, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1162, in _on_peer_cluster_relation_changed
+    self._set_security_conf(data)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1278, in _set_security_conf
+    self.charm.tls.store_new_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 630, in store_new_tls_resources
+    store_key_pair(
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/helper_security.py", line 535, in store_key_pair
+    tmp_cert.write(cert)
+  File "/usr/lib/python3.12/tempfile.py", line 638, in func_wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+TypeError: write() argument must be str, not None
+unit-opensearch-data-0: 02:00:40 ERROR juju.worker.uniter.operation hook "peer-cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-self-signed-certificates-0: 02:00:58 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:05:04 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 02:05:41 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/src/charm.py", line 217, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 475, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 459, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 403, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 438, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1162, in _on_peer_cluster_relation_changed
+    self._set_security_conf(data)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1278, in _set_security_conf
+    self.charm.tls.store_new_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 630, in store_new_tls_resources
+    store_key_pair(
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/helper_security.py", line 535, in store_key_pair
+    tmp_cert.write(cert)
+  File "/usr/lib/python3.12/tempfile.py", line 638, in func_wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+TypeError: write() argument must be str, not None
+unit-opensearch-data-0: 02:05:41 ERROR juju.worker.uniter.operation hook "peer-cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-data-0: 02:10:42 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/src/charm.py", line 217, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 475, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 459, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 403, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 438, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1162, in _on_peer_cluster_relation_changed
+    self._set_security_conf(data)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_relation_peer_cluster.py", line 1278, in _set_security_conf
+    self.charm.tls.store_new_tls_resources(CertType.APP_ADMIN, data.credentials.admin_tls)
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/opensearch_tls.py", line 630, in store_new_tls_resources
+    store_key_pair(
+  File "/var/lib/juju/agents/unit-opensearch-data-0/charm/lib/charms/opensearch/v0/helper_security.py", line 535, in store_key_pair
+    tmp_cert.write(cert)
+  File "/usr/lib/python3.12/tempfile.py", line 638, in func_wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+TypeError: write() argument must be str, not None
+unit-opensearch-data-0: 02:10:42 ERROR juju.worker.uniter.operation hook "peer-cluster-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-self-signed-certificates-0: 02:11:03 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
