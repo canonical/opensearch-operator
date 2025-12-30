@@ -1,0 +1,289 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'opensearch': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'active', 'since': '30 Dec 2025 01:47:48Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 's3-credentials': [{'related-application': 's3-integrator', 'interface': 's3', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/0': {'workload-status': {'current': 'active', 'since': '30 Dec 2025 01:47:48Z'}, 'juju-status': {'current': 'idle', 'since': '30 Dec 2025 01:47:54Z', 'version': '3.6.12'}, 'leader': True, 'machine': '2', 'open-ports': ['9200/tcp'], 'public-address': '10.107.134.152'}, 'opensearch/1': {'workload-status': {'current': 'active', 'since': '30 Dec 2025 01:39:03Z'}, 'juju-status': {'current': 'idle', 'since': '30 Dec 2025 01:48:01Z', 'version': '3.6.12'}, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.107.134.104'}, 'opensearch/2': {'workload-status': {'current': 'active', 'since': '30 Dec 2025 01:39:20Z'}, 'juju-status': {'current': 'idle', 'since': '30 Dec 2025 01:47:57Z', 'version': '3.6.12'}, 'machine': '4', 'open-ports': ['9200/tcp'], 'public-address': '10.107.134.18'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 's3-integrator': {'charm': 's3-integrator', 'base': {'name': 'ubuntu', 'channel': '22.04'}, 'charm-origin': 'charmhub', 'charm-name': 's3-integrator', 'charm-rev': 145, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '30 Dec 2025 01:40:47Z'}, 'relations': {'s3-credentials': [{'related-application': 'opensearch', 'interface': 's3', 'scope': 'global'}], 's3-integrator-peers': [{'related-application': 's3-integrator', 'interface': 's3-integrator-peers', 'scope': 'global'}]}, 'units': {'s3-integrator/0': {'workload-status': {'current': 'active', 'since': '30 Dec 2025 01:40:47Z'}, 'juju-status': {'current': 'idle', 'since': '30 Dec 2025 01:46:36Z', 'version': '3.6.12'}, 'leader': True, 'machine': '0', 'public-address': '10.107.134.213'}}, 'endpoint-bindings': {'': 'alpha', 's3-credentials': 'alpha', 's3-integrator-peers': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 317, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '30 Dec 2025 01:36:22Z'}, 'relations': {'certificates': [{'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '30 Dec 2025 01:36:22Z'}, 'juju-status': {'current': 'idle', 'since': '30 Dec 2025 01:38:30Z', 'version': '3.6.12'}, 'leader': True, 'machine': '1', 'public-address': '10.107.134.125'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m root:test_backups.py:751 Destroying the application
+[32mINFO    [0m root:test_backups.py:758 Deploying a new cluster
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/self-signed-certificates-317
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/s3-integrator-145
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/opensearch-1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [allocating] waiting: waiting for machine
+  opensearch/3 [allocating] waiting: waiting for machine
+  opensearch/4 [allocating] waiting: waiting for machine
+  opensearch/5 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [allocating] waiting: waiting for machine
+  opensearch/3 [allocating] waiting: waiting for machine
+  opensearch/4 [allocating] waiting: waiting for machine
+  opensearch/5 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [allocating] waiting: agent initialising
+  opensearch/5 [executing] maintenance: Installing OpenSearch...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [executing] maintenance: Installing OpenSearch...
+  opensearch/5 [executing] maintenance: Installing OpenSearch...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [executing] maintenance: Installing OpenSearch...
+  opensearch/5 [executing] maintenance: Installing OpenSearch...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] waiting: Waiting for OpenSearch to start...
+  opensearch/4 [executing] maintenance: Installing OpenSearch...
+  opensearch/5 [executing] maintenance: Installing OpenSearch...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] active: 
+  opensearch/4 [executing] maintenance: Waiting for TLS to be fully configured...
+  opensearch/5 [executing] maintenance: Installing OpenSearch...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [idle] active: 
+  opensearch/4 [idle] active: 
+  opensearch/5 [executing] maintenance: Installing OpenSearch...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [idle] active: 
+  opensearch/4 [idle] active: 
+  opensearch/5 [executing] waiting: Waiting for OpenSearch to start...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [idle] active: 
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [idle] active: 
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [idle] active: 
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:787 Syncing credentials for microceph
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/1 [executing] blocked: Missing parameters: ['access-key', 'secret-key']
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  01:57:39Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      3  opensearch                            1  no       
+s3-integrator                      active      1  s3-integrator             1/stable  145  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/3*                active    idle   7        10.107.134.66   9200/tcp  
+opensearch/4                 active    idle   8        10.107.134.90   9200/tcp  
+opensearch/5                 active    idle   9        10.107.134.216  9200/tcp  
+s3-integrator/1*             active    idle   6        10.107.134.157            
+self-signed-certificates/1*  active    idle   5        10.107.134.219            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+5        started  10.107.134.219  juju-e94fb5-5  ubuntu@24.04  github-runner  Running
+6        started  10.107.134.157  juju-e94fb5-6  ubuntu@22.04  github-runner  Running
+7        started  10.107.134.66   juju-e94fb5-7  ubuntu@24.04  github-runner  Running
+8        started  10.107.134.90   juju-e94fb5-8  ubuntu@24.04  github-runner  Running
+9        started  10.107.134.216  juju-e94fb5-9  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:57:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.1d8* -- (10.107.134.66) -- [idle (since: 01:57:36)] active: 
+		opensearch-4.1d8  -- (10.107.134.90) -- [idle (since: 01:57:32)] active: 
+		opensearch-5.1d8  -- (10.107.134.216) -- [idle (since: 01:57:33)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:57:50 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.1d8* -- (10.107.134.66) -- [idle (since: 01:57:36)] active: 
+		opensearch-4.1d8  -- (10.107.134.90) -- [idle (since: 01:57:32)] active: 
+		opensearch-5.1d8  -- (10.107.134.216) -- [idle (since: 01:57:33)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:58:01 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.1d8* -- (10.107.134.66) -- [idle (since: 01:57:36)] active: 
+		opensearch-4.1d8  -- (10.107.134.90) -- [idle (since: 01:57:32)] active: 
+		opensearch-5.1d8  -- (10.107.134.216) -- [idle (since: 01:57:33)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:58:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.1d8* -- (10.107.134.66) -- [idle (since: 01:57:36)] active: 
+		opensearch-4.1d8  -- (10.107.134.90) -- [idle (since: 01:57:32)] active: 
+		opensearch-5.1d8  -- (10.107.134.216) -- [idle (since: 01:57:33)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:58:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.1d8* -- (10.107.134.66) -- [idle (since: 01:57:36)] active: 
+		opensearch-4.1d8  -- (10.107.134.90) -- [idle (since: 01:57:32)] active: 
+		opensearch-5.1d8  -- (10.107.134.216) -- [idle (since: 01:57:33)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:58:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.1d8* -- (10.107.134.66) -- [idle (since: 01:57:36)] active: 
+		opensearch-4.1d8  -- (10.107.134.90) -- [idle (since: 01:57:32)] active: 
+		opensearch-5.1d8  -- (10.107.134.216) -- [idle (since: 01:57:33)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:58:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.1d8* -- (10.107.134.66) -- [idle (since: 01:57:36)] active: 
+		opensearch-4.1d8  -- (10.107.134.90) -- [idle (since: 01:57:32)] active: 
+		opensearch-5.1d8  -- (10.107.134.216) -- [idle (since: 01:57:33)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:58:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 01:58:56 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.107.134.66:9200/_recovery?human
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.107.134.66:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.107.134.66:9200/series_index/_count
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.107.134.66:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.107.134.66:9200/series_index/_count
+[32mINFO    [0m integration.ha.helpers:helpers.py:534 Index series_index has 305 documents, starting there
+[32mINFO    [0m integration.ha.helpers:helpers.py:248 Continuous writes result: namespace(max_stored_id=438, count=439, last_expected_id=438)
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.107.134.66:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.107.134.66:9200/_recovery?human
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.107.134.66:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.107.134.66:9200/series_index/_count
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.107.134.66:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.107.134.66:9200/series_index/_count
+[32mINFO    [0m integration.ha.helpers:helpers.py:534 Index series_index has 202 documents, starting there
+[32mINFO    [0m integration.ha.helpers:helpers.py:248 Continuous writes result: namespace(max_stored_id=335, count=336, last_expected_id=335)
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.107.134.66:9200/series_index/_search_shards
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:821 Final stage: backup+restore with active writes
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.107.134.66:9200/_recovery?human
+[32mINFO    [0m integration.ha.helpers:helpers.py:248 Continuous writes result: namespace(max_stored_id=145, count=146, last_expected_id=145)
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.107.134.66:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.107.134.66:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.107.134.66:9200/series_index/_count
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.107.134.66:9200/_recovery?human
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.107.134.66:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.107.134.66:9200/series_index/_count
+[32mINFO    [0m integration.ha.helpers:helpers.py:594 Testing restore for series_index - original count pre-restore: 146, and now, new count: 116
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  02:02:31Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      3  opensearch                            1  no       
+s3-integrator                      active      1  s3-integrator             1/stable  145  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/3*                active    idle   7        10.107.134.66   9200/tcp  
+opensearch/4                 active    idle   8        10.107.134.90   9200/tcp  
+opensearch/5                 active    idle   9        10.107.134.216  9200/tcp  
+s3-integrator/1*             active    idle   6        10.107.134.157            
+self-signed-certificates/1*  active    idle   5        10.107.134.219            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+5        started  10.107.134.219  juju-e94fb5-5  ubuntu@24.04  github-runner  Running
+6        started  10.107.134.157  juju-e94fb5-6  ubuntu@22.04  github-runner  Running
+7        started  10.107.134.66   juju-e94fb5-7  ubuntu@24.04  github-runner  Running
+8        started  10.107.134.90   juju-e94fb5-8  ubuntu@24.04  github-runner  Running
+9        started  10.107.134.216  juju-e94fb5-9  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-1: 01:36:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:36:14 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:36:21 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:36:21 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:36:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:36:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:36:30 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:36:30 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:37:08 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:37:08 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:37:38 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:37:45 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:38:26 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:38:28 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:38:28 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:38:29 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:40:54 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:46:26 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+machine-5: 01:52:22 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:52:22 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 01:52:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 01:52:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-9: 01:52:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-9: 01:52:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 01:52:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 01:52:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:53:19 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:53:19 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-1: 01:54:03 ERROR unit.self-signed-certificates/1.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-1: 01:54:09 ERROR unit.self-signed-certificates/1.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-1: 01:54:37 ERROR unit.self-signed-certificates/1.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-1: 01:54:38 ERROR unit.self-signed-certificates/1.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-1: 01:55:19 ERROR unit.self-signed-certificates/1.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-1: 01:55:22 ERROR unit.self-signed-certificates/1.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-1: 01:56:37 ERROR unit.self-signed-certificates/1.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-1: 02:01:08 ERROR unit.self-signed-certificates/1.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:171 Cleaning backups from cloud buckets
+[33mWARNING [0m integration.ha.test_backups:test_backups.py:197 Failed to clean up backups: SSL validation failed for https://10.151.33.138:445/testbucket?prefix=opensearch%2Fb66615b3-d1b1-4b09-b88f-478848d99d4b%2F&encoding-type=url [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1000)
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:511 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.25.1 Python/3.12.3 (Linux-6.14.0-37-generic-x86_64-with-glibc2.39)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': '9ee47e53-e523-11f0-809d-00163ef1b51a'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:547 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': '8fd1fc3b-701e-0046-2630-798655000000'
+    'x-ms-client-request-id': '9ee47e53-e523-11f0-809d-00163ef1b51a'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Tue, 30 Dec 2025 02:02:40 GMT'

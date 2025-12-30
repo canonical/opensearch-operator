@@ -1,0 +1,50 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'opensearch': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'active', 'since': '30 Dec 2025 02:02:34Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/1': {'workload-status': {'current': 'active', 'since': '30 Dec 2025 02:02:35Z'}, 'juju-status': {'current': 'idle', 'since': '30 Dec 2025 02:20:59Z', 'version': '3.6.12'}, 'leader': True, 'machine': '2', 'open-ports': ['9200/tcp'], 'public-address': '10.114.31.86'}, 'opensearch/3': {'workload-status': {'current': 'active', 'since': '30 Dec 2025 02:13:07Z'}, 'juju-status': {'current': 'idle', 'since': '30 Dec 2025 02:21:06Z', 'version': '3.6.12'}, 'machine': '4', 'open-ports': ['9200/tcp'], 'public-address': '10.114.31.245'}, 'opensearch/4': {'workload-status': {'current': 'active', 'since': '30 Dec 2025 02:18:16Z'}, 'juju-status': {'current': 'idle', 'since': '30 Dec 2025 02:20:51Z', 'version': '3.6.12'}, 'machine': '5', 'open-ports': ['9200/tcp'], 'public-address': '10.114.31.60'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 317, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '30 Dec 2025 01:59:39Z'}, 'relations': {'certificates': [{'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '30 Dec 2025 01:59:39Z'}, 'juju-status': {'current': 'idle', 'since': '30 Dec 2025 02:17:53Z', 'version': '3.6.12'}, 'leader': True, 'machine': '0', 'public-address': '10.114.31.211'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  02:21:35Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports  Message
+self-signed-certificates/0*  active    idle   0        10.114.31.211          
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.114.31.211  juju-90b017-0  ubuntu@24.04  github-runner  Running
+2        stopped  10.114.31.86   juju-90b017-2  ubuntu@24.04  github-runner  Running
+5        stopped  10.114.31.60   juju-90b017-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 01:59:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:59:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:59:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:59:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:59:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:59:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:59:48 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:59:48 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:01:25 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:01:32 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:01:34 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:01:37 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:01:38 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:01:40 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+machine-4: 02:10:36 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:10:36 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 02:12:33 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 02:12:33 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 02:12:33 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+machine-5: 02:15:56 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:15:56 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:17:51 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:17:52 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-3: 02:18:18 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-1: 02:21:16 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-4: 02:21:17 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-4: 02:21:18 ERROR unit.opensearch/4.juju-log Failed to add voting exclusion: opensearch-4.efe.
+unit-opensearch-1: 02:21:24 ERROR unit.opensearch/1.juju-log Failed to delete voting exclusion: opensearch-1.efe.
+unit-opensearch-1: 02:21:24 ERROR unit.opensearch/1.juju-log Failed to delete shard allocation exclusion: opensearch-1.efe.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
