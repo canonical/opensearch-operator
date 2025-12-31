@@ -1,0 +1,41 @@
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  01:58:17Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+application                        active      1  application                           0  no       
+opensearch                         active      2  opensearch                            0  no       
+opensearch-dashboards              active      1  opensearch-dashboards     2/edge     59  no       
+secondary-application              active      1  application                           1  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+application/0*               active    idle       2        10.242.188.176            
+opensearch-dashboards/0*     active    idle       1        10.242.188.150  5601/tcp  
+opensearch/0*                active    executing  3        10.242.188.240  9200/tcp  
+opensearch/1                 active    executing  4        10.242.188.207  9200/tcp  
+secondary-application/0*     active    executing  7        10.242.188.118            
+self-signed-certificates/0*  active    idle       0        10.242.188.187            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.242.188.187  juju-de42e2-0  ubuntu@24.04  github-runner  Running
+1        started  10.242.188.150  juju-de42e2-1  ubuntu@22.04  github-runner  Running
+2        started  10.242.188.176  juju-de42e2-2  ubuntu@22.04  github-runner  Running
+3        started  10.242.188.240  juju-de42e2-3  ubuntu@24.04  github-runner  Running
+4        started  10.242.188.207  juju-de42e2-4  ubuntu@24.04  github-runner  Running
+7        started  10.242.188.118  juju-de42e2-7  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:58:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 01:58:22 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m root:helpers.py:168 request results: namespace(status='failed', response={'return-code': 0})
+[32mINFO    [0m root:helpers.py:168 request results: namespace(status='completed', response={'results': '{"took": 2, "timed_out": false, "_shards": {"total": 1, "successful": 1, "skipped": 0, "failed": 0}, "hits": {"total": {"value": 3, "relation": "eq"}, "max_score": 0.41299206, "hits": [{"_index": "albums", "_id": "1", "_score": 0.41299206, "_source": {"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}}, {"_index": "albums", "_id": "2", "_score": 0.41299206, "_source": {"artist": "Herbie Hancock", "genre": ["Jazz"], "title": "Head Hunters"}}, {"_index": "albums", "_id": "3", "_score": 0.41299206, "_source": {"artist": "Lydian Collective", "genre": ["Jazz"], "title": "Adventure"}}]}}', 'return-code': 0})
+[32mINFO    [0m root:test_opensearch_provider.py:432 {'took': 2, 'timed_out': False, '_shards': {'total': 1, 'successful': 1, 'skipped': 0, 'failed': 0}, 'hits': {'total': {'value': 3, 'relation': 'eq'}, 'max_score': 0.41299206, 'hits': [{'_index': 'albums', '_id': '1', '_score': 0.41299206, '_source': {'artist': 'Vulfpeck', 'genre': ['Funk', 'Jazz'], 'title': 'Thrill of the Arts'}}, {'_index': 'albums', '_id': '2', '_score': 0.41299206, '_source': {'artist': 'Herbie Hancock', 'genre': ['Jazz'], 'title': 'Head Hunters'}}, {'_index': 'albums', '_id': '3', '_score': 0.41299206, '_source': {'artist': 'Lydian Collective', 'genre': ['Jazz'], 'title': 'Adventure'}}]}}
