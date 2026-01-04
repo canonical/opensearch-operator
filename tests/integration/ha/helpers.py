@@ -605,12 +605,28 @@ async def add_juju_secret(
 ) -> str:
     """Add a new juju secret."""
     logger.info(f"Data keys to insert: {data.keys()}")
-    key_values = " ".join([f"{key}={value}" for key, value in data.items()])
-    command = f"add-secret {secret_label} {key_values}"
-    _, stdout, _ = await ops_test.juju(*command.split())
-    logger.info(f"Add secret output: {stdout}")
-    secret_uri = stdout.strip()
+
+    # pass arguments as list
+    kv_args = [f"{k}={v}" for k, v in data.items()]
+
+    return_code, stdout, stderr = await ops_test.juju("add-secret", secret_label, *kv_args)
+    logger.info(f"Add secret return code={return_code} stdout={stdout} stderr={stderr}")
+    if return_code != 0:
+        raise AssertionError(
+            f"juju add-secret failed rc={return_code} stderr={stderr} stdout={stdout}"
+        )
+
+    secret_uri = (stdout or "").strip()
     logger.info(f"Secret uri: {secret_uri}")
-    command = f"grant-secret {secret_label} {charm_name}"
-    _, stdout, _ = await ops_test.juju(*command.split())
+    if not secret_uri:
+        raise AssertionError("juju add-secret returned empty secret URI")
+
+    # grant using the secret URI
+    return_code, stdout, stderr = await ops_test.juju("grant-secret", secret_uri, charm_name)
+    logger.info(f"Grant secret return code={return_code} stdout={stdout} stderr={stderr}")
+    if return_code != 0:
+        raise AssertionError(
+            f"juju grant-secret failed rc={return_code} stderr={stderr} stdout={stdout}"
+        )
+
     return secret_uri

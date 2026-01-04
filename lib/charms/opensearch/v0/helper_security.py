@@ -851,6 +851,11 @@ def verify_gcs_credentials(cfg: ObjectStorageConfig) -> bool:  # noqa: C901
         logger.info("GCS credential validation succeeded.")
         return True
 
+    except (ValueError, TypeError, KeyError) as e:
+        # Invalid/missing service account fields, invalid private_key format
+        logger.error("GCS credential validation failed: invalid credentials: %s", e, exc_info=True)
+        return False
+
     except GoogleAPIError as e:
         logger.error("GCS credential validation failed: %s", e, exc_info=True)
         return False

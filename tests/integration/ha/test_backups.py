@@ -332,7 +332,6 @@ async def _configure_gcs(
 ) -> None:
     """Configure gcs-integrator with bucket/path and service account JSON (via Juju secret)."""
     logger.info("Adding Juju secret for GCS service account JSON")
-
     local_label = "".join(random.choice(string.ascii_letters) for _ in range(10))
     credentials_secret_uri = await add_juju_secret(
         ops_test,
@@ -519,7 +518,7 @@ async def test_large_deployment_build_and_deploy(
 
 @pytest.mark.parametrize("cloud_name,deploy_type", LARGE_DEPLOYMENTS_ALL_CLOUDS)
 @pytest.mark.abort_on_fail
-async def test_large_setups_relations_with_misconfiguration(
+async def test_large_setups_relations_with_misconfiguration(  # noqa: C901
     ops_test: OpsTest,
     cloud_name: str,
     deploy_type: str,
@@ -527,15 +526,31 @@ async def test_large_setups_relations_with_misconfiguration(
     cloud_credentials: Dict[str, Dict[str, str]],
 ) -> None:
     """Confirm expected blocked messages under misconfiguration."""
+    # Select integrator and relation
+    if cloud_name == "azure":
+        backup_integrator = AZURE_INTEGRATOR
+        backup_relation = AZURE_RELATION
+        await _ensure_only_azure_integrator_related(ops_test, "main")
+    elif cloud_name == "gcs":
+        backup_integrator = GCS_INTEGRATOR
+        backup_relation = GCS_RELATION
+        await _ensure_only_gcs_integrator_related(ops_test, "main")
+    else:
+        backup_integrator = S3_INTEGRATOR
+        backup_relation = S3_RELATION
+        await _ensure_only_s3_integrator_related(ops_test, "main")
+
+    # Ensure main has the backup relation
+    if not _is_related_with(ops_test, "main", backup_integrator):
+        await ops_test.model.integrate(f"main:{backup_relation}", backup_integrator)
+    # Apply misconfiguration
     if cloud_name == "azure":
         bad_config = {"connection-protocol": "abfss", "container": "error", "path": "/"}
         bad_credentials = {"storage-account": "error", "secret-key": "error"}
         await _configure_azure(ops_test=ops_test, config=bad_config, credentials=bad_credentials)
         logger.info("Azure cloud is selected.")
     elif cloud_name == "gcs":
-        if "gcs" not in cloud_configs or "gcs" not in cloud_credentials:
-            pytest.skip("GCS config/credentials not available.")
-        bad_config = {"bucket": "error", "path": BackupsPath}
+        bad_config = {"bucket": cloud_configs["gcs"]["bucket"], "path": BackupsPath}
         bad_credentials = {
             "secret-key": json.dumps(
                 {
