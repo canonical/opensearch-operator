@@ -270,7 +270,6 @@ def write_gcs_service_account_json(
     Args:
         secret_key: JSON string content of the service account.
         dst: Destination path.
-        mode: File permissions.
 
     Returns:
         Path to the written file.

@@ -775,7 +775,7 @@ class OpenSearchSnapshotEvents(Object):
             logger.warning("no gcs credentials found.")
             return
 
-        if not (payload.credentials.gcs.secret_key):
+        if not payload.credentials.gcs.secret_key:
             logger.debug("GCS storage credentials are incomplete.")
             return
 
@@ -1748,6 +1748,14 @@ class OpenSearchSnapshotsManager:
             }
         )
 
-    def hash_credentials(self, credentials: dict[str, str]) -> str:
-        """Return a hash of the given credentials."""
+    @staticmethod
+    def hash_credentials(credentials: dict[str, str]) -> str:
+        """Return a hash of the given credentials.
+
+        Args:
+            credentials: credentials in a dict
+
+        Returns:
+            hash of the credentials
+        """
         return hashlib.sha1(json.dumps(credentials, sort_keys=True).encode()).hexdigest()

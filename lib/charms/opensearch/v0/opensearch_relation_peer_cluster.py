@@ -973,7 +973,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             }
 
         if rel_data.credentials.gcs and rel_data.credentials.gcs.secret_key:
-            # TODO Move this to gcs relation and include both in one secret
             redacted_dict["credentials"]["gcs"] = {
                 "secret-key": self.secrets.get_secret_id(Scope.APP, "gcs-secret-key"),
             }

@@ -586,7 +586,7 @@ class GcsRelData(Model):
         if not input_dict:
             return None
         creds = GcsRelDataCredentials(**input_dict)
-        merged = dict(input_dict)
+        merged = {**input_dict}
         merged[GCS_CREDENTIALS] = creds.dict(by_alias=True, exclude_none=True)
         return cls.parse_obj(merged)
 

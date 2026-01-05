@@ -802,7 +802,7 @@ def verify_gcs_credentials(cfg: ObjectStorageConfig) -> bool:  # noqa: C901
         logger.error("GCS credential validation failed: missing credentials block.")
         return False
 
-    service_account_json = getattr(gcs_cfg.credentials, "secret_key", None)
+    service_account_json = gcs_cfg.credentials.secret_key
     bucket_name = gcs_cfg.bucket
 
     if not service_account_json:
