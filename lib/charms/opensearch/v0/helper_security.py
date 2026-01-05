@@ -714,10 +714,52 @@ def verify_s3_credentials(cfg: ObjectStorageConfig) -> bool:
         return True
 
     except (BotoCoreError, ClientError) as e:
+        if isinstance(e, ClientError):
+            status_code = e.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+            error_code = e.response.get("Error", {}).get("Code")
+            bucket_missing = status_code == 404 or error_code in {"NoSuchBucket", "404"}
+            if bucket_missing:
+                logger.warning("S3 bucket %r not found; attempting to create it.", s3_cfg.bucket)
+                try:
+                    create_kwargs = {"Bucket": s3_cfg.bucket}
+                    if s3_cfg.region:
+                        create_kwargs["CreateBucketConfiguration"] = {
+                            "LocationConstraint": s3_cfg.region
+                        }
+                    s3_client.create_bucket(**create_kwargs)
+                    # Verify again after creation
+                    s3_client.head_bucket(Bucket=s3_cfg.bucket)
+                    prefix = (s3_cfg.base_path or "").rstrip("/")
+                    probe_key = (
+                        f"{prefix}/.opensearch-verify-{uuid.uuid4().hex}"
+                        if prefix
+                        else f".opensearch-verify-{uuid.uuid4().hex}"
+                    )
+
+                    s3_client.put_object(
+                        Bucket=s3_cfg.bucket,
+                        Key=probe_key,
+                        Body=b"opensearch-verify",
+                        ContentType="text/plain",
+                    )
+                    s3_client.delete_object(Bucket=s3_cfg.bucket, Key=probe_key)
+
+                    logger.info("Created S3 bucket %r and verified access.", s3_cfg.bucket)
+                    return True
+
+                except (BotoCoreError, ClientError) as create_err:
+                    logger.error(
+                        "S3 bucket creation/verification failed for %r: %s",
+                        s3_cfg.bucket,
+                        create_err,
+                        exc_info=True,
+                    )
+                    return False
+
         logger.error(
             "S3 credential validation with boto3 failed: %s",
             e,
-            exc_info=e,
+            exc_info=True,
         )
         return False
 
@@ -766,9 +808,36 @@ def verify_azure_credentials(cfg: ObjectStorageConfig) -> bool:
             credential=account_key,
         )
 
-        # check credentials.
-        container_client.get_container_properties()
+        # ensure container exists, create if missing.
+        try:
+            container_client.get_container_properties()
+        except AzureError as e:
+            msg = str(e)
+            is_not_found = (
+                "ContainerNotFound" in msg
+                or "ResourceNotFound" in msg
+                or "404" in msg
+                or "NotFound" in msg
+            )
+            if not is_not_found:
+                raise
 
+            logger.warning(
+                "Azure container %r not found; attempting to create it.", container_name
+            )
+            container_client.create_container()
+            logger.info("Created Azure container %r.", container_name)
+
+        # write + delete probe blob (minimal add)
+        prefix = (az_cfg.base_path or "").rstrip("/")
+        probe_name = (
+            f"{prefix}/.opensearch-verify-{uuid.uuid4().hex}"
+            if prefix
+            else f".opensearch-verify-{uuid.uuid4().hex}"
+        )
+        blob_client = container_client.get_blob_client(probe_name)
+        blob_client.upload_blob(b"opensearch-verify", overwrite=True)
+        blob_client.delete_blob()
         logger.info("Azure Storage credential validation succeeded.")
         return True
 
@@ -854,7 +923,7 @@ def verify_gcs_credentials(object_storage_config: ObjectStorageConfig) -> bool: 
                 return False
 
         # tests the permissions to bucket
-        prefix = gcs_cfg.base_path.rstrip("/")
+        prefix = (gcs_cfg.base_path or "").rstrip("/")
         if prefix:
             probe_name = f"{prefix}/.opensearch-verify-{uuid.uuid4().hex}"
         else:
