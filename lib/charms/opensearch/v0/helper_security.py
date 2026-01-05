@@ -798,12 +798,12 @@ def verify_gcs_credentials(cfg: ObjectStorageConfig) -> bool:  # noqa: C901
     """
     gcs_cfg = cfg.gcs
 
-    if not getattr(gcs_cfg, "credentials", None):
+    if not gcs_cfg.credentials:
         logger.error("GCS credential validation failed: missing credentials block.")
         return False
 
     service_account_json = getattr(gcs_cfg.credentials, "secret_key", None)
-    bucket_name = getattr(gcs_cfg, "bucket", None)
+    bucket_name = gcs_cfg.bucket
 
     if not service_account_json:
         logger.error("GCS credential validation failed: secret_key is empty.")
@@ -827,22 +827,11 @@ def verify_gcs_credentials(cfg: ObjectStorageConfig) -> bool:  # noqa: C901
     if project_id:
         client_kwargs["project"] = project_id
 
-    endpoint = getattr(gcs_cfg, "endpoint", None)
-    client_options = {"api_endpoint": endpoint} if endpoint else None
-
     try:
-        if client_options:
-            client = storage.Client.from_service_account_info(
-                sa_info,
-                client_options=client_options,
-                **client_kwargs,
-            )
-        else:
-            client = storage.Client.from_service_account_info(
-                sa_info,
-                **client_kwargs,
-            )
-
+        client = storage.Client.from_service_account_info(
+            sa_info,
+            **client_kwargs,
+        )
         # list_blobs will raise if credentials are wrong or bucket is not accessible.
         blobs_iter = client.list_blobs(bucket_name, max_results=1)
         # Fetch one page
