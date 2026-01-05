@@ -12,7 +12,7 @@ locals {
   ]
   apps_not_in_failover_model = [
     for app in local.apps :
-    app if app.model_uuid != var.failover.model_uuid
+    app if var.failover == null || app.model_uuid != var.failover.model_uuid
   ]
 
   all_models = distinct(concat(
