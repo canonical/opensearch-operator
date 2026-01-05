@@ -11,6 +11,7 @@ import secrets
 import string
 import subprocess
 import tempfile
+import uuid
 from datetime import datetime
 from os.path import exists
 from typing import Optional, Tuple
@@ -24,7 +25,7 @@ from charms.opensearch.v0.helper_charm import run_cmd
 from charms.opensearch.v0.models import ObjectStorageConfig
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from cryptography import x509
-from google.api_core.exceptions import GoogleAPIError
+from google.api_core.exceptions import Conflict, Forbidden, GoogleAPIError, NotFound
 from google.cloud import storage
 
 # The unique Charmhub library identifier, never change it
@@ -784,13 +785,15 @@ def verify_gcs_credentials(object_storage_config: ObjectStorageConfig) -> bool: 
     """Validate GCS credentials using google-cloud-storage.
 
     Args:
-        cfg: ObjectStorageConfig object
+        cfg: ObjectStorageConfig containing GCS settings (service-account JSON and bucket name).
 
     Returns:
-        True if we can access the configured bucket, False otherwise.
+        True if the service account can access the bucket (or create it if missing) and
+        can write/delete an object in it; False otherwise.
 
-    cfg.gcs.credentials.secret_key to contain a service-account JSON
-    (as a string), and cfg.gcs.bucket to contain the bucket name.
+    Behavior:
+        - If the configured bucket does not exist, attempt to create it.
+        - Verify access via write + delete probe object.
     """
     if not object_storage_config.gcs.credentials:
         logger.error("GCS credential validation failed: missing credentials block.")
@@ -824,13 +827,60 @@ def verify_gcs_credentials(object_storage_config: ObjectStorageConfig) -> bool: 
             service_account,
             **client_kwargs,
         )
-        # list_blobs will raise if credentials are wrong or bucket is not accessible.
-        blobs_iter = client.list_blobs(bucket_name, max_results=1)
-        # Fetch one page
-        _ = next(iter(blobs_iter), None)
+        bucket = client.bucket(bucket_name)
+        # ensure bucket exists, otherwise create it.
+        if not bucket.exists():
+            logger.warning("GCS bucket %r not found; attempting to create it.", bucket_name)
+            try:
+                client.create_bucket(bucket)
+                logger.info("Created GCS bucket %r.", bucket_name)
+            except Conflict:
+                # It might have been created concurrently or name already taken globally.
+                # recheck existence, if not accessible, fail.
+                if not bucket.exists():
+                    logger.error(
+                        "Bucket %r exists globally but is not accessible (name conflict or no access).",
+                        bucket_name,
+                    )
+                    return False
+            except Forbidden as e:
+                logger.error(
+                    "Bucket %r missing and cannot be created (forbidden). "
+                    "Service account likely missing storage.buckets.create. Error: %s",
+                    bucket_name,
+                    e,
+                    exc_info=True,
+                )
+                return False
+
+        # tests the permissions to bucket
+        prefix = gcs_cfg.base_path.rstrip("/")
+        if prefix:
+            probe_name = f"{prefix}/.opensearch-verify-{uuid.uuid4().hex}"
+        else:
+            probe_name = f".opensearch-verify-{uuid.uuid4().hex}"
+        blob = bucket.blob(probe_name)
+        blob.upload_from_string(b"opensearch-verify", content_type="text/plain")
+        blob.delete()
 
         logger.info("GCS credential validation succeeded.")
         return True
+
+    except Forbidden as e:
+        logger.error(
+            "GCS credential validation failed: forbidden (missing permissions). Error: %s",
+            e,
+            exc_info=True,
+        )
+        return False
+
+    except NotFound as e:
+        logger.error(
+            "GCS credential validation failed: not found (endpoint/resource mismatch). Error: %s",
+            e,
+            exc_info=True,
+        )
+        return False
 
     except (ValueError, TypeError, KeyError) as e:
         # Invalid/missing service account fields, invalid private_key format
