@@ -914,17 +914,16 @@ def verify_gcs_credentials(object_storage_config: ObjectStorageConfig) -> bool: 
                 client.create_bucket(bucket)
                 logger.info("Created GCS bucket %r.", bucket_name)
             except Conflict:
-                # It might have been created concurrently or name already taken globally.
-                # recheck existence, if not accessible, fail.
-                if not bucket.exists():
-                    logger.error(
-                        "Bucket %r exists globally but is not accessible (name conflict or no access).",
-                        bucket_name,
-                    )
-                    return False
+                # it might have been created concurrently or name already taken globally.
+                logger.error(
+                    "GCS bucket %r could not be created because the name is already in use globally. "
+                    "Choose a unique bucket name (GCS bucket names are global).",
+                    bucket_name,
+                )
+                return False
             except Forbidden as e:
                 logger.error(
-                    "Bucket %r missing and cannot be created (forbidden). "
+                    "Bucket %r cannot be created (forbidden). "
                     "Service account likely missing storage.buckets.create. Error: %s",
                     bucket_name,
                     e,
