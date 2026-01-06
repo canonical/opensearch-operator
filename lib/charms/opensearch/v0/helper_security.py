@@ -717,48 +717,6 @@ def verify_s3_credentials(cfg: ObjectStorageConfig) -> bool:  # noqa: C901
         if isinstance(e, ClientError):
             status_code = e.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
             error_code = e.response.get("Error", {}).get("Code")
-            # handle AWS wrong-region handling if status code 301
-            # and x-amz-bucket-region is given in the error
-            if status_code == 301 or error_code in {"301", "PermanentRedirect"}:
-                bucket_region = (
-                    e.response.get("ResponseMetadata", {})
-                    .get("HTTPHeaders", {})
-                    .get("x-amz-bucket-region")
-                )
-                if bucket_region:
-                    logger.warning(
-                        "S3 bucket %r is in region %r (redirected); retrying head_bucket with that region.",
-                        s3_cfg.bucket,
-                        bucket_region,
-                    )
-                    # switch endpoint_url to the correct regional AWS endpoint
-                    retry_endpoint = s3_cfg.endpoint
-                    if retry_endpoint and "amazonaws.com" in retry_endpoint:
-                        retry_endpoint = f"https://s3.{bucket_region}.amazonaws.com"
-                    try:
-                        # use correct region
-                        s3_client = boto3.session.Session(
-                            aws_access_key_id=s3_cfg.credentials.access_key,
-                            aws_secret_access_key=s3_cfg.credentials.secret_key,
-                            aws_session_token=getattr(s3_cfg.credentials, "session_token", ""),
-                        ).client(
-                            "s3",
-                            endpoint_url=retry_endpoint,
-                            region_name=bucket_region,
-                            verify=verify_param,
-                        )
-                        s3_client.head_bucket(Bucket=s3_cfg.bucket)
-                        logger.info(
-                            "S3 credential validation with boto3 succeeded after region redirect."
-                        )
-                        return True
-                    except (BotoCoreError, ClientError) as retry_err:
-                        logger.error(
-                            "S3 credential validation retry after region redirect failed: %s",
-                            retry_err,
-                            exc_info=True,
-                        )
-                        return False
             # handle missing bucket
             bucket_missing = status_code == 404 or error_code in {"NoSuchBucket", "404"}
             if bucket_missing:
