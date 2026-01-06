@@ -897,8 +897,18 @@ def verify_gcs_credentials(object_storage_config: ObjectStorageConfig) -> bool: 
             **client_kwargs,
         )
         bucket = client.bucket(bucket_name)
+
         # ensure bucket exists, otherwise create it.
-        if not bucket.exists():
+        try:
+            exists = bucket.exists()
+        except Forbidden:
+            logger.warning(
+                "GCS bucket existence check returned 403 for %r; attempting to create it.",
+                bucket_name,
+            )
+            exists = False
+
+        if not exists:
             logger.warning("GCS bucket %r not found; attempting to create it.", bucket_name)
             try:
                 client.create_bucket(bucket)
