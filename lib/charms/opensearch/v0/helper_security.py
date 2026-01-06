@@ -663,7 +663,7 @@ def _split_pem_chain(chain: str) -> list[str]:
     ]
 
 
-def verify_s3_credentials(cfg: ObjectStorageConfig) -> bool:
+def verify_s3_credentials(cfg: ObjectStorageConfig) -> bool:  # noqa: C901
     """Validate S3 credentials + CA using boto3.
 
     Args:
@@ -721,12 +721,19 @@ def verify_s3_credentials(cfg: ObjectStorageConfig) -> bool:
             if bucket_missing:
                 logger.warning("S3 bucket %r not found; attempting to create it.", s3_cfg.bucket)
                 try:
-                    create_kwargs = {"Bucket": s3_cfg.bucket}
-                    if s3_cfg.region:
-                        create_kwargs["CreateBucketConfiguration"] = {
-                            "LocationConstraint": s3_cfg.region
-                        }
-                    s3_client.create_bucket(**create_kwargs)
+                    try:
+                        s3_client.create_bucket(Bucket=s3_cfg.bucket)
+                    except ClientError as create_err:
+                        # if we have a region fallback to AWS style LocationConstraint
+                        # skip us-east-1 which is special in AWS
+                        if s3_cfg.region and s3_cfg.region not in {"us-east-1"}:
+                            s3_client.create_bucket(
+                                Bucket=s3_cfg.bucket,
+                                CreateBucketConfiguration={"LocationConstraint": s3_cfg.region},
+                            )
+                        else:
+                            raise create_err
+
                     # Verify again after creation
                     s3_client.head_bucket(Bucket=s3_cfg.bucket)
                     prefix = (s3_cfg.base_path or "").rstrip("/")
