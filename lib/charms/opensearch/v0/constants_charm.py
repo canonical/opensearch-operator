@@ -77,6 +77,7 @@ BackupRelConflict = "Too many object storage relations. Only one is supported."
 BackupMisconfiguration = "opensearch {} repository setup failed. Check the {} config."
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
 SecretAccessError = "Failed to access secret, please check permissions."
+SmtpRelationInvalid = "SMTP relation must be created with the main-orchestrator cluster."
 JWTAuthConfigInvalid = (
     "Configuration for JWT authentication is invalid. Check and correct parameters."
 )
