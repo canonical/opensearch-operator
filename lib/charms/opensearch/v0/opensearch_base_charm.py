@@ -87,6 +87,7 @@ from charms.opensearch.v0.opensearch_peer_clusters import (
 from charms.opensearch.v0.opensearch_plugin_manager import (
     OpenSearchPluginEvents,
     OpenSearchPluginManager,
+    SmtpEvents,
 )
 from charms.opensearch.v0.opensearch_profile import (
     ProfilesManager,
@@ -230,6 +231,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.plugin_manager = OpenSearchPluginManager(self.state)
         self.plugin_events = OpenSearchPluginEvents(self)
+        self.smtp_events = SmtpEvents(self)
+
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
         self.peer_cluster_provider = OpenSearchPeerClusterProvider(self)
