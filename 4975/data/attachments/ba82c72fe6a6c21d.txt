@@ -1,0 +1,237 @@
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:281 Adding Juju secret for secret-key config option for azure-storage-integrator
+[32mINFO    [0m integration.ha.helpers:helpers.py:607 Data keys to insert: dict_keys(['secret-key'])
+[32mINFO    [0m integration.ha.helpers:helpers.py:611 Add secret output: secret:d5g5se0fraed52am915g
+
+[32mINFO    [0m integration.ha.helpers:helpers.py:613 Secret uri: secret:d5g5se0fraed52am915g
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:291 Juju secret for secret-key config option for azure-storage-integrator added. Secret URI: secret:d5g5se0fraed52am915g
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:303 Setting up configuration for azure-storage-integrator charm...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  azure-storage-integrator/0 [executing] blocked: Missing parameters: ['container', 'storage-account', 'credentials']
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:484 Azure cloud is selected.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  01:47:55Z
+
+App                       Version  Status   Scale  Charm                     Channel      Rev  Exposed  Message
+azure-storage-integrator           active       1  azure-storage-integrator  latest/edge   35  no       
+failover                           active       2  opensearch                               1  no       
+main                               blocked      1  opensearch                               0  no       Backup configuration error: bad credentials, permissions, invalid CA, or unsupported configuration.
+opensearch                         active       1  opensearch                               2  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable     317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+azure-storage-integrator/0*  active    idle   1        10.42.161.142             
+failover/2*                  active    idle   4        10.42.161.206   9200/tcp  
+failover/3                   active    idle   5        10.42.161.120   9200/tcp  
+main/0*                      active    idle   3        10.42.161.182   9200/tcp  
+opensearch/0*                active    idle   2        10.42.161.92    9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.42.161.96              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.42.161.96   juju-f3a5fd-0  ubuntu@24.04  github-runner  Running
+1        started  10.42.161.142  juju-f3a5fd-1  ubuntu@22.04  github-runner  Running
+2        started  10.42.161.92   juju-f3a5fd-2  ubuntu@24.04  github-runner  Running
+3        started  10.42.161.182  juju-f3a5fd-3  ubuntu@24.04  github-runner  Running
+4        started  10.42.161.206  juju-f3a5fd-4  ubuntu@24.04  github-runner  Running
+5        started  10.42.161.120  juju-f3a5fd-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:47:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 01:47:56 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:521 Opensearch is blocked by invalid config/credentials.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  01:47:56Z
+
+App                       Version  Status   Scale  Charm                     Channel      Rev  Exposed  Message
+azure-storage-integrator           active       1  azure-storage-integrator  latest/edge   35  no       
+failover                           active       2  opensearch                               1  no       
+main                               blocked      1  opensearch                               0  no       Backup configuration error: bad credentials, permissions, invalid CA, or unsupported configuration.
+opensearch                         active       1  opensearch                               2  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable     317  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+azure-storage-integrator/0*  active    executing  1        10.42.161.142             
+failover/2*                  active    executing  4        10.42.161.206   9200/tcp  
+failover/3                   active    executing  5        10.42.161.120   9200/tcp  
+main/0*                      active    idle       3        10.42.161.182   9200/tcp  
+opensearch/0*                active    executing  2        10.42.161.92    9200/tcp  
+self-signed-certificates/0*  active    idle       0        10.42.161.96              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.42.161.96   juju-f3a5fd-0  ubuntu@24.04  github-runner  Running
+1        started  10.42.161.142  juju-f3a5fd-1  ubuntu@22.04  github-runner  Running
+2        started  10.42.161.92   juju-f3a5fd-2  ubuntu@24.04  github-runner  Running
+3        started  10.42.161.182  juju-f3a5fd-3  ubuntu@24.04  github-runner  Running
+4        started  10.42.161.206  juju-f3a5fd-4  ubuntu@24.04  github-runner  Running
+5        started  10.42.161.120  juju-f3a5fd-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:47:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: failover - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: failover active -- message: None
+		failover-2.e90* -- (10.42.161.206) -- [executing (since: 01:47:56)] active: 
+		failover-3.e90  -- (10.42.161.120) -- [executing (since: 01:47:56)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 01:48:09 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  01:48:24Z
+
+App                       Version  Status   Scale  Charm                     Channel      Rev  Exposed  Message
+azure-storage-integrator           active       1  azure-storage-integrator  latest/edge   35  no       
+failover                           active       2  opensearch                               1  no       
+main                               blocked      1  opensearch                               0  no       Backup configuration error: bad credentials, permissions, invalid CA, or unsupported configuration.
+opensearch                         active       1  opensearch                               2  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable     317  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+azure-storage-integrator/0*  active    idle       1        10.42.161.142             
+failover/2*                  active    idle       4        10.42.161.206   9200/tcp  
+failover/3                   active    idle       5        10.42.161.120   9200/tcp  
+main/0*                      active    idle       3        10.42.161.182   9200/tcp  
+opensearch/0*                active    executing  2        10.42.161.92    9200/tcp  
+self-signed-certificates/0*  active    idle       0        10.42.161.96              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.42.161.96   juju-f3a5fd-0  ubuntu@24.04  github-runner  Running
+1        started  10.42.161.142  juju-f3a5fd-1  ubuntu@22.04  github-runner  Running
+2        started  10.42.161.92   juju-f3a5fd-2  ubuntu@24.04  github-runner  Running
+3        started  10.42.161.182  juju-f3a5fd-3  ubuntu@24.04  github-runner  Running
+4        started  10.42.161.206  juju-f3a5fd-4  ubuntu@24.04  github-runner  Running
+5        started  10.42.161.120  juju-f3a5fd-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 01:48:25 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:376 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:377 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  01:48:32Z
+
+App                       Version  Status  Scale  Charm                     Channel      Rev  Exposed  Message
+azure-storage-integrator           active      1  azure-storage-integrator  latest/edge   35  no       
+failover                           active      2  opensearch                               1  no       
+main                               active      1  opensearch                               0  no       
+opensearch                         active      1  opensearch                               2  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable     317  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+azure-storage-integrator/0*  active    idle       1        10.42.161.142             
+failover/2*                  active    idle       4        10.42.161.206   9200/tcp  
+failover/3                   active    idle       5        10.42.161.120   9200/tcp  
+main/0*                      active    idle       3        10.42.161.182   9200/tcp  
+opensearch/0*                active    executing  2        10.42.161.92    9200/tcp  
+self-signed-certificates/0*  active    idle       0        10.42.161.96              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.42.161.96   juju-f3a5fd-0  ubuntu@24.04  github-runner  Running
+1        started  10.42.161.142  juju-f3a5fd-1  ubuntu@22.04  github-runner  Running
+2        started  10.42.161.92   juju-f3a5fd-2  ubuntu@24.04  github-runner  Running
+3        started  10.42.161.182  juju-f3a5fd-3  ubuntu@24.04  github-runner  Running
+4        started  10.42.161.206  juju-f3a5fd-4  ubuntu@24.04  github-runner  Running
+5        started  10.42.161.120  juju-f3a5fd-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.aca* -- (10.42.161.182) -- [idle (since: 01:48:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.aca* -- (10.42.161.182) -- [idle (since: 01:48:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:48:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.aca* -- (10.42.161.182) -- [idle (since: 01:48:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:05 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.aca* -- (10.42.161.182) -- [idle (since: 01:48:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:16 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.aca* -- (10.42.161.182) -- [idle (since: 01:48:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:27 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.aca* -- (10.42.161.182) -- [idle (since: 01:48:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.aca* -- (10.42.161.182) -- [idle (since: 01:48:32)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:384 
+
+
+01:49:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:395 01:49:49 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:570 Cleaned up misconfigured backup relation from main; main is active again.
