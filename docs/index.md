@@ -32,11 +32,11 @@ The upper portion of this page describes the Operating System (OS) where the cha
 
 | | |
 |--|--|
-| **Tutorial** | [Introduction](tutorial-index) 🞄 [Step 1: Environment setup](tutorial-1-set-up-the-environment) |
-| **Deployment** | [Deploy with LXD](how-to-deploy-lxd) 🞄 [Large deployment](how-to-deploy-large) 🞄 [Requirements](reference-system-requirements) |
-| **Operations** | [Horizontal scaling](how-to-scale-horizontally) 🞄 [Performance optimization](how-to-optimize-cluster-performance) 🞄 [Applications integration](how-to-integrate-with-an-application) 🞄 [Version upgrades](how-to-minor-upgrade) 🞄 [Version rollback](how-to-minor-rollback) 🞄 [Monitoring](how-to-monitoring-cos-index) 🞄 [Load testing](how-to-perform-load-testing) 🞄 [Software testing](reference-software-testing) |
-| **Backups** | [Create a backup](how-to-create-a-backup) 🞄 [Azure configuration](how-to-back-up-configure-azure-storage) 🞄 [S3 configuration](how-to-back-up-configure-s3) 🞄 [Restore from a local backup](how-to-restore-a-local-backup) 🞄 [Migrate a cluster](how-to-migrate-a-cluster) 🞄 [Recover from attached storage](how-to-recover-from-attached-storage) |
-| **Security** | [Overview](explanation-security-index) 🞄 [Enable encryption](how-to-enable-tls-encryption) 🞄 [Rotate certificates](how-to-rotate-tls-ca-certificates) 🞄 [OAuth](how-to-access-using-oauth) 🞄 [JWT Auth](how-to-guides-enable-jwt-authentication) 🞄 [Cryptography](explanation-security-cryptography) |
+| **Tutorial** | [Introduction](tutorial-index) • [Step 1: Environment setup](tutorial-1-set-up-the-environment) |
+| **Deployment** | [Deploy with LXD](how-to-deploy-lxd) • [Large deployment](how-to-deploy-large) • [Requirements](reference-system-requirements) |
+| **Operations** | [Horizontal scaling](how-to-scale-horizontally) • [Performance optimization](how-to-optimize-cluster-performance) • [Applications integration](how-to-integrate-with-an-application) • [Version upgrades](how-to-minor-upgrade) • [Version rollback](how-to-minor-rollback) • [Monitoring](how-to-monitoring-cos-index) • [Load testing](how-to-perform-load-testing) • [Software testing](reference-software-testing) |
+| **Backups** | [Create a backup](how-to-create-a-backup) • [Azure configuration](how-to-back-up-configure-azure-storage) • [S3 configuration](how-to-back-up-configure-s3) • [Restore from a local backup](how-to-restore-a-local-backup) • [Migrate a cluster](how-to-migrate-a-cluster) • [Recover from attached storage](how-to-recover-from-attached-storage) |
+| **Security** | [Overview](explanation-security-index) • [Enable encryption](how-to-enable-tls-encryption) • [Rotate certificates](how-to-rotate-tls-ca-certificates) • [OAuth](how-to-access-using-oauth) • [JWT Auth](how-to-guides-enable-jwt-authentication) • [Cryptography](explanation-security-cryptography) |
 
 ## How the documentation is organised
 
