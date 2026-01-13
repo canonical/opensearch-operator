@@ -3,15 +3,20 @@
 from __future__ import annotations
 
 import json
+from unittest.mock import Mock
 
 import pytest
+from azure.core.exceptions import AzureError, ResourceNotFoundError
+from botocore.exceptions import ClientError
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_health import HealthColors
 from charms.opensearch.v0.opensearch_snapshots import (
     OpenSearchSnapshotsManager as SnapshotsManager,
 )
+from google.api_core.exceptions import Conflict, Forbidden
 from ops import testing
 
+from lib.charms.opensearch.v0 import helper_security
 from tests.unit.lib.fixtures_snapshots import SnapshotsUnitTestFixtures
 
 _S3_PEM = """-----BEGIN CERTIFICATE-----
@@ -481,3 +486,344 @@ class TestPrerequisites(SnapshotsUnitTestFixtures):
         with pytest.raises(testing.ActionFailed) as err:
             self.ctx.run(self.ctx.on.action("create-backup"), st)
         assert "operation in progress" in err.value.message.lower()
+
+
+class TestCreateS3Bucket(SnapshotsUnitTestFixtures):
+    @staticmethod
+    def _client_error(code: str, status: int = 400) -> ClientError:
+        return ClientError(
+            {
+                "Error": {"Code": code, "Message": "err"},
+                "ResponseMetadata": {"HTTPStatusCode": status},
+            },
+            operation_name="Test",
+        )
+
+    def test_create_s3_bucket_when_region_non_us_east_1_then_calls_location_constraint(
+        self, monkeypatch
+    ):
+        bucket = Mock()
+        bucket.wait_until_exists = Mock()
+
+        get_bucket = Mock(return_value=bucket)
+        monkeypatch.setattr(helper_security, "get_s3_bucket_resource", get_bucket)
+
+        params = {
+            "access-key": "a",
+            "secret-key": "s",
+            "bucket": "b",
+            "endpoint": "https://s3.example",
+            "region": "eu-north-1",
+        }
+
+        helper_security.create_s3_bucket(params, verify=True)
+
+        get_bucket.assert_called_once()
+        bucket.create.assert_called_once_with(
+            CreateBucketConfiguration={"LocationConstraint": "eu-north-1"}
+        )
+        bucket.wait_until_exists.assert_called_once()
+
+    def test_create_s3_bucket_when_region_us_east_1_then_calls_create_without_location_constraint(
+        self, monkeypatch
+    ):
+        bucket = Mock()
+        bucket.wait_until_exists = Mock()
+
+        monkeypatch.setattr(helper_security, "get_s3_bucket_resource", lambda *_a, **_k: bucket)
+
+        params = {
+            "access-key": "a",
+            "secret-key": "s",
+            "bucket": "b",
+            "endpoint": "https://s3.example",
+            "region": "us-east-1",
+        }
+
+        helper_security.create_s3_bucket(params, verify=True)
+
+        bucket.create.assert_called_once_with()
+        bucket.wait_until_exists.assert_called_once()
+
+    @pytest.mark.parametrize(
+        "code", ["BucketAlreadyOwnedByYou", "BucketAlreadyExists", "BucketNameUnavailable"]
+    )
+    def test_create_s3_bucket_when_bucket_already_exists_then_it_does_not_raise(
+        self, monkeypatch, code
+    ):
+        bucket = Mock()
+        bucket.create.side_effect = self._client_error(code)
+
+        monkeypatch.setattr(helper_security, "get_s3_bucket_resource", lambda *_a, **_k: bucket)
+
+        params = {
+            "access-key": "a",
+            "secret-key": "s",
+            "bucket": "b",
+            "endpoint": "https://s3.example",
+            "region": "us-east-1",
+        }
+        helper_security.create_s3_bucket(params, verify=True)
+
+    def test_create_s3_bucket_when_access_denied_then_other_clienterror_raises(self, monkeypatch):
+        bucket = Mock()
+        bucket.create.side_effect = self._client_error("AccessDenied", status=403)
+
+        monkeypatch.setattr(helper_security, "get_s3_bucket_resource", lambda *_a, **_k: bucket)
+
+        params = {
+            "access-key": "a",
+            "secret-key": "s",
+            "bucket": "b",
+            "endpoint": "https://s3.example",
+            "region": "us-east-1",
+        }
+
+        with pytest.raises(ClientError):
+            helper_security.create_s3_bucket(params, verify=True)
+
+    def test_verify_s3_credentials_when_bucket_missing_then_triggers_create_and_probe(
+        self, monkeypatch
+    ):
+        cfg = Mock()
+        cfg.s3 = Mock()
+        cfg.s3.credentials = Mock()
+        cfg.s3.tls_ca_chain = None
+        cfg.s3.credentials.access_key = "a"
+        cfg.s3.credentials.secret_key = "s"
+        cfg.s3.bucket = "mybucket"
+        cfg.s3.endpoint = "https://s3.example"
+        cfg.s3.region = "us-east-1"
+        cfg.s3.base_path = "base/path"
+
+        bucket = Mock()
+        bucket.meta = Mock()
+        bucket.meta.client = Mock()
+
+        # head_bucket returns 404 (NoSuchBucket)
+        bucket.meta.client.head_bucket.side_effect = self._client_error("NoSuchBucket", status=404)
+
+        # probe write/delete
+        bucket.put_object = Mock()
+        bucket.Object.return_value.delete = Mock()
+
+        monkeypatch.setattr(helper_security, "get_s3_bucket_resource", lambda *_a, **_k: bucket)
+
+        mock_create = Mock(return_value=None)
+        monkeypatch.setattr(helper_security, "create_s3_bucket", mock_create)
+
+        ok = helper_security.verify_s3_credentials(cfg)
+        assert ok is True
+
+        mock_create.assert_called_once()
+        bucket.put_object.assert_called_once()
+        bucket.Object.return_value.delete.assert_called_once()
+
+
+class TestCreateAzureContainer(SnapshotsUnitTestFixtures):
+    def test_create_azure_container_when_create_bucket_then_create_container_is_called(
+        self, monkeypatch
+    ):
+        client = Mock()
+        monkeypatch.setattr(helper_security, "get_azure_container_client", lambda _params: client)
+
+        params = {
+            "storage-account": "acc",
+            "secret-key": "key",
+            "container": "cont",
+            "account-url": "https://acc.blob.core.windows.net",
+        }
+
+        helper_security.create_azure_container(params)
+        client.create_container.assert_called_once()
+
+    def test_create_azure_container_when_container_exists_and_we_run_create_container_then_it_does_not_raise(
+        self, monkeypatch
+    ):
+        client = Mock()
+        client.create_container.side_effect = AzureError("boom")
+        monkeypatch.setattr(helper_security, "get_azure_container_client", lambda _params: client)
+
+        params = {
+            "storage-account": "acc",
+            "secret-key": "key",
+            "container": "cont",
+            "account-url": "https://acc.blob.core.windows.net",
+        }
+
+        with pytest.raises(AzureError):
+            helper_security.create_azure_container(params)
+
+    def test_create_azure_container_when_create_container_then_other_azure_error_raises(
+        self, monkeypatch
+    ):
+        client = Mock()
+        client.create_container.side_effect = AzureError("boom")
+        monkeypatch.setattr(helper_security, "get_azure_container_client", lambda _params: client)
+
+        params = {
+            "storage-account": "acc",
+            "secret-key": "key",
+            "container": "cont",
+            "account-url": "https://acc.blob.core.windows.net",
+        }
+
+        with pytest.raises(AzureError):
+            helper_security.create_azure_container(params)
+
+    def test_create_azure_container_when_container_missing_then_triggers_create_and_probe(
+        self, monkeypatch
+    ):
+        cfg = Mock()
+        cfg.azure = Mock()
+        cfg.azure.credentials = Mock()
+        cfg.azure.connection_protocol = "https"
+        cfg.azure.credentials.storage_account = "acc"
+        cfg.azure.credentials.secret_key = "key"
+        cfg.azure.container = "cont"
+        cfg.azure.base_path = "base/path"
+        cfg.azure.endpoint = "https://account.blob.core.windows.net/container"
+
+        container_client = Mock()
+        container_client.get_container_properties.side_effect = ResourceNotFoundError("missing")
+
+        blob_client = Mock()
+        container_client.get_blob_client.return_value = blob_client
+
+        monkeypatch.setattr(
+            helper_security, "get_azure_container_client", lambda _params: container_client
+        )
+
+        mock_create = Mock(return_value=None)
+        monkeypatch.setattr(helper_security, "create_azure_container", mock_create)
+
+        ok = helper_security.verify_azure_credentials(cfg)
+        assert ok is True
+
+        mock_create.assert_called_once()
+        blob_client.upload_blob.assert_called_once()
+        blob_client.delete_blob.assert_called_once()
+
+
+class TestCreateGCSBucket(SnapshotsUnitTestFixtures):
+    @staticmethod
+    def _cfg(*, secret_key: str = "{}", bucket: str = "bkt", base_path: str = "base/path"):
+        """Build an ObjectStorageConfig mock for GCS."""
+        cfg = Mock()
+        cfg.gcs = Mock()
+        cfg.gcs.credentials = Mock()
+        cfg.gcs.credentials.secret_key = secret_key
+        cfg.gcs.bucket = bucket
+        cfg.gcs.base_path = base_path
+        return cfg
+
+    def test_create_gcs_bucket_when_credentials_block_missing_then_return_false(self):
+        cfg = Mock()
+        cfg.gcs = Mock()
+        cfg.gcs.credentials = None
+
+        assert helper_security.verify_gcs_credentials(cfg) is False
+
+    def test_create_gcs_bucket_when_secret_key_empty_then_return_false(self):
+        cfg = self._cfg(secret_key="")
+        assert helper_security.verify_gcs_credentials(cfg) is False
+
+    def test_create_gcs_bucket_when_bucket_name_empty_then_return_false(self):
+        cfg = self._cfg(bucket="")
+        assert helper_security.verify_gcs_credentials(cfg) is False
+
+    def test_create_gcs_bucket_when_secret_key_is_invalid_json_then_return_false(self):
+        cfg = self._cfg(secret_key="not-json")
+        assert helper_security.verify_gcs_credentials(cfg) is False
+
+    def test_create_gcs_bucket_when_bucket_missing_then_create_bucket_test_write_access(
+        self, monkeypatch
+    ):
+        cfg = self._cfg(
+            secret_key='{"project_id":"p"}',
+            bucket="mybucket",
+            base_path="base/path",
+        )
+
+        client = Mock()
+        bucket = Mock()
+        blob = Mock()
+
+        bucket.exists.return_value = False
+        bucket.blob.return_value = blob
+
+        monkeypatch.setattr(helper_security, "get_gcs_client", lambda _json: client)
+        monkeypatch.setattr(helper_security, "get_gcs_bucket", lambda _client, _name: bucket)
+
+        create_bucket = Mock(return_value=None)
+        monkeypatch.setattr(helper_security, "create_gcs_bucket", create_bucket)
+
+        monkeypatch.setattr(helper_security.uuid, "uuid4", lambda: Mock(hex="abc"))
+
+        ok = helper_security.verify_gcs_credentials(cfg)
+        assert ok is True
+
+        create_bucket.assert_called_once_with(client, bucket)
+        bucket.blob.assert_called_once_with("base/path/.opensearch-verify-abc")
+        blob.upload_from_string.assert_called_once()
+        blob.delete.assert_called_once()
+
+    def test_create_gcs_bucket_when_exists_check_forbidden_then_attempt_to_create(
+        self, monkeypatch
+    ):
+        cfg = self._cfg(secret_key='{"project_id":"p"}', bucket="mybucket")
+
+        client = Mock()
+        bucket = Mock()
+        blob = Mock()
+
+        bucket.exists.side_effect = Forbidden("no buckets.get")
+        bucket.blob.return_value = blob
+
+        monkeypatch.setattr(helper_security, "get_gcs_client", lambda _json: client)
+        monkeypatch.setattr(helper_security, "get_gcs_bucket", lambda _client, _name: bucket)
+
+        create_bucket = Mock(return_value=None)
+        monkeypatch.setattr(helper_security, "create_gcs_bucket", create_bucket)
+
+        ok = helper_security.verify_gcs_credentials(cfg)
+        assert ok is True
+        create_bucket.assert_called_once_with(client, bucket)
+
+    @pytest.mark.parametrize("exc", [Conflict("taken"), Forbidden("denied")])
+    def test_create_gcs_bucket_when_bucket_creation_fails_then_return_false(
+        self, monkeypatch, exc
+    ):
+        cfg = self._cfg(secret_key='{"project_id":"p"}', bucket="mybucket")
+
+        client = Mock()
+        bucket = Mock()
+        bucket.exists.return_value = False
+
+        monkeypatch.setattr(helper_security, "get_gcs_client", lambda _json: client)
+        monkeypatch.setattr(helper_security, "get_gcs_bucket", lambda _client, _name: bucket)
+
+        def _raise(*_a, **_k):
+            raise exc
+
+        monkeypatch.setattr(helper_security, "create_gcs_bucket", _raise)
+
+        assert helper_security.verify_gcs_credentials(cfg) is False
+
+    def test_create_gcs_bucket_when_probe_upload_forbidden_then_return_false(self, monkeypatch):
+        cfg = self._cfg(
+            secret_key='{"project_id":"p"}',
+            bucket="mybucket",
+            base_path="base/path",
+        )
+        client = Mock()
+        bucket = Mock()
+        blob = Mock()
+        bucket.exists.return_value = True
+        bucket.blob.return_value = blob
+        blob.upload_from_string.side_effect = Forbidden("no objects.create")
+
+        monkeypatch.setattr(helper_security, "get_gcs_client", lambda _json: client)
+        monkeypatch.setattr(helper_security, "get_gcs_bucket", lambda _client, _name: bucket)
+        assert helper_security.verify_gcs_credentials(cfg) is False
+        blob.delete.assert_not_called()

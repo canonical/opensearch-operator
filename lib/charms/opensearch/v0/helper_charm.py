@@ -2,12 +2,10 @@
 # See LICENSE file for licensing details.
 
 """Utility functions for charms related operations."""
-import json
 import logging
 import os
 import re
 import subprocess
-from pathlib import Path
 from time import time_ns
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Iterable, List, Union
