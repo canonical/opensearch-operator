@@ -70,6 +70,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: (Github hosted) Mount /mnt to have more storage 
+        run: |
+          sudo mkdir -p /mnt/lxd/storage-pools
+          sudo mkdir -p /var/snap/lxd/common/lxd/storage-pools
+          sudo mount --bind /mnt/lxd/storage-pools /var/snap/lxd/common/lxd/storage-pools
+
       - name: (GitHub hosted) Free up disk space
         run: |
           printf '\nDisk usage before cleanup\n'
@@ -78,9 +84,6 @@ jobs:
           rm -r /opt/hostedtoolcache/
           printf '\nDisk usage after cleanup\n'
           df --human-readable
-
-      - name: (self hosted) Disk usage
-        run: df --human-readable
 
       - name: Install terraform snap
         run: |

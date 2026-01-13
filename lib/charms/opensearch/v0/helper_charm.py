@@ -8,7 +8,7 @@ import re
 import subprocess
 from time import time_ns
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, List, Union
+from typing import TYPE_CHECKING, Iterable, List, Union
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
 from charms.opensearch.v0.helper_enums import BaseStrEnum
@@ -247,3 +247,13 @@ def mask_sensitive_information(cmd: str) -> str:
     pattern = re.compile(r"(-tspass\s+|-kspass\s+|-storepass\s+|-new\s+|pass:)(\S+)")
 
     return re.sub(pattern, r"\1" + "xxx", cmd)
+
+
+def diff(desired: Iterable[str], current: Iterable[str]) -> tuple[set[str], set[str]]:
+    """Returns diff needed to turn current list into desired list"""
+    desired_labels = set(desired)
+    current_labels = set(current)
+
+    add = desired_labels - current_labels
+    remove = current_labels - desired_labels
+    return add, remove

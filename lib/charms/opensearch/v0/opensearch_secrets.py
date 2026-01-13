@@ -31,7 +31,7 @@ from charms.opensearch.v0.opensearch_internal_data import (
     Scope,
     SecretCache,
 )
-from ops import JujuVersion, Relation, Secret, SecretNotFoundError
+from ops import JujuVersion, ModelError, Relation, Secret, SecretNotFoundError
 from ops.charm import SecretChangedEvent
 from ops.framework import Object
 from overrides import override
@@ -202,6 +202,9 @@ class OpenSearchSecrets(Object, RelationDataStore):
             secret = self._charm.model.get_secret(label=label)
         except SecretNotFoundError:
             return None
+        except ModelError:
+            logger.error("No permission to access secret: %s", label)
+            return None
 
         self.cached_secrets.set_meta(scope, label, secret)
         return secret
@@ -287,8 +290,21 @@ class OpenSearchSecrets(Object, RelationDataStore):
             logging.warning(f"Secret {scope}:{key} can't be deleted as it doesn't exist")
             return None
 
-        secret.remove_all_revisions()
-        self.cached_secrets.delete(scope, self.label(scope, key))
+        try:
+            secret.remove_all_revisions()
+        except SecretNotFoundError:
+            # the secret doesn't exist anymore
+            logging.info(
+                "Secret %s:%s already absent in Juju, ignoring remove_all_revisions.", scope, key
+            )
+            # clean up the local cache so we don't keep a stale reference
+            self.cached_secrets.delete(scope, self.label(scope, key))
+            return
+
+        # If we got here, removal in Juju succeeded; clean cache.
+        label = self.label(scope, key)
+        self.cached_secrets.delete(scope, label)
+        self._charm.peers_data.delete(scope, label)
 
     @override
     def has(self, scope: Scope, key: str):
@@ -379,12 +395,36 @@ class OpenSearchSecrets(Object, RelationDataStore):
 
         logging.debug(f"Deleted secret {scope}:{key}")
 
+    def get_tracked_secret(self, secret_id: str, scope: Scope, key: str) -> Optional[Secret]:
+        """Track a granted secret and add it to the cache"""
+        label = self.label(scope, key)
+        if cached_secret_meta := self.cached_secrets.get_meta(scope, label):
+            # already tracking
+            return cached_secret_meta
+        try:
+            secret = self._charm.model.get_secret(id=secret_id)
+        except SecretNotFoundError:
+            logger.info("Could not find secret: %s - %s", key, secret_id)
+            return None
+
+        self.cached_secrets.set_meta(scope, label, secret)
+        self.cached_secrets.put_content(scope, label, secret.get_content(refresh=True))
+        return secret
+
     def get_secret_id(self, scope: Scope, key: str) -> Optional[str]:
         """Get the secret ID from the cache."""
         label = self.label(scope, key)
         return self._charm.peers_data.get(scope, label)
 
-    def grant_secret_to_relation(self, secret_id: int, relation: Relation):
+    def grant_secret_to_relation(self, secret_id: str, relation: Relation) -> bool:
         """Grant a secret to a relation."""
-        secret = self._charm.model.get_secret(id=secret_id)
-        secret.grant(relation)
+        try:
+            secret = self._charm.model.get_secret(id=secret_id)
+            secret.grant(relation)
+        except SecretNotFoundError:
+            logger.error("Could not find secret: %s", secret_id)
+            return False
+        except ModelError:
+            logger.error("Not owner of secret: %s. Cannot grant to relation", secret_id)
+            return False
+        return True

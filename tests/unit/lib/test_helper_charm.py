@@ -6,7 +6,7 @@
 import unittest
 
 from charms.opensearch.v0.constants_charm import PeerRelationName
-from charms.opensearch.v0.helper_charm import Status, mask_sensitive_information
+from charms.opensearch.v0.helper_charm import Status, diff, mask_sensitive_information
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.testing import Harness
 
@@ -68,3 +68,24 @@ class TestHelperDatabag(unittest.TestCase):
 
         actual_result = mask_sensitive_information(command_to_test)
         assert actual_result == expected_result
+
+    def test_diff(self):
+        """Test diff method"""
+        desired = ["a", "b", "c"]
+        current = []
+
+        add, remove = diff(desired, current)
+        assert add == set(desired)
+        assert remove == set()
+
+        desired = ["a", "b", "c", "d"]
+        current = ["a", "d", "e"]
+        add, remove = diff(desired, current)
+        assert add == set(["b", "c"])
+        assert remove == set("e")
+
+        desired = []
+        current = ["a", "b", "c"]
+        add, remove = diff(desired, current)
+        assert add == set()
+        assert remove == set(current)

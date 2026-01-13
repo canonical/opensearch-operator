@@ -106,10 +106,6 @@ class TestPerformanceProfile(unittest.TestCase):
                 return_value=True,
             ),
             patch(
-                "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.run",
-                return_value=False,
-            ),
-            patch(
                 "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._apply_system_requirement",
                 return_value=False,
             ),
@@ -145,10 +141,6 @@ class TestPerformanceProfile(unittest.TestCase):
             patch(
                 "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up",
                 return_value=True,
-            ),
-            patch(
-                "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.run",
-                return_value=False,
             ),
             patch(
                 "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._apply_system_requirement",
@@ -217,10 +209,6 @@ class TestPerformanceProfile(unittest.TestCase):
                 return_value=True,
             ),
             patch(
-                "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.run",
-                return_value=False,
-            ),
-            patch(
                 "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._apply_system_requirement",
                 return_value=True,
             ),
@@ -276,10 +264,6 @@ class TestPerformanceProfile(unittest.TestCase):
                 return_value=True,
             ),
             patch(
-                "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.run",
-                return_value=False,
-            ),
-            patch(
                 "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution._apply_system_requirement",
                 return_value=True,
             ),
@@ -330,10 +314,6 @@ class TestPerformanceProfile(unittest.TestCase):
             ),
             patch(
                 "charms.opensearch.v0.opensearch_distro.OpenSearchDistribution.is_node_up",
-                return_value=False,
-            ),
-            patch(
-                "charms.opensearch.v0.opensearch_plugin_manager.OpenSearchPluginManager.run",
                 return_value=False,
             ),
             patch(

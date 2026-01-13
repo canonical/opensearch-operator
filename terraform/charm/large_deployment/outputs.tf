@@ -24,9 +24,9 @@ output "app_names" {
   description = "Output of all deployed application names."
   value = {
     opensearch_main     = module.opensearch_main.app_names["opensearch"]
-    opensearch_failover = module.opensearch_failover.app_names["opensearch"]
+    opensearch_failover = try(module.opensearch_failover["deployed"].app_names["opensearch"], null)
     opensearch_apps = [
-      for app_module in module.opensearch_non_orchestrator_apps :
+      for app_module in values(module.opensearch_non_orchestrator_apps) :
       app_module.app_names["opensearch"]
     ]
     self-signed-certificates = module.opensearch_main.app_names["self-signed-certificates"]
