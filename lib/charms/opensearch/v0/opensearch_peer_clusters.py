@@ -826,7 +826,7 @@ class OpenSearchPeerClustersManager:
                 credentials["azure"]["secret-key"], content_key="azure-secret-key"
             )
 
-        if credentials.get("gcs") and credentials["gcs"].get("secret-key"):
+        if credentials.get("gcs", {}).get("secret-key"):
             credentials["gcs"]["secret-key"] = self._resolve_credential(
                 credentials["gcs"]["secret-key"], content_key="gcs-secret-key"
             )

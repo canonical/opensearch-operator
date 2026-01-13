@@ -148,3 +148,7 @@ OAUTH_RELATION = "oauth"
 PERFORMANCE_PROFILE = "profile"
 
 JWT_CONFIG_RELATION = "jwt-configuration"
+
+# GCS Service account JSON
+
+GCS_SERVICE_ACCOUNT_JSON = "/var/snap/opensearch/common/home/snap_daemon/gcs_service_account.json"

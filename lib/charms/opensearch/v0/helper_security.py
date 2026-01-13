@@ -673,43 +673,41 @@ def verify_s3_credentials(cfg: ObjectStorageConfig) -> bool:
 
     All errors are logged with full traceback here.
     """
-    s3_cfg = cfg.s3
-
     ca_tmp_path = None
     verify_param: str | bool = True
 
     # If we have a custom CA chain, write it to a temp file and pass it to boto3
-    if s3_cfg.tls_ca_chain:
+    if cfg.s3.tls_ca_chain:
         fd, ca_tmp_path = tempfile.mkstemp(prefix="opensearch-s3-ca-", suffix=".pem")
         with os.fdopen(fd, "w") as f:
-            f.write(s3_cfg.tls_ca_chain)
+            f.write(cfg.s3.tls_ca_chain)
         verify_param = ca_tmp_path
 
     try:
         session = boto3.session.Session(
-            aws_access_key_id=s3_cfg.credentials.access_key,
-            aws_secret_access_key=s3_cfg.credentials.secret_key,
-            aws_session_token=getattr(s3_cfg.credentials, "session_token", ""),
+            aws_access_key_id=cfg.s3.credentials.access_key,
+            aws_secret_access_key=cfg.s3.credentials.secret_key,
+            aws_session_token=getattr(cfg.s3.credentials, "session_token", ""),
         )
 
         logger.info(
             "Verifying S3 with endpoint=%r bucket=%r region=%r has_ca=%r verify=%r",
-            s3_cfg.endpoint,
-            s3_cfg.bucket,
-            s3_cfg.region,
-            bool(s3_cfg.tls_ca_chain),
+            cfg.s3.endpoint,
+            cfg.s3.bucket,
+            cfg.s3.region,
+            bool(cfg.s3.tls_ca_chain),
             verify_param,
         )
 
         s3_client = session.client(
             "s3",
-            endpoint_url=s3_cfg.endpoint,
-            region_name=s3_cfg.region,
+            endpoint_url=cfg.s3.endpoint,
+            region_name=cfg.s3.region,
             verify=verify_param,
         )
 
         # This will test both credentials and TLS/CA
-        s3_client.head_bucket(Bucket=s3_cfg.bucket)
+        s3_client.head_bucket(Bucket=cfg.s3.bucket)
 
         logger.info("S3 credential validation with boto3 succeeded.")
         return True
@@ -742,24 +740,22 @@ def verify_azure_credentials(cfg: ObjectStorageConfig) -> bool:
     Uses the storage-account, secret-key and container fields provided by
     azure-storage-integrator.
     """
-    az_cfg = cfg.azure
-
     # TODO move this to the pydantic model validation
-    if az_cfg.connection_protocol not in {"http", "https"}:
+    if cfg.azure.connection_protocol not in {"http", "https"}:
         logger.warning(
             "Azure Storage credential validation failed: unsupported connection protocol %s",
-            az_cfg.connection_protocol,
+            cfg.azure.connection_protocol,
         )
         return False
 
     try:
-        account_name = az_cfg.credentials.storage_account
-        account_key = az_cfg.credentials.secret_key
-        container_name = az_cfg.container
+        account_name = cfg.azure.credentials.storage_account
+        account_key = cfg.azure.credentials.secret_key
+        container_name = cfg.azure.container
 
         # If azure integrator ever sends a custom endpoint, we will use it.
         # Otherwise, we will use public Azure blob endpoint.
-        raw_endpoint = az_cfg.endpoint
+        raw_endpoint = cfg.azure.endpoint
         account_url = raw_endpoint.rsplit("/", 1)[0]
         account_url = account_url or f"https://{account_name}.blob.core.windows.net"
 
@@ -796,14 +792,12 @@ def verify_gcs_credentials(cfg: ObjectStorageConfig) -> bool:  # noqa: C901
     cfg.gcs.credentials.secret_key to contain a service-account JSON
     (as a string), and cfg.gcs.bucket to contain the bucket name.
     """
-    gcs_cfg = cfg.gcs
-
-    if not gcs_cfg.credentials:
+    if not cfg.gcs.credentials:
         logger.error("GCS credential validation failed: missing credentials block.")
         return False
 
-    service_account_json = gcs_cfg.credentials.secret_key
-    bucket_name = gcs_cfg.bucket
+    service_account_json = cfg.gcs.credentials.secret_key
+    bucket_name = cfg.gcs.bucket
 
     if not service_account_json:
         logger.error("GCS credential validation failed: secret_key is empty.")

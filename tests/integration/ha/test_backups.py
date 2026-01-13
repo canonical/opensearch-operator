@@ -1047,6 +1047,7 @@ async def _ensure_only_s3_integrator_related(
 ) -> None:
     """Ensure S3 integrator is deployed and related to app (Azure relation removed)."""
     await _drop_azure_relation_if_any(ops_test, app)
+    await _drop_gcs_relation_if_any(ops_test, app)
 
     if S3_INTEGRATOR not in ops_test.model.applications:
         await ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL)
@@ -1072,6 +1073,7 @@ async def _ensure_only_s3_integrator_related(
 async def _ensure_only_azure_integrator_related(ops_test: OpsTest, app: str) -> None:
     """Ensure Azure integrator is deployed and related to app (S3 relation removed)."""
     await _drop_s3_relation_if_any(ops_test, app)
+    await _drop_gcs_relation_if_any(ops_test, app)
 
     if AZURE_INTEGRATOR not in ops_test.model.applications:
         await ops_test.model.deploy(AZURE_INTEGRATOR, channel=AZURE_INTEGRATOR_CHANNEL)

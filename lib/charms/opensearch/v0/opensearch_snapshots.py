@@ -282,13 +282,15 @@ class OpenSearchSnapshotEvents(Object):
                     "azure.client.default.key": object_storage_config.azure.credentials.secret_key,
                 }
             )
-        else:
+        elif object_storage_type == ObjectStorageType.GCS:
             sa_path = write_gcs_service_account_json(
                 secret_key=object_storage_config.gcs.credentials.secret_key
             )
             self.charm.keystore_manager.put_file_entry(
                 key="gcs.client.default.credentials_file", filename=sa_path
             )
+        else:
+            raise ValueError(f"Unknown object storage type: {object_storage_type}")
 
         self.charm.opensearch_keystore_events.reload_event.emit()
 
@@ -419,20 +421,15 @@ class OpenSearchSnapshotEvents(Object):
 
         if s3_info:
             info_to_save = s3_info
-        elif azure_info:
-            info_to_save = azure_info
-        elif gcs_info:
-            info_to_save = gcs_info
-        else:
-            info_to_save = None
-
-        if s3_info:
             object_storage_types_to_clean = [ObjectStorageType.AZURE, ObjectStorageType.GCS]
         elif azure_info:
+            info_to_save = azure_info
             object_storage_types_to_clean = [ObjectStorageType.S3, ObjectStorageType.GCS]
         elif gcs_info:
+            info_to_save = gcs_info
             object_storage_types_to_clean = [ObjectStorageType.S3, ObjectStorageType.AZURE]
         else:
+            info_to_save = None
             object_storage_types_to_clean = []
 
         keystore_entries_to_clean = []

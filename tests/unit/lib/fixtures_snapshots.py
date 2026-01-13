@@ -168,3 +168,22 @@ class SnapshotsUnitTestFixtures:
         return testing.Relation(
             endpoint=GCS_RELATION, interface="gcs", remote_app_name="gcs-integrator"
         )
+
+    @pytest.fixture(params=["s3", "azure", "gcs"])
+    def backend_setup(self, request):
+        backend = request.param
+        instance = request.instance
+
+        mapping = {
+            "s3": (instance.use_s3, instance.s3_relation),
+            "azure": (instance.use_azure, instance.azure_relation),
+            "gcs": (instance.use_gcs, instance.gcs_relation),
+        }
+
+        try:
+            use_fn, rel_fn = mapping[backend]
+        except KeyError as exc:
+            raise AssertionError(f"Unknown backend {backend}") from exc
+
+        use_fn()
+        return backend, {rel_fn()}

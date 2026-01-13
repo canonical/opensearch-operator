@@ -12,7 +12,10 @@ from time import time_ns
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Iterable, List, Union
 
-from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.constants_charm import (
+    GCS_SERVICE_ACCOUNT_JSON,
+    PeerRelationName,
+)
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import App, PeerClusterApp
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
@@ -263,7 +266,7 @@ def diff(desired: Iterable[str], current: Iterable[str]) -> tuple[set[str], set[
 
 def write_gcs_service_account_json(
     secret_key: str,
-    dst: str = "/var/snap/opensearch/common/home/snap_daemon/service_account.json",
+    dst: str = GCS_SERVICE_ACCOUNT_JSON,
 ) -> Path:
     """Write GCS service account JSON (from relation secret_key) to a file.
 
