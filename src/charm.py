@@ -47,6 +47,10 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self.framework.observe(
             self.on[machine_upgrade.FORCE_ACTION_NAME].action, self._on_force_upgrade_action
         )
+        self.framework.observe(
+            self.on[machine_upgrade.ROLLBACK_OVERRIDE_VERSION_ACTION_NAME].action,
+            self._on_rollback_override_version_action,
+        )
 
     @property
     def _upgrade(self) -> typing.Optional[machine_upgrade.Upgrade]:
@@ -93,7 +97,29 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         if not self._upgrade.is_compatible:
             self._set_upgrade_status()
             return
+
+        # CHECK FOR ROLLBACK
+        if self._upgrade.is_rollback and not self._upgrade.can_rollback:
+            self.unit.status = ops.BlockedStatus(
+                "Rollback unsupported. Refresh to a newer revision or consult the recovery documentation"
+            )
+            logger.error(
+                "Rollback unsupported. Refresh to a newer revision or consult the recovery documentation"
+            )
+            # TODO LOG LINK TO RECOVERY DOCS
+            return
+
         if self._upgrade.unit_state is upgrade.UnitState.OUTDATED:
+            logger.debug(
+                f"Rollback status: is_rollback={self._upgrade.is_rollback}, can_rollback={self._upgrade.can_rollback}"
+            )
+            if self._upgrade.is_rollback:
+                logger.warning("Rollback detected")
+                self.unit.status = BlockedStatus(
+                    "Rollback incompatible. Run 'juju run <unit> rollback-override-version' to override node version and attempt startup procedure"
+                )
+                self.node_lock.release()
+                return
             try:
                 authorized = self._upgrade.authorized
             except upgrade.PrecheckFailed as exception:
@@ -211,6 +237,21 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         self._upgrade_opensearch_event.emit(ignore_lock=False)
         event.set_results({"result": f"Forcefully upgraded {self.unit.name}"})
         logger.debug("Forced upgrade")
+
+    def _on_rollback_override_version_action(self, event: ops.ActionEvent) -> None:
+        if not self._upgrade or not self._upgrade.is_rollback:
+            message = "No rollback in progress"
+            logger.debug(f"Rollback override version event failed: {message}")
+            event.fail(message)
+            return
+        if self._upgrade.unit_state is not upgrade.UnitState.OUTDATED:
+            message = "Unit already upgraded"
+            logger.debug(f"Force upgrade event failed: {message}")
+            event.fail(message)
+            return
+        self._upgrade_opensearch_event.emit(override_version=True)
+        event.set_results({"result": f"Overrode OpenSearch version on {self.unit.name}"})
+        logger.debug("Overrode OpenSearch version")
 
 
 if __name__ == "__main__":
