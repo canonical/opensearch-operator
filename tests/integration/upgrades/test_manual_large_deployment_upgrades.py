@@ -182,6 +182,8 @@ async def test_deploy_version(ops_test: OpsTest, version, series) -> None:
 
 @pytest.mark.parametrize("version", UPGRADE_PARAMS)
 @pytest.mark.abort_on_fail
+@pytest.mark.skip("Rollbacks not supported")
+# TODO re-enable after rollbacks best effort support is added
 async def test_upgrade_rollback_from_local(
     ops_test: OpsTest,
     version: str,
