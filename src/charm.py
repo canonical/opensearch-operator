@@ -75,7 +75,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
                 # Save versions on initial start
                 self._upgrade.set_versions_in_app_databag()
 
-    def _reconcile_upgrade(self, _=None):
+    def _reconcile_upgrade(self, _=None):  # noqa: C901
         """Handle upgrade events."""
         if not self._upgrade:
             logger.debug("Peer relation not available")

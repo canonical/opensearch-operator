@@ -308,7 +308,6 @@ class Upgrade(abc.ABC):
     @property
     def is_rollback(self) -> bool:
         """Whether this upgrade is a rollback"""
-
         unit_bag_version_str = self._unit_databag.get("workload_version")
         if not self.versions_set or unit_bag_version_str is None:
             return False
