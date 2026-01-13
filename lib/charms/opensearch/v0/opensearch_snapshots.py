@@ -478,7 +478,7 @@ class OpenSearchSnapshotEvents(Object):
                     }
                 )
             elif gcs_info:
-                service_account_path = self.charm.snapshot_manager.write_gcs_service_account_json(
+                service_account_path = self.charm.snapshots_manager.write_gcs_service_account_json(
                     secret_key=gcs_info["secret_key"]
                 )
                 self.charm.keystore_manager.put_file_entry(
