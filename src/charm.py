@@ -115,7 +115,9 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         # Set/clear upgrade unit status if no other unit status
         if isinstance(self.unit.status, ops.ActiveStatus) or (
             isinstance(self.unit.status, ops.BlockedStatus)
-            and self.unit.status.message.startswith("Pre-upgrade check failed:")
+            and self.unit.status.message.startswith(
+                "Rollback with `juju refresh`. Pre-upgrade check failed:"
+            )
         ):
             self.status.set(self._upgrade.get_unit_juju_status() or ops.ActiveStatus())
             logger.debug(f"Set unit status to {self.unit.status}")

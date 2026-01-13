@@ -1392,7 +1392,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # If `health_ == HealthColors.YELLOW`, no shards are initializing or relocating
             # (otherwise `health_` would be `HealthColors.YELLOW_TEMP`)
             if health not in (HealthColors.GREEN, HealthColors.YELLOW):
-                logger.error("Cluster is not healthy after upgrade. Manual intervention required.")
+                logger.error(
+                    "Cluster is not healthy after upgrade. Manual intervention required. To rollback, "
+                    "`juju refresh` to the previous revision"
+                )
                 event.defer()
                 return
             elif health == HealthColors.YELLOW:
