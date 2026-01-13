@@ -504,14 +504,13 @@ class GcsRelDataCredentials(Model):
         allow_population_by_field_name = True
 
     @validator("secret_key", pre=True)
-    def _normalize_secret_key(cls, v):  # noqa: N805
+    def _normalize_secret_key(cls, values):  # noqa: N805
         """Accept either raw JSON or base64-encoded JSON"""
-        if v is None:
+        if values is None:
             return None
 
-        content = v.decode() if isinstance(v, (bytes, bytearray)) else str(v)
-        content = content.strip()
-        if not content:
+        content = values.decode() if isinstance(values, (bytes, bytearray)) else str(values)
+        if not (content := content.strip()):
             return None
 
         # already JSON

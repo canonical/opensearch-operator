@@ -780,7 +780,7 @@ def verify_azure_credentials(cfg: ObjectStorageConfig) -> bool:
         return False
 
 
-def verify_gcs_credentials(cfg: ObjectStorageConfig) -> bool:  # noqa: C901
+def verify_gcs_credentials(object_storage_config: ObjectStorageConfig) -> bool:  # noqa: C901
     """Validate GCS credentials using google-cloud-storage.
 
     Args:
@@ -792,12 +792,12 @@ def verify_gcs_credentials(cfg: ObjectStorageConfig) -> bool:  # noqa: C901
     cfg.gcs.credentials.secret_key to contain a service-account JSON
     (as a string), and cfg.gcs.bucket to contain the bucket name.
     """
-    if not cfg.gcs.credentials:
+    if not object_storage_config.gcs.credentials:
         logger.error("GCS credential validation failed: missing credentials block.")
         return False
 
-    service_account_json = cfg.gcs.credentials.secret_key
-    bucket_name = cfg.gcs.bucket
+    service_account_json = object_storage_config.gcs.credentials.secret_key
+    bucket_name = object_storage_config.gcs.bucket
 
     if not service_account_json:
         logger.error("GCS credential validation failed: secret_key is empty.")
@@ -807,7 +807,7 @@ def verify_gcs_credentials(cfg: ObjectStorageConfig) -> bool:  # noqa: C901
         return False
 
     try:
-        sa_info = json.loads(service_account_json)
+        service_account = json.loads(service_account_json)
     except (TypeError, ValueError) as e:
         logger.error(
             "GCS credential validation failed: secret_key is not valid JSON: %s",
@@ -815,15 +815,13 @@ def verify_gcs_credentials(cfg: ObjectStorageConfig) -> bool:  # noqa: C901
         )
         return False
 
-    project_id = sa_info.get("project_id")
-
     client_kwargs: dict = {}
-    if project_id:
+    if project_id := service_account.get("project_id"):
         client_kwargs["project"] = project_id
 
     try:
         client = storage.Client.from_service_account_info(
-            sa_info,
+            service_account,
             **client_kwargs,
         )
         # list_blobs will raise if credentials are wrong or bucket is not accessible.

@@ -636,8 +636,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             return GcsRelDataCredentials(secret_key=secret_key)
 
         # Non-main orchestrators: only return creds if we already have them
-        secret_key = self.charm.secrets.get(Scope.APP, "gcs-secret-key")
-        if not secret_key:
+        if not self.charm.secrets.get(Scope.APP, "gcs-secret-key"):
             return None
 
         # Return what we have received from the peer relation
@@ -1023,7 +1022,6 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                             self.secrets.grant_secret_to_relation(
                                 secret_id["secret-key"], relation
                             )
-
                     else:
                         self.secrets.grant_secret_to_relation(secret_id, relation)
 

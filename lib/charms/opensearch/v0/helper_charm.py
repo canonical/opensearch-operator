@@ -2,18 +2,15 @@
 # See LICENSE file for licensing details.
 
 """Utility functions for charms related operations."""
-import json
 import logging
 import os
 import re
 import subprocess
-from pathlib import Path
 from time import time_ns
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Iterable, List, Union
 
 from charms.opensearch.v0.constants_charm import (
-    GCS_SERVICE_ACCOUNT_JSON,
     PeerRelationName,
 )
 from charms.opensearch.v0.helper_enums import BaseStrEnum
@@ -262,54 +259,3 @@ def diff(desired: Iterable[str], current: Iterable[str]) -> tuple[set[str], set[
     add = desired_labels - current_labels
     remove = current_labels - desired_labels
     return add, remove
-
-
-def write_gcs_service_account_json(
-    secret_key: str,
-    dst: str = GCS_SERVICE_ACCOUNT_JSON,
-) -> Path:
-    """Write GCS service account JSON (from relation secret_key) to a file.
-
-    Args:
-        secret_key: JSON string content of the service account.
-        dst: Destination path.
-
-    Returns:
-        Path to the written file.
-
-    Raises:
-        ValueError: if secret_key is empty or not valid JSON.
-        OSError: if writing fails.
-    """
-    if not secret_key:
-        raise ValueError("Missing GCS secret_key (service account JSON).")
-
-    try:
-        obj = json.loads(secret_key)
-        content = json.dumps(obj)
-    except json.JSONDecodeError as e:
-        raise ValueError("GCS secret_key is not valid JSON.") from e
-
-    path = Path(dst)
-    path.write_text(content, encoding="utf-8")
-    return path
-
-
-def remove_gcs_service_account_json(
-    dst: str = "/var/snap/opensearch/common/home/snap_daemon/service_account.json",
-) -> None:
-    """Remove the GCS service account JSON file.
-
-    Args:
-        dst: Path to the service account file.
-
-    Raises:
-        FileNotFoundError: if missing_ok is False and file doesn't exist.
-        OSError: if deletion fails for other reasons.
-    """
-    path = Path(dst)
-    try:
-        path.unlink()
-    except FileNotFoundError:
-        logger.warning("GCS service account JSON file not found, skipping removal: %s", dst)
-        return

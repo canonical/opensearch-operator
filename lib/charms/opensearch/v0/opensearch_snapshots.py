@@ -7,6 +7,7 @@ import json
 import logging
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, Tuple, Union
 
 from charms.data_platform_libs.v0.azure_storage import (
@@ -25,6 +26,7 @@ from charms.data_platform_libs.v0.s3 import (
 from charms.opensearch.v0.constants_charm import (
     AZURE_RELATION,
     GCS_RELATION,
+    GCS_SERVICE_ACCOUNT_JSON,
     OPENSEARCH_BACKUP_ID_FORMAT,
     S3_RELATION,
     BackupCredentialCleanupFailed,
@@ -37,10 +39,6 @@ from charms.opensearch.v0.constants_charm import (
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
     RestoreInProgress,
-)
-from charms.opensearch.v0.helper_charm import (
-    remove_gcs_service_account_json,
-    write_gcs_service_account_json,
 )
 from charms.opensearch.v0.helper_cluster import ClusterState
 from charms.opensearch.v0.helper_security import (
@@ -283,11 +281,11 @@ class OpenSearchSnapshotEvents(Object):
                 }
             )
         elif object_storage_type == ObjectStorageType.GCS:
-            sa_path = write_gcs_service_account_json(
+            service_account_path = self.charm.snapshots_manager.write_gcs_service_account_json(
                 secret_key=object_storage_config.gcs.credentials.secret_key
             )
             self.charm.keystore_manager.put_file_entry(
-                key="gcs.client.default.credentials_file", filename=sa_path
+                key="gcs.client.default.credentials_file", filename=service_account_path
             )
         else:
             raise ValueError(f"Unknown object storage type: {object_storage_type}")
@@ -480,9 +478,11 @@ class OpenSearchSnapshotEvents(Object):
                     }
                 )
             elif gcs_info:
-                sa_path = write_gcs_service_account_json(secret_key=gcs_info["secret_key"])
+                service_account_path = self.charm.snapshot_manager.write_gcs_service_account_json(
+                    secret_key=gcs_info["secret_key"]
+                )
                 self.charm.keystore_manager.put_file_entry(
-                    key="gcs.client.default.credentials_file", filename=sa_path
+                    key="gcs.client.default.credentials_file", filename=service_account_path
                 )
 
             # Optional CA chain
@@ -1612,7 +1612,7 @@ class OpenSearchSnapshotsManager:
             self.charm.keystore_manager.remove_entries(keystore_entries)
             self.charm.opensearch_keystore_events.reload_event.emit()
             if object_storage_type == ObjectStorageType.GCS or str(object_storage_type) == "gcs":
-                remove_gcs_service_account_json()
+                self.remove_gcs_service_account_json()
             logger.info("Removed keystore entries for %s", object_storage_type)
         except OpenSearchCmdError as e:
             parts = [
@@ -1756,3 +1756,53 @@ class OpenSearchSnapshotsManager:
             hash of the credentials
         """
         return hashlib.sha1(json.dumps(credentials, sort_keys=True).encode()).hexdigest()
+
+    def write_gcs_service_account_json(
+        self,
+        secret_key: str,
+        dst: str = GCS_SERVICE_ACCOUNT_JSON,
+    ) -> Path:
+        """Write GCS service account JSON (from relation secret_key) to a file.
+
+        Args:
+            secret_key: JSON string content of the service account.
+            dst: Destination path.
+
+        Returns:
+            Path to the written file.
+
+        Raises:
+            ValueError: if secret_key is empty or not valid JSON.
+            OSError: if writing fails.
+        """
+        if not secret_key:
+            raise ValueError("Missing GCS secret_key (service account JSON).")
+
+        try:
+            # validate JSON and normalize formatting
+            obj = json.loads(secret_key)
+            content = json.dumps(obj)
+        except json.JSONDecodeError as e:
+            raise ValueError("GCS secret_key is not valid JSON.") from e
+
+        self.charm.opensearch.write_file(dst, content, override=True)
+        return Path(dst)
+
+    def remove_gcs_service_account_json(
+        self,
+        dst: str = GCS_SERVICE_ACCOUNT_JSON,
+    ) -> None:
+        """Remove the GCS service account JSON file.
+
+        Args:
+            dst: Path to the service account file.
+
+        Raises:
+            OSError: if deletion fails for other reasons.
+        """
+        path = Path(dst)
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            logger.warning("GCS service account JSON file not found, skipping removal: %s", dst)
+            return
