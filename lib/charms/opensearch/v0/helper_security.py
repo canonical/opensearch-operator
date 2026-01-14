@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Helpers for security related operations, such as password generation etc."""
+import json
 import logging
 import math
 import os
@@ -23,6 +24,8 @@ from charms.opensearch.v0.helper_charm import run_cmd
 from charms.opensearch.v0.models import ObjectStorageConfig
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from cryptography import x509
+from google.api_core.exceptions import GoogleAPIError
+from google.cloud import storage
 
 # The unique Charmhub library identifier, never change it
 LIBID = "224ce9884b0d47b997357fec522f11c7"
@@ -670,43 +673,41 @@ def verify_s3_credentials(cfg: ObjectStorageConfig) -> bool:
 
     All errors are logged with full traceback here.
     """
-    s3_cfg = cfg.s3
-
     ca_tmp_path = None
     verify_param: str | bool = True
 
     # If we have a custom CA chain, write it to a temp file and pass it to boto3
-    if s3_cfg.tls_ca_chain:
+    if cfg.s3.tls_ca_chain:
         fd, ca_tmp_path = tempfile.mkstemp(prefix="opensearch-s3-ca-", suffix=".pem")
         with os.fdopen(fd, "w") as f:
-            f.write(s3_cfg.tls_ca_chain)
+            f.write(cfg.s3.tls_ca_chain)
         verify_param = ca_tmp_path
 
     try:
         session = boto3.session.Session(
-            aws_access_key_id=s3_cfg.credentials.access_key,
-            aws_secret_access_key=s3_cfg.credentials.secret_key,
-            aws_session_token=getattr(s3_cfg.credentials, "session_token", ""),
+            aws_access_key_id=cfg.s3.credentials.access_key,
+            aws_secret_access_key=cfg.s3.credentials.secret_key,
+            aws_session_token=getattr(cfg.s3.credentials, "session_token", ""),
         )
 
         logger.info(
             "Verifying S3 with endpoint=%r bucket=%r region=%r has_ca=%r verify=%r",
-            s3_cfg.endpoint,
-            s3_cfg.bucket,
-            s3_cfg.region,
-            bool(s3_cfg.tls_ca_chain),
+            cfg.s3.endpoint,
+            cfg.s3.bucket,
+            cfg.s3.region,
+            bool(cfg.s3.tls_ca_chain),
             verify_param,
         )
 
         s3_client = session.client(
             "s3",
-            endpoint_url=s3_cfg.endpoint,
-            region_name=s3_cfg.region,
+            endpoint_url=cfg.s3.endpoint,
+            region_name=cfg.s3.region,
             verify=verify_param,
         )
 
         # This will test both credentials and TLS/CA
-        s3_client.head_bucket(Bucket=s3_cfg.bucket)
+        s3_client.head_bucket(Bucket=cfg.s3.bucket)
 
         logger.info("S3 credential validation with boto3 succeeded.")
         return True
@@ -739,24 +740,22 @@ def verify_azure_credentials(cfg: ObjectStorageConfig) -> bool:
     Uses the storage-account, secret-key and container fields provided by
     azure-storage-integrator.
     """
-    az_cfg = cfg.azure
-
     # TODO move this to the pydantic model validation
-    if az_cfg.connection_protocol not in {"http", "https"}:
+    if cfg.azure.connection_protocol not in {"http", "https"}:
         logger.warning(
             "Azure Storage credential validation failed: unsupported connection protocol %s",
-            az_cfg.connection_protocol,
+            cfg.azure.connection_protocol,
         )
         return False
 
     try:
-        account_name = az_cfg.credentials.storage_account
-        account_key = az_cfg.credentials.secret_key
-        container_name = az_cfg.container
+        account_name = cfg.azure.credentials.storage_account
+        account_key = cfg.azure.credentials.secret_key
+        container_name = cfg.azure.container
 
         # If azure integrator ever sends a custom endpoint, we will use it.
         # Otherwise, we will use public Azure blob endpoint.
-        raw_endpoint = az_cfg.endpoint
+        raw_endpoint = cfg.azure.endpoint
         account_url = raw_endpoint.rsplit("/", 1)[0]
         account_url = account_url or f"https://{account_name}.blob.core.windows.net"
 
@@ -778,4 +777,66 @@ def verify_azure_credentials(cfg: ObjectStorageConfig) -> bool:
             e,
             exc_info=e,
         )
+        return False
+
+
+def verify_gcs_credentials(object_storage_config: ObjectStorageConfig) -> bool:  # noqa: C901
+    """Validate GCS credentials using google-cloud-storage.
+
+    Args:
+        cfg: ObjectStorageConfig object
+
+    Returns:
+        True if we can access the configured bucket, False otherwise.
+
+    cfg.gcs.credentials.secret_key to contain a service-account JSON
+    (as a string), and cfg.gcs.bucket to contain the bucket name.
+    """
+    if not object_storage_config.gcs.credentials:
+        logger.error("GCS credential validation failed: missing credentials block.")
+        return False
+
+    service_account_json = object_storage_config.gcs.credentials.secret_key
+    bucket_name = object_storage_config.gcs.bucket
+
+    if not service_account_json:
+        logger.error("GCS credential validation failed: secret_key is empty.")
+        return False
+    if not bucket_name:
+        logger.error("GCS credential validation failed: bucket name is missing.")
+        return False
+
+    try:
+        service_account = json.loads(service_account_json)
+    except (TypeError, ValueError) as e:
+        logger.error(
+            "GCS credential validation failed: secret_key is not valid JSON: %s",
+            e,
+        )
+        return False
+
+    client_kwargs: dict = {}
+    if project_id := service_account.get("project_id"):
+        client_kwargs["project"] = project_id
+
+    try:
+        client = storage.Client.from_service_account_info(
+            service_account,
+            **client_kwargs,
+        )
+        # list_blobs will raise if credentials are wrong or bucket is not accessible.
+        blobs_iter = client.list_blobs(bucket_name, max_results=1)
+        # Fetch one page
+        _ = next(iter(blobs_iter), None)
+
+        logger.info("GCS credential validation succeeded.")
+        return True
+
+    except (ValueError, TypeError, KeyError) as e:
+        # Invalid/missing service account fields, invalid private_key format
+        logger.error("GCS credential validation failed: invalid credentials: %s", e, exc_info=True)
+        return False
+
+    except GoogleAPIError as e:
+        logger.error("GCS credential validation failed: %s", e, exc_info=True)
         return False

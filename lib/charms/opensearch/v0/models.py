@@ -2,6 +2,8 @@
 # See LICENSE file for licensing details.
 
 """Cluster-related data structures / model classes."""
+import base64
+import binascii
 import json
 import logging
 import re
@@ -494,12 +496,37 @@ class AzureRelData(Model):
 class GcsRelDataCredentials(Model):
     """Model class for credentials passed on the gcs relation."""
 
-    secret_key: str = Field(alias="secret-key", default=None)
+    secret_key: Optional[str] = Field(alias="secret-key", default=None)
 
     class Config:
         """Model config of this pydantic model."""
 
         allow_population_by_field_name = True
+
+    @validator("secret_key", pre=True)
+    def _normalize_secret_key(cls, values):  # noqa: N805
+        """Accept either raw JSON or base64-encoded JSON"""
+        if values is None:
+            return None
+
+        content = values.decode() if isinstance(values, (bytes, bytearray)) else str(values)
+        if not (content := content.strip()):
+            return None
+
+        # already JSON
+        if content.startswith("{") and content.endswith("}"):
+            # validate JSON shape
+            json.loads(content)
+            return content
+
+        # base64 (urlsafe)
+        try:
+            decoded_bytes = base64.b64decode(content, altchars=b"-_", validate=True)
+            decoded_text = decoded_bytes.decode("utf-8").strip()
+            json.loads(decoded_text)
+            return decoded_text
+        except (binascii.Error, ValueError, UnicodeDecodeError, json.JSONDecodeError) as e:
+            raise ValueError("secret-key is not valid JSON (raw or base64-encoded)") from e
 
 
 class GcsRelData(Model):
@@ -511,7 +538,56 @@ class GcsRelData(Model):
     bucket: str = Field(default="")
     base_path: Optional[str] = Field(alias="path", default=None)
     storage_class: Optional[str] = Field(alias="storage-class", default=None)
-    credentials: GcsRelDataCredentials = Field(alias=GCS_CREDENTIALS, default=None)
+    credentials: GcsRelDataCredentials = Field(
+        alias=GCS_CREDENTIALS, default_factory=GcsRelDataCredentials
+    )
+
+    class Config:
+        """Model config of this pydantic model."""
+
+        allow_population_by_field_name = True
+
+    @root_validator
+    def validate_core_fields(cls, values):  # noqa: N805
+        """Validate the core fields of the gcs relation data."""
+        creds = values.get("credentials")
+        if not creds or not creds.secret_key:
+            raise ValueError("Missing fields: secret-key")
+
+        if not values.get("bucket"):
+            raise ValueError("Missing field: bucket")
+
+        # remove any duplicate, prefix or trailing "/" characters
+        if base_path := values.get("base_path"):
+            base_path = re.sub(r"/+", "/", base_path).strip().strip("/")
+        values["base_path"] = base_path or None
+
+        return values
+
+    @validator(GCS_CREDENTIALS, check_fields=False)
+    def ensure_secret_content(cls, conf: Dict[str, str] | GcsRelDataCredentials):  # noqa: N805):
+        """Ensure the secret content is set."""
+        if not conf:
+            return None
+
+        data = conf if isinstance(conf, dict) else conf.dict(by_alias=True, exclude_none=True)
+        for v in data.values():
+            if isinstance(v, str) and v.startswith("secret://"):
+                raise ValueError(f"The secret content must be passed, received {v} instead")
+        return conf
+
+    @classmethod
+    def from_relation(cls, input_dict: Optional[Dict[str, Any]]):
+        """Create a new instance of this class from a json/dict repr.
+
+        This method creates a nested GcsRelDataCredentials object from the input dict.
+        """
+        if not input_dict:
+            return None
+        creds = GcsRelDataCredentials(**input_dict)
+        merged = {**input_dict}
+        merged[GCS_CREDENTIALS] = creds.dict(by_alias=True, exclude_none=True)
+        return cls.parse_obj(merged)
 
 
 class ObjectStorageConfig(Model):
@@ -534,7 +610,7 @@ class PeerClusterRelDataCredentials(Model):
     admin_tls: Optional[Dict[str, Optional[str]]]
     s3: Optional[S3RelDataCredentials]
     azure: Optional[AzureRelDataCredentials]
-    gcs: Optional[GcsRelData]
+    gcs: Optional[GcsRelDataCredentials]
 
 
 class PeerClusterApp(Model):
