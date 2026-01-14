@@ -108,6 +108,10 @@ async def test_upgrade_between_versions(
     await assert_upgrade_to_revision(ops_test, app=app, revision=revision)
     await assert_version_units(ops_test, app, VERSION_N_MINUS_1)
 
+    # continuous writes checks
+    await assert_continuous_writes_increasing(c_writes)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [app])
+
 
 @pytest.mark.group(id="happy_path_upgrade")
 @pytest.mark.abort_on_fail

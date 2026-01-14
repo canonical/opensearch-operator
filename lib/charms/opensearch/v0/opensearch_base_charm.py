@@ -1291,7 +1291,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     "PUT",
                     "/_cluster/settings",
                     # Reset to default value
-                    payload={"persistent": {"cluster.routing.allocation.enable": None}},
+                    payload={"persistent": {"cluster.routing.allocation.enable": "all"}},
                 )
             except OpenSearchHttpError:
                 logger.exception("Failed to re-enable allocation after upgrade")

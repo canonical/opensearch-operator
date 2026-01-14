@@ -167,7 +167,7 @@ class Upgrade(upgrade.Upgrade):
                                 "/_cluster/settings",
                                 # Reset to default value
                                 payload={
-                                    "persistent": {"cluster.routing.allocation.enable": None}
+                                    "persistent": {"cluster.routing.allocation.enable": "all"}
                                 },
                                 alt_hosts=self._charm.alt_hosts,
                             )
