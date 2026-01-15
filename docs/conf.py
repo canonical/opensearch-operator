@@ -169,7 +169,7 @@ html_context = {
 # TODO: If your documentation is hosted on https://docs.ubuntu.com/,
 #       uncomment and update as needed.
 
-slug = 'charmed-opensearch'
+# slug = 'charmed-opensearch'
 
 #######################
 # Sitemap configuration: https://sphinx-sitemap.readthedocs.io/
