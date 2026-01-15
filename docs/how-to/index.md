@@ -1,4 +1,4 @@
-(how-to-guides-index)=
+(how-to-index)=
 # How-to guides
 
 The following guides cover key processes and common tasks for managing and using Charmed OpenSearch on machines.
@@ -52,7 +52,7 @@ Integrate with an application <integrate-with-an-application>
 back-up-and-restore/index
 recover-from-attached-storage
 upgrade/index
-Access using Oauth <access-using-oauth>
+Access using OAuth <access-using-oauth>
 Enable JWT Authentication <enable-jwt-authentication>
 monitoring-cos/index
 ```
