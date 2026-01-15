@@ -98,10 +98,10 @@ async def test_deploy_latest_from_channel(ops_test: OpsTest, series) -> None:
 @pytest.mark.abort_on_fail
 @pytest.mark.skip("Can't upgrade between earlier versions")
 # TODO: re-enable after two versions available
-async def test_upgrade_between_versions(
+async def test_upgrade_to_n_minus_1(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, series
 ) -> None:
-    """Test upgrade from upstream to currently locally built version."""
+    """Test upgrade from upstream (n-2) to currently n-1 built version."""
     app = (await app_name(ops_test)) or APP_NAME
     revision = VERSION_TO_REVISION[VERSION_N_MINUS_1][series]
     await assert_version_units(ops_test, app, VERSION_N_MINUS_2)
@@ -118,7 +118,7 @@ async def test_upgrade_between_versions(
 async def test_upgrade_to_local(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, charm
 ) -> None:
-    """Test upgrade from usptream to currently locally built version."""
+    """Test upgrade from n-1 to currently locally built version."""
     app = (await app_name(ops_test)) or APP_NAME
     await assert_upgrade_to_local(ops_test, app=app, charm=charm)
     await assert_version_units(ops_test, app, VERSION_N)

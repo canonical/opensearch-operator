@@ -147,8 +147,10 @@ async def test_deploy_starting_version(ops_test: OpsTest, series) -> None:
 @pytest.mark.abort_on_fail
 @pytest.mark.skip("Can't upgrade between earlier versions")
 # TODO: re-enable after two versions available
-async def test_upgrade_between_versions(ops_test: OpsTest, series: str) -> None:
-    """Test minor version upgrade."""
+async def test_upgrade_to_n_minus_1(
+    ops_test: OpsTest, series: str, c_writes: ContinuousWrites, c_writes_runner
+) -> None:
+    """Test minor version upgrade from n-2 to n-1."""
     # upgrade to version n-1 revision for current series
     revision = VERSION_TO_REVISION[VERSION_N_MINUS_1][series]
     for app in list(APPS.keys()):
@@ -156,13 +158,17 @@ async def test_upgrade_between_versions(ops_test: OpsTest, series: str) -> None:
         await assert_upgrade_to_revision(ops_test, app, revision)
         await assert_version_units(ops_test, app, VERSION_N_MINUS_1)
 
+    # continuous writes checks
+    await assert_continuous_writes_increasing(c_writes)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [APP_NAME, MAIN_APP])
+
 
 @pytest.mark.group(id="happy_path_upgrade")
 @pytest.mark.abort_on_fail
 async def test_upgrade_to_local(
     ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, charm
 ) -> None:
-    """Test upgrade to local charm."""
+    """Test upgrade to local charm from n-1."""
     for app in [APP_NAME, FAILOVER_APP, MAIN_APP]:
         await assert_upgrade_to_local(ops_test, app=app, charm=charm)
         await assert_version_units(ops_test, app, VERSION_N)
@@ -189,6 +195,8 @@ async def test_upgrade_rollback_from_local(
     version: str,
     charm: str,
     series: str,
+    c_writes: ContinuousWrites,
+    c_writes_runner,
 ) -> None:
     """Test upgrade to local and rollback to given version."""
     revision = VERSION_TO_REVISION[version][series]
@@ -196,6 +204,10 @@ async def test_upgrade_rollback_from_local(
         await assert_version_units(ops_test, app, version)
         await assert_rollback_to_revision(ops_test, app, charm, revision)
         await assert_version_units(ops_test, app, version)
+
+    # continuous writes checks
+    await assert_continuous_writes_increasing(c_writes)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [APP_NAME, MAIN_APP])
 
 
 @pytest.mark.parametrize("version", UPGRADE_PARAMS)
