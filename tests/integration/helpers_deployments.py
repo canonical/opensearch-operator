@@ -328,6 +328,36 @@ async def _is_every_condition_met(
     return True
 
 
+async def wait_until_condition_on_units(
+    ops_test, app: str, condition, timeout: int = 1200
+) -> None:
+    """Block and wait until a condition is met on the units in `app` or timeout."""
+    try:
+        logger.info("\n\n\n")
+        logger.info(
+            subprocess.check_output(
+                f"juju status --model {ops_test.model.info.name}", shell=True
+            ).decode("utf-8")
+        )
+        for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(10)):
+            with attempt:
+                logger.info("Waiting for condition...")
+                units = await get_application_units(ops_test, app)
+                if condition(units):
+                    logger.info(f"{now()} -- Waiting for condition: complete.\n\n\n")
+                    return
+                raise Exception
+    except RetryError:
+        logger.error("wait_until_condition_on_units -- Timed out!\n\n\n")
+        logger.info(
+            subprocess.check_output(
+                f"juju status --model {ops_test.model.info.name}", shell=True
+            ).decode("utf-8")
+        )
+        _dump_juju_logs(model=ops_test.model.info.name, lines=3000)
+        raise
+
+
 async def wait_until(  # noqa: C901
     ops_test: OpsTest,
     apps: List[str],

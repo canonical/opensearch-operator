@@ -13,6 +13,7 @@ import typing
 
 import charms.opensearch.v0.constants_charm as constants_charm
 import ops
+from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 
 import upgrade
 from opensearch import OpenSearchSnap
@@ -160,6 +161,18 @@ class Upgrade(upgrade.Upgrade):
                     ):
                         # Assumes charm version uniquely identifies charm revision
                         logger.debug("Rollback detected. Skipping pre-upgrade check")
+                        try:
+                            self._charm.opensearch.request(
+                                "PUT",
+                                "/_cluster/settings",
+                                # Reset to default value
+                                payload={
+                                    "persistent": {"cluster.routing.allocation.enable": "all"}
+                                },
+                                alt_hosts=self._charm.alt_hosts,
+                            )
+                        except OpenSearchHttpError:
+                            logger.exception("Failed to re-enable allocation after rollback")
                     else:
                         # Run pre-upgrade check
                         # (in case user forgot to run pre-upgrade-check action)
