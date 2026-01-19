@@ -842,8 +842,7 @@ def get_azure_container_client(azure_parameters: dict[str, str]) -> ContainerCli
     Returns:
         ContainerClient: Client bound to the target container.
     """
-    account_url = azure_parameters.get("account-url")
-    if not account_url:
+    if not (account_url := azure_parameters.get("account-url")):
         account_url = f"https://{azure_parameters['storage-account']}.blob.core.windows.net"
 
     return ContainerClient(
@@ -900,8 +899,7 @@ def verify_azure_credentials(storage_config: ObjectStorageConfig) -> bool:
 
         # Custom endpoint if present, else default public endpoint
         raw_endpoint = storage_config.azure.endpoint or ""
-        account_url = raw_endpoint.rsplit("/", 1)[0] if raw_endpoint else ""
-        if not account_url:
+        if not (account_url := raw_endpoint.rsplit("/", 1)[0] if raw_endpoint else ""):
             account_url = f"https://{account_name}.blob.core.windows.net"
 
         azure_params: dict[str, str] = {
