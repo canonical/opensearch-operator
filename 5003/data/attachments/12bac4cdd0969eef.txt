@@ -1,0 +1,565 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'opensearch-data': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'blocked', 'message': 'Cannot start. Waiting for peer cluster relation...', 'since': '19 Jan 2026 01:57:57Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch-data', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch-data', 'interface': 'opensearch_peers', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch-data', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch-data/0': {'workload-status': {'current': 'blocked', 'message': 'Missing requirements: At least 1 cluster manager nodes are required.', 'since': '19 Jan 2026 01:57:57Z'}, 'juju-status': {'current': 'idle', 'since': '19 Jan 2026 02:02:38Z', 'version': '3.6.13'}, 'leader': True, 'machine': '1', 'public-address': '10.251.166.92'}, 'opensearch-data/1': {'workload-status': {'current': 'blocked', 'message': 'Missing requirements: At least 1 cluster manager nodes are required.', 'since': '19 Jan 2026 01:57:58Z'}, 'juju-status': {'current': 'idle', 'since': '19 Jan 2026 02:02:38Z', 'version': '3.6.13'}, 'machine': '2', 'public-address': '10.251.166.162'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 'opensearch-failover': {'charm': 'local:noble/opensearch-3', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 3, 'exposed': False, 'application-status': {'current': 'active', 'since': '19 Jan 2026 02:03:37Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch-failover', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch-failover', 'interface': 'opensearch_peers', 'scope': 'global'}], 'peer-cluster': [{'related-application': 'opensearch-main', 'interface': 'peer_cluster', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch-failover', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch-failover/0': {'workload-status': {'current': 'active', 'since': '19 Jan 2026 02:05:33Z'}, 'juju-status': {'current': 'idle', 'since': '19 Jan 2026 02:10:46Z', 'version': '3.6.13'}, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.251.166.138'}, 'opensearch-failover/1': {'workload-status': {'current': 'active', 'since': '19 Jan 2026 02:06:07Z'}, 'juju-status': {'current': 'idle', 'since': '19 Jan 2026 02:10:46Z', 'version': '3.6.13'}, 'machine': '4', 'open-ports': ['9200/tcp'], 'public-address': '10.251.166.243'}, 'opensearch-failover/2': {'workload-status': {'current': 'active', 'since': '19 Jan 2026 02:05:04Z'}, 'juju-status': {'current': 'idle', 'since': '19 Jan 2026 02:10:54Z', 'version': '3.6.13'}, 'leader': True, 'machine': '5', 'open-ports': ['9200/tcp'], 'public-address': '10.251.166.56'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 'opensearch-main': {'charm': 'local:noble/opensearch-2', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 2, 'exposed': False, 'application-status': {'current': 'active', 'since': '19 Jan 2026 02:04:04Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch-main', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch-main', 'interface': 'opensearch_peers', 'scope': 'global'}], 'peer-cluster-orchestrator': [{'related-application': 'opensearch-failover', 'interface': 'peer_cluster', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch-main', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch-main/0': {'workload-status': {'current': 'active', 'since': '19 Jan 2026 02:04:02Z'}, 'juju-status': {'current': 'idle', 'since': '19 Jan 2026 02:12:30Z', 'version': '3.6.13'}, 'machine': '7', 'open-ports': ['9200/tcp'], 'public-address': '10.251.166.24'}, 'opensearch-main/1': {'workload-status': {'current': 'active', 'since': '19 Jan 2026 02:04:02Z'}, 'juju-status': {'current': 'idle', 'since': '19 Jan 2026 02:12:30Z', 'version': '3.6.13'}, 'leader': True, 'machine': '8', 'open-ports': ['9200/tcp'], 'public-address': '10.251.166.142'}, 'opensearch-main/2': {'workload-status': {'current': 'active', 'since': '19 Jan 2026 02:03:57Z'}, 'juju-status': {'current': 'idle', 'since': '19 Jan 2026 02:12:30Z', 'version': '3.6.13'}, 'machine': '9', 'open-ports': ['9200/tcp'], 'public-address': '10.251.166.148'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 317, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '19 Jan 2026 01:56:06Z'}, 'relations': {'certificates': [{'related-application': 'opensearch-data', 'interface': 'tls-certificates', 'scope': 'global'}, {'related-application': 'opensearch-failover', 'interface': 'tls-certificates', 'scope': 'global'}, {'related-application': 'opensearch-main', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '19 Jan 2026 01:56:06Z'}, 'juju-status': {'current': 'idle', 'since': '19 Jan 2026 02:12:29Z', 'version': '3.6.13'}, 'leader': True, 'machine': '0', 'public-address': '10.251.166.168'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.13   unsupported  02:13:20Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch-data                    blocked      2  opensearch                            0  no       Cannot start. Waiting for peer cluster relation...
+opensearch-failover                active       3  opensearch                            3  no       
+opensearch-main                    active       3  opensearch                            2  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch-data/0*           blocked   executing  1        10.251.166.92             Missing requirements: At least 1 cluster manager nodes are required.
+opensearch-data/1            blocked   executing  2        10.251.166.162            Missing requirements: At least 1 cluster manager nodes are required.
+opensearch-failover/0        active    executing  3        10.251.166.138  9200/tcp  
+opensearch-failover/1        active    executing  4        10.251.166.243  9200/tcp  
+opensearch-failover/2*       active    executing  5        10.251.166.56   9200/tcp  
+opensearch-main/0            active    executing  7        10.251.166.24   9200/tcp  
+opensearch-main/1*           active    executing  8        10.251.166.142  9200/tcp  
+opensearch-main/2            active    executing  9        10.251.166.148  9200/tcp  
+self-signed-certificates/0*  active    idle       0        10.251.166.168            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.251.166.168  juju-549df7-0  ubuntu@24.04  github-runner  Running
+1        started  10.251.166.92   juju-549df7-1  ubuntu@24.04  github-runner  Running
+2        started  10.251.166.162  juju-549df7-2  ubuntu@24.04  github-runner  Running
+3        started  10.251.166.138  juju-549df7-3  ubuntu@24.04  github-runner  Running
+4        started  10.251.166.243  juju-549df7-4  ubuntu@24.04  github-runner  Running
+5        started  10.251.166.56   juju-549df7-5  ubuntu@24.04  github-runner  Running
+7        started  10.251.166.24   juju-549df7-7  ubuntu@24.04  github-runner  Running
+8        started  10.251.166.142  juju-549df7-8  ubuntu@24.04  github-runner  Running
+9        started  10.251.166.148  juju-549df7-9  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:13:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [executing (since: 02:13:19)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [executing (since: 02:13:19)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [executing (since: 02:13:19)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:13:30 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [idle (since: 02:13:24)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [idle (since: 02:13:27)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [idle (since: 02:13:24)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:13:41 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [idle (since: 02:13:41)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [executing (since: 02:13:40)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [idle (since: 02:13:41)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:13:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [idle (since: 02:13:44)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [idle (since: 02:13:46)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [idle (since: 02:13:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:14:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [idle (since: 02:13:44)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [idle (since: 02:13:46)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [idle (since: 02:13:44)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:14:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [idle (since: 02:14:13)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [executing (since: 02:14:12)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [executing (since: 02:14:12)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:14:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [idle (since: 02:14:18)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [idle (since: 02:14:20)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [idle (since: 02:14:18)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:14:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [idle (since: 02:14:18)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [idle (since: 02:14:20)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [idle (since: 02:14:18)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:14:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [idle (since: 02:14:18)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [idle (since: 02:14:20)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [idle (since: 02:14:18)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:14:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [idle (since: 02:14:18)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [idle (since: 02:14:20)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [idle (since: 02:14:18)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:15:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [idle (since: 02:14:18)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [idle (since: 02:14:20)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [idle (since: 02:14:18)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:15:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [idle (since: 02:15:20)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [executing (since: 02:15:19)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [idle (since: 02:15:20)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:15:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [idle (since: 02:15:20)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [idle (since: 02:15:22)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [idle (since: 02:15:20)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:15:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [idle (since: 02:15:20)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [idle (since: 02:15:22)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [idle (since: 02:15:20)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:15:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [idle (since: 02:15:20)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [idle (since: 02:15:22)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [idle (since: 02:15:20)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:16:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [idle (since: 02:15:20)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [idle (since: 02:15:22)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [idle (since: 02:15:20)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:16:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [idle (since: 02:15:20)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [idle (since: 02:15:22)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [idle (since: 02:15:20)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:16:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-main-0.f20  -- (10.251.166.24) -- [idle (since: 02:15:20)] active: 
+		opensearch-main-1.f20* -- (10.251.166.142) -- [idle (since: 02:15:22)] active: 
+		opensearch-main-2.f20  -- (10.251.166.148) -- [idle (since: 02:15:20)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:16:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-failover-0.553  -- (10.251.166.138) -- [idle (since: 02:16:23)] active: 
+		opensearch-failover-1.553  -- (10.251.166.243) -- [idle (since: 02:16:23)] active: 
+		opensearch-failover-2.553* -- (10.251.166.56) -- [idle (since: 02:16:24)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:16:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-failover-0.553  -- (10.251.166.138) -- [idle (since: 02:16:23)] active: 
+		opensearch-failover-1.553  -- (10.251.166.243) -- [idle (since: 02:16:23)] active: 
+		opensearch-failover-2.553* -- (10.251.166.56) -- [idle (since: 02:16:24)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:17:01 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-failover-0.553  -- (10.251.166.138) -- [idle (since: 02:16:23)] active: 
+		opensearch-failover-1.553  -- (10.251.166.243) -- [idle (since: 02:16:23)] active: 
+		opensearch-failover-2.553* -- (10.251.166.56) -- [idle (since: 02:16:24)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:17:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-failover-0.553  -- (10.251.166.138) -- [idle (since: 02:16:23)] active: 
+		opensearch-failover-1.553  -- (10.251.166.243) -- [idle (since: 02:16:23)] active: 
+		opensearch-failover-2.553* -- (10.251.166.56) -- [idle (since: 02:16:24)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:17:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-failover-0.553  -- (10.251.166.138) -- [idle (since: 02:16:23)] active: 
+		opensearch-failover-1.553  -- (10.251.166.243) -- [idle (since: 02:16:23)] active: 
+		opensearch-failover-2.553* -- (10.251.166.56) -- [idle (since: 02:16:24)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:17:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-failover-0.553  -- (10.251.166.138) -- [idle (since: 02:16:23)] active: 
+		opensearch-failover-1.553  -- (10.251.166.243) -- [idle (since: 02:16:23)] active: 
+		opensearch-failover-2.553* -- (10.251.166.56) -- [idle (since: 02:16:24)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:17:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-data - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-data-0.1b9* -- (10.251.166.92) -- [idle (since: 02:17:21)] active: 
+		opensearch-data-1.1b9  -- (10.251.166.162) -- [idle (since: 02:17:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:18:01 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-data - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-data-0.1b9* -- (10.251.166.92) -- [idle (since: 02:17:21)] active: 
+		opensearch-data-1.1b9  -- (10.251.166.162) -- [idle (since: 02:17:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:18:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-data - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-data-0.1b9* -- (10.251.166.92) -- [idle (since: 02:17:21)] active: 
+		opensearch-data-1.1b9  -- (10.251.166.162) -- [idle (since: 02:17:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:18:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-data - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-data-0.1b9* -- (10.251.166.92) -- [idle (since: 02:17:21)] active: 
+		opensearch-data-1.1b9  -- (10.251.166.162) -- [idle (since: 02:17:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:18:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:18:41 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.251.166.142:9200/_nodes
+[32mINFO    [0m integration.ha.conftest:conftest.py:55 
+
+
+
+The writes have been cleared.
+
+
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.13   unsupported  02:18:53Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch-data                    active      2  opensearch                            0  no       
+opensearch-failover                active      3  opensearch                            3  no       
+opensearch-main                    active      3  opensearch                            2  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch-data/0*           active    idle   1        10.251.166.92   9200/tcp  
+opensearch-data/1            active    idle   2        10.251.166.162  9200/tcp  
+opensearch-failover/0        active    idle   3        10.251.166.138  9200/tcp  
+opensearch-failover/1        active    idle   4        10.251.166.243  9200/tcp  
+opensearch-failover/2*       active    idle   5        10.251.166.56   9200/tcp  
+opensearch-main/0            active    idle   7        10.251.166.24   9200/tcp  
+opensearch-main/1*           active    idle   8        10.251.166.142  9200/tcp  
+opensearch-main/2            active    idle   9        10.251.166.148  9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.251.166.168            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.251.166.168  juju-549df7-0  ubuntu@24.04  github-runner  Running
+1        started  10.251.166.92   juju-549df7-1  ubuntu@24.04  github-runner  Running
+2        started  10.251.166.162  juju-549df7-2  ubuntu@24.04  github-runner  Running
+3        started  10.251.166.138  juju-549df7-3  ubuntu@24.04  github-runner  Running
+4        started  10.251.166.243  juju-549df7-4  ubuntu@24.04  github-runner  Running
+5        started  10.251.166.56   juju-549df7-5  ubuntu@24.04  github-runner  Running
+7        started  10.251.166.24   juju-549df7-7  ubuntu@24.04  github-runner  Running
+8        started  10.251.166.142  juju-549df7-8  ubuntu@24.04  github-runner  Running
+9        started  10.251.166.148  juju-549df7-9  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 01:55:55 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:55:55 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:56:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:56:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:56:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:56:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 01:56:14 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 01:56:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:56:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:56:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:56:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:56:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 01:56:20 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 01:56:20 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:56:23 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:56:23 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-9: 01:56:25 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-9: 01:56:25 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:56:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:56:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-invalid-0: 01:57:50 ERROR unit.opensearch-invalid/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-invalid-0: 01:57:50 ERROR unit.opensearch-invalid/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-invalid-0: 01:57:51 ERROR unit.opensearch-invalid/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-invalid-0: 01:57:51 ERROR unit.opensearch-invalid/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-invalid-0: 01:57:52 ERROR unit.opensearch-invalid/0.juju-log opensearch-peers:6: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-invalid-0: 01:57:52 ERROR unit.opensearch-invalid/0.juju-log opensearch-peers:6: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-invalid-0: 01:57:52 ERROR unit.opensearch-invalid/0.juju-log opensearch-peers:6: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-invalid-0: 01:57:52 ERROR unit.opensearch-invalid/0.juju-log opensearch-peers:6: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-invalid-0: 01:57:53 ERROR unit.opensearch-invalid/0.juju-log upgrade-version-a:8: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-invalid-0: 01:57:53 ERROR unit.opensearch-invalid/0.juju-log upgrade-version-a:8: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:57:57 ERROR unit.opensearch-data/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:57:57 ERROR unit.opensearch-data/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:57:58 ERROR unit.opensearch-data/1.juju-log upgrade-version-a:0: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:57:58 ERROR unit.opensearch-data/1.juju-log upgrade-version-a:0: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:57:58 ERROR unit.opensearch-data/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:57:58 ERROR unit.opensearch-data/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:57:59 ERROR unit.opensearch-data/1.juju-log opensearch-peers:1: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:57:59 ERROR unit.opensearch-data/1.juju-log opensearch-peers:1: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:57:59 ERROR unit.opensearch-data/0.juju-log upgrade-version-a:0: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:57:59 ERROR unit.opensearch-data/0.juju-log upgrade-version-a:0: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:57:59 ERROR unit.opensearch-data/1.juju-log opensearch-peers:1: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:57:59 ERROR unit.opensearch-data/1.juju-log opensearch-peers:1: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:58:00 ERROR unit.opensearch-data/1.juju-log upgrade-version-a:0: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:58:00 ERROR unit.opensearch-data/1.juju-log upgrade-version-a:0: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:58:00 ERROR unit.opensearch-data/0.juju-log upgrade-version-a:0: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:58:00 ERROR unit.opensearch-data/0.juju-log upgrade-version-a:0: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:58:02 ERROR unit.opensearch-data/0.juju-log opensearch-peers:1: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:58:02 ERROR unit.opensearch-data/0.juju-log opensearch-peers:1: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:58:02 ERROR unit.opensearch-data/0.juju-log opensearch-peers:1: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:58:02 ERROR unit.opensearch-data/0.juju-log opensearch-peers:1: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:58:03 ERROR unit.opensearch-data/0.juju-log opensearch-peers:1: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:58:03 ERROR unit.opensearch-data/0.juju-log opensearch-peers:1: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:58:04 ERROR unit.opensearch-data/0.juju-log opensearch-peers:1: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:58:04 ERROR unit.opensearch-data/0.juju-log opensearch-peers:1: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:58:04 ERROR unit.opensearch-data/0.juju-log opensearch-peers:1: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:58:04 ERROR unit.opensearch-data/0.juju-log opensearch-peers:1: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:58:05 ERROR unit.opensearch-data/0.juju-log upgrade-version-a:0: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:58:05 ERROR unit.opensearch-data/0.juju-log upgrade-version-a:0: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:58:06 ERROR unit.opensearch-data/0.juju-log node-lock-fallback:2: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:58:06 ERROR unit.opensearch-data/0.juju-log node-lock-fallback:2: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:58:07 ERROR unit.opensearch-data/0.juju-log node-lock-fallback:2: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:58:07 ERROR unit.opensearch-data/0.juju-log node-lock-fallback:2: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 02:00:05 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-1: 02:01:04 ERROR unit.opensearch-data/1.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 02:01:04 ERROR unit.opensearch-data/1.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 02:01:04 ERROR unit.opensearch-data/1.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 02:01:04 ERROR unit.opensearch-data/1.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-invalid-0: 02:01:10 ERROR unit.opensearch-invalid/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-invalid-0: 02:01:10 ERROR unit.opensearch-invalid/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-invalid-0: 02:01:10 ERROR unit.opensearch-invalid/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-invalid-0: 02:01:10 ERROR unit.opensearch-invalid/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 02:02:11 ERROR unit.opensearch-data/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 02:02:11 ERROR unit.opensearch-data/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 02:02:11 ERROR unit.opensearch-data/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 02:02:11 ERROR unit.opensearch-data/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-invalid-0: 02:02:35 ERROR unit.opensearch-invalid/0.juju-log certificates:16: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-invalid-0: 02:02:35 ERROR unit.opensearch-invalid/0.juju-log certificates:16: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 02:02:35 ERROR unit.opensearch-data/1.juju-log certificates:15: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 02:02:35 ERROR unit.opensearch-data/1.juju-log certificates:15: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 02:02:35 ERROR unit.opensearch-data/0.juju-log certificates:15: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 02:02:35 ERROR unit.opensearch-data/0.juju-log certificates:15: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-invalid-0: 02:02:37 ERROR unit.opensearch-invalid/0.juju-log certificates:16: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 02:02:37 ERROR unit.opensearch-data/1.juju-log certificates:15: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 02:02:37 ERROR unit.opensearch-data/1.juju-log certificates:15: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-invalid-0: 02:02:37 ERROR unit.opensearch-invalid/0.juju-log certificates:16: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 02:02:37 ERROR unit.opensearch-data/0.juju-log certificates:15: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 02:02:37 ERROR unit.opensearch-data/0.juju-log certificates:15: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-invalid-0: 02:02:38 ERROR unit.opensearch-invalid/0.juju-log certificates:16: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-invalid-0: 02:02:38 ERROR unit.opensearch-invalid/0.juju-log certificates:16: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 02:02:38 ERROR unit.opensearch-data/1.juju-log certificates:15: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 02:02:38 ERROR unit.opensearch-data/1.juju-log certificates:15: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 02:02:38 ERROR unit.opensearch-data/0.juju-log certificates:15: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 02:02:38 ERROR unit.opensearch-data/0.juju-log certificates:15: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 02:02:39 ERROR unit.self-signed-certificates/0.juju-log certificates:15: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:02:40 ERROR unit.self-signed-certificates/0.juju-log certificates:16: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:02:41 ERROR unit.self-signed-certificates/0.juju-log certificates:13: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:02:44 ERROR unit.self-signed-certificates/0.juju-log certificates:13: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:02:47 ERROR unit.self-signed-certificates/0.juju-log certificates:14: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:02:48 ERROR unit.self-signed-certificates/0.juju-log certificates:13: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:02:50 ERROR unit.self-signed-certificates/0.juju-log certificates:15: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:02:51 ERROR unit.self-signed-certificates/0.juju-log certificates:14: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:02:54 ERROR unit.self-signed-certificates/0.juju-log certificates:14: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:04:09 ERROR unit.self-signed-certificates/0.juju-log certificates:14: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:04:16 ERROR unit.self-signed-certificates/0.juju-log certificates:14: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:04:18 ERROR unit.self-signed-certificates/0.juju-log certificates:14: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:04:37 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-invalid-0: 02:05:26 ERROR unit.opensearch-invalid/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-invalid-0: 02:05:26 ERROR unit.opensearch-invalid/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-invalid-0: 02:05:26 ERROR unit.opensearch-invalid/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-invalid-0: 02:05:26 ERROR unit.opensearch-invalid/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 02:05:49 ERROR unit.opensearch-data/1.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 02:05:49 ERROR unit.opensearch-data/1.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 02:05:49 ERROR unit.opensearch-data/1.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 02:05:49 ERROR unit.opensearch-data/1.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 02:07:44 ERROR unit.opensearch-data/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 02:07:44 ERROR unit.opensearch-data/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 02:07:44 ERROR unit.opensearch-data/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 02:07:44 ERROR unit.opensearch-data/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 02:09:02 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-invalid-0: 02:10:01 ERROR unit.opensearch-invalid/0.juju-log peer-cluster:17: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-invalid-0: 02:10:01 ERROR unit.opensearch-invalid/0.juju-log peer-cluster:17: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-invalid-0: 02:10:02 ERROR unit.opensearch-invalid/0.juju-log peer-cluster:17: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-invalid-0: 02:10:02 ERROR unit.opensearch-invalid/0.juju-log peer-cluster:17: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-invalid-0: 02:10:03 ERROR unit.opensearch-invalid/0.juju-log peer-cluster:17: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-invalid-0: 02:10:03 ERROR unit.opensearch-invalid/0.juju-log peer-cluster:17: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-invalid-0: 02:10:03 ERROR unit.opensearch-invalid/0.juju-log peer-cluster:17: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-invalid-0: 02:10:03 ERROR unit.opensearch-invalid/0.juju-log peer-cluster:17: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 02:11:07 ERROR unit.opensearch-data/1.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 02:11:07 ERROR unit.opensearch-data/1.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 02:11:08 ERROR unit.opensearch-data/1.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 02:11:08 ERROR unit.opensearch-data/1.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 02:13:03 ERROR unit.opensearch-data/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 02:13:03 ERROR unit.opensearch-data/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 02:13:03 ERROR unit.opensearch-data/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 02:13:03 ERROR unit.opensearch-data/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-main-1: 02:13:26 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-data-0: 02:13:26 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-data-1: 02:13:26 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-failover-1: 02:13:26 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-failover-0: 02:13:26 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-failover-2: 02:13:26 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-data-1: 02:13:38 ERROR unit.opensearch-data/1.juju-log peer-cluster:18: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 02:13:38 ERROR unit.opensearch-data/1.juju-log peer-cluster:18: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 02:13:38 ERROR unit.opensearch-data/1.juju-log peer-cluster:18: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 02:13:38 ERROR unit.opensearch-data/1.juju-log peer-cluster:18: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-main-0: 02:13:40 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-main-2: 02:13:40 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 02:13:42 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 02:13:43 ERROR unit.self-signed-certificates/0.juju-log certificates:15: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-1: 02:13:52 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-failover-1: 02:13:53 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-failover-0: 02:13:53 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-data-0: 02:13:53 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-failover-2: 02:13:54 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-main-1: 02:14:13 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 02:14:19 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-data-0: 02:14:20 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-failover-2: 02:14:20 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-failover-1: 02:14:20 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-failover-0: 02:14:20 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-data-1: 02:14:23 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-main-2: 02:15:20 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-main-0: 02:15:20 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-data-0: 02:15:54 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-data-1: 02:15:54 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-failover-1: 02:16:22 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-failover-2: 02:16:22 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-failover-0: 02:16:22 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-data-0: 02:16:54 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-data-1: 02:17:12 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
