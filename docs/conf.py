@@ -224,13 +224,9 @@ sitemap_excludes = [
 # NOTE: If undefined, set to None, or empty,
 #       the sphinx_reredirects extension will be disabled.
 
-redirects = {
-    'reference/doc-cheat-sheet-myst/': '/reference/myst-syntax-reference',
-    'reference/doc-cheat-sheet/': '/reference/rst-syntax-reference',
-    'reference/style-guide-myst/': '/reference/myst-syntax-reference',
-    'reference/style-guide/': '/reference/rst-syntax-reference',
-}
+# redirects = {}
 
+rediraffe_redirects = "redirects.txt"
 
 ###########################
 # Link checker exceptions #
@@ -294,6 +290,7 @@ extensions = [
     "sphinx_last_updated_by_git",
     "sphinx.ext.intersphinx",
     "sphinx_sitemap",
+    "sphinxext.rediraffe",
 ]
 
 # Excludes files or directories from processing
