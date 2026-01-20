@@ -499,7 +499,7 @@ class TestCreateS3Bucket(SnapshotsUnitTestFixtures):
             operation_name="Test",
         )
 
-    def test_create_s3_bucket_when_region_non_us_east_1_then_calls_location_constraint(
+    def test_create_s3_bucket_when_region_non_us_east_1_but_no_aws_endpoint_then_does_not_call_location_constraint(
         self, monkeypatch
     ):
         bucket = Mock()
@@ -513,6 +513,29 @@ class TestCreateS3Bucket(SnapshotsUnitTestFixtures):
             "secret-key": "s",
             "bucket": "b",
             "endpoint": "https://s3.example",
+            "region": "eu-north-1",
+        }
+
+        helper_security.create_s3_bucket(params, verify=True)
+
+        get_bucket.assert_called_once()
+        bucket.create.assert_called_once_with()
+        bucket.wait_until_exists.assert_called_once()
+
+    def test_create_s3_bucket_when_region_non_us_east_1_with_aws_endpoint_then_call_location_constraint(
+        self, monkeypatch
+    ):
+        bucket = Mock()
+        bucket.wait_until_exists = Mock()
+
+        get_bucket = Mock(return_value=bucket)
+        monkeypatch.setattr(helper_security, "get_s3_bucket_resource", get_bucket)
+
+        params = {
+            "access-key": "a",
+            "secret-key": "s",
+            "bucket": "b",
+            "endpoint": "amazonaws.com",
             "region": "eu-north-1",
         }
 

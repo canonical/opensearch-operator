@@ -711,11 +711,12 @@ def create_s3_bucket(s3_parameters: dict[str, str], verify: str | bool = True) -
     """
     region = s3_parameters.get("region")
     bucket = get_s3_bucket_resource(s3_parameters, verify=verify)
+    is_aws_endpoint = "amazonaws.com" in (s3_parameters.get("endpoint") or "").lower()
 
     try:
         # setting the `LocationConstraint` to the default value of us-east-1 will fail
         # https://github.com/aws/aws-sdk-js/issues/3647
-        if region and region != "us-east-1":
+        if is_aws_endpoint and region and region != "us-east-1":
             bucket.create(CreateBucketConfiguration={"LocationConstraint": region})
         else:
             bucket.create()
