@@ -95,7 +95,11 @@ PClusterMainIsRequirer = "Main orchestrator cannot be a requirer"
 InvalidProfileConfigOption = (
     "Invalid profile configuration option. Only `production` and `testing` values are allowed."
 )
-
+SmtpWaitingRecipients = (
+    "SMTP sender configured; waiting for recipients to create email group/channel."
+)
+SmtpNoRelationData = "No relation data found. Please check the relation with smtp-integrator."
+SmtpMissingRequiredParameters = "Parameters missing from smtp-integrator: {}."
 # Maintenance statuses
 InstallProgress = "Installing OpenSearch..."
 SecurityIndexInitProgress = "Initializing the security index..."
@@ -149,6 +153,8 @@ OAUTH_RELATION = "oauth"
 PERFORMANCE_PROFILE = "profile"
 
 JWT_CONFIG_RELATION = "jwt-configuration"
+
+SMTP_SECRET_LABEL = "plugin-notifications"
 
 # GCS Service account JSON
 

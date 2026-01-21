@@ -79,6 +79,9 @@ from charms.opensearch.v0.opensearch_keystore import (
 )
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
+from charms.opensearch.v0.opensearch_notifications_client import (
+    OpenSearchNotificationsClient,
+)
 from charms.opensearch.v0.opensearch_oauth import OAuthHandler
 from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchPeerClustersManager,
@@ -231,6 +234,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.plugin_manager = OpenSearchPluginManager(self.state)
         self.plugin_events = OpenSearchPluginEvents(self)
+        self.notifications = OpenSearchNotificationsClient(self.opensearch)
         self.smtp_events = SmtpEvents(self)
 
         self.user_manager = OpenSearchUserManager(self)

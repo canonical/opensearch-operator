@@ -68,20 +68,21 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 19
+LIBPATCH = 20
 
-PYDEPS = ["pydantic>=2"]
+PYDEPS = ["pydantic>=2", "email-validator>=2"]
 
 # pylint: disable=wrong-import-position
 import itertools
+import json
 import logging
 import typing
 from ast import literal_eval
 from enum import Enum
-from typing import Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import ops
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, EmailStr, Field, ValidationError, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -138,6 +139,8 @@ class SmtpRelationData(BaseModel):
         transport_security: The security protocol to use for the outgoing SMTP relay.
         domain: The domain used by the emails sent from SMTP relay.
         skip_ssl_verify: Specifies if certificate trust verification is skipped in the SMTP relay.
+        smtp_sender: Optional sender email address for outgoing notifications.
+        recipients: List of recipient email addresses for notifications.
     """
 
     host: str = Field(..., min_length=1)
@@ -149,6 +152,14 @@ class SmtpRelationData(BaseModel):
     transport_security: TransportSecurity
     domain: Optional[str] = None
     skip_ssl_verify: Optional[bool] = False
+    smtp_sender: Optional[EmailStr] = None
+    recipients: List[EmailStr] = Field(default_factory=list)
+
+    @field_validator("recipients", mode="before")
+    @classmethod
+    def _recipients_str_to_list(cls, value: Any) -> Any:
+        """Convert value to list[str]."""
+        return parse_recipients(value)
 
     def to_relation_data(self) -> Dict[str, str]:
         """Convert an instance of SmtpRelationData to the relation representation.
@@ -174,6 +185,14 @@ class SmtpRelationData(BaseModel):
                 logger.warning("password field exists along with password_id field, removing.")
                 del result["password"]
             result["password_id"] = self.password_id
+
+        if self.smtp_sender:
+            result["smtp_sender"] = str(self.smtp_sender)
+
+        if self.recipients:
+            recipients = list(self.recipients)
+            result["recipients"] = json.dumps([str(r) for r in recipients])
+
         return result
 
 
@@ -190,6 +209,8 @@ class SmtpDataAvailableEvent(ops.RelationEvent):
         transport_security: The security protocol to use for the outgoing SMTP relay.
         domain: The domain used by the emails sent from SMTP relay.
         skip_ssl_verify: Specifies if certificate trust verification is skipped in the SMTP relay.
+        smtp_sender: Optional sender email address for outgoing notifications.
+        recipients: List of recipient email addresses for notifications.
     """
 
     @property
@@ -247,6 +268,27 @@ class SmtpDataAvailableEvent(ops.RelationEvent):
         return literal_eval(
             typing.cast(str, self.relation.data[self.relation.app].get("skip_ssl_verify"))
         )
+
+    @property
+    def smtp_sender(self) -> Optional[str]:
+        """Fetch the SMTP sender from the relation.
+
+        Returns:
+            smtp_sender: Optional sender email address for outgoing notifications.
+        """
+        assert self.relation.app
+        return self.relation.data[self.relation.app].get("smtp_sender")
+
+    @property
+    def recipients(self) -> List[str]:
+        """Fetch the SMTP recipients from the relation.
+
+        Returns:
+            recipients: list of recipient email addresses for notifications.
+        """
+        assert self.relation.app
+        raw = self.relation.data[self.relation.app].get("recipients")
+        return parse_recipients(raw)
 
 
 class SmtpRequiresEvents(ops.CharmEvents):
@@ -307,24 +349,27 @@ class SmtpRequires(ops.Object):
             SecretError: if the secret can't be read.
         """
         assert relation.app
-        relation_data = relation.data[relation.app]
-        if not relation_data:
+        raw_relation_data = relation.data[relation.app]
+        if not raw_relation_data:
             return None
 
-        password = relation_data.get("password")
-        if password is None and relation_data.get("password_id"):
+        data: Dict[str, Any] = dict(raw_relation_data)
+
+        password = data.get("password")
+        if password is None and data.get("password_id"):
             try:
                 password = (
-                    self.model.get_secret(id=relation_data.get("password_id"))
+                    self.model.get_secret(id=data["password_id"])
                     .get_content(refresh=True)
                     .get("password")
                 )
             except ops.model.ModelError as exc:
-                raise SecretError(
-                    f"Could not consume secret {relation_data.get('password_id')}"
-                ) from exc
+                raise SecretError(f"Could not consume secret {data.get('password_id')}") from exc
 
-        return SmtpRelationData(**{**relation_data, "password": password})  # type: ignore
+        # normalize recipients
+        data["recipients"] = parse_recipients(data.get("recipients"))
+
+        return SmtpRelationData(**{**data, "password": password})
 
     def _is_relation_data_valid(self, relation: ops.Relation) -> bool:
         """Validate the relation data.
@@ -431,3 +476,58 @@ class SmtpProvides(ops.Object):
             logger.info("update data in relation id:%s", relation.id)
             relation_data.clear()
             relation_data.update(new_data)
+
+
+def parse_recipients(raw: Any) -> list[str]:
+    """Normalize SMTP recipient input into a list of email strings.
+
+    The function produces a normalized list[str] so that downstream validation (EmailStr)
+    can be applied consistently.
+
+    Args:
+        raw: Recipient input as received from relation data, charm config,
+            May be None, str, or list.
+
+    Accepted input forms:
+        - None or empty string
+        - list of stripped string values
+        - JSON list string
+        - Comma-separated string
+        - Single address string
+
+    Returns:
+        A list of recipient strings. The email correctness is validated later by EmailStr.
+
+    Raises:
+        TypeError: If raw is not None, str or list.
+        ValueError: If a JSON-encoded value does not decode to a list.
+    """
+    if raw is None:
+        return []
+
+    if isinstance(raw, list):
+        return [str(x).strip() for x in raw if str(x).strip()]
+
+    if not isinstance(raw, str):
+        raise TypeError("recipients must be a string, list, or None")
+
+    s = raw.strip()
+    if not s:
+        return []
+
+    # JSON list string
+    if s.startswith("["):
+        loaded = json.loads(s)
+        if not isinstance(loaded, list):
+            raise ValueError("recipients JSON must decode to a list")
+        return [str(x).strip() for x in loaded if str(x).strip()]
+
+    # JSON without a bracelet: '"a@x.com", "b@y.com"'
+    if '"' in s and "," in s:
+        loaded = json.loads(f"[{s}]")
+        if not isinstance(loaded, list):
+            raise ValueError("recipients must decode to a list")
+        return [str(x).strip() for x in loaded if str(x).strip()]
+
+    # comma-separated or single
+    return [p.strip() for p in s.split(",") if p.strip()]
