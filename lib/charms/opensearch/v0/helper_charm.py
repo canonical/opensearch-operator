@@ -10,7 +10,9 @@ from time import time_ns
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Iterable, List, Union
 
-from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.constants_charm import (
+    PeerRelationName,
+)
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import App, PeerClusterApp
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError

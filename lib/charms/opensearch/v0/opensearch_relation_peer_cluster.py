@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, MutableMapping, Optional
 
 from charms.opensearch.v0.constants_charm import (
     AZURE_RELATION,
+    GCS_RELATION,
     S3_RELATION,
     AdminUser,
     COSUser,
@@ -21,7 +22,11 @@ from charms.opensearch.v0.constants_charm import (
     PeerClusterOrchestratorRelationName,
     PeerClusterRelationName,
 )
-from charms.opensearch.v0.constants_secrets import AZURE_CREDENTIALS, S3_CREDENTIALS
+from charms.opensearch.v0.constants_secrets import (
+    AZURE_CREDENTIALS,
+    GCS_CREDENTIALS,
+    S3_CREDENTIALS,
+)
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import Status, all_units, diff, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology
@@ -31,6 +36,7 @@ from charms.opensearch.v0.models import (
     DeploymentDescription,
     DeploymentType,
     Directive,
+    GcsRelDataCredentials,
     Node,
     ObjectStorageConfig,
     PeerClusterApp,
@@ -396,6 +402,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             for rel_name, label in [
                 (S3_RELATION, S3_CREDENTIALS),
                 (AZURE_RELATION, AZURE_CREDENTIALS),
+                (GCS_RELATION, GCS_CREDENTIALS),
             ]
             if self.charm.secrets.has(Scope.APP, label)
         ]
@@ -604,6 +611,39 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 Scope.APP, "cluster_fleet_apps_rels", cluster_fleet_apps_rels
             )
 
+    def _gcs_credentials(
+        self, deployment_desc: DeploymentDescription
+    ) -> Optional[GcsRelDataCredentials]:
+        """Retrieve GCS storage credentials."""
+        if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
+            if not self.charm.model.get_relation(GCS_RELATION):
+                return None
+
+            object_storage_config = (
+                self.charm.snapshots_manager.get_storage_config(ObjectStorageType.GCS)
+                or ObjectStorageConfig()
+            )
+            gcs = object_storage_config.gcs
+            if not (gcs and gcs.credentials and gcs.credentials.secret_key):
+                return None
+
+            # As the main orchestrator, this application must set the gcs information.
+            secret_key = gcs.credentials.secret_key
+
+            # set the secrets in the charm
+            self.charm.secrets.put(Scope.APP, "gcs-secret-key", secret_key)
+
+            return GcsRelDataCredentials(secret_key=secret_key)
+
+        # Non-main orchestrators: only return creds if we already have them
+        if not self.charm.secrets.get(Scope.APP, "gcs-secret-key"):
+            return None
+
+        # Return what we have received from the peer relation
+        return GcsRelDataCredentials(
+            secret_key=self.charm.secrets.get(Scope.APP, "gcs-secret-key"),
+        )
+
     def _azure_credentials(
         self, deployment_desc: DeploymentDescription
     ) -> Optional[AzureRelDataCredentials]:
@@ -741,6 +781,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 admin_tls=self.secrets.get_object(Scope.APP, CertType.APP_ADMIN.val),
                 s3=self._s3_credentials(deployment_desc),
                 azure=self._azure_credentials(deployment_desc),
+                gcs=self._gcs_credentials(deployment_desc),
             )
         return None
 
@@ -930,6 +971,11 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                 "secret-key": self.secrets.get_secret_id(Scope.APP, "azure-secret-key"),
             }
 
+        if rel_data.credentials.gcs and rel_data.credentials.gcs.secret_key:
+            redacted_dict["credentials"]["gcs"] = {
+                "secret-key": self.secrets.get_secret_id(Scope.APP, "gcs-secret-key"),
+            }
+
         return redacted_dict
 
     def _grant_rel_data_secrets(  # noqa: C901
@@ -966,6 +1012,12 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
                             self.secrets.grant_secret_to_relation(
                                 secret_id["storage-account"], relation
                             )
+                        if secret_id["secret-key"]:
+                            self.secrets.grant_secret_to_relation(
+                                secret_id["secret-key"], relation
+                            )
+
+                    elif key == "gcs":
                         if secret_id["secret-key"]:
                             self.secrets.grant_secret_to_relation(
                                 secret_id["secret-key"], relation
@@ -1310,6 +1362,18 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
                 Scope.APP,
                 AZURE_CREDENTIALS,
                 AzureRelDataCredentials().to_dict(by_alias=True),
+            )
+
+        if gcs_creds := data.credentials.gcs:
+            self.charm.secrets.put_object(
+                Scope.APP, GCS_CREDENTIALS, gcs_creds.to_dict(by_alias=True)
+            )
+        else:
+            # Set GCS credentials to empty
+            self.charm.secrets.put_object(
+                Scope.APP,
+                GCS_CREDENTIALS,
+                GcsRelDataCredentials().to_dict(by_alias=True),
             )
 
     def _orchestrators(

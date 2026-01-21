@@ -1138,7 +1138,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch_peer_cm.is_consumer():
             self.peer_cluster_requirer.refresh_requirer_relation_data()
 
-        if self.opensearch.is_started():
+        if self.opensearch.is_started() and not self.opensearch.is_failed():
             try:
                 self._post_start_init(event)
             except (
@@ -1301,7 +1301,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     "PUT",
                     "/_cluster/settings",
                     # Reset to default value
-                    payload={"persistent": {"cluster.routing.allocation.enable": None}},
+                    payload={"persistent": {"cluster.routing.allocation.enable": "all"}},
                 )
             except OpenSearchHttpError:
                 logger.exception("Failed to re-enable allocation after upgrade")
@@ -1367,10 +1367,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # If `health_ == HealthColors.YELLOW`, no shards are initializing or relocating
             # (otherwise `health_` would be `HealthColors.YELLOW_TEMP`)
             if health not in (HealthColors.GREEN, HealthColors.YELLOW):
-                logger.error(
-                    "Cluster is not healthy after upgrade. Manual intervention required. To rollback, "
-                    "`juju refresh` to the previous revision"
-                )
+                logger.error("Cluster is not healthy after upgrade. Manual intervention required.")
                 event.defer()
                 return
             elif health == HealthColors.YELLOW:
