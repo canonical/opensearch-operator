@@ -775,8 +775,8 @@ class TestCreateGCSBucket(SnapshotsUnitTestFixtures):
         bucket.exists.return_value = False
         bucket.blob.return_value = blob
 
+        client.bucket.return_value = bucket
         monkeypatch.setattr(helper_security, "get_gcs_client", lambda _json: client)
-        monkeypatch.setattr(helper_security, "get_gcs_bucket", lambda _client, _name: bucket)
 
         create_bucket = Mock(return_value=None)
         monkeypatch.setattr(helper_security, "create_gcs_bucket", create_bucket)
@@ -803,8 +803,8 @@ class TestCreateGCSBucket(SnapshotsUnitTestFixtures):
         bucket.exists.side_effect = Forbidden("no buckets.get")
         bucket.blob.return_value = blob
 
+        client.bucket.return_value = bucket
         monkeypatch.setattr(helper_security, "get_gcs_client", lambda _json: client)
-        monkeypatch.setattr(helper_security, "get_gcs_bucket", lambda _client, _name: bucket)
 
         create_bucket = Mock(return_value=None)
         monkeypatch.setattr(helper_security, "create_gcs_bucket", create_bucket)
@@ -823,8 +823,8 @@ class TestCreateGCSBucket(SnapshotsUnitTestFixtures):
         bucket = Mock()
         bucket.exists.return_value = False
 
+        client.bucket.return_value = bucket
         monkeypatch.setattr(helper_security, "get_gcs_client", lambda _json: client)
-        monkeypatch.setattr(helper_security, "get_gcs_bucket", lambda _client, _name: bucket)
 
         def _raise(*_a, **_k):
             raise exc
@@ -846,7 +846,8 @@ class TestCreateGCSBucket(SnapshotsUnitTestFixtures):
         bucket.blob.return_value = blob
         blob.upload_from_string.side_effect = Forbidden("no objects.create")
 
+        client.bucket.return_value = bucket
         monkeypatch.setattr(helper_security, "get_gcs_client", lambda _json: client)
-        monkeypatch.setattr(helper_security, "get_gcs_bucket", lambda _client, _name: bucket)
+
         assert helper_security.verify_gcs_credentials(cfg) is False
         blob.delete.assert_not_called()

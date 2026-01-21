@@ -711,7 +711,7 @@ def create_s3_bucket(s3_parameters: dict[str, str], verify: str | bool = True) -
     """
     region = s3_parameters.get("region")
     bucket = get_s3_bucket_resource(s3_parameters, verify=verify)
-    is_aws_endpoint = "amazonaws.com" in (s3_parameters.get("endpoint") or "").lower()
+    is_aws_endpoint = "amazonaws.com" in (s3_parameters.get("endpoint", "").lower())
 
     try:
         # setting the `LocationConstraint` to the default value of us-east-1 will fail
@@ -970,24 +970,6 @@ def get_gcs_client(service_account_json: str) -> storage.Client:
     return storage.Client.from_service_account_info(service_account, **client_kwargs)
 
 
-def get_gcs_bucket(client: storage.Client, bucket_name: str) -> storage.Bucket:
-    """Return a GCS Bucket handle for the given name.
-
-    Args:
-        client: Authenticated google-cloud-storage client.
-        bucket_name: Target bucket name.
-
-    Returns:
-        google.cloud.storage.Bucket: Bucket handle (existence not guaranteed).
-
-    Raises:
-        ValueError: If bucket_name is empty.
-    """
-    if not bucket_name:
-        raise ValueError("Missing GCS bucket name.")
-    return client.bucket(bucket_name)
-
-
 def create_gcs_bucket(client: storage.Client, bucket: storage.Bucket) -> None:
     """Create a GCS bucket.
 
@@ -1053,7 +1035,7 @@ def verify_gcs_credentials(object_storage_config: ObjectStorageConfig) -> bool: 
 
     try:
         client = get_gcs_client(service_account_json)
-        bucket = get_gcs_bucket(client, bucket_name)
+        bucket = client.bucket(bucket_name)
 
         # ensure bucket exists or create
         try:
