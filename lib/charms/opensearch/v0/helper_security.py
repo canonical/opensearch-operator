@@ -11,20 +11,22 @@ import secrets
 import string
 import subprocess
 import tempfile
+import uuid
 from datetime import datetime
 from os.path import exists
 from typing import Optional, Tuple
 
 import bcrypt
 import boto3
-from azure.core.exceptions import AzureError
+from azure.core.exceptions import AzureError, ResourceExistsError, ResourceNotFoundError
 from azure.storage.blob import ContainerClient
+from botocore.client import Config
 from botocore.exceptions import BotoCoreError, ClientError
 from charms.opensearch.v0.helper_charm import run_cmd
 from charms.opensearch.v0.models import ObjectStorageConfig
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from cryptography import x509
-from google.api_core.exceptions import GoogleAPIError
+from google.api_core.exceptions import Conflict, Forbidden, GoogleAPIError, NotFound
 from google.cloud import storage
 
 # The unique Charmhub library identifier, never change it
@@ -662,62 +664,161 @@ def _split_pem_chain(chain: str) -> list[str]:
     ]
 
 
-def verify_s3_credentials(cfg: ObjectStorageConfig) -> bool:
-    """Validate S3 credentials + CA using boto3.
+def get_s3_bucket_resource(s3_parameters: dict[str, str], verify: str | bool = True):
+    """Build a boto3 S3 Bucket resource from connection parameters.
 
     Args:
-        cfg: ObjectStorageConfigobject
+        s3_parameters: Mapping containing S3 connection information.
+        verify: TLS verification option passed to boto3.
+            - True: verify using system CAs
+            - False: disable TLS verification
+            - str: path to a CA bundle file (file containing a custom CA)
+
+    Returns:
+        boto3.resources.factory.s3.Bucket: Bucket resource handle
+
+    Raises:
+        KeyError: If required keys are missing from s3_parameters.
+        BotoCoreError: If boto3 fails to initialise the client/resource.
+    """
+    s3_resource = boto3.resource(
+        "s3",
+        region_name=s3_parameters.get("region"),
+        endpoint_url=s3_parameters["endpoint"],
+        aws_access_key_id=s3_parameters["access-key"],
+        aws_secret_access_key=s3_parameters["secret-key"],
+        config=Config(
+            # https://github.com/boto/boto3/issues/4400#issuecomment-2600742103
+            request_checksum_calculation="when_required",
+            response_checksum_validation="when_required",
+        ),
+        verify=verify,
+    )
+    return s3_resource.Bucket(s3_parameters["bucket"])
+
+
+def create_s3_bucket(s3_parameters: dict[str, str], verify: str | bool = True) -> None:
+    """Create the configured S3 bucket.
+
+    Args:
+        s3_parameters: Mapping containing S3 connection information
+                same as get_s3_bucket_resource().
+        verify: TLS verification option passed to boto3.
+
+    Raises:
+        ClientError: If bucket creation fails for reasons other than already exists.
+        BotoCoreError: If boto3 fails to initialise or make API calls.
+    """
+    region = s3_parameters.get("region")
+    bucket = get_s3_bucket_resource(s3_parameters, verify=verify)
+    is_aws_endpoint = "amazonaws.com" in (s3_parameters.get("endpoint", "").lower())
+
+    try:
+        # setting the `LocationConstraint` to the default value of us-east-1 will fail
+        # https://github.com/aws/aws-sdk-js/issues/3647
+        if is_aws_endpoint and region and region != "us-east-1":
+            bucket.create(CreateBucketConfiguration={"LocationConstraint": region})
+        else:
+            bucket.create()
+        bucket.wait_until_exists()
+
+    except ClientError as e:
+        msg = str(e)
+        if (
+            "BucketAlreadyOwnedByYou" in msg
+            or "BucketAlreadyExists" in msg
+            or "BucketNameUnavailable" in msg
+        ):
+            logger.info(f"Using existing bucket {s3_parameters['bucket']}")
+            return
+
+        logger.error(e, exc_info=True)
+        raise
+
+    logger.info(f"Bucket {s3_parameters['bucket']} is ready")
+
+
+def verify_s3_credentials(storage_config: ObjectStorageConfig) -> bool:  # noqa: C901
+    """Validate S3 credentials and CA using boto3.
+
+    Args:
+        storage_config: ObjectStorageConfig containing S3 settings (endpoint, bucket,
+            region, base_path, credentials, and optional tls_ca_chain).
 
     Returns:
         True if credentials (and CA) work with S3, False otherwise.
 
-    All errors are logged with full traceback here.
+    All errors are logged with the full traceback here.
+    This function may create the bucket if it does not exist.
     """
     ca_tmp_path = None
     verify_param: str | bool = True
 
     # If we have a custom CA chain, write it to a temp file and pass it to boto3
-    if cfg.s3.tls_ca_chain:
+    if storage_config.s3.tls_ca_chain:
         fd, ca_tmp_path = tempfile.mkstemp(prefix="opensearch-s3-ca-", suffix=".pem")
         with os.fdopen(fd, "w") as f:
-            f.write(cfg.s3.tls_ca_chain)
+            f.write(storage_config.s3.tls_ca_chain)
         verify_param = ca_tmp_path
 
-    try:
-        session = boto3.session.Session(
-            aws_access_key_id=cfg.s3.credentials.access_key,
-            aws_secret_access_key=cfg.s3.credentials.secret_key,
-            aws_session_token=getattr(cfg.s3.credentials, "session_token", ""),
-        )
+    s3_params: dict[str, str] = {
+        "access-key": storage_config.s3.credentials.access_key,
+        "secret-key": storage_config.s3.credentials.secret_key,
+        "bucket": storage_config.s3.bucket,
+        "endpoint": storage_config.s3.endpoint,
+        "region": storage_config.s3.region or "",
+        "path": (storage_config.s3.base_path or "").strip("/"),
+    }
 
+    try:
         logger.info(
             "Verifying S3 with endpoint=%r bucket=%r region=%r has_ca=%r verify=%r",
-            cfg.s3.endpoint,
-            cfg.s3.bucket,
-            cfg.s3.region,
-            bool(cfg.s3.tls_ca_chain),
+            storage_config.s3.endpoint,
+            storage_config.s3.bucket,
+            storage_config.s3.region,
+            bool(storage_config.s3.tls_ca_chain),
             verify_param,
         )
 
-        s3_client = session.client(
-            "s3",
-            endpoint_url=cfg.s3.endpoint,
-            region_name=cfg.s3.region,
-            verify=verify_param,
+        bucket = get_s3_bucket_resource(s3_params, verify=verify_param)
+
+        # check bucket exists + credentials/TLS are valid
+        try:
+            bucket.meta.client.head_bucket(Bucket=storage_config.s3.bucket)
+        except ClientError as e:
+            status_code = e.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+            error_code = e.response.get("Error", {}).get("Code")
+            bucket_missing = status_code == 404 or error_code in {"NoSuchBucket", "404"}
+
+            if bucket_missing:
+                logger.warning(
+                    "S3 bucket %r not found; attempting to create it.", storage_config.s3.bucket
+                )
+                create_s3_bucket(s3_params, verify=verify_param)
+            else:
+                # auth/TLS/permission issue
+                raise
+
+        # write/delete to verify RW access
+        prefix = s3_params["path"]
+        probe_key = (
+            f"{prefix}/.opensearch-verify-{uuid.uuid4().hex}"
+            if prefix
+            else f".opensearch-verify-{uuid.uuid4().hex}"
         )
 
-        # This will test both credentials and TLS/CA
-        s3_client.head_bucket(Bucket=cfg.s3.bucket)
+        bucket.put_object(
+            Key=probe_key,
+            Body=b"opensearch-verify",
+            ContentType="text/plain",
+        )
+        bucket.Object(probe_key).delete()
 
         logger.info("S3 credential validation with boto3 succeeded.")
         return True
 
     except (BotoCoreError, ClientError) as e:
-        logger.error(
-            "S3 credential validation with boto3 failed: %s",
-            e,
-            exc_info=e,
-        )
+        logger.error("S3 credential validation with boto3 failed: %s", e, exc_info=True)
         return False
 
     finally:
@@ -728,69 +829,195 @@ def verify_s3_credentials(cfg: ObjectStorageConfig) -> bool:
                 pass
 
 
-def verify_azure_credentials(cfg: ObjectStorageConfig) -> bool:
-    """Validate Azure Storage credentials using azure-storage-blob.
+def get_azure_container_client(azure_parameters: dict[str, str]) -> ContainerClient:
+    """Build an Azure Blob Storage ContainerClient from connection parameters.
 
     Args:
-        cfg: ObjectStorageConfigobject
+        azure_parameters: Mapping containing Azure connection information. Expected keys:
+            - storage-account: Storage account name
+            - container: Container name
+            - secret-key: Account key (credential)
+            - account-url: Optional account URL. If omitted,
+                    defaults to a public Azure endpoint for the storage account.
 
     Returns:
-        True if we can access the configured container, False otherwise.
-
-    Uses the storage-account, secret-key and container fields provided by
-    azure-storage-integrator.
+        ContainerClient: Client bound to the target container.
     """
-    # TODO move this to the pydantic model validation
-    if cfg.azure.connection_protocol not in {"http", "https"}:
+    if not (account_url := azure_parameters.get("account-url")):
+        account_url = f"https://{azure_parameters['storage-account']}.blob.core.windows.net"
+
+    return ContainerClient(
+        account_url=account_url,
+        container_name=azure_parameters["container"],
+        credential=azure_parameters["secret-key"],
+    )
+
+
+def create_azure_container(azure_parameters: dict[str, str]) -> None:
+    """Create the configured Azure blob container if it does not exist.
+
+    Args:
+        azure_parameters: Same mapping as get_azure_container_client().
+
+    Raises:
+        AzureError: The Azure SDK errors other than already exists.
+    """
+    container_client = get_azure_container_client(azure_parameters)
+    try:
+        container_client.create_container()
+        logger.info(f"Container {azure_parameters['container']} created")
+    except ResourceExistsError:
+        logger.info(f"Container {azure_parameters['container']} already exists")
+    except AzureError as e:
+        logger.error(
+            "Failed to create container %s: %s", azure_parameters["container"], e, exc_info=True
+        )
+        raise
+
+
+def verify_azure_credentials(storage_config: ObjectStorageConfig) -> bool:
+    """Validate Azure Blob Storage credentials using azure-storage-blob.
+
+    Args:
+        storage_config: ObjectStorageConfig containing Azure settings (endpoint,
+            base_path, container, and credentials).
+
+    Returns:
+        True if credentials allow container access and write/delete operations,
+        False otherwise.
+    """
+    if storage_config.azure.connection_protocol not in {"http", "https"}:
         logger.warning(
             "Azure Storage credential validation failed: unsupported connection protocol %s",
-            cfg.azure.connection_protocol,
+            storage_config.azure.connection_protocol,
         )
         return False
 
     try:
-        account_name = cfg.azure.credentials.storage_account
-        account_key = cfg.azure.credentials.secret_key
-        container_name = cfg.azure.container
+        account_name = storage_config.azure.credentials.storage_account
+        account_key = storage_config.azure.credentials.secret_key
+        container_name = storage_config.azure.container
 
-        # If azure integrator ever sends a custom endpoint, we will use it.
-        # Otherwise, we will use public Azure blob endpoint.
-        raw_endpoint = cfg.azure.endpoint
-        account_url = raw_endpoint.rsplit("/", 1)[0]
-        account_url = account_url or f"https://{account_name}.blob.core.windows.net"
+        # Custom endpoint if present, else default public endpoint
+        raw_endpoint = storage_config.azure.endpoint or ""
+        if not (account_url := raw_endpoint.rsplit("/", 1)[0] if raw_endpoint else ""):
+            account_url = f"https://{account_name}.blob.core.windows.net"
 
-        container_client = ContainerClient(
-            account_url=account_url,
-            container_name=container_name,
-            credential=account_key,
+        azure_params: dict[str, str] = {
+            "storage-account": account_name,
+            "secret-key": account_key,
+            "container": container_name,
+            "account-url": account_url,
+        }
+
+        container_client = get_azure_container_client(azure_params)
+
+        # ensure container exists and it also validates the credentials
+        try:
+            container_client.get_container_properties()
+        except ResourceNotFoundError:
+            logger.warning(
+                "Azure container %r not found; attempting to create it.", container_name
+            )
+            create_azure_container(azure_params)
+            container_client = get_azure_container_client(azure_params)
+
+        # write/delete to validate RW access
+        prefix = (storage_config.azure.base_path or "").strip("/")
+        probe_name = (
+            f"{prefix}/.opensearch-verify-{uuid.uuid4().hex}"
+            if prefix
+            else f".opensearch-verify-{uuid.uuid4().hex}"
         )
 
-        # check credentials.
-        container_client.get_container_properties()
+        blob_client = container_client.get_blob_client(probe_name)
+        blob_client.upload_blob(b"opensearch-verify", overwrite=True)
+        blob_client.delete_blob()
 
         logger.info("Azure Storage credential validation succeeded.")
         return True
 
     except AzureError as e:
-        logger.error(
-            "Azure Storage credential validation failed: %s",
-            e,
-            exc_info=e,
-        )
+        logger.error("Azure Storage credential validation failed: %s", e, exc_info=True)
         return False
+
+
+def get_gcs_client(service_account_json: str) -> storage.Client:
+    """Build a GCS client from a service-account JSON string.
+
+    Args:
+        service_account_json: JSON string for a service account key.
+
+    Returns:
+        google.cloud.storage.Client: Authenticated GCS client.
+
+    Raises:
+        ValueError: If the input is empty or not valid JSON.
+        GoogleAPIError: If the client cannot be created due to SDK errors.
+    """
+    if not service_account_json:
+        raise ValueError("Missing GCS secret_key (service account JSON).")
+
+    try:
+        service_account = json.loads(service_account_json)
+    except (TypeError, ValueError) as e:
+        raise ValueError("GCS secret_key is not valid JSON.") from e
+
+    client_kwargs: dict = {}
+    if project_id := service_account.get("project_id"):
+        client_kwargs["project"] = project_id
+
+    return storage.Client.from_service_account_info(service_account, **client_kwargs)
+
+
+def create_gcs_bucket(client: storage.Client, bucket: storage.Bucket) -> None:
+    """Create a GCS bucket.
+
+    Args:
+        client: Authenticated google-cloud-storage client.
+        bucket: Bucket handle to create.
+
+    Raises:
+        Conflict: If the bucket name is already taken (GCS bucket names are global).
+        Forbidden: If the service account lacks storage.buckets.create permission.
+        GoogleAPIError: For other GCS API errors.
+    """
+    try:
+        client.create_bucket(bucket)
+        logger.info("Created GCS bucket %r.", bucket.name)
+    except Conflict:
+        # GCS bucket names are global, and conflict means that name already taken
+        logger.error(
+            "GCS bucket %r could not be created because the name is already in use globally. "
+            "Choose a unique bucket name (GCS bucket names are global).",
+            bucket.name,
+        )
+        raise
+    except Forbidden as e:
+        logger.error(
+            "Bucket %r cannot be created (forbidden). "
+            "Service account likely missing storage.buckets.create. Error: %s",
+            bucket.name,
+            e,
+            exc_info=True,
+        )
+        raise
 
 
 def verify_gcs_credentials(object_storage_config: ObjectStorageConfig) -> bool:  # noqa: C901
     """Validate GCS credentials using google-cloud-storage.
 
     Args:
-        cfg: ObjectStorageConfig object
+        object_storage_config: ObjectStorageConfig containing GCS
+            settings (service-account JSON and bucket name).
 
     Returns:
-        True if we can access the configured bucket, False otherwise.
+        True if the service account can access the bucket (or create it if missing) and
+        can write/delete an object in it; False otherwise.
 
-    cfg.gcs.credentials.secret_key to contain a service-account JSON
-    (as a string), and cfg.gcs.bucket to contain the bucket name.
+    Behavior:
+        - If the configured bucket does not exist, try to create it.
+        - Verify access via write and delete a small dummy blob.
     """
     if not object_storage_config.gcs.credentials:
         logger.error("GCS credential validation failed: missing credentials block.")
@@ -807,34 +1034,63 @@ def verify_gcs_credentials(object_storage_config: ObjectStorageConfig) -> bool: 
         return False
 
     try:
-        service_account = json.loads(service_account_json)
-    except (TypeError, ValueError) as e:
-        logger.error(
-            "GCS credential validation failed: secret_key is not valid JSON: %s",
-            e,
-        )
-        return False
+        client = get_gcs_client(service_account_json)
+        bucket = client.bucket(bucket_name)
 
-    client_kwargs: dict = {}
-    if project_id := service_account.get("project_id"):
-        client_kwargs["project"] = project_id
+        # ensure bucket exists or create
+        try:
+            exists = bucket.exists()
+        except Forbidden:
+            # Some environments return 403 for exists() when the caller lacks storage.buckets.get.
+            # In this case we best-effort try to create. But it may still fail
+            # if bucket exists or permission is missing.
+            logger.warning(
+                "GCS bucket existence check returned 403 for %r; attempting to create it.",
+                bucket_name,
+            )
+            exists = False
 
-    try:
-        client = storage.Client.from_service_account_info(
-            service_account,
-            **client_kwargs,
+        if not exists:
+            logger.warning("GCS bucket %r not found; attempting to create it.", bucket_name)
+            try:
+                create_gcs_bucket(client, bucket)
+            except (Conflict, Forbidden):
+                # this is already logged in the helper
+                return False
+
+        # write/delete to validate RW access
+        prefix = (object_storage_config.gcs.base_path or "").strip("/")
+        probe_name = (
+            f"{prefix}/.opensearch-verify-{uuid.uuid4().hex}"
+            if prefix
+            else f".opensearch-verify-{uuid.uuid4().hex}"
         )
-        # list_blobs will raise if credentials are wrong or bucket is not accessible.
-        blobs_iter = client.list_blobs(bucket_name, max_results=1)
-        # Fetch one page
-        _ = next(iter(blobs_iter), None)
+
+        blob = bucket.blob(probe_name)
+        blob.upload_from_string(b"opensearch-verify", content_type="text/plain")
+        blob.delete()
 
         logger.info("GCS credential validation succeeded.")
         return True
 
     except (ValueError, TypeError, KeyError) as e:
-        # Invalid/missing service account fields, invalid private_key format
         logger.error("GCS credential validation failed: invalid credentials: %s", e, exc_info=True)
+        return False
+
+    except Forbidden as e:
+        logger.error(
+            "GCS credential validation failed: forbidden (missing permissions). Error: %s",
+            e,
+            exc_info=True,
+        )
+        return False
+
+    except NotFound as e:
+        logger.error(
+            "GCS credential validation failed: not found (endpoint/resource mismatch). Error: %s",
+            e,
+            exc_info=True,
+        )
         return False
 
     except GoogleAPIError as e:
