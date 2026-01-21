@@ -1301,7 +1301,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     "PUT",
                     "/_cluster/settings",
                     # Reset to default value
-                    payload={"persistent": {"cluster.routing.allocation.enable": "all"}},
+                    payload={
+                        "persistent": {
+                            "cluster.routing.allocation.enable": "all",
+                            "action.auto_create_index": True,
+                        }
+                    },
                 )
             except OpenSearchHttpError:
                 logger.exception("Failed to re-enable allocation after upgrade")
@@ -1497,7 +1502,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.opensearch.request(
                 "PUT",
                 "/_cluster/settings",
-                payload={"persistent": {"cluster.routing.allocation.enable": "primaries"}},
+                payload={
+                    "persistent": {
+                        "cluster.routing.allocation.enable": "primaries",
+                        "action.auto_create_index": False,
+                    }
+                },
             )
         except OpenSearchHttpError:
             logger.exception("Failed to disable shard allocation before upgrade")

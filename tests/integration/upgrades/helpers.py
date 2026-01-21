@@ -333,7 +333,12 @@ async def recover_from_rollback(ops_test: OpsTest, app: str, expected_cluster_si
         ops_test,
         "PUT",
         f"https://{unit_ip}:9200/_cluster/settings",
-        payload={"persistent": {"cluster.routing.allocation.enable": "all"}},
+        payload={
+            "persistent": {
+                "cluster.routing.allocation.enable": "all",
+                "action.auto_create_index": True,
+            }
+        },
     )
 
     time.sleep(5)
