@@ -29,5 +29,6 @@ Additionally, you can find automatically generated metadata in the following tab
 :hidden:
 
 release-notes/index
+alert-rules
 system-requirements
 ```

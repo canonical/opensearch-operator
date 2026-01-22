@@ -43,8 +43,7 @@ The following guides cover key processes and common tasks for managing and using
 
 ## Monitoring (COS)
 
-* [Monitoring (COS)](how-to-monitoring-cos-index)
-  * [Enable COS](how-to-monitoring-enable-cos)
+* [Monitoring (COS)](how-to-monitoring)
 
 ```{toctree}
 :titlesonly:
@@ -61,5 +60,5 @@ upgrade/index
 Access using OAuth <access-using-oauth>
 Enable JWT Authentication <enable-jwt-authentication>
 Enable email notifications <add-smtp-credentials>
-monitoring-cos/index
+monitoring/index
 ```

@@ -38,7 +38,7 @@ TLS certificates without any downtime.
 Integrate with the Canonical Observability Stack (COS) and the OpenSearch Dashboards charm
 to monitor operational performance and visualize stored data across all clusters.
 
-* [How to enable monitoring](how-to-monitoring-enable-cos)
+* [How to enable monitoring](how-to-monitoring)
 * [OpenSearch Dashboards: How to connect to OpenSearch](https://charmhub.io/opensearch-dashboards/docs/h-db-connect)
 
 ### Backups
