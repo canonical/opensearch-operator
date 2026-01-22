@@ -4,7 +4,7 @@ myst:
     description: "Software testing guide for Charmed OpenSearch covering unit tests, integration tests, and performance benchmarking procedures."
 ---
 
-(reference-software-testing)=
+(explanation-software-testing)=
 # Software testing for charms
 
 ```{note}
