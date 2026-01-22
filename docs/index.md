@@ -57,7 +57,7 @@ fixes and constructive feedback:
 
 ## License & trademark
 
-The Charmed OpenSearch ROCK, Charmed OpenSearch Snap,
+The Charmed OpenSearch ROCK, Charmed OpenSearch snap,
 and Charmed OpenSearch Operator are free software, distributed under the
 [Apache Software License, version 2.0](https://github.com/canonical/charmed-opensearch-rock/blob/2-24.04/edge/licenses/LICENSE-rock).
 They install and operate OpenSearch, which is also licensed under the
