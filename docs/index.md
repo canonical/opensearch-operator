@@ -1,7 +1,7 @@
 ---
 myst:
   html_meta:
-    description: "Official documentation for Charmed OpenSearch - deploy, manage, and scale OpenSearch clusters with Juju on AWS, Azure, OpenStack, and VMware."
+    description: "Deploy and manage OpenSearch clusters with automated operations, TLS encryption, backups, and horizontal scaling on any cloud using Juju."
 ---
 
 (index)=
