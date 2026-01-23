@@ -26,6 +26,16 @@ jobs:
     name: Lint
     uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v32.1.0
 
+  said:
+    name: ID SA
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: gcp bare
+        run: print "\nBare:\n${GCP_SERVICE_ACCOUNT}\n"
+      - name: gcp b64
+        run: print "\nNON_B64:\n${GCP_SERVICE_ACCOUNT_FOR_REDACT_NON_B64}\n"
+
   unit-test:
     name: Unit test charm
     runs-on: ubuntu-latest
