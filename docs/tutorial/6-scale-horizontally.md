@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Scale your Charmed OpenSearch cluster horizontally by adding or removing Juju units to handle growing data and traffic demands."
+---
+
 (tutorial-6-scale-horizontally)=
 # 6. Scale horizontally
 

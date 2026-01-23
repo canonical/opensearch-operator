@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Deep-dive explanations of Charmed OpenSearch concepts including security, encryption, authentication, and deployment architecture."
+---
+
 (explanation-index)=
 # Explanation
 

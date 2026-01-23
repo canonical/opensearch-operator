@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Complete backup and restore guides for Charmed OpenSearch including S3, Azure storage configuration, and cluster migration."
+---
+
 (how-to-guides-back-up-and-restore-index)=
 # Back up and restore
 

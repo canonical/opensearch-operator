@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Charmed OpenSearch Revision 315 release notes - Ubuntu 24.04 support, OAuth/JWT authentication, and OpenSearch 2.19.4 upgrade."
+---
+
 (reference-release-notes-revision-315)=
 # Revision 315
 

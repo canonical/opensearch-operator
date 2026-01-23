@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Integrate client applications with Charmed OpenSearch using the opensearch_client interface or data-integrator charm."
+---
+
 (how-to-integrate-with-an-application)=
 # How to integrate OpenSearch with an application
 

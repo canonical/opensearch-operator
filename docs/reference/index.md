@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Technical reference documentation for Charmed OpenSearch including release notes, system requirements, and software testing."
+---
+
 (reference-index)=
 # Reference
 

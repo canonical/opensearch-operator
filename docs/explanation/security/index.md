@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Comprehensive security hardening guide for Charmed OpenSearch covering cloud security, Juju security, and deployment best practices."
+---
+
 (explanation-security-index)=
 # Security hardening guide
 

@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Rotate TLS and CA certificates in Charmed OpenSearch manually or automatically for enhanced security and compliance."
+---
+
 (how-to-rotate-tls-ca-certificates)=
 # How to rotate TLS/CA certificates
 

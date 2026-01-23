@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Create and manage backups of your Charmed OpenSearch cluster to S3-compatible storage for disaster recovery and data protection."
+---
+
 (how-to-create-a-backup)=
 # How to create a backup
 

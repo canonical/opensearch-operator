@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Monitor Charmed OpenSearch with Canonical Observability Stack (COS) using Grafana, Prometheus metrics, and alert rules."
+---
+
 (how-to-monitoring-cos-index)=
 # Monitoring (COS)
 
