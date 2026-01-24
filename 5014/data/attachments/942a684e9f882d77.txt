@@ -1,0 +1,33 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.13   unsupported  02:36:23Z
+
+App                       Version  Status       Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         maintenance      2  opensearch                            1  no       Waiting for TLS to be fully configured...
+self-signed-certificates           waiting        0/1  self-signed-certificates  1/stable  317  no       waiting for machine
+
+Unit                        Workload     Agent       Machine  Public address  Ports  Message
+opensearch/1*               maintenance  idle        2        10.140.106.24          Waiting for TLS to be fully configured...
+opensearch/2                maintenance  idle        3        10.140.106.179         Waiting for TLS to be fully configured...
+self-signed-certificates/1  waiting      allocating  4        10.140.106.146         waiting for machine
+
+Machine  State    Address         Inst id        Base          AZ             Message
+2        started  10.140.106.24   juju-1da2bc-2  ubuntu@24.04  github-runner  Running
+3        started  10.140.106.179  juju-1da2bc-3  ubuntu@24.04  github-runner  Running
+4        pending  10.140.106.146  juju-1da2bc-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-1: 02:09:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:09:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:09:46 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:09:46 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:11:15 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:11:23 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+machine-2: 02:14:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:14:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:14:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:14:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...

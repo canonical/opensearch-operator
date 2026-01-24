@@ -1,0 +1,248 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'opensearch': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'active', 'since': '24 Jan 2026 01:46:59Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 's3-credentials': [{'related-application': 's3-integrator', 'interface': 's3', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/0': {'workload-status': {'current': 'active', 'since': '24 Jan 2026 01:42:28Z'}, 'juju-status': {'current': 'idle', 'since': '24 Jan 2026 01:47:08Z', 'version': '3.6.13'}, 'machine': '1', 'open-ports': ['9200/tcp'], 'public-address': '10.186.192.117'}, 'opensearch/1': {'workload-status': {'current': 'active', 'since': '24 Jan 2026 01:42:09Z'}, 'juju-status': {'current': 'idle', 'since': '24 Jan 2026 01:48:30Z', 'version': '3.6.13'}, 'machine': '2', 'open-ports': ['9200/tcp'], 'public-address': '10.186.192.116'}, 'opensearch/2': {'workload-status': {'current': 'active', 'since': '24 Jan 2026 01:41:34Z'}, 'juju-status': {'current': 'idle', 'since': '24 Jan 2026 01:47:09Z', 'version': '3.6.13'}, 'leader': True, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.186.192.185'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 's3-integrator': {'charm': 's3-integrator', 'base': {'name': 'ubuntu', 'channel': '22.04'}, 'charm-origin': 'charmhub', 'charm-name': 's3-integrator', 'charm-rev': 145, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '24 Jan 2026 01:46:34Z'}, 'relations': {'s3-credentials': [{'related-application': 'opensearch', 'interface': 's3', 'scope': 'global'}], 's3-integrator-peers': [{'related-application': 's3-integrator', 'interface': 's3-integrator-peers', 'scope': 'global'}]}, 'units': {'s3-integrator/0': {'workload-status': {'current': 'active', 'since': '24 Jan 2026 01:46:34Z'}, 'juju-status': {'current': 'idle', 'since': '24 Jan 2026 01:46:55Z', 'version': '3.6.13'}, 'leader': True, 'machine': '4', 'public-address': '10.186.192.71'}}, 'endpoint-bindings': {'': 'alpha', 's3-credentials': 'alpha', 's3-integrator-peers': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 317, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '24 Jan 2026 01:39:29Z'}, 'relations': {'certificates': [{'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '24 Jan 2026 01:39:29Z'}, 'juju-status': {'current': 'idle', 'since': '24 Jan 2026 01:41:39Z', 'version': '3.6.13'}, 'leader': True, 'machine': '0', 'public-address': '10.186.192.211'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:358 opensearch and s3-integrator already integrated
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:1357 Configured S3 with correct credentials and config.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.13   unsupported  01:48:49Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      3  opensearch                            0  no       
+s3-integrator                      active      1  s3-integrator             1/stable  145  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0                 active    idle   1        10.186.192.117  9200/tcp  
+opensearch/1                 active    idle   2        10.186.192.116  9200/tcp  
+opensearch/2*                active    idle   3        10.186.192.185  9200/tcp  
+s3-integrator/0*             active    idle   4        10.186.192.71             
+self-signed-certificates/0*  active    idle   0        10.186.192.211            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.186.192.211  juju-e8064f-0  ubuntu@24.04  github-runner  Running
+1        started  10.186.192.117  juju-e8064f-1  ubuntu@24.04  github-runner  Running
+2        started  10.186.192.116  juju-e8064f-2  ubuntu@24.04  github-runner  Running
+3        started  10.186.192.185  juju-e8064f-3  ubuntu@24.04  github-runner  Running
+4        started  10.186.192.71   juju-e8064f-4  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:48:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.2d2  -- (10.186.192.117) -- [idle (since: 01:47:08)] active: 
+		opensearch-1.2d2  -- (10.186.192.116) -- [idle (since: 01:48:30)] active: 
+		opensearch-2.2d2* -- (10.186.192.185) -- [idle (since: 01:47:09)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:49:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.2d2  -- (10.186.192.117) -- [idle (since: 01:47:08)] active: 
+		opensearch-1.2d2  -- (10.186.192.116) -- [idle (since: 01:48:30)] active: 
+		opensearch-2.2d2* -- (10.186.192.185) -- [idle (since: 01:47:09)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:49:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.2d2  -- (10.186.192.117) -- [idle (since: 01:47:08)] active: 
+		opensearch-1.2d2  -- (10.186.192.116) -- [idle (since: 01:48:30)] active: 
+		opensearch-2.2d2* -- (10.186.192.185) -- [idle (since: 01:47:09)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:49:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.2d2  -- (10.186.192.117) -- [idle (since: 01:47:08)] active: 
+		opensearch-1.2d2  -- (10.186.192.116) -- [idle (since: 01:48:30)] active: 
+		opensearch-2.2d2* -- (10.186.192.185) -- [idle (since: 01:47:09)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:49:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.2d2  -- (10.186.192.117) -- [idle (since: 01:47:08)] active: 
+		opensearch-1.2d2  -- (10.186.192.116) -- [idle (since: 01:48:30)] active: 
+		opensearch-2.2d2* -- (10.186.192.185) -- [idle (since: 01:47:09)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:49:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.2d2  -- (10.186.192.117) -- [idle (since: 01:47:08)] active: 
+		opensearch-1.2d2  -- (10.186.192.116) -- [idle (since: 01:48:30)] active: 
+		opensearch-2.2d2* -- (10.186.192.185) -- [idle (since: 01:47:09)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:49:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 01:49:56 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:1377 Configured S3 with wrong CA
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.13   unsupported  01:50:13Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         blocked      3  opensearch                            0  no       Backup configuration error: bad credentials, permissions, invalid CA, or unsupported configuration.
+s3-integrator                      active       1  s3-integrator             1/stable  145  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0                 active    idle   1        10.186.192.117  9200/tcp  
+opensearch/1                 active    idle   2        10.186.192.116  9200/tcp  
+opensearch/2*                active    idle   3        10.186.192.185  9200/tcp  
+s3-integrator/0*             active    idle   4        10.186.192.71             
+self-signed-certificates/0*  active    idle   0        10.186.192.211            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.186.192.211  juju-e8064f-0  ubuntu@24.04  github-runner  Running
+1        started  10.186.192.117  juju-e8064f-1  ubuntu@24.04  github-runner  Running
+2        started  10.186.192.116  juju-e8064f-2  ubuntu@24.04  github-runner  Running
+3        started  10.186.192.185  juju-e8064f-3  ubuntu@24.04  github-runner  Running
+4        started  10.186.192.71   juju-e8064f-4  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:50:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 01:50:14 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:1384 Opensearch 1 app is blocked because of S3 bad CA.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:1390 Configured S3 with valid CA.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.13   unsupported  01:50:32Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      3  opensearch                            0  no       
+s3-integrator                      active      1  s3-integrator             1/stable  145  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0                 active    idle   1        10.186.192.117  9200/tcp  
+opensearch/1                 active    idle   2        10.186.192.116  9200/tcp  
+opensearch/2*                active    idle   3        10.186.192.185  9200/tcp  
+s3-integrator/0*             active    idle   4        10.186.192.71             
+self-signed-certificates/0*  active    idle   0        10.186.192.211            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.186.192.211  juju-e8064f-0  ubuntu@24.04  github-runner  Running
+1        started  10.186.192.117  juju-e8064f-1  ubuntu@24.04  github-runner  Running
+2        started  10.186.192.116  juju-e8064f-2  ubuntu@24.04  github-runner  Running
+3        started  10.186.192.185  juju-e8064f-3  ubuntu@24.04  github-runner  Running
+4        started  10.186.192.71   juju-e8064f-4  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:50:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.2d2  -- (10.186.192.117) -- [idle (since: 01:50:23)] active: 
+		opensearch-1.2d2  -- (10.186.192.116) -- [idle (since: 01:50:21)] active: 
+		opensearch-2.2d2* -- (10.186.192.185) -- [idle (since: 01:50:22)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:50:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.2d2  -- (10.186.192.117) -- [idle (since: 01:50:23)] active: 
+		opensearch-1.2d2  -- (10.186.192.116) -- [idle (since: 01:50:21)] active: 
+		opensearch-2.2d2* -- (10.186.192.185) -- [idle (since: 01:50:22)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:50:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.2d2  -- (10.186.192.117) -- [idle (since: 01:50:23)] active: 
+		opensearch-1.2d2  -- (10.186.192.116) -- [idle (since: 01:50:21)] active: 
+		opensearch-2.2d2* -- (10.186.192.185) -- [idle (since: 01:50:22)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:51:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.2d2  -- (10.186.192.117) -- [idle (since: 01:50:23)] active: 
+		opensearch-1.2d2  -- (10.186.192.116) -- [idle (since: 01:50:21)] active: 
+		opensearch-2.2d2* -- (10.186.192.185) -- [idle (since: 01:50:22)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:51:16 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.2d2  -- (10.186.192.117) -- [idle (since: 01:50:23)] active: 
+		opensearch-1.2d2  -- (10.186.192.116) -- [idle (since: 01:50:21)] active: 
+		opensearch-2.2d2* -- (10.186.192.185) -- [idle (since: 01:50:22)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:51:27 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.2d2  -- (10.186.192.117) -- [idle (since: 01:50:23)] active: 
+		opensearch-1.2d2  -- (10.186.192.116) -- [idle (since: 01:50:21)] active: 
+		opensearch-2.2d2* -- (10.186.192.185) -- [idle (since: 01:50:22)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:51:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 01:51:38 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:1399 Opensearch all apps and units become active after providing valid S3 CA.
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.186.192.185:9200/_snapshot/s3-repository

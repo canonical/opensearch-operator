@@ -1,0 +1,173 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.13   unsupported  03:03:52Z
+
+App                       Version  Status       Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           waiting          2  opensearch                            2  no       TLS not fully configured in related 'main-orchestrator'.
+main                               maintenance      1  opensearch                            0  no       Waiting for TLS to be fully configured...
+opensearch                         waiting          1  opensearch                            1  no       TLS not fully configured in related 'main-orchestrator'.
+s3-integrator                      waiting        0/1  s3-integrator             1/stable  145  no       waiting for machine
+self-signed-certificates           waiting        0/1  self-signed-certificates  1/stable  317  no       waiting for machine
+
+Unit                        Workload     Agent       Machine  Public address  Ports  Message
+failover/0*                 maintenance  idle        4        10.94.127.102          Waiting for the admin user to be fully configured...
+failover/1                  maintenance  idle        5        10.94.127.95           Waiting for the admin user to be fully configured...
+main/0*                     maintenance  idle        3        10.94.127.78           Waiting for TLS to be fully configured...
+opensearch/0*               maintenance  idle        2        10.94.127.80           Waiting for the admin user to be fully configured...
+s3-integrator/0             waiting      allocating  0        10.94.127.64           waiting for machine
+self-signed-certificates/0  waiting      allocating  1        10.94.127.148          waiting for machine
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        pending  10.94.127.64   juju-1e2833-0  ubuntu@22.04  github-runner  Running
+1        pending  10.94.127.148  juju-1e2833-1  ubuntu@24.04  github-runner  Running
+2        started  10.94.127.80   juju-1e2833-2  ubuntu@24.04  github-runner  Running
+3        started  10.94.127.78   juju-1e2833-3  ubuntu@24.04  github-runner  Running
+4        started  10.94.127.102  juju-1e2833-4  ubuntu@24.04  github-runner  Running
+5        started  10.94.127.95   juju-1e2833-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-2: 02:01:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:01:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:01:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:01:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:01:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:01:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:01:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:01:54 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-0: 02:03:22 ERROR unit.failover/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:22 ERROR unit.failover/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:03:23 ERROR unit.failover/1.juju-log upgrade-version-a:7: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:03:23 ERROR unit.failover/1.juju-log upgrade-version-a:7: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:23 ERROR unit.failover/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:23 ERROR unit.failover/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:03:24 ERROR unit.failover/1.juju-log node-lock-fallback:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:03:24 ERROR unit.failover/1.juju-log node-lock-fallback:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:24 ERROR unit.failover/0.juju-log upgrade-version-a:7: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:24 ERROR unit.failover/0.juju-log upgrade-version-a:7: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:03:25 ERROR unit.failover/1.juju-log opensearch-peers:8: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:03:25 ERROR unit.failover/1.juju-log opensearch-peers:8: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:25 ERROR unit.failover/0.juju-log upgrade-version-a:7: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:25 ERROR unit.failover/0.juju-log upgrade-version-a:7: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:03:25 ERROR unit.failover/1.juju-log opensearch-peers:8: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:03:25 ERROR unit.failover/1.juju-log opensearch-peers:8: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:26 ERROR unit.failover/0.juju-log node-lock-fallback:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:26 ERROR unit.failover/0.juju-log node-lock-fallback:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:03:26 ERROR unit.failover/1.juju-log opensearch-peers:8: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:03:26 ERROR unit.failover/1.juju-log opensearch-peers:8: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:27 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:03:27 ERROR unit.failover/1.juju-log opensearch-peers:8: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:27 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:03:27 ERROR unit.failover/1.juju-log opensearch-peers:8: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:03:28 ERROR unit.failover/1.juju-log opensearch-peers:8: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:28 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:03:28 ERROR unit.failover/1.juju-log opensearch-peers:8: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:28 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:29 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:29 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:30 ERROR unit.failover/0.juju-log node-lock-fallback:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:30 ERROR unit.failover/0.juju-log node-lock-fallback:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:03:31 ERROR unit.failover/1.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:03:31 ERROR unit.failover/1.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:31 ERROR unit.failover/0.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:31 ERROR unit.failover/0.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:03:32 ERROR unit.failover/1.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:03:32 ERROR unit.failover/1.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:03:32 ERROR unit.failover/1.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:03:32 ERROR unit.failover/1.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:32 ERROR unit.failover/0.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:32 ERROR unit.failover/0.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:32 ERROR unit.failover/0.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:32 ERROR unit.failover/0.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:03:33 ERROR unit.failover/1.juju-log opensearch-peers:8: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:03:33 ERROR unit.failover/1.juju-log opensearch-peers:8: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:03:33 ERROR unit.failover/1.juju-log opensearch-peers:8: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:03:33 ERROR unit.failover/1.juju-log opensearch-peers:8: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:33 ERROR unit.failover/0.juju-log upgrade-version-a:7: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:33 ERROR unit.failover/0.juju-log upgrade-version-a:7: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:33 ERROR unit.failover/0.juju-log upgrade-version-a:7: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:33 ERROR unit.failover/0.juju-log upgrade-version-a:7: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:34 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:34 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:34 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:34 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:35 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:35 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:36 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:36 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:36 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:36 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:36 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:36 ERROR unit.failover/0.juju-log opensearch-peers:8: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-0: 02:03:37 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 02:03:37 ERROR unit.opensearch/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 02:03:38 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 02:03:38 ERROR unit.opensearch/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 02:03:39 ERROR unit.opensearch/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 02:03:39 ERROR unit.opensearch/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 02:03:39 ERROR unit.opensearch/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 02:03:39 ERROR unit.opensearch/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-failover-1: 02:03:41 ERROR unit.failover/1.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:03:41 ERROR unit.failover/1.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:41 ERROR unit.failover/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:41 ERROR unit.failover/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:41 ERROR unit.failover/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:41 ERROR unit.failover/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:03:42 ERROR unit.failover/1.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:03:42 ERROR unit.failover/1.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:03:42 ERROR unit.failover/1.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:03:42 ERROR unit.failover/1.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:42 ERROR unit.failover/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:42 ERROR unit.failover/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:42 ERROR unit.failover/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:42 ERROR unit.failover/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:42 ERROR unit.failover/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:42 ERROR unit.failover/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-0: 02:03:54 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 02:03:54 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 02:03:55 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 02:03:55 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 02:03:55 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 02:03:55 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-failover-1: 02:03:56 ERROR unit.failover/1.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:03:56 ERROR unit.failover/1.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:03:56 ERROR unit.failover/1.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:03:56 ERROR unit.failover/1.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:57 ERROR unit.failover/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:57 ERROR unit.failover/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:57 ERROR unit.failover/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:57 ERROR unit.failover/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 02:03:57 ERROR unit.failover/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 02:03:57 ERROR unit.failover/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-0: 02:04:08 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 02:04:08 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 02:04:08 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 02:04:08 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-failover-1: 02:04:09 ERROR unit.failover/1.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:04:09 ERROR unit.failover/1.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:04:09 ERROR unit.failover/1.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:04:09 ERROR unit.failover/1.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:190 Cleaning backups from cloud buckets
+[33mWARNING [0m integration.ha.test_backups:test_backups.py:216 Failed to clean up backups: SSL validation failed for https://10.151.33.81:445/testbucket?prefix=opensearch%2F08e06445-b314-41ee-9da0-42aa6be6a739%2F&encoding-type=url [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1000)
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:511 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.25.1 Python/3.12.3 (Linux-6.14.0-37-generic-x86_64-with-glibc2.39)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': '535bbe45-f8d1-11f0-aff2-00163ea52a7e'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:547 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': '5a0cc2ef-501e-000c-53de-8c25da000000'
+    'x-ms-client-request-id': '535bbe45-f8d1-11f0-aff2-00163ea52a7e'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Sat, 24 Jan 2026 03:03:57 GMT'

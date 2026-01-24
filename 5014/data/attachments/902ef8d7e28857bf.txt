@@ -1,0 +1,841 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'failover': {'charm': 'local:noble/opensearch-1', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 1, 'exposed': False, 'application-status': {'current': 'active', 'since': '24 Jan 2026 02:04:30Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'failover', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'failover', 'interface': 'opensearch_peers', 'scope': 'global'}], 'peer-cluster': [{'related-application': 'main', 'interface': 'peer_cluster', 'scope': 'global'}], 'peer-cluster-orchestrator': [{'related-application': 'opensearch', 'interface': 'peer_cluster', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'failover', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'failover/0': {'workload-status': {'current': 'active', 'since': '24 Jan 2026 02:00:23Z'}, 'juju-status': {'current': 'idle', 'since': '24 Jan 2026 02:09:03Z', 'version': '3.6.13'}, 'machine': '4', 'open-ports': ['9200/tcp'], 'public-address': '10.199.130.133'}, 'failover/1': {'workload-status': {'current': 'active', 'since': '24 Jan 2026 02:00:39Z'}, 'juju-status': {'current': 'idle', 'since': '24 Jan 2026 02:09:28Z', 'version': '3.6.13'}, 'leader': True, 'machine': '5', 'open-ports': ['9200/tcp'], 'public-address': '10.199.130.174'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 'main': {'charm': 'local:noble/opensearch-2', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 2, 'exposed': False, 'application-status': {'current': 'active', 'since': '24 Jan 2026 02:04:43Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'main', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'main', 'interface': 'opensearch_peers', 'scope': 'global'}], 'peer-cluster-orchestrator': [{'related-application': 'failover', 'interface': 'peer_cluster', 'scope': 'global'}, {'related-application': 'opensearch', 'interface': 'peer_cluster', 'scope': 'global'}], 's3-credentials': [{'related-application': 's3-integrator', 'interface': 's3', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'main', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'main/0': {'workload-status': {'current': 'active', 'since': '24 Jan 2026 02:09:15Z'}, 'juju-status': {'current': 'idle', 'since': '24 Jan 2026 02:09:26Z', 'version': '3.6.13'}, 'leader': True, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.199.130.43'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 'opensearch': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'active', 'since': '24 Jan 2026 02:04:23Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 'peer-cluster': [{'related-application': 'failover', 'interface': 'peer_cluster', 'scope': 'global'}, {'related-application': 'main', 'interface': 'peer_cluster', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/0': {'workload-status': {'current': 'active', 'since': '24 Jan 2026 02:01:09Z'}, 'juju-status': {'current': 'idle', 'since': '24 Jan 2026 02:09:20Z', 'version': '3.6.13'}, 'leader': True, 'machine': '2', 'open-ports': ['9200/tcp'], 'public-address': '10.199.130.158'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 's3-integrator': {'charm': 's3-integrator', 'base': {'name': 'ubuntu', 'channel': '22.04'}, 'charm-origin': 'charmhub', 'charm-name': 's3-integrator', 'charm-rev': 145, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '24 Jan 2026 02:03:52Z'}, 'relations': {'s3-credentials': [{'related-application': 'main', 'interface': 's3', 'scope': 'global'}], 's3-integrator-peers': [{'related-application': 's3-integrator', 'interface': 's3-integrator-peers', 'scope': 'global'}]}, 'units': {'s3-integrator/0': {'workload-status': {'current': 'active', 'since': '24 Jan 2026 02:03:52Z'}, 'juju-status': {'current': 'idle', 'since': '24 Jan 2026 02:06:07Z', 'version': '3.6.13'}, 'leader': True, 'machine': '0', 'public-address': '10.199.130.14'}}, 'endpoint-bindings': {'': 'alpha', 's3-credentials': 'alpha', 's3-integrator-peers': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 317, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '24 Jan 2026 01:57:06Z'}, 'relations': {'certificates': [{'related-application': 'failover', 'interface': 'tls-certificates', 'scope': 'global'}, {'related-application': 'main', 'interface': 'tls-certificates', 'scope': 'global'}, {'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '24 Jan 2026 01:57:06Z'}, 'juju-status': {'current': 'idle', 'since': '24 Jan 2026 02:00:01Z', 'version': '3.6.13'}, 'leader': True, 'machine': '1', 'public-address': '10.199.130.184'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:757 Remove backup relation
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.13   unsupported  02:09:38Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           active      2  opensearch                            1  no       
+main                               active      1  opensearch                            2  no       
+opensearch                         active      1  opensearch                            0  no       
+s3-integrator                      active      1  s3-integrator             1/stable  145  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+failover/0                   active    executing  4        10.199.130.133  9200/tcp  
+failover/1*                  active    executing  5        10.199.130.174  9200/tcp  
+main/0*                      active    idle       3        10.199.130.43   9200/tcp  
+opensearch/0*                active    executing  2        10.199.130.158  9200/tcp  
+s3-integrator/0*             active    idle       0        10.199.130.14             
+self-signed-certificates/0*  active    idle       1        10.199.130.184            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.199.130.14   juju-1c4280-0  ubuntu@22.04  github-runner  Running
+1        started  10.199.130.184  juju-1c4280-1  ubuntu@24.04  github-runner  Running
+2        started  10.199.130.158  juju-1c4280-2  ubuntu@24.04  github-runner  Running
+3        started  10.199.130.43   juju-1c4280-3  ubuntu@24.04  github-runner  Running
+4        started  10.199.130.133  juju-1c4280-4  ubuntu@24.04  github-runner  Running
+5        started  10.199.130.174  juju-1c4280-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:09:38 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [idle (since: 02:09:38)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:09:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [idle (since: 02:09:38)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:10:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [idle (since: 02:09:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:10:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [idle (since: 02:09:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:10:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [idle (since: 02:09:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:10:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [idle (since: 02:09:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:10:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [idle (since: 02:09:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:10:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [idle (since: 02:09:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:11:05 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [idle (since: 02:09:57)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:11:16 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.394* -- (10.199.130.158) -- [idle (since: 02:10:19)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:11:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.394* -- (10.199.130.158) -- [idle (since: 02:10:19)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:11:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:11:41 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:772 Re-add backup credentials relation
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:774 Waiting for app status to be active.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.13   unsupported  02:11:42Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           active      2  opensearch                            1  no       
+main                               active      1  opensearch                            2  no       
+opensearch                         active      1  opensearch                            0  no       
+s3-integrator                      active      1  s3-integrator             1/stable  145  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+failover/0                   active    idle       4        10.199.130.133  9200/tcp  
+failover/1*                  active    idle       5        10.199.130.174  9200/tcp  
+main/0*                      active    executing  3        10.199.130.43   9200/tcp  
+opensearch/0*                active    idle       2        10.199.130.158  9200/tcp  
+s3-integrator/0*             active    executing  0        10.199.130.14             
+self-signed-certificates/0*  active    idle       1        10.199.130.184            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.199.130.14   juju-1c4280-0  ubuntu@22.04  github-runner  Running
+1        started  10.199.130.184  juju-1c4280-1  ubuntu@24.04  github-runner  Running
+2        started  10.199.130.158  juju-1c4280-2  ubuntu@24.04  github-runner  Running
+3        started  10.199.130.43   juju-1c4280-3  ubuntu@24.04  github-runner  Running
+4        started  10.199.130.133  juju-1c4280-4  ubuntu@24.04  github-runner  Running
+5        started  10.199.130.174  juju-1c4280-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:11:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [executing (since: 02:11:41)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:11:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [executing (since: 02:11:49)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:12:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [executing (since: 02:12:03)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:12:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [idle (since: 02:12:08)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:12:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [idle (since: 02:12:08)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:12:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [idle (since: 02:12:08)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:12:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [idle (since: 02:12:08)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:12:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [idle (since: 02:12:08)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:13:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [idle (since: 02:12:08)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:13:19 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.a34* -- (10.199.130.43) -- [idle (since: 02:12:08)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:13:30 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.394* -- (10.199.130.158) -- [idle (since: 02:12:29)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:13:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:13:44 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:785 Syncing credentials for microceph
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.199.130.43:9200/_recovery?human
+[32mINFO    [0m integration.ha.helpers:helpers.py:248 Continuous writes result: namespace(max_stored_id=404, count=405, last_expected_id=404)
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.199.130.43:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.199.130.43:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.199.130.43:9200/series_index/_count
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.199.130.43:9200/_recovery?human
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.199.130.43:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.199.130.43:9200/series_index/_count
+[32mINFO    [0m integration.ha.helpers:helpers.py:594 Testing restore for series_index - original count pre-restore: 405, and now, new count: 373
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.199.130.43:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.199.130.43:9200/series_index/_count
+[32mINFO    [0m integration.ha.conftest:conftest.py:55 
+
+
+
+The writes have been cleared.
+
+
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.13   unsupported  02:15:13Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           active      2  opensearch                            1  no       
+main                               active      1  opensearch                            2  no       
+opensearch                         active      1  opensearch                            0  no       
+s3-integrator                      active      1  s3-integrator             1/stable  145  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+failover/0                   active    idle   4        10.199.130.133  9200/tcp  
+failover/1*                  active    idle   5        10.199.130.174  9200/tcp  
+main/0*                      active    idle   3        10.199.130.43   9200/tcp  
+opensearch/0*                active    idle   2        10.199.130.158  9200/tcp  
+s3-integrator/0*             active    idle   0        10.199.130.14             
+self-signed-certificates/0*  active    idle   1        10.199.130.184            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.199.130.14   juju-1c4280-0  ubuntu@22.04  github-runner  Running
+1        started  10.199.130.184  juju-1c4280-1  ubuntu@24.04  github-runner  Running
+2        started  10.199.130.158  juju-1c4280-2  ubuntu@24.04  github-runner  Running
+3        started  10.199.130.43   juju-1c4280-3  ubuntu@24.04  github-runner  Running
+4        started  10.199.130.133  juju-1c4280-4  ubuntu@24.04  github-runner  Running
+5        started  10.199.130.174  juju-1c4280-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-1: 01:56:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:56:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:57:00 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:57:00 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:57:00 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:57:00 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:57:04 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:57:04 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:57:11 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:57:11 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:57:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:57:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:58:21 ERROR unit.self-signed-certificates/0.juju-log certificates:14: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:58:25 ERROR unit.self-signed-certificates/0.juju-log certificates:13: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:58:26 ERROR unit.self-signed-certificates/0.juju-log certificates:14: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-failover-1: 01:58:27 ERROR unit.failover/1.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 01:58:27 ERROR unit.failover/1.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 01:58:28 ERROR unit.failover/1.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 01:58:28 ERROR unit.failover/1.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 01:58:29 ERROR unit.failover/1.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 01:58:29 ERROR unit.failover/1.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 01:58:30 ERROR unit.failover/1.juju-log certificates:14: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 01:58:30 ERROR unit.failover/1.juju-log certificates:14: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 01:58:31 ERROR unit.failover/1.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 01:58:31 ERROR unit.failover/1.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 01:58:31 ERROR unit.failover/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:58:31 ERROR unit.failover/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 01:58:31 ERROR unit.failover/1.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 01:58:31 ERROR unit.failover/1.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 01:58:32 ERROR unit.failover/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:58:32 ERROR unit.failover/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 01:58:33 ERROR unit.failover/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:58:33 ERROR unit.failover/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-self-signed-certificates-0: 01:58:34 ERROR unit.self-signed-certificates/0.juju-log certificates:13: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-failover-0: 01:58:35 ERROR unit.failover/0.juju-log certificates:14: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:58:35 ERROR unit.failover/0.juju-log certificates:14: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 01:58:36 ERROR unit.failover/0.juju-log certificates:14: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:58:36 ERROR unit.failover/0.juju-log certificates:14: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 01:58:37 ERROR unit.failover/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:58:37 ERROR unit.failover/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 01:58:37 ERROR unit.failover/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:58:37 ERROR unit.failover/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-self-signed-certificates-0: 01:58:44 ERROR unit.self-signed-certificates/0.juju-log certificates:15: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-failover-1: 01:58:46 ERROR unit.failover/1.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 01:58:46 ERROR unit.failover/1.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 01:58:46 ERROR unit.failover/1.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 01:58:46 ERROR unit.failover/1.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-0: 01:58:50 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:58:50 ERROR unit.opensearch/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:58:51 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:58:51 ERROR unit.opensearch/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-failover-0: 01:58:52 ERROR unit.failover/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:58:52 ERROR unit.failover/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-0: 01:58:52 ERROR unit.failover/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-0: 01:58:52 ERROR unit.failover/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-0: 01:58:52 ERROR unit.opensearch/0.juju-log certificates:15: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:58:52 ERROR unit.opensearch/0.juju-log certificates:15: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:58:53 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:58:53 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:58:54 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:58:54 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:58:54 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:58:54 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:59:10 ERROR unit.opensearch/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:59:10 ERROR unit.opensearch/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:59:11 ERROR unit.opensearch/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:59:11 ERROR unit.opensearch/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:59:11 ERROR unit.opensearch/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:59:11 ERROR unit.opensearch/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:59:24 ERROR unit.opensearch/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:59:24 ERROR unit.opensearch/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:59:24 ERROR unit.opensearch/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:59:24 ERROR unit.opensearch/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 01:59:49 ERROR unit.self-signed-certificates/0.juju-log certificates:14: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:59:55 ERROR unit.self-signed-certificates/0.juju-log certificates:15: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:00:00 ERROR unit.self-signed-certificates/0.juju-log certificates:14: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:02:47 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-main-0: 02:04:04 ERROR unit.main/0.juju-log s3-credentials:16: S3 credential validation with boto3 failed: Could not connect to the endpoint URL: "https://localhost:445/error"
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/util/connection.py", line 85, in create_connection
+    raise err
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/util/connection.py", line 73, in create_connection
+    sock.connect(sa)
+ConnectionRefusedError: [Errno 111] Connection refused
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/httpsession.py", line 464, in send
+    urllib_response = conn.urlopen(
+                      ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 488, in _make_request
+    raise new_e
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 464, in _make_request
+    self._validate_conn(conn)
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 1093, in _validate_conn
+    conn.connect()
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connection.py", line 704, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connection.py", line 213, in _new_conn
+    raise NewConnectionError(
+urllib3.exceptions.NewConnectionError: <botocore.awsrequest.AWSHTTPSConnection object at 0x7beba6920e30>: Failed to establish a new connection: [Errno 111] Connection refused
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-main-0/charm/lib/charms/opensearch/v0/helper_security.py", line 787, in verify_s3_credentials
+    bucket.meta.client.head_bucket(Bucket=storage_config.s3.bucket)
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/client.py", line 598, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/client.py", line 1043, in _make_api_call
+    http, parsed_response = self._make_request(
+                            ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/client.py", line 1067, in _make_request
+    return self._endpoint.make_request(operation_model, request_dict)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 119, in make_request
+    return self._send_request(request_dict, operation_model)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 200, in _send_request
+    while self._needs_retry(
+          ^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 360, in _needs_retry
+    responses = self._event_emitter.emit(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/hooks.py", line 412, in emit
+    return self._emitter.emit(aliased_event_name, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/hooks.py", line 256, in emit
+    return self._emit(event_name, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/hooks.py", line 239, in _emit
+    response = handler(**kwargs)
+               ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 207, in __call__
+    if self._checker(**checker_kwargs):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 284, in __call__
+    should_retry = self._should_retry(
+                   ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 320, in _should_retry
+    return self._checker(attempt_number, response, caught_exception)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 363, in __call__
+    checker_response = checker(
+                       ^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 247, in __call__
+    return self._check_caught_exception(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 416, in _check_caught_exception
+    raise caught_exception
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 279, in _do_get_response
+    http_response = self._send(request)
+                    ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 383, in _send
+    return self.http_session.send(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/httpsession.py", line 493, in send
+    raise EndpointConnectionError(endpoint_url=request.url, error=e)
+botocore.exceptions.EndpointConnectionError: Could not connect to the endpoint URL: "https://localhost:445/error"
+unit-main-0: 02:04:13 ERROR unit.main/0.juju-log s3-credentials:16: S3 credential validation with boto3 failed: Could not connect to the endpoint URL: "https://localhost:445/error"
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/util/connection.py", line 85, in create_connection
+    raise err
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/util/connection.py", line 73, in create_connection
+    sock.connect(sa)
+ConnectionRefusedError: [Errno 111] Connection refused
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/httpsession.py", line 464, in send
+    urllib_response = conn.urlopen(
+                      ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 488, in _make_request
+    raise new_e
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 464, in _make_request
+    self._validate_conn(conn)
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 1093, in _validate_conn
+    conn.connect()
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connection.py", line 704, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connection.py", line 213, in _new_conn
+    raise NewConnectionError(
+urllib3.exceptions.NewConnectionError: <botocore.awsrequest.AWSHTTPSConnection object at 0x79915add23f0>: Failed to establish a new connection: [Errno 111] Connection refused
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-main-0/charm/lib/charms/opensearch/v0/helper_security.py", line 787, in verify_s3_credentials
+    bucket.meta.client.head_bucket(Bucket=storage_config.s3.bucket)
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/client.py", line 598, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/client.py", line 1043, in _make_api_call
+    http, parsed_response = self._make_request(
+                            ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/client.py", line 1067, in _make_request
+    return self._endpoint.make_request(operation_model, request_dict)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 119, in make_request
+    return self._send_request(request_dict, operation_model)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 200, in _send_request
+    while self._needs_retry(
+          ^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 360, in _needs_retry
+    responses = self._event_emitter.emit(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/hooks.py", line 412, in emit
+    return self._emitter.emit(aliased_event_name, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/hooks.py", line 256, in emit
+    return self._emit(event_name, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/hooks.py", line 239, in _emit
+    response = handler(**kwargs)
+               ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 207, in __call__
+    if self._checker(**checker_kwargs):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 284, in __call__
+    should_retry = self._should_retry(
+                   ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 320, in _should_retry
+    return self._checker(attempt_number, response, caught_exception)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 363, in __call__
+    checker_response = checker(
+                       ^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 247, in __call__
+    return self._check_caught_exception(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 416, in _check_caught_exception
+    raise caught_exception
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 279, in _do_get_response
+    http_response = self._send(request)
+                    ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 383, in _send
+    return self.http_session.send(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/httpsession.py", line 493, in send
+    raise EndpointConnectionError(endpoint_url=request.url, error=e)
+botocore.exceptions.EndpointConnectionError: Could not connect to the endpoint URL: "https://localhost:445/error"
+unit-main-0: 02:04:19 ERROR unit.main/0.juju-log s3-credentials:16: S3 credential validation with boto3 failed: Could not connect to the endpoint URL: "https://localhost:445/error"
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/util/connection.py", line 85, in create_connection
+    raise err
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/util/connection.py", line 73, in create_connection
+    sock.connect(sa)
+ConnectionRefusedError: [Errno 111] Connection refused
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/httpsession.py", line 464, in send
+    urllib_response = conn.urlopen(
+                      ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 488, in _make_request
+    raise new_e
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 464, in _make_request
+    self._validate_conn(conn)
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 1093, in _validate_conn
+    conn.connect()
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connection.py", line 704, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connection.py", line 213, in _new_conn
+    raise NewConnectionError(
+urllib3.exceptions.NewConnectionError: <botocore.awsrequest.AWSHTTPSConnection object at 0x750ff1b52c30>: Failed to establish a new connection: [Errno 111] Connection refused
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-main-0/charm/lib/charms/opensearch/v0/helper_security.py", line 787, in verify_s3_credentials
+    bucket.meta.client.head_bucket(Bucket=storage_config.s3.bucket)
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/client.py", line 598, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/client.py", line 1043, in _make_api_call
+    http, parsed_response = self._make_request(
+                            ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/client.py", line 1067, in _make_request
+    return self._endpoint.make_request(operation_model, request_dict)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 119, in make_request
+    return self._send_request(request_dict, operation_model)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 200, in _send_request
+    while self._needs_retry(
+          ^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 360, in _needs_retry
+    responses = self._event_emitter.emit(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/hooks.py", line 412, in emit
+    return self._emitter.emit(aliased_event_name, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/hooks.py", line 256, in emit
+    return self._emit(event_name, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/hooks.py", line 239, in _emit
+    response = handler(**kwargs)
+               ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 207, in __call__
+    if self._checker(**checker_kwargs):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 284, in __call__
+    should_retry = self._should_retry(
+                   ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 320, in _should_retry
+    return self._checker(attempt_number, response, caught_exception)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 363, in __call__
+    checker_response = checker(
+                       ^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 247, in __call__
+    return self._check_caught_exception(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 416, in _check_caught_exception
+    raise caught_exception
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 279, in _do_get_response
+    http_response = self._send(request)
+                    ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 383, in _send
+    return self.http_session.send(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/httpsession.py", line 493, in send
+    raise EndpointConnectionError(endpoint_url=request.url, error=e)
+botocore.exceptions.EndpointConnectionError: Could not connect to the endpoint URL: "https://localhost:445/error"
+unit-main-0: 02:04:27 ERROR unit.main/0.juju-log s3-credentials:16: S3 credential validation with boto3 failed: Could not connect to the endpoint URL: "https://localhost:445/error"
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/util/connection.py", line 85, in create_connection
+    raise err
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/util/connection.py", line 73, in create_connection
+    sock.connect(sa)
+ConnectionRefusedError: [Errno 111] Connection refused
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/httpsession.py", line 464, in send
+    urllib_response = conn.urlopen(
+                      ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 488, in _make_request
+    raise new_e
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 464, in _make_request
+    self._validate_conn(conn)
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 1093, in _validate_conn
+    conn.connect()
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connection.py", line 704, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/urllib3/connection.py", line 213, in _new_conn
+    raise NewConnectionError(
+urllib3.exceptions.NewConnectionError: <botocore.awsrequest.AWSHTTPSConnection object at 0x7880fe7573b0>: Failed to establish a new connection: [Errno 111] Connection refused
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-main-0/charm/lib/charms/opensearch/v0/helper_security.py", line 787, in verify_s3_credentials
+    bucket.meta.client.head_bucket(Bucket=storage_config.s3.bucket)
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/client.py", line 598, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/client.py", line 1043, in _make_api_call
+    http, parsed_response = self._make_request(
+                            ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/client.py", line 1067, in _make_request
+    return self._endpoint.make_request(operation_model, request_dict)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 119, in make_request
+    return self._send_request(request_dict, operation_model)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 200, in _send_request
+    while self._needs_retry(
+          ^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 360, in _needs_retry
+    responses = self._event_emitter.emit(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/hooks.py", line 412, in emit
+    return self._emitter.emit(aliased_event_name, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/hooks.py", line 256, in emit
+    return self._emit(event_name, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/hooks.py", line 239, in _emit
+    response = handler(**kwargs)
+               ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 207, in __call__
+    if self._checker(**checker_kwargs):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 284, in __call__
+    should_retry = self._should_retry(
+                   ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 320, in _should_retry
+    return self._checker(attempt_number, response, caught_exception)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 363, in __call__
+    checker_response = checker(
+                       ^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 247, in __call__
+    return self._check_caught_exception(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/retryhandler.py", line 416, in _check_caught_exception
+    raise caught_exception
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 279, in _do_get_response
+    http_response = self._send(request)
+                    ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/endpoint.py", line 383, in _send
+    return self.http_session.send(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-main-0/charm/venv/lib/python3.12/site-packages/botocore/httpsession.py", line 493, in send
+    raise EndpointConnectionError(endpoint_url=request.url, error=e)
+botocore.exceptions.EndpointConnectionError: Could not connect to the endpoint URL: "https://localhost:445/error"
+unit-self-signed-certificates-0: 02:07:12 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:11:40 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:190 Cleaning backups from cloud buckets
+[33mWARNING [0m integration.ha.test_backups:test_backups.py:216 Failed to clean up backups: SSL validation failed for https://10.151.33.78:445/testbucket?prefix=opensearch%2Fb0d042b4-e482-4ba0-b285-b9e992ee00d0%2F&encoding-type=url [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1000)
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:511 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.25.1 Python/3.12.3 (Linux-6.14.0-37-generic-x86_64-with-glibc2.39)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': '87ef128c-f8ca-11f0-be66-00163e245df0'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:547 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': '16b65ebf-001e-0001-66d7-8ced0e000000'
+    'x-ms-client-request-id': '87ef128c-f8ca-11f0-be66-00163e245df0'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Sat, 24 Jan 2026 02:15:19 GMT'
