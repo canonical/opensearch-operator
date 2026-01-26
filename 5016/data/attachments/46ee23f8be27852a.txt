@@ -1,0 +1,15 @@
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.121.253.131:9200/_plugins/_security_analytics/rules?category=linux
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: PUT -- https://10.121.253.131:9200/log-index
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.121.253.131:9200/_plugins/_security_analytics/detectors
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:1295 
+Detectors response: {'_id': 'oDUI-JsByQ3Z-eDOhsFR', '_version': 1, 'detector': {'name': 'danger-detector', 'detector_type': 'linux', 'enabled': True, 'schedule': {'period': {'interval': 1, 'unit': 'MINUTES'}}, 'inputs': [{'detector_input': {'description': '', 'indices': ['log-index'], 'custom_rules': [{'id': 'nTUI-JsByQ3Z-eDOYsHS'}], 'pre_packaged_rules': []}}], 'triggers': [], 'last_update_time': '2026-01-26T02:01:03.308572659Z', 'enabled_time': '2026-01-26T02:01:03.308538828Z', 'threat_intel_enabled': False}}
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: PUT -- https://10.121.253.131:9200/_bulk
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.121.253.131:9200/log-index/_refresh
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:1307 Waiting for detector schedule period to pass...
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:1311 Waiting for security analytics finding to be reported...
+[32mINFO    [0m integration.plugins.helpers:helpers.py:154 Polling https://10.121.253.131:9200/_plugins/_security_analytics/findings/_search?detector_id=oDUI-JsByQ3Z-eDOhsFR...
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.121.253.131:9200/_plugins/_security_analytics/findings/_search?detector_id=oDUI-JsByQ3Z-eDOhsFR
+[32mINFO    [0m integration.plugins.helpers:helpers.py:162 Done. Condition met: {'total_findings': 1, 'findings': [{'detectorId': 'oDUI-JsByQ3Z-eDOhsFR', 'id': '92c071b2-b936-4c4b-a1ea-aeb32d073356', 'related_doc_ids': ['ozUI-JsByQ3Z-eDOkMG2'], 'index': 'log-index', 'queries': [{'id': 'nTUI-JsByQ3Z-eDOYsHS', 'name': 'Critical Detector', 'fields': [], 'query': 'activity: "suspicious"', 'tags': ['low', 'linux'], 'query_field_names': ['activity']}], 'timestamp': 1769392923806, 'document_list': [{'index': 'log-index', 'id': 'ozUI-JsByQ3Z-eDOkMG2', 'found': True, 'document': '{"name": "c", "activity": "suspicious"}'}]}]}
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: DELETE -- https://10.121.253.131:9200/_plugins/_security_analytics/detectors/oDUI-JsByQ3Z-eDOhsFR
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: DELETE -- https://10.121.253.131:9200/_plugins/_security_analytics/rules/nTUI-JsByQ3Z-eDOYsHS?category=linux
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: DELETE -- https://10.121.253.131:9200/log-index/
