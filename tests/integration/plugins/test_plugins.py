@@ -47,6 +47,8 @@ COS_RELATION_NAME = "cos-agent"
 DASHBOARDS_APP_NAME = "opensearch-dashboards"
 MAIN_ORCHESTRATOR_NAME = "main"
 FAILOVER_ORCHESTRATOR_NAME = "failover"
+SMTP_INTEGRATOR_APP_NAME = "smtp-integrator"
+SMTP_INTEGRATOR_CHANNEL = "latest/edge"
 
 
 ALL_GROUPS = {
@@ -133,6 +135,62 @@ async def _wait_for_units(
             timeout=1800,
             idle_period=IDLE_PERIOD,
         )
+
+
+async def _notifications_list_configs(ops_test: OpsTest, base_url: str):
+    return await http_request(ops_test, "GET", f"{base_url}/_plugins/_notifications/configs")
+
+
+def _extract_configs(configs_resp: dict) -> list[dict]:
+    if not isinstance(configs_resp, dict):
+        return []
+    if isinstance(configs_resp.get("configs"), list):
+        return configs_resp["configs"]
+    if isinstance(configs_resp.get("items"), list):
+        return configs_resp["items"]
+    if isinstance(configs_resp.get("config_list"), list):
+        return configs_resp["config_list"]
+    return []
+
+
+def _find_configs_by_name(configs_resp: dict, name: str) -> list[dict]:
+    out = []
+    for c in _extract_configs(configs_resp):
+        # name can be at top-level or nested under config
+        cfg_name = c.get("name") or (c.get("config") or {}).get("name")
+        if cfg_name == name:
+            out.append(c)
+    return out
+
+
+async def _wait_until_config_present(
+    ops_test: OpsTest,
+    base_url: str,
+    config_name: str,
+    timeout: int = 180,
+    poll: int = 5,
+) -> dict:
+    async with asyncio.timeout(timeout):
+        while True:
+            resp = await _notifications_list_configs(ops_test, base_url)
+            for cfg in _find_configs_by_name(resp, config_name):
+                return cfg
+            await asyncio.sleep(poll)
+
+
+async def _wait_until_config_absent(
+    ops_test: OpsTest,
+    base_url: str,
+    config_name: str,
+    timeout: int = 180,
+    poll: int = 5,
+) -> None:
+    async with asyncio.timeout(timeout):
+        while True:
+            resp = await _notifications_list_configs(ops_test, base_url)
+            if not _find_configs_by_name(resp, config_name):
+                return
+            await asyncio.sleep(poll)
 
 
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
@@ -1425,3 +1483,73 @@ async def test_skills_plugin(ops_test: OpsTest, deploy_type: str) -> None:
 
     response = await http_request(ops_test, "POST", f"{endpoint}/{agent_id}/_execute", payload)
     assert len(response.get("inference_results", [])) > 0, "Flow agent did not return any results"
+
+
+@pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
+@pytest.mark.abort_on_fail
+async def test_smtp_relation_when_related_with_smtp_integrator_then_creates_notifications(
+    ops_test: OpsTest, deploy_type: str
+) -> None:
+    """Ensure that relating smtp-integrator results in notifications email config objects:
+
+    - SMTP sender/account config
+    - Email channel config
+    - Email group config
+    """
+    # ensure OpenSearch is up
+    await _wait_for_units(ops_test, deploy_type)
+
+    # deploy smtp-integrator
+    await ops_test.model.deploy(
+        SMTP_INTEGRATOR_APP_NAME,
+        channel=SMTP_INTEGRATOR_CHANNEL,
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[SMTP_INTEGRATOR_APP_NAME],
+        timeout=20 * 60,
+    )
+
+    # dummy SMTP config
+    await ops_test.model.applications[SMTP_INTEGRATOR_APP_NAME].set_config(
+        {
+            "host": "127.0.0.1",
+            "port": "2525",
+            "user": "dummy-user",
+            "password": "dummy-pass",
+            "transport_security": "none",
+            "auth_type": "plain",
+            "smtp_sender": "no-reply@example.com",
+            "recipients": "a@example.com,b@example.com",
+        }
+    )
+
+    # relate opensearch and smtp
+    await ops_test.model.integrate(f"{APP_NAME}:smtp", f"{SMTP_INTEGRATOR_APP_NAME}:smtp")
+    await _wait_for_units(ops_test, deploy_type)
+
+    leader_unit_ip = await get_leader_unit_ip(ops_test)
+    base_url = f"https://{leader_unit_ip}:9200"
+
+    smtp_sender_cfg_name = "smtp-sender-no-reply-example-com"
+    email_channel_cfg_name = f"{smtp_sender_cfg_name}_email-channel"
+    email_group_cfg_name = f"{smtp_sender_cfg_name}_recipients"
+
+    sender_cfg = await _wait_until_config_present(ops_test, base_url, smtp_sender_cfg_name)
+    channel_cfg = await _wait_until_config_present(ops_test, base_url, email_channel_cfg_name)
+    group_cfg = await _wait_until_config_present(ops_test, base_url, email_group_cfg_name)
+
+    assert sender_cfg.get("name") == smtp_sender_cfg_name
+    assert channel_cfg.get("name") == email_channel_cfg_name
+    assert group_cfg.get("name") == email_group_cfg_name
+
+    # remove relation
+    await ops_test.model.applications[APP_NAME].remove_relation(
+        f"{APP_NAME}:smtp",
+        f"{SMTP_INTEGRATOR_APP_NAME}:smtp",
+    )
+    await _wait_for_units(ops_test, deploy_type)
+
+    # now they should be deleted
+    await _wait_until_config_absent(ops_test, base_url, email_channel_cfg_name)
+    await _wait_until_config_absent(ops_test, base_url, email_group_cfg_name)
+    await _wait_until_config_absent(ops_test, base_url, smtp_sender_cfg_name)
