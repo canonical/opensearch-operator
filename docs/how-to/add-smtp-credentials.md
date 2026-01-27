@@ -43,7 +43,7 @@ juju config smtp-integrator \
   user="<smtp-username>" \
   password="<smtp-password>" \
   smtp-sender="<sender-email>" \
-  recipients='["a@example.com","b@example.com"]'
+  recipients="a@example.com,b@example.com"
 ```
 
 **Important**
