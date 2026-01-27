@@ -70,24 +70,60 @@ class SmtpEvents(Object):
 
     @staticmethod
     def _label(relation_id: int) -> str:
+        """Return label for this relation.
+
+        Args:
+            relation_id: relation id
+
+        Returns:
+            relation label
+        """
         return f"{SMTP_SECRET_LABEL}-{relation_id}"
 
     @staticmethod
     def _recipient_group_id(sender_id: str) -> str:
+        """Return recipient group id for this relation.
+
+        Args:
+            sender_id: sender id
+
+        Returns:
+            sender group id
+        """
         return f"{sender_id}_recipients"
 
     @staticmethod
     def _email_channel_id(sender_id: str) -> str:
+        """Return email channel id for this relation.
+
+        Args:
+            sender_id: sender id
+
+        Returns:
+            email channel id
+        """
         return f"{sender_id}_email-channel"
 
     @staticmethod
     def _sender_id_from_email(sender_email: str) -> str:
+        """Return sender id for this relation.
+
+        Args:
+            sender_email: sender email
+
+        Returns:
+            sender id
+        """
         s = sender_email.strip().lower()
         s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
         return f"smtp-sender-{s}"
 
     def _has_duplicate_sender_emails(self) -> Optional[str]:
-        """Return duplicate sender email if exists, else None."""
+        """Return duplicate sender email if exists, else None.
+
+        Returns:
+            Duplicate sender email if exists, else None
+        """
         seen: dict[str, int] = {}
         for rel in self.charm.model.relations[self.relation_name]:
             try:
@@ -104,7 +140,11 @@ class SmtpEvents(Object):
         return None
 
     def _on_smtp_credentials_changed(self, event) -> None:  # noqa: C901
-        """Configure notifications sender/group/channel and keystore creds for this relation."""
+        """Configure notifications sender/group/channel and keystore creds for this relation.
+
+        Args:
+            event: Smtp credentials available event
+        """
         parameters = None
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             logger.debug("Deployment not ready. Deferring event.")
@@ -178,7 +218,7 @@ class SmtpEvents(Object):
                 self.charm.status.clear(
                     "Duplicate SMTP sender email across smtp relations:",
                     app=True,
-                    pattern=Status.CheckPattern.Prefix,
+                    pattern=Status.CheckPattern.Start,
                 )
 
         sender_email = str(parameters.smtp_sender)
@@ -197,7 +237,7 @@ class SmtpEvents(Object):
                 from_address=sender_email,
             )
 
-        # Store keystore creds on every unit
+        # store keystore creds on every unit
         entries = {
             f"opensearch.notifications.core.email.{sender_id}.username": parameters.user,
             f"opensearch.notifications.core.email.{sender_id}.password": parameters.password,
@@ -250,7 +290,11 @@ class SmtpEvents(Object):
                 self.charm.peer_cluster_provider.refresh_relation_data(event)
 
     def _on_smtp_credentials_gone(self, event) -> None:  # noqa: C901
-        """Cleanup for a broken smtp relation (relation-scoped)."""
+        """Cleanup for a broken smtp relation (relation-scoped).
+
+        Args:
+            event: Smtp relation broken event
+        """
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             logger.debug("Deployment not ready. Deferring event.")
             event.defer()
@@ -297,7 +341,11 @@ class SmtpEvents(Object):
             self.charm.peer_cluster_provider.refresh_relation_data(event)
 
     def _on_secret_changed(self, event) -> None:
-        """Handles secret changes (support multiple smtp relations)."""
+        """Handles secret changes (support multiple smtp relations).
+
+        Args:
+            event: Secret event
+        """
         if SMTP_SECRET_LABEL not in event.secret.label:
             return
 

@@ -23,14 +23,29 @@ class NotificationsClientError(RuntimeError):
 
 @dataclass(frozen=True)
 class NotificationsConfigRef:
-    """Notifications config referencing CRUD."""
+    """Notifications config referencing CRUD operations.
+
+    Args:
+        config_id: the id of the notification config
+        name: the name of the notification config
+    """
 
     config_id: str
     name: str
 
 
 def check_transport_security(transport_security) -> str:
-    """Check if transport_security is valid."""
+    """Check if transport_security is valid.
+
+    Args:
+        transport_security: an OpenSearchDistribution instance
+
+    Returns:
+        tls or none
+
+    Raises:
+        ValueError
+    """
     val = getattr(transport_security, "value", transport_security)
     val = str(val).strip().lower()
 
@@ -64,11 +79,24 @@ class OpenSearchNotificationsClient:
         description: str = "",
         is_enabled: bool = True,
     ) -> NotificationsConfigRef:
-        """Apply smtp sender configuration."""
+        """Apply smtp sender configuration.
+
+        Args:
+            sender_id: the id of the sender
+            host: the smtp host
+            port: the smtp port
+            transport_security: an OpenSearchDistribution instance
+            from_address: the smtp address
+            description: the smtp description
+            is_enabled: whether the smtp sender is enabled
+
+        Returns:
+            NotificationsConfigRef: the notification config
+        """
         method = check_transport_security(transport_security)
         config = {
             "name": sender_id,
-            "description": description or f"SMTP sender managed by Juju ({sender_id})",
+            "description": description or f"SMTP sender: ({sender_id})",
             "config_type": "smtp_account",
             "is_enabled": is_enabled,
             "smtp_account": {
@@ -89,7 +117,17 @@ class OpenSearchNotificationsClient:
         description: str = "",
         is_enabled: bool = True,
     ) -> NotificationsConfigRef:
-        """Apply email group configuration."""
+        """Apply email group configuration.
+
+        Args:
+            group_id: the id of the email group
+            recipients: the email recipients
+            description: the email description
+            is_enabled: whether the email group is enabled
+
+        Returns:
+            NotificationsConfigRef: the notification config
+        """
         config = {
             "name": group_id,
             "description": description or f"Email group managed by ({group_id})",
@@ -112,10 +150,22 @@ class OpenSearchNotificationsClient:
         description: str = "",
         is_enabled: bool = True,
     ) -> NotificationsConfigRef:
-        """Apply email channel configuration."""
+        """Apply email channel configuration.
+
+        Args:
+            channel_id: the id of the email channel
+            sender_id: the id of the email sender
+            email_group_ids: the email group ids
+            fallback_recipients: the email recipients
+            description: the email description
+            is_enabled: whether the email channel is enabled
+
+        Returns:
+            NotificationsConfigRef: the notification config
+        """
         config = {
             "name": channel_id,
-            "description": description or f"Email channel managed by Juju ({channel_id})",
+            "description": description or f"Email channel: ({channel_id})",
             "config_type": "email",
             "is_enabled": is_enabled,
             "email": {
@@ -128,7 +178,11 @@ class OpenSearchNotificationsClient:
         return NotificationsConfigRef(config_id=channel_id, name=channel_id)
 
     def delete_config(self, config_id: str) -> None:
-        """Delete config by id."""
+        """Delete config by id.
+
+        Args:
+            config_id: Notification Config ID
+        """
         try:
             self.opensearch.request("DELETE", f"/_plugins/_notifications/configs/{config_id}")
         except OpenSearchHttpError as exc:
@@ -136,45 +190,27 @@ class OpenSearchNotificationsClient:
                 f"Failed to delete notifications config_id={config_id}: {exc}"
             ) from exc
 
-    def delete_configs(self, config_ids: Iterable[str]) -> None:
-        """Delete configs by id."""
-        ids = [cid for cid in config_ids if cid]
-        if not ids:
-            return
-        joined = ",".join(ids)
-        try:
-            self.opensearch.request(
-                "DELETE", f"/_plugins/_notifications/configs/?config_id_list={joined}"
-            )
-        except OpenSearchHttpError as exc:
-            raise NotificationsClientError(
-                f"Failed to delete notifications config_id_list={ids}: {exc}"
-            ) from exc
-
-    def disable_config(self, config_id: str) -> None:
-        """Disable a config (if you prefer not to delete)."""
-        try:
-            self.opensearch.request(
-                "PUT",
-                f"/_plugins/_notifications/configs/{config_id}",
-                payload={"config": {"is_enabled": False}},
-            )
-        except OpenSearchHttpError as exc:
-            raise NotificationsClientError(
-                f"Failed to disable notifications config_id={config_id}: {exc}"
-            ) from exc
-
     def _create_or_update_config(
         self, *, config_id: str, name: str, config: Dict[str, Any]
     ) -> None:
-        """Create if missing, otherwise update."""
+        """Create if missing, otherwise update.
+
+        Args:
+            config_id: Notification Config ID
+            name: Notification Name
+            config: Notification Config
+        """
         if self._exists(config_id):
             self._update_config(config_id=config_id, config=config)
         else:
             self._create_config(config_id=config_id, name=name, config=config)
 
     def _exists(self, config_id: str) -> bool:
-        """Return True if config exists, False if 404 otherwise raise."""
+        """Return True if config exists, False if 404 otherwise raise.
+
+        Args:
+            config_id: Notification Config ID
+        """
         try:
             self.opensearch.request("GET", f"/_plugins/_notifications/configs/{config_id}")
             return True
@@ -185,6 +221,13 @@ class OpenSearchNotificationsClient:
             raise
 
     def _create_config(self, *, config_id: str, name: str, config: Dict[str, Any]) -> None:
+        """Create if missing, otherwise update.
+
+        Args:
+            config_id: Notification Config ID
+            name: Notification Name
+            config: Notification Config
+        """
         payload = {"config_id": config_id, "name": name, "config": config}
         try:
             self.opensearch.request("POST", "/_plugins/_notifications/configs/", payload=payload)
@@ -194,6 +237,12 @@ class OpenSearchNotificationsClient:
             ) from exc
 
     def _update_config(self, *, config_id: str, config: Dict[str, Any]) -> None:
+        """Update if missing, otherwise update.
+
+        Args:
+            config_id: Notification Config ID
+            config: Notification Config
+        """
         payload = {"config": config}
         try:
             self.opensearch.request(

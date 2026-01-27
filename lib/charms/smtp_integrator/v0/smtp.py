@@ -68,9 +68,9 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 20
+LIBPATCH = 21
 
-PYDEPS = ["pydantic>=2", "email-validator>=2"]
+PYDEPS = ["pydantic>=1.10,<3", "email-validator>=2"]
 
 # pylint: disable=wrong-import-position
 import itertools
@@ -79,15 +79,40 @@ import logging
 import typing
 from ast import literal_eval
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, TypeVar, cast
 
 import ops
-from pydantic import BaseModel, EmailStr, Field, ValidationError, field_validator
+from pydantic import BaseModel, EmailStr, Field, ValidationError
 
 logger = logging.getLogger(__name__)
 
+_F = TypeVar("_F", bound=Callable[..., Any])
+
+try:
+    # Pydantic v2
+    from pydantic import field_validator as _pyd_field_validator
+
+    _PYDANTIC_V2 = True
+except ImportError:
+    _pyd_field_validator = None  # type: ignore[assignment]
+    _PYDANTIC_V2 = False
+
+# Pydantic v1 field validation decorator (v2 uses field_validator)
+from pydantic import validator as _pyd_validator  # type: ignore[attr-defined]
+
 DEFAULT_RELATION_NAME = "smtp"
 LEGACY_RELATION_NAME = "smtp-legacy"
+
+
+def recipients_validator() -> Callable[[_F], _F]:
+    """Return the correct recipients validator decorator for pydantic v1/v2.
+
+    Returns:
+        A decorator to validate/normalize the recipients field before EmailStr validation.
+    """
+    if _PYDANTIC_V2:
+        return cast(Any, _pyd_field_validator)("recipients", mode="before")
+    return cast(Any, _pyd_validator)("recipients", pre=True)
 
 
 class SmtpError(Exception):
@@ -155,10 +180,10 @@ class SmtpRelationData(BaseModel):
     smtp_sender: Optional[EmailStr] = None
     recipients: List[EmailStr] = Field(default_factory=list)
 
-    @field_validator("recipients", mode="before")
+    @recipients_validator()
     @classmethod
     def _recipients_str_to_list(cls, value: Any) -> Any:
-        """Convert value to list[str]."""
+        """Convert recipients input to list[str] before EmailStr validation."""
         return parse_recipients(value)
 
     def to_relation_data(self) -> Dict[str, str]:
