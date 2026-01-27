@@ -1,7 +1,7 @@
 (how-to-guides-add-smtp-credentials)=
 # How to add SMTP credentials to enable email notifications
 
-This document describes how to add SMTP credentials in order for the Notifications plugin to authenticate an email sender account.
+This document describes how to configure SMTP credentials using the SMTP integrator charm so that OpenSearch can automatically create and manage Notifications email sender, channel, and group configurations.
 
 ```{note}
 Sending emails through an SMTP server that uses self-signed certificates is not currently supported.
@@ -34,16 +34,22 @@ self-signed-certificates/0*  active    idle   3        10.45.114.130
 smtp-integrator/0*           blocked   idle   4        10.45.114.15              invalid configuration: host
 ```
 
-Configure the SMTP integrator:
+Configure the SMTP integrator with SMTP credentials:
 
 ```shell
-juju config smtp-integrator user="<stmp-username>" password="<smtp-password>" host="<any non-empty string>"
+juju config smtp-integrator \
+  host="<smtp-host>" \
+  port="587" \
+  user="<smtp-username>" \
+  password="<smtp-password>" \
+  smtp-sender="<sender-email>" \
+  recipients='["a@example.com","b@example.com"]'
 ```
 
 **Important**
-The [OpenSearch documentation](https://docs.opensearch.org/2.19/observing-your-data/notifications/index/#create-email-sender) instructs you to specify a unique sender name when creating an email sender. This name must match the value of `user` you pass to the SMTP integrator. The sender name and username must be identical.
-
-The charm also requires a `host` configuration option, although the OpenSearch charm does not use this value. You can provide any non-empty string.
+The [OpenSearch documentation](https://docs.opensearch.org/2.19/observing-your-data/notifications/index/#create-email-sender) requires a unique sender name when creating an email sender. 
+The value of smtp-sender is used to derive the OpenSearch SMTP sender config, the email channel and the email recipient group. Sender names are automatically generated from the sender email address and must be unique across relations.
+Duplicate sender addresses across multiple SMTP relations are rejected and will result in a blocked status.
 
 ## Integrate the SMTP integrator and OpenSearch
 
@@ -57,7 +63,7 @@ juju integrate smtp-integrator:smtp opensearch
 
 In large deployments, the SMTP integrator must be integrated with the main orchestrator application.
 
-You can identity which applications is the main-orchestrator
+You can identify which applications is the main-orchestrator
 by inspecting the `integrations` section of `juju status`:
 
 ```shell
