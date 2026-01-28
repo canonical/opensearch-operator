@@ -1544,7 +1544,9 @@ async def test_smtp_relation_when_related_with_smtp_integrator_then_creates_noti
     assert _cfg_name(group_cfg) == email_group_cfg_name
 
     # remove relation
-    await ops_test.model.remove_relation(
+    main_app = ops_test.model.applications[APP_NAME]
+
+    await main_app.remove_relation(
         f"{APP_NAME}:smtp",
         f"{SMTP_INTEGRATOR_APP_NAME}:smtp",
     )
