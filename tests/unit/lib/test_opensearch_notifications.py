@@ -13,7 +13,6 @@ from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_notifications_client import (
     NotificationsClientError,
     OpenSearchNotificationsClient,
-    check_transport_security,
 )
 from ops import testing
 from ops.charm import ActionEvent, CharmBase
@@ -100,9 +99,6 @@ class NotificationsClientScenarioCharm(CharmBase):
 
         self.client = OpenSearchNotificationsClient(self.os_client)
 
-        self.framework.observe(
-            self.on.check_transport_security_action, self._on_check_transport_security
-        )
         self.framework.observe(self.on.apply_smtp_sender_action, self._on_apply_smtp_sender)
         self.framework.observe(self.on.apply_email_group_action, self._on_apply_email_group)
         self.framework.observe(self.on.apply_email_channel_action, self._on_apply_email_channel)
@@ -110,27 +106,6 @@ class NotificationsClientScenarioCharm(CharmBase):
         self.framework.observe(self.on.exists_action, self._on_exists)
         self.framework.observe(self.on.create_config_action, self._on_create_config)
         self.framework.observe(self.on.update_config_action, self._on_update_config)
-
-    def _on_check_transport_security(self, event: ActionEvent):
-        raw = event.params["input"]
-
-        try:
-            parsed = json.loads(raw)
-            inp_obj = (
-                TransportSec(parsed["value"])
-                if isinstance(parsed, dict) and "value" in parsed
-                else raw
-            )
-        except json.JSONDecodeError:
-            inp_obj = raw
-
-        try:
-            normalized = check_transport_security(inp_obj)
-        except ValueError as e:
-            event.fail(str(e))
-            return
-
-        event.set_results({"normalized": normalized})
 
     def _on_apply_smtp_sender(self, event: ActionEvent):
         exists = bool(event.params.get("exists", False))
@@ -222,30 +197,9 @@ def ctx(opensearch_mock: MagicMock) -> testing.Context:
 
 
 @pytest.mark.parametrize(
-    "input,expected",
-    [
-        ("none", "none"),
-        ("TLS", "tls"),
-        (TransportSec("tls"), "tls"),
-        (TransportSec(" NONE "), "none"),
-    ],
-)
-def test_check_transport_security_when_valid_input_then_returns_normalized_value(
-    input, expected
-) -> None:
-    assert check_transport_security(input) == expected
-
-
-@pytest.mark.parametrize("input", ["starttls", "bogus", " ssl ", ""])
-def test_check_transport_security_when_unsupported_value_then_raises_value_error(input) -> None:
-    with pytest.raises(ValueError):
-        check_transport_security(input)
-
-
-@pytest.mark.parametrize(
     "exists,transport_security,expected_method",
     [
-        (False, "tls", "tls"),
+        (False, "tls", "ssl"),
         (True, "none", "none"),
     ],
 )
