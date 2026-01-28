@@ -34,29 +34,6 @@ class NotificationsConfigRef:
     name: str
 
 
-def check_transport_security(transport_security) -> str:
-    """Check if transport_security is valid.
-
-    Args:
-        transport_security: an OpenSearchDistribution instance
-
-    Returns:
-        tls or none
-
-    Raises:
-        ValueError
-    """
-    val = getattr(transport_security, "value", transport_security)
-    val = str(val).strip().lower()
-
-    if val == "none":
-        return "none"
-    if val == "tls":
-        return "tls"
-
-    raise ValueError(f"Unsupported transport_security: {val}")
-
-
 class OpenSearchNotificationsClient:
     """Notifications plugin API client using OpenSearchDistribution.request()."""
 
@@ -93,7 +70,14 @@ class OpenSearchNotificationsClient:
         Returns:
             NotificationsConfigRef: the notification config
         """
-        method = check_transport_security(transport_security)
+        method = {
+            "none": "none",
+            "starttls": "start_tls",
+            "tls": "ssl",
+        }.get(transport_security)
+
+        if method is None:
+            raise ValueError(f"Unsupported transport_security: {transport_security}")
         config = {
             "name": sender_id,
             "description": description or f"SMTP sender: ({sender_id})",

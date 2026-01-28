@@ -227,6 +227,8 @@ class SmtpEvents(Object):
         label = self._label(event.relation.id)
         group_id = self._recipient_group_id(sender_id)
         channel_id = self._email_channel_id(sender_id)
+        ts = getattr(parameters.transport_security, "value", parameters.transport_security)
+        transport_security = str(ts).strip().lower()
 
         # create/update SMTP sender config
         if self.charm.unit.is_leader():
@@ -234,7 +236,7 @@ class SmtpEvents(Object):
                 sender_id=sender_id,
                 host=parameters.host,
                 port=parameters.port,
-                transport_security=parameters.transport_security,
+                transport_security=transport_security,
                 from_address=sender_email,
             )
 
