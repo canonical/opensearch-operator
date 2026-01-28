@@ -22,7 +22,7 @@ from ops.framework import StoredState
 
 @dataclass
 class TransportSec:
-    """Helper to mimic smtp-integrator TransportSecurity-like object."""
+    """Helper to stub smtp-integrator TransportSecurity-like object."""
 
     value: str
 
@@ -150,7 +150,7 @@ class NotificationsClientScenarioCharm(CharmBase):
     def _on_apply_email_group(self, event: ActionEvent):
         recipients = json.loads(event.params.get("recipients_json", "[]"))
 
-        self.client.apply_email_group(group_id="grp", recipients=recipients)
+        self.client.apply_email_group(group_id="group", recipients=recipients)
         event.set_results({"ok": "true"})
 
     def _on_apply_email_channel(self, event: ActionEvent):
@@ -158,9 +158,9 @@ class NotificationsClientScenarioCharm(CharmBase):
 
         self.client._exists = MagicMock(return_value=False)
         self.client.apply_email_channel(
-            channel_id="ch",
+            channel_id="channel",
             sender_id="sender",
-            email_group_ids=["grp1", "grp2"],
+            email_group_ids=["group1", "group2"],
             fallback_recipients=fallback,
         )
 
@@ -301,7 +301,7 @@ def test_apply_email_group_scenario_when_called_then_payload_shape_is_correct(
     # exists check
     (first_method, first_path) = opensearch_mock.request.call_args_list[0].args[:2]
     assert first_method == "GET"
-    assert first_path == "/_plugins/_notifications/configs/grp"
+    assert first_path == "/_plugins/_notifications/configs/group"
 
     # create/update request
     (second_method, second_path) = opensearch_mock.request.call_args_list[1].args[:2]
@@ -345,7 +345,7 @@ def test_apply_email_channel_scenario_when_called_then_create_recipient_list(
     cfg = payload["config"]
     assert cfg["config_type"] == "email"
     assert cfg["email"]["email_account_id"] == "sender"
-    assert cfg["email"]["email_group_id_list"] == ["grp1", "grp2"]
+    assert cfg["email"]["email_group_id_list"] == ["group1", "group2"]
     assert cfg["email"]["recipient_list"] == expected_recipient_list
 
 
@@ -382,7 +382,7 @@ def test_exists_scenario_when_returns_true_then_get_ok(
 
 
 @pytest.mark.parametrize("code", [404, 400])
-def test_exists_scenario_when_no_object(
+def test_exists_when_no_object_then_get_request_succeed(
     ctx: testing.Context, opensearch_mock: MagicMock, code: int
 ) -> None:
     opensearch_mock.request.side_effect = _http_err(code)
@@ -390,7 +390,7 @@ def test_exists_scenario_when_no_object(
     opensearch_mock.request.assert_called_once_with("GET", "/_plugins/_notifications/configs/x")
 
 
-def test_exists_when_scenario_fails_then_return_opensearch_error(
+def test_exists_when_request_fails_then_return_opensearch_error(
     ctx: testing.Context, opensearch_mock: MagicMock
 ) -> None:
     opensearch_mock.request.side_effect = _http_err(503)

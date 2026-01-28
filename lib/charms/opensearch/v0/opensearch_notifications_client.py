@@ -18,7 +18,7 @@ from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 
 
 class NotificationsClientError(RuntimeError):
-    """Raised when Notifications API operations fail."""
+    """Raises when Notifications API operations fail."""
 
 
 @dataclass(frozen=True)
@@ -206,10 +206,13 @@ class OpenSearchNotificationsClient:
             self._create_config(config_id=config_id, name=name, config=config)
 
     def _exists(self, config_id: str) -> bool:
-        """Return True if config exists, False if 404 otherwise raise.
+        """Check if config exists.
 
         Args:
             config_id: Notification Config ID
+
+        Returns:
+            True if config exists, False if 404.
         """
         try:
             self.opensearch.request("GET", f"/_plugins/_notifications/configs/{config_id}")

@@ -21,7 +21,7 @@ from charms.opensearch.v0.opensearch_plugin_manager import SmtpEvents
 from ops import BlockedStatus, WaitingStatus
 from ops.charm import CharmBase
 from ops.framework import StoredState
-from scenario import Context, State
+from scenario import Context, Relation, State
 
 META = yaml.safe_load(
     """
@@ -44,8 +44,6 @@ def smtp_relation(
     remote_app_data: dict | None = None,
     local_app_data: dict | None = None,
 ):
-    from scenario import Relation
-
     return Relation(
         endpoint=SMTP_ENDPOINT,
         interface=SMTP_INTERFACE,
@@ -117,12 +115,6 @@ class SmtpTestCharm(CharmBase):
             return self.relation_params_by_id[relation.id]
 
         self.smtp_events.smtp.get_relation_data_from_relation = MagicMock(side_effect=_reader)
-
-        # optional: inject duplicate sender behavior
-        if self.force_duplicate_sender is not None:
-            self.smtp_events._has_duplicate_sender_emails = MagicMock(
-                return_value=self.force_duplicate_sender
-            )
 
         self.framework.observe(
             self.on.smtp_relation_changed, self.smtp_events._on_smtp_credentials_changed
@@ -236,7 +228,7 @@ class TestHelpers:
         assert SmtpEvents._label(7) == f"{SMTP_SECRET_LABEL}-7"
 
 
-class TestDuplicateSenderEmailsScenario:
+class TestDuplicateSenderEmails:
     def test_has_duplicate_sender_emails_when_duplicate_then_returns_duplicated_email(
         self, ctx, deps
     ) -> None:
@@ -277,7 +269,7 @@ class TestDuplicateSenderEmailsScenario:
             assert "duplicate" not in getattr(status, "message", "").lower()
 
 
-class TestOnSmtpCredentialsChangedScenario:
+class TestOnSmtpCredentialsChanged:
     def test_when_deployment_not_ready_then_no_ops(self, ctx, deps) -> None:
         deps["opensearch_peer_cm"].deployment_desc.return_value = None
         rel = smtp_relation(1)
@@ -406,7 +398,7 @@ class TestOnSmtpCredentialsChangedScenario:
         deps["notifications"].apply_email_channel.assert_not_called()
 
 
-class TestOnSmtpCredentialsGoneScenario:
+class TestOnSmtpCredentialsGone:
     def test_when_deployment_not_ready_then_no_ops(self, ctx, deps) -> None:
         deps["opensearch_peer_cm"].deployment_desc.return_value = None
         rel = smtp_relation(1)

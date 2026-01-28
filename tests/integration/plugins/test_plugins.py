@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -137,30 +138,30 @@ async def _wait_for_units(
         )
 
 
-async def _notifications_list_configs(ops_test: OpsTest, base_url: str):
+async def _notifications_list_configs(ops_test: OpsTest, base_url: str) -> dict[str, Any]:
     return await http_request(ops_test, "GET", f"{base_url}/_plugins/_notifications/configs")
 
 
-def _extract_configs(configs_resp: dict) -> list[dict]:
+def _cfg_name(item: dict) -> str | None:
+    return (item.get("config") or {}).get("name")
+
+
+def _iter_configs(configs_resp: Any):
+    """Yield config items across known response shape."""
     if not isinstance(configs_resp, dict):
-        return []
-    if isinstance(configs_resp.get("configs"), list):
-        return configs_resp["configs"]
-    if isinstance(configs_resp.get("items"), list):
-        return configs_resp["items"]
-    if isinstance(configs_resp.get("config_list"), list):
-        return configs_resp["config_list"]
-    return []
+        return
+    for key in ("config_list", "configs", "items"):
+        items = configs_resp.get(key)
+        if isinstance(items, list):
+            yield from items
+            return
 
 
-def _find_configs_by_name(configs_resp: dict, name: str) -> list[dict]:
-    out = []
-    for c in _extract_configs(configs_resp):
-        # name can be at top-level or nested under config
-        cfg_name = c.get("name") or (c.get("config") or {}).get("name")
-        if cfg_name == name:
-            out.append(c)
-    return out
+def _find_config_by_name(configs_resp: Any, name: str) -> dict | None:
+    for item in _iter_configs(configs_resp):
+        if _cfg_name(item) == name:
+            return item
+    return None
 
 
 async def _wait_until_config_present(
@@ -173,7 +174,7 @@ async def _wait_until_config_present(
     async with asyncio.timeout(timeout):
         while True:
             resp = await _notifications_list_configs(ops_test, base_url)
-            for cfg in _find_configs_by_name(resp, config_name):
+            if cfg := _find_config_by_name(resp, config_name):
                 return cfg
             await asyncio.sleep(poll)
 
@@ -188,7 +189,7 @@ async def _wait_until_config_absent(
     async with asyncio.timeout(timeout):
         while True:
             resp = await _notifications_list_configs(ops_test, base_url)
-            if not _find_configs_by_name(resp, config_name):
+            if _find_config_by_name(resp, config_name) is None:
                 return
             await asyncio.sleep(poll)
 
@@ -1538,12 +1539,12 @@ async def test_smtp_relation_when_related_with_smtp_integrator_then_creates_noti
     channel_cfg = await _wait_until_config_present(ops_test, base_url, email_channel_cfg_name)
     group_cfg = await _wait_until_config_present(ops_test, base_url, email_group_cfg_name)
 
-    assert sender_cfg.get("name") == smtp_sender_cfg_name
-    assert channel_cfg.get("name") == email_channel_cfg_name
-    assert group_cfg.get("name") == email_group_cfg_name
+    assert _cfg_name(sender_cfg) == smtp_sender_cfg_name
+    assert _cfg_name(channel_cfg) == email_channel_cfg_name
+    assert _cfg_name(group_cfg) == email_group_cfg_name
 
     # remove relation
-    await ops_test.model.applications[APP_NAME].remove_relation(
+    await ops_test.model.remove_relation(
         f"{APP_NAME}:smtp",
         f"{SMTP_INTEGRATOR_APP_NAME}:smtp",
     )

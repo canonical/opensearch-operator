@@ -31,8 +31,9 @@ from charms.opensearch.v0.helper_plugins import (
 from charms.opensearch.v0.models import DeploymentType, PluginConfigInfo
 from charms.opensearch.v0.opensearch_internal_data import Scope
 from charms.smtp_integrator.v0.smtp import DEFAULT_RELATION_NAME as SMTP_RELATION
-from charms.smtp_integrator.v0.smtp import SmtpRequires
+from charms.smtp_integrator.v0.smtp import SmtpDataAvailableEvent, SmtpRequires
 from ops import BlockedStatus, WaitingStatus
+from ops.charm import RelationBrokenEvent, SecretChangedEvent
 from ops.framework import Object
 
 # The unique Charmhub library identifier, never change it
@@ -139,7 +140,7 @@ class SmtpEvents(Object):
             seen[sender] = rel.id
         return None
 
-    def _on_smtp_credentials_changed(self, event) -> None:  # noqa: C901
+    def _on_smtp_credentials_changed(self, event: SmtpDataAvailableEvent) -> None:  # noqa: C901
         """Configure notifications sender/group/channel and keystore creds for this relation.
 
         Args:
@@ -289,11 +290,11 @@ class SmtpEvents(Object):
             if self.charm.opensearch_peer_cm.is_provider(typ="main"):
                 self.charm.peer_cluster_provider.refresh_relation_data(event)
 
-    def _on_smtp_credentials_gone(self, event) -> None:  # noqa: C901
+    def _on_smtp_credentials_gone(self, event: RelationBrokenEvent) -> None:  # noqa: C901
         """Cleanup for a broken smtp relation (relation-scoped).
 
         Args:
-            event: Smtp relation broken event
+            event: RelationBrokenEvent
         """
         if not (deployment_desc := self.charm.opensearch_peer_cm.deployment_desc()):
             logger.debug("Deployment not ready. Deferring event.")
@@ -340,13 +341,16 @@ class SmtpEvents(Object):
         if self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event)
 
-    def _on_secret_changed(self, event) -> None:
+    def _on_secret_changed(self, event: SecretChangedEvent) -> None:
         """Handles secret changes (support multiple smtp relations).
 
         Args:
-            event: Secret event
+            event: SecretChangedEvent
         """
-        if SMTP_SECRET_LABEL not in event.secret.label:
+        secret = getattr(event, "secret", None)
+        label = getattr(secret, "label", None)
+
+        if not label or SMTP_SECRET_LABEL not in label:
             return
 
         content = event.secret.get_content(refresh=True)
