@@ -1,0 +1,73 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:03:34Z
+
+App                       Version  Status       Scale  Charm                     Channel   Rev  Exposed  Message
+gcs-integrator                     blocked          1  gcs-integrator            1/edge      6  no       Missing config(s): 'bucket', 'credentials'
+opensearch                         maintenance      3  opensearch                            0  no       Installing OpenSearch...
+self-signed-certificates           active           1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports  Message
+gcs-integrator/0*            blocked      idle       0        10.217.215.79          Missing config(s): 'bucket', 'credentials'
+opensearch/0*                maintenance  executing  2        10.217.215.193         (install) Installing OpenSearch...
+opensearch/1                 active       idle       3        10.217.215.72          
+opensearch/2                 active       idle       4        10.217.215.151         
+self-signed-certificates/0*  active       idle       1        10.217.215.188         
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.217.215.79   juju-6762f8-0  ubuntu@24.04  github-runner  Running
+1        started  10.217.215.188  juju-6762f8-1  ubuntu@24.04  github-runner  Running
+2        started  10.217.215.193  juju-6762f8-2  ubuntu@24.04  github-runner  Running
+3        started  10.217.215.72   juju-6762f8-3  ubuntu@24.04  github-runner  Running
+4        started  10.217.215.151  juju-6762f8-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 01:40:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:40:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:41:00 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:41:00 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:41:01 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:41:01 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:41:03 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:41:03 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:41:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:41:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:42:20 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:42:34 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-gcs-integrator-0: 01:45:10 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-0: 01:45:10 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-self-signed-certificates-0: 01:46:43 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-gcs-integrator-0: 01:49:28 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-0: 01:49:28 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-self-signed-certificates-0: 01:51:42 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-gcs-integrator-0: 01:54:15 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-0: 01:54:15 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-self-signed-certificates-0: 01:57:34 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-gcs-integrator-0: 01:58:59 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-0: 01:58:59 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-self-signed-certificates-0: 02:03:30 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:190 Cleaning backups from cloud buckets
+[33mWARNING [0m integration.ha.test_backups:test_backups.py:216 Failed to clean up backups: SSL validation failed for https://10.151.33.150:445/testbucket?prefix=opensearch%2F85d89c8e-d30b-48eb-9137-805e44e7f499%2F&encoding-type=url [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1000)
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:511 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.25.1 Python/3.12.3 (Linux-6.14.0-37-generic-x86_64-with-glibc2.39)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'bdefa600-fcb6-11f0-8623-00163e79e863'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:547 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'fab2c2e0-801e-00c4-42c3-90c7eb000000'
+    'x-ms-client-request-id': 'bdefa600-fcb6-11f0-8623-00163e79e863'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Thu, 29 Jan 2026 02:03:44 GMT'

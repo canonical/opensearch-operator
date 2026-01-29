@@ -1,0 +1,124 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:40:33Z
+
+App                       Version  Status       Scale  Charm                     Channel      Rev  Exposed  Message
+azure-storage-integrator           blocked          1  azure-storage-integrator  latest/edge   47  no       Missing parameters: ['container', 'storage-account', 'credentials']
+failover                           maintenance      2  opensearch                               1  no       Installing OpenSearch...
+main                               active           1  opensearch                               0  no       
+opensearch                         active           1  opensearch                               2  no       
+self-signed-certificates           active           1  self-signed-certificates  1/stable     317  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports     Message
+azure-storage-integrator/0*  blocked      idle       0        10.162.57.10              Missing parameters: ['container', 'storage-account', 'credentials']
+failover/0                   maintenance  executing  4        10.162.57.24              (install) Installing OpenSearch...
+failover/1*                  active       idle       5        10.162.57.249   9200/tcp  
+main/0*                      active       idle       3        10.162.57.88    9200/tcp  
+opensearch/0*                active       idle       2        10.162.57.247   9200/tcp  
+self-signed-certificates/0*  active       idle       1        10.162.57.60              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.162.57.10   juju-2ec22b-0  ubuntu@22.04  github-runner  Running
+1        started  10.162.57.60   juju-2ec22b-1  ubuntu@24.04  github-runner  Running
+2        started  10.162.57.247  juju-2ec22b-2  ubuntu@24.04  github-runner  Running
+3        started  10.162.57.88   juju-2ec22b-3  ubuntu@24.04  github-runner  Running
+4        started  10.162.57.24   juju-2ec22b-4  ubuntu@24.04  github-runner  Running
+5        started  10.162.57.249  juju-2ec22b-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-1: 01:41:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:41:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:41:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:41:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:41:39 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:41:39 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:41:46 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:41:46 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:41:48 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:41:48 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:42:11 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:42:11 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:43:36 ERROR unit.self-signed-certificates/0.juju-log certificates:14: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-0: 01:43:46 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:43:46 ERROR unit.opensearch/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:43:48 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:43:48 ERROR unit.opensearch/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:43:50 ERROR unit.opensearch/0.juju-log certificates:14: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:43:50 ERROR unit.opensearch/0.juju-log certificates:14: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:43:52 ERROR unit.opensearch/0.juju-log certificates:14: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:43:52 ERROR unit.opensearch/0.juju-log certificates:14: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:43:54 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:43:54 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:43:54 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:43:54 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:43:55 ERROR unit.opensearch/0.juju-log upgrade-version-a:1: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:43:55 ERROR unit.opensearch/0.juju-log upgrade-version-a:1: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:44:07 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:44:07 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 01:44:08 ERROR unit.self-signed-certificates/0.juju-log certificates:12: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-0: 01:44:09 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:44:09 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:44:09 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:44:09 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 01:44:24 ERROR unit.self-signed-certificates/0.juju-log certificates:12: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-0: 01:44:31 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:44:31 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 01:44:31 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 01:44:31 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 01:46:03 ERROR unit.self-signed-certificates/0.juju-log certificates:14: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:46:55 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:51:30 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:57:10 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:00:44 ERROR unit.self-signed-certificates/0.juju-log certificates:13: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-failover-1: 02:00:54 ERROR unit.failover/1.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:00:54 ERROR unit.failover/1.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:00:56 ERROR unit.failover/1.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:00:56 ERROR unit.failover/1.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:00:58 ERROR unit.failover/1.juju-log peer-cluster:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:00:58 ERROR unit.failover/1.juju-log peer-cluster:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:00:58 ERROR unit.failover/1.juju-log peer-cluster:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:00:58 ERROR unit.failover/1.juju-log peer-cluster:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:01:19 ERROR unit.failover/1.juju-log certificates:13: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:01:19 ERROR unit.failover/1.juju-log certificates:13: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:01:21 ERROR unit.failover/1.juju-log peer-cluster:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:01:21 ERROR unit.failover/1.juju-log peer-cluster:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:01:22 ERROR unit.failover/1.juju-log certificates:13: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:01:22 ERROR unit.failover/1.juju-log certificates:13: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:01:24 ERROR unit.failover/1.juju-log peer-cluster:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:01:24 ERROR unit.failover/1.juju-log peer-cluster:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-failover-1: 02:01:24 ERROR unit.failover/1.juju-log peer-cluster:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-failover-1: 02:01:24 ERROR unit.failover/1.juju-log peer-cluster:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-self-signed-certificates-0: 02:01:50 ERROR unit.self-signed-certificates/0.juju-log certificates:13: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:02:33 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:08:32 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:13:50 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:18:02 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:22:51 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:27:02 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:32:37 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:38:23 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:190 Cleaning backups from cloud buckets
+[33mWARNING [0m integration.ha.test_backups:test_backups.py:216 Failed to clean up backups: SSL validation failed for https://10.151.33.80:445/testbucket?prefix=opensearch%2F356e4d0e-a127-40e3-955a-ce59273e11ef%2F&encoding-type=url [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1000)
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:511 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.25.1 Python/3.12.3 (Linux-6.14.0-37-generic-x86_64-with-glibc2.39)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e5387d35-fcbb-11f0-a30c-00163eb727f3'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:547 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': '82dfb125-e01e-00b0-54c8-90f31b000000'
+    'x-ms-client-request-id': 'e5387d35-fcbb-11f0-a30c-00163eb727f3'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Thu, 29 Jan 2026 02:40:37 GMT'

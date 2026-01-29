@@ -1,0 +1,67 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:45:02Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           blocked      2  opensearch                2/edge    208  no       Cannot start. Waiting for peer cluster relation...
+main                               blocked      3  opensearch                2/edge    208  no       Failed to apply config changes on the plugin.
+opensearch                         blocked      3  opensearch                2/edge    208  no       Cannot start. Waiting for peer cluster relation...
+self-signed-certificates           active       1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports  Message
+failover/0*                  active       idle       0        10.209.44.208          
+failover/1                   active       idle       1        10.209.44.6            
+main/0                       blocked      idle       5        10.209.44.118          Failed to apply config changes on the plugin.
+main/1*                      maintenance  executing  6        10.209.44.143          (install) Installing OpenSearch...
+main/2                       blocked      idle       7        10.209.44.166          Failed to apply config changes on the plugin.
+opensearch/0*                active       idle       2        10.209.44.253          
+opensearch/1                 active       idle       3        10.209.44.209          
+opensearch/2                 active       idle       4        10.209.44.119          
+self-signed-certificates/0*  active       idle       8        10.209.44.52           
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.209.44.208  juju-ab043b-0  ubuntu@24.04  github-runner  Running
+1        started  10.209.44.6    juju-ab043b-1  ubuntu@24.04  github-runner  Running
+2        started  10.209.44.253  juju-ab043b-2  ubuntu@24.04  github-runner  Running
+3        started  10.209.44.209  juju-ab043b-3  ubuntu@24.04  github-runner  Running
+4        started  10.209.44.119  juju-ab043b-4  ubuntu@24.04  github-runner  Running
+5        started  10.209.44.118  juju-ab043b-5  ubuntu@24.04  github-runner  Running
+6        started  10.209.44.143  juju-ab043b-6  ubuntu@24.04  github-runner  Running
+7        started  10.209.44.166  juju-ab043b-7  ubuntu@24.04  github-runner  Running
+8        started  10.209.44.52   juju-ab043b-8  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 02:15:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:15:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 02:15:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 02:15:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:15:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:15:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:15:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:15:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:15:49 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:15:49 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 02:15:52 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 02:15:52 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:15:56 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:15:56 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 02:15:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 02:15:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:16:02 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:16:02 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:16:50 ERROR unit.self-signed-certificates/0.juju-log certificates:10: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:16:58 ERROR unit.self-signed-certificates/0.juju-log certificates:10: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:17:09 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:17:18 ERROR unit.self-signed-certificates/0.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:17:23 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:17:30 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:17:36 ERROR unit.self-signed-certificates/0.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:21:21 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:27:21 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:33:17 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:38:20 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:43:52 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
