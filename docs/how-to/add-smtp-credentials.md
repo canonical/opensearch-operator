@@ -56,7 +56,7 @@ Duplicate sender addresses across multiple SMTP relations are rejected and will 
 Integrate the SMTP integrator with the OpenSearch application:
 
 ```shell
-juju integrate smtp-integrator:smtp opensearch
+juju integrate smtp-integrator:smtp opensearch:smtp
 ```
 
 ## Large Deployments

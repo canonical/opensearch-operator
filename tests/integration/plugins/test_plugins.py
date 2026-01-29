@@ -139,6 +139,15 @@ async def _wait_for_units(
 
 
 async def _notifications_list_configs(ops_test: OpsTest, base_url: str) -> dict[str, Any]:
+    """Fetch all notification configs from the OpenSearch Notifications plugin API.
+
+    Args:
+        ops_test: OpsTest test harness.
+        base_url: OpenSearch base URL (e.g. https://ip:9200).
+
+    Returns:
+        Response body from GET /_plugins/_notifications/configs.
+    """
     return await http_request(ops_test, "GET", f"{base_url}/_plugins/_notifications/configs")
 
 

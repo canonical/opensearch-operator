@@ -77,7 +77,7 @@ BackupRelConflict = "Too many object storage relations. Only one is supported."
 BackupMisconfiguration = "opensearch {} repository setup failed. Check the {} config."
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
 SecretAccessError = "Failed to access secret, please check permissions."
-SmtpRelationInvalid = "SMTP relation must be created with the main-orchestrator cluster."
+SmtpRelationInvalid = "SMTP relation must be established with the main-orchestrator cluster."
 JWTAuthConfigInvalid = (
     "Configuration for JWT authentication is invalid. Check and correct parameters."
 )
@@ -99,6 +99,8 @@ SmtpWaitingRecipients = (
     "SMTP sender configured; waiting for recipients to create email group/channel."
 )
 SmtpNoRelationData = "No relation data found. Please check the relation with smtp-integrator."
+SMTPConfigurationError = "SMTP configuration failed, please check the logs for details."
+SmtpDuplicateSender = "Duplicate SMTP sender email across smtp relations: {}."
 SmtpMissingRequiredParameters = "Parameters missing from smtp-integrator: {}."
 # Maintenance statuses
 InstallProgress = "Installing OpenSearch..."

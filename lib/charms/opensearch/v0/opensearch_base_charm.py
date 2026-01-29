@@ -46,6 +46,12 @@ from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import Status, all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import get_host_ip, units_ips
+from charms.opensearch.v0.helper_plugins import (
+    remove_plugin_secret as _remove_plugin_secret,
+)
+from charms.opensearch.v0.helper_plugins import (
+    store_plugin_secret as _store_plugin_secret,
+)
 from charms.opensearch.v0.helper_security import (
     cert_expiration_remaining_hours,
     generate_hashed_password,
@@ -79,8 +85,8 @@ from charms.opensearch.v0.opensearch_keystore import (
 )
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
-from charms.opensearch.v0.opensearch_notifications_client import (
-    OpenSearchNotificationsClient,
+from charms.opensearch.v0.opensearch_notifications import (
+    OpenSearchNotificationsManager,
 )
 from charms.opensearch.v0.opensearch_oauth import OAuthHandler
 from charms.opensearch.v0.opensearch_peer_clusters import (
@@ -90,7 +96,6 @@ from charms.opensearch.v0.opensearch_peer_clusters import (
 from charms.opensearch.v0.opensearch_plugin_manager import (
     OpenSearchPluginEvents,
     OpenSearchPluginManager,
-    SmtpEvents,
 )
 from charms.opensearch.v0.opensearch_profile import (
     ProfilesManager,
@@ -101,6 +106,7 @@ from charms.opensearch.v0.opensearch_relation_peer_cluster import (
 )
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
+from charms.opensearch.v0.opensearch_smtp import SmtpEvents
 from charms.opensearch.v0.opensearch_snapshots import (
     OpenSearchSnapshotEvents,
     OpenSearchSnapshotsManager,
@@ -234,7 +240,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.plugin_manager = OpenSearchPluginManager(self.state)
         self.plugin_events = OpenSearchPluginEvents(self)
-        self.notifications = OpenSearchNotificationsClient(self.opensearch)
+        self.notifications = OpenSearchNotificationsManager(self.opensearch)
         self.smtp_events = SmtpEvents(self)
 
         self.user_manager = OpenSearchUserManager(self)
@@ -295,6 +301,20 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # Ensure that only one instance of the `_on_peer_relation_changed` handler exists
         # in the deferred event queue
         self._is_peer_rel_changed_deferred = False
+
+    def store_plugin_secret(
+        self,
+        *,
+        content: dict,
+        label: str,
+        relation_name: Optional[str] = None,
+    ) -> None:
+        """Create/update app-scoped plugin secret and store id in peers data."""
+        _store_plugin_secret(self, content=content, label=label, relation_name=relation_name)
+
+    def remove_plugin_secret(self, label: str) -> None:
+        """Delete app-scoped plugin secret and remove id from peers data."""
+        _remove_plugin_secret(self, label=label)
 
     @property
     @abc.abstractmethod

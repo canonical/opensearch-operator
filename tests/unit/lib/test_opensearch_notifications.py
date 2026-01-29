@@ -10,9 +10,10 @@ from unittest.mock import MagicMock
 import pytest
 import yaml
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
-from charms.opensearch.v0.opensearch_notifications_client import (
+from charms.opensearch.v0.opensearch_notifications import (
     NotificationsClientError,
-    OpenSearchNotificationsClient,
+    OpenSearchNotificationsManager,
+    TransportSecurity,
 )
 from ops import testing
 from ops.charm import ActionEvent, CharmBase
@@ -33,8 +34,8 @@ def _http_err(code: int, text: str = "error") -> OpenSearchHttpError:
 
 META_YAML = """
 name: notifications-test-charm
-description: scenario charm for OpenSearchNotificationsClient unit tests
-summary: scenario charm
+description: charm for OpenSearchNotificationsManager unit tests
+summary: test charm
 """
 
 ACTIONS_YAML = """
@@ -44,22 +45,22 @@ check-transport-security:
     input:
       type: string
 
-apply-smtp-sender:
-  description: apply smtp sender
+put-smtp-sender:
+  description: put smtp sender
   params:
     exists:
       type: boolean
     transport_security:
       type: string
 
-apply-email-group:
-  description: apply email group
+put-email-group:
+  description: put email group
   params:
     recipients_json:
       type: string
 
-apply-email-channel:
-  description: apply email channel
+put-email-channel:
+  description: put email channel
   params:
     fallback_recipients_json:
       type: string
@@ -70,7 +71,7 @@ delete-config:
     config_id:
       type: string
 
-exists:
+config_exists:
   description: test _exists
   params:
     config_id:
@@ -97,24 +98,24 @@ class NotificationsClientScenarioCharm(CharmBase):
         if self.os_client is None:
             self.os_client = MagicMock()
 
-        self.client = OpenSearchNotificationsClient(self.os_client)
+        self.client = OpenSearchNotificationsManager(self.os_client)
 
-        self.framework.observe(self.on.apply_smtp_sender_action, self._on_apply_smtp_sender)
-        self.framework.observe(self.on.apply_email_group_action, self._on_apply_email_group)
-        self.framework.observe(self.on.apply_email_channel_action, self._on_apply_email_channel)
+        self.framework.observe(self.on.put_smtp_sender_action, self._on_put_smtp_sender)
+        self.framework.observe(self.on.put_email_group_action, self._on_put_email_group)
+        self.framework.observe(self.on.put_email_channel_action, self._on_put_email_channel)
         self.framework.observe(self.on.delete_config_action, self._on_delete_config)
-        self.framework.observe(self.on.exists_action, self._on_exists)
+        self.framework.observe(self.on.config_exists_action, self._on_config_exists)
         self.framework.observe(self.on.create_config_action, self._on_create_config)
         self.framework.observe(self.on.update_config_action, self._on_update_config)
 
-    def _on_apply_smtp_sender(self, event: ActionEvent):
+    def _on_put_smtp_sender(self, event: ActionEvent):
         exists = bool(event.params.get("exists", False))
-        ts = event.params.get("transport_security", "tls")
+        ts = TransportSecurity(event.params.get("transport_security", "tls"))
 
         self.client._exists = MagicMock(return_value=exists)
 
-        self.client.apply_smtp_sender(
-            sender_id="smtp-sender-x",
+        self.client.put_smtp_sender(
+            smtp_account_id="smtp-sender-x",
             host="smtp.example.com",
             port=25,
             transport_security=ts,
@@ -122,19 +123,19 @@ class NotificationsClientScenarioCharm(CharmBase):
         )
         event.set_results({"ok": "true"})
 
-    def _on_apply_email_group(self, event: ActionEvent):
+    def _on_put_email_group(self, event: ActionEvent):
         recipients = json.loads(event.params.get("recipients_json", "[]"))
 
-        self.client.apply_email_group(group_id="group", recipients=recipients)
+        self.client.put_email_group(group_id="group", recipients=recipients)
         event.set_results({"ok": "true"})
 
-    def _on_apply_email_channel(self, event: ActionEvent):
+    def _on_put_email_channel(self, event: ActionEvent):
         fallback = json.loads(event.params.get("fallback_recipients_json", "null"))
 
-        self.client._exists = MagicMock(return_value=False)
-        self.client.apply_email_channel(
+        self.client.config_exists = MagicMock(return_value=False)
+        self.client.put_email_channel(
             channel_id="channel",
-            sender_id="sender",
+            smtp_account_id="sender",
             email_group_ids=["group1", "group2"],
             fallback_recipients=fallback,
         )
@@ -145,15 +146,15 @@ class NotificationsClientScenarioCharm(CharmBase):
         config_id = event.params["config_id"]
         try:
             self.client.delete_config(config_id)
-        except NotificationsClientError as e:
-            event.fail(str(e))
+        except OpenSearchHttpError as e:
+            event.fail(f"Failed to delete notifications config_id={config_id}: {e}")
             return
         event.set_results({"ok": "true"})
 
-    def _on_exists(self, event: ActionEvent):
+    def _on_config_exists(self, event: ActionEvent):
         config_id = event.params["config_id"]
         try:
-            ok = self.client._exists(config_id)
+            ok = self.client.config_exists(config_id)
         except OpenSearchHttpError as e:
             event.fail(f"OpenSearchHttpError code={e.response_code}")
             return
@@ -162,7 +163,7 @@ class NotificationsClientScenarioCharm(CharmBase):
     def _on_create_config(self, event: ActionEvent):
         try:
             self.client._create_config(config_id="x", name="x", config={"a": 1})
-        except NotificationsClientError as e:
+        except (NotificationsClientError, OpenSearchHttpError) as e:
             event.fail(str(e))
             return
         event.set_results({"ok": "true"})
@@ -170,7 +171,7 @@ class NotificationsClientScenarioCharm(CharmBase):
     def _on_update_config(self, event: ActionEvent):
         try:
             self.client._update_config(config_id="x", config={"a": 1})
-        except NotificationsClientError as e:
+        except (NotificationsClientError, OpenSearchHttpError) as e:
             event.fail(str(e))
             return
         event.set_results({"ok": "true"})
@@ -203,7 +204,7 @@ def ctx(opensearch_mock: MagicMock) -> testing.Context:
         (True, "none", "none"),
     ],
 )
-def test_apply_smtp_sender_scenario_when_called_then_creates_or_updates_payload(
+def test_put_smtp_sender_scenario_when_called_then_creates_or_updates_payload(
     ctx: testing.Context,
     opensearch_mock: MagicMock,
     exists: bool,
@@ -214,16 +215,16 @@ def test_apply_smtp_sender_scenario_when_called_then_creates_or_updates_payload(
 
     ctx.run(
         ctx.on.action(
-            "apply-smtp-sender",
+            "put-smtp-sender",
             params={"exists": exists, "transport_security": transport_security},
         ),
         testing.State(leader=True),
     )
 
-    assert opensearch_mock.request.call_count == 1
-
-    method, path = opensearch_mock.request.call_args.args[:2]
-    payload = opensearch_mock.request.call_args.kwargs["payload"]
+    # _create_or_update_config: GET (exists) then POST or PUT
+    assert opensearch_mock.request.call_count == 2
+    method, path = opensearch_mock.request.call_args_list[1].args[:2]
+    payload = opensearch_mock.request.call_args_list[1].kwargs["payload"]
 
     cfg = payload["config"]
     assert cfg["config_type"] == "smtp_account"
@@ -241,13 +242,13 @@ def test_apply_smtp_sender_scenario_when_called_then_creates_or_updates_payload(
         ([], []),
     ],
 )
-def test_apply_email_group_scenario_when_called_then_payload_shape_is_correct(
+def test_put_email_group_scenario_when_called_then_payload_shape_is_correct(
     ctx: testing.Context, opensearch_mock: MagicMock, recipients, expected_recipient_list
 ) -> None:
     opensearch_mock.request.reset_mock()
 
     ctx.run(
-        ctx.on.action("apply-email-group", params={"recipients_json": json.dumps(recipients)}),
+        ctx.on.action("put-email-group", params={"recipients_json": json.dumps(recipients)}),
         testing.State(leader=True),
     )
     assert opensearch_mock.request.call_count == 2
@@ -275,21 +276,21 @@ def test_apply_email_group_scenario_when_called_then_payload_shape_is_correct(
         ([], []),
     ],
 )
-def test_apply_email_channel_scenario_when_called_then_create_recipient_list(
+def test_put_email_channel_scenario_when_called_then_create_recipient_list(
     ctx: testing.Context, opensearch_mock: MagicMock, fallback_recipients, expected_recipient_list
 ) -> None:
     opensearch_mock.request.reset_mock()
 
     ctx.run(
         ctx.on.action(
-            "apply-email-channel",
+            "put-email-channel",
             params={"fallback_recipients_json": json.dumps(fallback_recipients)},
         ),
         testing.State(leader=True),
     )
 
+    # charm mocks config_exists(return_value=False), so only create (POST) is sent
     assert opensearch_mock.request.call_count == 1
-
     method, path = opensearch_mock.request.call_args.args[:2]
     payload = opensearch_mock.request.call_args.kwargs["payload"]
 
@@ -331,16 +332,16 @@ def test_exists_scenario_when_returns_true_then_get_ok(
     ctx: testing.Context, opensearch_mock: MagicMock
 ) -> None:
     opensearch_mock.request.return_value = {"ok": True}
-    ctx.run(ctx.on.action("exists", params={"config_id": "x"}), testing.State(leader=True))
+    ctx.run(ctx.on.action("config_exists", params={"config_id": "x"}), testing.State(leader=True))
     opensearch_mock.request.assert_called_once_with("GET", "/_plugins/_notifications/configs/x")
 
 
-@pytest.mark.parametrize("code", [404, 400])
 def test_exists_when_no_object_then_get_request_succeed(
-    ctx: testing.Context, opensearch_mock: MagicMock, code: int
+    ctx: testing.Context, opensearch_mock: MagicMock
 ) -> None:
-    opensearch_mock.request.side_effect = _http_err(code)
-    ctx.run(ctx.on.action("exists", params={"config_id": "x"}), testing.State(leader=True))
+    """When config does not exist (404), config_exists returns False and action succeeds."""
+    opensearch_mock.request.side_effect = _http_err(404)
+    ctx.run(ctx.on.action("config_exists", params={"config_id": "x"}), testing.State(leader=True))
     opensearch_mock.request.assert_called_once_with("GET", "/_plugins/_notifications/configs/x")
 
 
@@ -349,7 +350,9 @@ def test_exists_when_request_fails_then_return_opensearch_error(
 ) -> None:
     opensearch_mock.request.side_effect = _http_err(503)
     with pytest.raises(testing.ActionFailed) as e:
-        ctx.run(ctx.on.action("exists", params={"config_id": "x"}), testing.State(leader=True))
+        ctx.run(
+            ctx.on.action("config_exists", params={"config_id": "x"}), testing.State(leader=True)
+        )
     assert "opensearchhttperror code=503" in str(e.value).lower()
 
 
