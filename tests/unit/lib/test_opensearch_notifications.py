@@ -85,7 +85,7 @@ update-config:
 """
 
 
-class NotificationsClientScenarioCharm(CharmBase):
+class NotificationsManagerCharm(CharmBase):
     """A tiny charm that exposes NotificationsClient calls via actions."""
 
     _stored = StoredState()
@@ -185,13 +185,13 @@ def opensearch_mock() -> MagicMock:
 
 @pytest.fixture
 def ctx(opensearch_mock: MagicMock) -> testing.Context:
-    NotificationsClientScenarioCharm.os_client = opensearch_mock
+    NotificationsManagerCharm.os_client = opensearch_mock
 
     meta = yaml.safe_load(META_YAML)
     actions = yaml.safe_load(ACTIONS_YAML)
 
     return testing.Context(
-        charm_type=NotificationsClientScenarioCharm,
+        charm_type=NotificationsManagerCharm,
         meta=meta,
         actions=actions,
     )
@@ -204,7 +204,7 @@ def ctx(opensearch_mock: MagicMock) -> testing.Context:
         (True, "none", "none"),
     ],
 )
-def test_put_smtp_sender_scenario_when_called_then_creates_or_updates_payload(
+def test_put_smtp_sender_when_called_then_creates_or_updates_payload(
     ctx: testing.Context,
     opensearch_mock: MagicMock,
     exists: bool,
@@ -242,7 +242,7 @@ def test_put_smtp_sender_scenario_when_called_then_creates_or_updates_payload(
         ([], []),
     ],
 )
-def test_put_email_group_scenario_when_called_then_payload_shape_is_correct(
+def test_put_email_group_when_called_then_payload_shape_is_correct(
     ctx: testing.Context, opensearch_mock: MagicMock, recipients, expected_recipient_list
 ) -> None:
     opensearch_mock.request.reset_mock()
@@ -276,7 +276,7 @@ def test_put_email_group_scenario_when_called_then_payload_shape_is_correct(
         ([], []),
     ],
 )
-def test_put_email_channel_scenario_when_called_then_create_recipient_list(
+def test_put_email_channel_when_called_then_create_recipient_list(
     ctx: testing.Context, opensearch_mock: MagicMock, fallback_recipients, expected_recipient_list
 ) -> None:
     opensearch_mock.request.reset_mock()
@@ -304,7 +304,7 @@ def test_put_email_channel_scenario_when_called_then_create_recipient_list(
     assert cfg["email"]["recipient_list"] == expected_recipient_list
 
 
-def test_delete_config_scenario_when_delete_request_then_request_found(
+def test_delete_config_when_delete_request_then_request_found(
     ctx: testing.Context, opensearch_mock: MagicMock
 ) -> None:
     ctx.run(
@@ -315,7 +315,7 @@ def test_delete_config_scenario_when_delete_request_then_request_found(
     )
 
 
-def test_delete_config_scenario_when_raise_then_wraps_opensearch_error(
+def test_delete_config_when_raise_then_wraps_opensearch_error(
     ctx: testing.Context, opensearch_mock: MagicMock
 ) -> None:
     opensearch_mock.request.side_effect = _http_err(500)
@@ -328,7 +328,7 @@ def test_delete_config_scenario_when_raise_then_wraps_opensearch_error(
     assert "failed to delete notifications config_id=abc" in str(e.value).lower()
 
 
-def test_exists_scenario_when_returns_true_then_get_ok(
+def test_exists_when_returns_true_then_get_ok(
     ctx: testing.Context, opensearch_mock: MagicMock
 ) -> None:
     opensearch_mock.request.return_value = {"ok": True}
@@ -357,7 +357,7 @@ def test_exists_when_request_fails_then_return_opensearch_error(
 
 
 @pytest.mark.parametrize("action_name", ["create-config", "update-config"])
-def test_create_or_update_scenario_when_request_error_then_wraps_opensearch_errors(
+def test_create_or_update_when_request_error_then_wraps_opensearch_errors(
     ctx: testing.Context, opensearch_mock: MagicMock, action_name: str
 ) -> None:
     opensearch_mock.request.side_effect = _http_err(500)

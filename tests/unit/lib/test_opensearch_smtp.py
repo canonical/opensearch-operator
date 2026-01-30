@@ -98,20 +98,20 @@ class SmtpTestCharm(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
-        d = self.deps or {}
+        dependencies = self.deps or {}
 
-        self.status = d["status"]
-        self.opensearch_peer_cm = d["opensearch_peer_cm"]
-        self.opensearch = d["opensearch"]
-        self.peer_cluster_provider = d["peer_cluster_provider"]
-        self.keystore_manager = d["keystore_manager"]
-        self.notifications = d["notifications"]
-        self.plugin_manager = d["plugin_manager"]
-        self.state = d["state"]
-        self.secrets = d["secrets"]
-        self.opensearch_keystore_events = d["opensearch_keystore_events"]
-        self.store_plugin_secret = d.get("store_plugin_secret", MagicMock())
-        self.remove_plugin_secret = d.get("remove_plugin_secret", MagicMock())
+        self.status = dependencies["status"]
+        self.opensearch_peer_cm = dependencies["opensearch_peer_cm"]
+        self.opensearch = dependencies["opensearch"]
+        self.peer_cluster_provider = dependencies["peer_cluster_provider"]
+        self.keystore_manager = dependencies["keystore_manager"]
+        self.notifications = dependencies["notifications"]
+        self.plugin_manager = dependencies["plugin_manager"]
+        self.state = dependencies["state"]
+        self.secrets = dependencies["secrets"]
+        self.opensearch_keystore_events = dependencies["opensearch_keystore_events"]
+        self.store_plugin_secret = dependencies.get("store_plugin_secret", MagicMock())
+        self.remove_plugin_secret = dependencies.get("remove_plugin_secret", MagicMock())
 
         self.smtp_events = SmtpEvents(self)
 

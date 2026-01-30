@@ -19,6 +19,7 @@ from charms.data_platform_libs.v0.data_interfaces import SecretError
 from charms.opensearch.v0.constants_charm import (
     SMTP_SECRET_LABEL,
     SMTPConfigurationError,
+    SmtpDuplicateSender,
     SmtpMissingRequiredParameters,
     SmtpNoRelationData,
     SmtpRelationInvalid,
@@ -39,8 +40,6 @@ from charms.smtp_integrator.v0.smtp import SmtpDataAvailableEvent, SmtpRequires
 from ops import BlockedStatus, WaitingStatus
 from ops.charm import RelationBrokenEvent, SecretChangedEvent
 from ops.framework import Object
-
-from lib.charms.opensearch.v0.constants_charm import SmtpDuplicateSender
 
 logger = logging.getLogger(__name__)
 
