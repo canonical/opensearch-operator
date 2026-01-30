@@ -16,8 +16,10 @@ from charms.opensearch.v0.constants_charm import (
 )
 from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from charms.opensearch.v0.opensearch_notifications import OpenSearchNotificationsManager
-from charms.opensearch.v0.opensearch_smtp import SmtpEvents
+from charms.opensearch.v0.opensearch_notifications_events import NotificationsEvents
+from charms.opensearch.v0.opensearch_notifications_manager import (
+    OpenSearchNotificationsManager,
+)
 from ops import BlockedStatus, WaitingStatus
 from ops.charm import CharmBase
 from ops.framework import StoredState
@@ -87,7 +89,7 @@ class _FakeSecret:
 
 
 class SmtpTestCharm(CharmBase):
-    """Scenario charm wrapper to exercise SmtpEvents via relation events."""
+    """Scenario charm wrapper to exercise NotificationsEvents via relation events."""
 
     _stored = StoredState()
 
@@ -104,7 +106,7 @@ class SmtpTestCharm(CharmBase):
         self.opensearch = dependencies["opensearch"]
         self.peer_cluster_provider = dependencies["peer_cluster_provider"]
         self.keystore_manager = dependencies["keystore_manager"]
-        self.notifications = dependencies["notifications"]
+        self.notifications_manager = dependencies["notifications"]
         self.plugin_manager = dependencies["plugin_manager"]
         self.state = dependencies["state"]
         self.secrets = dependencies["secrets"]
@@ -112,7 +114,7 @@ class SmtpTestCharm(CharmBase):
         self.store_plugin_secret = dependencies.get("store_plugin_secret", MagicMock())
         self.remove_plugin_secret = dependencies.get("remove_plugin_secret", MagicMock())
 
-        self.smtp_events = SmtpEvents(self)
+        self.smtp_events = NotificationsEvents(self)
 
         # relation-data reader
         def _reader(relation):
@@ -165,7 +167,7 @@ def deps():
 
     def _get_smtp_config(params, relation_id: int):
         label = OpenSearchNotificationsManager.label(relation_id)
-        sid = f"smtp-{relation_id}"
+        sid = f"smtp-{relation_id}_smtp-account"
         return SimpleNamespace(
             smtp_account_id=sid,
             label=label,
@@ -226,9 +228,9 @@ class TestHelpers:
     @pytest.mark.parametrize(
         "relation_id,expected",
         [
-            (0, "smtp-0"),
-            (1, "smtp-1"),
-            (42, "smtp-42"),
+            (0, "smtp-0_smtp-account"),
+            (1, "smtp-1_smtp-account"),
+            (42, "smtp-42_smtp-account"),
         ],
     )
     def test_smtp_account_id_from_relation(self, relation_id, expected) -> None:
@@ -239,8 +241,8 @@ class TestHelpers:
     @pytest.mark.parametrize(
         "smtp_account_id,expected",
         [
-            ("smtp-0", "smtp-0_recipients"),
-            ("smtp-1", "smtp-1_recipients"),
+            ("smtp-0_smtp-account", "smtp-0_recipients"),
+            ("smtp-1_smtp-account", "smtp-1_recipients"),
         ],
     )
     def test_recipient_group_id(self, smtp_account_id, expected) -> None:
@@ -249,8 +251,8 @@ class TestHelpers:
     @pytest.mark.parametrize(
         "smtp_account_id,expected",
         [
-            ("smtp-0", "smtp-0_email-channel"),
-            ("smtp-1", "smtp-1_email-channel"),
+            ("smtp-0_smtp-account", "smtp-0_email-channel"),
+            ("smtp-1_smtp-account", "smtp-1_email-channel"),
         ],
     )
     def test_email_channel_id(self, smtp_account_id, expected) -> None:
@@ -385,7 +387,7 @@ class TestSmtpCredentialsChanged:
         deps["notifications"].delete_config.assert_not_called()
         deps["notifications"].put_smtp_sender.assert_called_once()
         call_kw = deps["notifications"].put_smtp_sender.call_args.kwargs
-        assert call_kw["smtp_account_id"] == "smtp-3"
+        assert call_kw["smtp_account_id"] == "smtp-3_smtp-account"
 
     def test_credentials_changed_when_no_plugin_config_then_no_delete_calls(
         self, ctx, deps
@@ -414,7 +416,7 @@ class TestSmtpCredentialsGone:
         """When cleanup has both keys and smtp_account_id, clean keystore and notifications."""
         rel_id = 3
         label = OpenSearchNotificationsManager.label(rel_id)
-        smtp_account_id = f"smtp-{rel_id}"
+        smtp_account_id = f"smtp-{rel_id}_smtp-account"
         stored_keys = ["k1", "k2"]
         plugin_config_info = {
             label: SimpleNamespace(
@@ -426,33 +428,37 @@ class TestSmtpCredentialsGone:
         charm.unit.is_leader.return_value = True
         charm.status = MagicMock()
         charm.state = SimpleNamespace(unit=SimpleNamespace(plugin_config_info=plugin_config_info))
-        charm.notifications = MagicMock()
-        charm.notifications.label = OpenSearchNotificationsManager.label
-        charm.notifications.email_channel_id = OpenSearchNotificationsManager.email_channel_id
-        charm.notifications.recipient_group_id = OpenSearchNotificationsManager.recipient_group_id
+        charm.notifications_manager = MagicMock()
+        charm.notifications_manager.label = OpenSearchNotificationsManager.label
+        charm.notifications_manager.email_channel_id = (
+            OpenSearchNotificationsManager.email_channel_id
+        )
+        charm.notifications_manager.recipient_group_id = (
+            OpenSearchNotificationsManager.recipient_group_id
+        )
+        charm.notifications_manager.delete_config = deps["notifications"].delete_config
         charm.keystore_manager = deps["keystore_manager"]
         charm.opensearch_keystore_events = deps["opensearch_keystore_events"]
         charm.plugin_manager = deps["plugin_manager"]
         charm.remove_plugin_secret = deps["remove_plugin_secret"]
-        charm.notifications.delete_config = deps["notifications"].delete_config
         charm.opensearch_peer_cm = MagicMock()
         charm.opensearch_peer_cm.is_provider.return_value = False
 
         ev = MagicMock()
         ev.relation.id = rel_id
 
-        handler = SmtpEvents(charm)
+        handler = NotificationsEvents(charm)
         handler._on_smtp_credentials_gone(ev)
 
-        deps["keystore_manager"].remove_entries.assert_called_once_with(stored_keys)
-        deps["opensearch_keystore_events"].reload_event.emit.assert_called_once()
-        deps["plugin_manager"].remove_plugin_config.assert_any_call(scope=Scope.UNIT, label=label)
-
+        # Order: delete_config first (leader), then keystore, then plugin config
         channel_id = OpenSearchNotificationsManager.email_channel_id(smtp_account_id)
         group_id = OpenSearchNotificationsManager.recipient_group_id(smtp_account_id)
         deps["notifications"].delete_config.assert_has_calls(
             [call(channel_id), call(group_id), call(smtp_account_id)], any_order=False
         )
+        deps["keystore_manager"].remove_entries.assert_called_once_with(stored_keys)
+        deps["opensearch_keystore_events"].reload_event.emit.assert_called_once()
+        deps["plugin_manager"].remove_plugin_config.assert_any_call(scope=Scope.UNIT, label=label)
 
     def test_credentials_gone_when_no_keys_then_no_keystore_cleanup_still_deletes_notifications(
         self, deps
@@ -460,7 +466,7 @@ class TestSmtpCredentialsGone:
         """smtp_account_id is always stored. keys may be absent. Only notifications cleaned."""
         rel_id = 2
         label = OpenSearchNotificationsManager.label(rel_id)
-        smtp_account_id = f"smtp-{rel_id}"
+        smtp_account_id = f"smtp-{rel_id}_smtp-account"
         plugin_config_info = {
             label: SimpleNamespace(cleanup={"keys": [], "smtp_account_id": [smtp_account_id]})
         }
@@ -469,33 +475,36 @@ class TestSmtpCredentialsGone:
         charm.unit.is_leader.return_value = True
         charm.status = MagicMock()
         charm.state = SimpleNamespace(unit=SimpleNamespace(plugin_config_info=plugin_config_info))
-        charm.notifications = MagicMock()
-        charm.notifications.label = OpenSearchNotificationsManager.label
-        charm.notifications.email_channel_id = OpenSearchNotificationsManager.email_channel_id
-        charm.notifications.recipient_group_id = OpenSearchNotificationsManager.recipient_group_id
+        charm.notifications_manager = MagicMock()
+        charm.notifications_manager.label = OpenSearchNotificationsManager.label
+        charm.notifications_manager.email_channel_id = (
+            OpenSearchNotificationsManager.email_channel_id
+        )
+        charm.notifications_manager.recipient_group_id = (
+            OpenSearchNotificationsManager.recipient_group_id
+        )
+        charm.notifications_manager.delete_config = deps["notifications"].delete_config
         charm.keystore_manager = deps["keystore_manager"]
         charm.opensearch_keystore_events = deps["opensearch_keystore_events"]
         charm.plugin_manager = deps["plugin_manager"]
         charm.remove_plugin_secret = deps["remove_plugin_secret"]
-        charm.notifications.delete_config = deps["notifications"].delete_config
         charm.opensearch_peer_cm = MagicMock()
         charm.opensearch_peer_cm.is_provider.return_value = False
 
         ev = MagicMock()
         ev.relation.id = rel_id
 
-        handler = SmtpEvents(charm)
+        handler = NotificationsEvents(charm)
         handler._on_smtp_credentials_gone(ev)
-
-        deps["keystore_manager"].remove_entries.assert_not_called()
-        deps["opensearch_keystore_events"].reload_event.emit.assert_not_called()
-        deps["plugin_manager"].remove_plugin_config.assert_any_call(scope=Scope.UNIT, label=label)
 
         channel_id = OpenSearchNotificationsManager.email_channel_id(smtp_account_id)
         group_id = OpenSearchNotificationsManager.recipient_group_id(smtp_account_id)
         deps["notifications"].delete_config.assert_has_calls(
             [call(channel_id), call(group_id), call(smtp_account_id)], any_order=False
         )
+        deps["keystore_manager"].remove_entries.assert_not_called()
+        deps["opensearch_keystore_events"].reload_event.emit.assert_not_called()
+        deps["plugin_manager"].remove_plugin_config.assert_any_call(scope=Scope.UNIT, label=label)
 
     def test_credentials_gone_when_no_smtp_account_id_then_no_keystore_or_notification_cleanup(
         self, deps
@@ -511,8 +520,8 @@ class TestSmtpCredentialsGone:
         charm.unit.is_leader.return_value = True
         charm.status = MagicMock()
         charm.state = SimpleNamespace(unit=SimpleNamespace(plugin_config_info=plugin_config_info))
-        charm.notifications = deps["notifications"]
-        charm.notifications.label = OpenSearchNotificationsManager.label
+        charm.notifications_manager = deps["notifications"]
+        charm.notifications_manager.label = OpenSearchNotificationsManager.label
         charm.keystore_manager = deps["keystore_manager"]
         charm.opensearch_keystore_events = deps["opensearch_keystore_events"]
         charm.plugin_manager = deps["plugin_manager"]
@@ -523,7 +532,7 @@ class TestSmtpCredentialsGone:
         ev = MagicMock()
         ev.relation.id = rel_id
 
-        handler = SmtpEvents(charm)
+        handler = NotificationsEvents(charm)
         handler._on_smtp_credentials_gone(ev)
 
         deps["keystore_manager"].remove_entries.assert_not_called()
@@ -535,7 +544,7 @@ class TestSmtpCredentialsGone:
 class TestSecretChanged:
     def test_secret_chaanged_when_label_not_smtp_plugin_then_ignores(self, deps) -> None:
         charm = MagicMock()
-        handler = SmtpEvents(charm)
+        handler = NotificationsEvents(charm)
 
         charm.unit.is_leader.return_value = False
         charm.keystore_manager = MagicMock()
@@ -549,7 +558,7 @@ class TestSecretChanged:
 
     def test_secret_changed_when_label_malformed_then_ignores(self) -> None:
         charm = MagicMock()
-        handler = SmtpEvents(charm)
+        handler = NotificationsEvents(charm)
 
         charm.unit.is_leader.return_value = False
         charm.keystore_manager = MagicMock()
@@ -568,7 +577,7 @@ class TestSecretChanged:
         charm.opensearch_keystore_events = MagicMock()
         charm.opensearch_keystore_events.reload_event = MagicMock()
         charm.opensearch_keystore_events.reload_event.emit = MagicMock()
-        handler = SmtpEvents(charm)
+        handler = NotificationsEvents(charm)
 
         charm.unit.is_leader.return_value = False
         charm.plugin_manager = MagicMock()
@@ -576,7 +585,7 @@ class TestSecretChanged:
 
         decoded = {"keys": {"k1": "v1", "k2": "v2"}, "notification_config_ids": ["a"]}
         monkeypatch.setattr(
-            "charms.opensearch.v0.opensearch_smtp.decode_plugin_secret_content",
+            "charms.opensearch.v0.opensearch_notifications_events.decode_plugin_secret_content",
             lambda content, label: decoded,
         )
 
@@ -602,7 +611,7 @@ class TestSecretChanged:
         charm.opensearch_keystore_events = MagicMock()
         charm.opensearch_keystore_events.reload_event = MagicMock()
         charm.opensearch_keystore_events.reload_event.emit = MagicMock()
-        handler = SmtpEvents(charm)
+        handler = NotificationsEvents(charm)
 
         charm.unit.is_leader.return_value = False
         charm.plugin_manager = MagicMock()
@@ -610,7 +619,7 @@ class TestSecretChanged:
 
         decoded = {"keys": {"k1": "v1"}}
         monkeypatch.setattr(
-            "charms.opensearch.v0.opensearch_smtp.decode_plugin_secret_content",
+            "charms.opensearch.v0.opensearch_notifications_events.decode_plugin_secret_content",
             lambda content, label: decoded,
         )
 

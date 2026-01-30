@@ -27,7 +27,11 @@ class NotificationsClientError(RuntimeError):
 
 
 class TransportSecurity(str, Enum):
-    """SMTP transport security protocol."""
+    """SMTP transport security protocol.
+
+    Enum values match relation data (smtp-integrator). api_method() maps to
+    OpenSearch Notifications API strings (start_tls, ssl).
+    """
 
     NONE = "none"
     STARTTLS = "starttls"
@@ -39,21 +43,17 @@ class TransportSecurity(str, Enum):
 
 
 @dataclass(frozen=True)
-class NotificationsConfigRef:
-    """Notifications config referencing CRUD operations.
-
-    Args:
-        config_id: the id of the notification config
-        name: the name of the notification config
-    """
-
-    config_id: str
-    name: str
-
-
-@dataclass(frozen=True)
 class SmtpConfig:
-    """SMTP-related config derived from relation data."""
+    """SMTP-related config derived from relation data.
+
+    Attributes:
+        sender_email: From-address for the SMTP sender (relation smtp_sender).
+        smtp_account_id: OpenSearch config id for the SMTP account (e.g. smtp-88_smtp-account).
+        label: Plugin/config label for this relation (e.g. plugin-notifications-88).
+        group_id: OpenSearch config id for the recipient group (e.g. smtp-88_recipients).
+        channel_id: OpenSearch config id for the email channel (e.g. smtp-88_email-channel).
+        transport_security: SMTP transport security (none, start_tls, tls).
+    """
 
     sender_email: str
     smtp_account_id: str
@@ -90,31 +90,39 @@ class OpenSearchNotificationsManager:
     def recipient_group_id(smtp_account_id: str) -> str:
         """Return recipient group id for this relation.
 
+        The group ids use the relation base (e.g. smtp-88).
+        Removes _smtp-account suffix, if present.
+
         Args:
-            smtp_account_id: smtp account config id
+            smtp_account_id: smtp account config id (e.g. smtp-88_smtp-account)
 
         Returns:
-            recipient group id
+            recipient group id (e.g. smtp-88_recipients)
         """
-        return f"{smtp_account_id}_recipients"
+        base = smtp_account_id.removesuffix("_smtp-account") or smtp_account_id
+        return f"{base}_recipients"
 
     @staticmethod
     def email_channel_id(smtp_account_id: str) -> str:
         """Return email channel id for this relation.
 
+        The channel ids use the relation base (e.g. smtp-88).
+        Strips _smtp-account suffix, if present.
+
         Args:
-            smtp_account_id: smtp account config id
+            smtp_account_id: smtp account config id (e.g. smtp-88_smtp-account)
 
         Returns:
-            email channel id
+            email channel id (e.g. smtp-88_email-channel)
         """
-        return f"{smtp_account_id}_email-channel"
+        base = smtp_account_id.removesuffix("_smtp-account") or smtp_account_id
+        return f"{base}_email-channel"
 
     @staticmethod
     def smtp_account_id_from_relation(relation_id: int) -> str:
         """Return smtp account config id for this relation.
 
-        Config identity is relation-based such as smtp-relation ID.
+        Config identity is relation-based with smtp-account suffix, e.g. smtp-88_smtp-account.
 
         Args:
             relation_id: Juju relation id
@@ -122,7 +130,7 @@ class OpenSearchNotificationsManager:
         Returns:
             smtp account config id
         """
-        return f"smtp-{relation_id}"
+        return f"smtp-{relation_id}_smtp-account"
 
     def get_smtp_config(self, parameters: SmtpRelationData, relation_id: int) -> SmtpConfig:
         """Derive SMTP-related config IDs and normalized values from relation data.

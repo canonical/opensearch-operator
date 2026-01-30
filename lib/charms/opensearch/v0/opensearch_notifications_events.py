@@ -3,7 +3,7 @@
 
 """SMTP integration for the OpenSearch charm.
 
-SmtpEvents: handles the smtp-integrator relation (credentials available,
+NotificationsEvents: handles the smtp-integrator relation (credentials available,
   relation broken, secret changed). Validates SMTP parameters, creates/updates
   OpenSearch notification configs and keystore entries, and cleans up on
   relation break.
@@ -31,7 +31,7 @@ from charms.opensearch.v0.helper_plugins import (
 from charms.opensearch.v0.models import DeploymentType
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from charms.opensearch.v0.opensearch_notifications import (
+from charms.opensearch.v0.opensearch_notifications_manager import (
     NotificationsClientError,
 )
 from charms.smtp_integrator.v0.smtp import DEFAULT_RELATION_NAME as SMTP_RELATION
@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 
-class SmtpEvents(Object):
+class NotificationsEvents(Object):
     """Events handler for smtp events"""
 
     relation_name = SMTP_RELATION
@@ -126,12 +126,12 @@ class SmtpEvents(Object):
                 SmtpMissingRequiredParameters, pattern=Status.CheckPattern.Interpolated, app=True
             )
 
-        config = self.charm.notifications.get_smtp_config(parameters, event.relation.id)
+        config = self.charm.notifications_manager.get_smtp_config(parameters, event.relation.id)
 
         # create/update SMTP sender config (config_id is relation-based)
         if self.charm.unit.is_leader():
             try:
-                self.charm.notifications.put_smtp_sender(
+                self.charm.notifications_manager.put_smtp_sender(
                     smtp_account_id=config.smtp_account_id,
                     host=parameters.host,
                     port=parameters.port,
@@ -195,11 +195,11 @@ class SmtpEvents(Object):
         # create recipient group and email channel if recipients are provided
         if parameters.recipients:
             try:
-                self.charm.notifications.put_email_group(
+                self.charm.notifications_manager.put_email_group(
                     group_id=config.group_id,
                     recipients=[str(r) for r in parameters.recipients],
                 )
-                self.charm.notifications.put_email_channel(
+                self.charm.notifications_manager.put_email_channel(
                     channel_id=config.channel_id,
                     smtp_account_id=config.smtp_account_id,
                     email_group_ids=[config.group_id],
@@ -240,7 +240,7 @@ class SmtpEvents(Object):
                 SmtpMissingRequiredParameters, pattern=Status.CheckPattern.Interpolated, app=True
             )
 
-        label = self.charm.notifications.label(event.relation.id)
+        label = self.charm.notifications_manager.label(event.relation.id)
         plugin_config = self.charm.state.unit.plugin_config_info.get(label)
         if not plugin_config:
             return
@@ -260,8 +260,18 @@ class SmtpEvents(Object):
                     self.charm.peer_cluster_provider.refresh_relation_data(event)
             return
 
-        # Keystore: keys may be absent while smtp_account_id exists
-        # only remove entries when keys present
+        # Delete notification configs first so we never have configs that reference
+        # missing keystore credentials (channel -> group -> smtp account dependency order)
+        if self.charm.unit.is_leader():
+            channel_id = self.charm.notifications_manager.email_channel_id(smtp_account_id)
+            group_id = self.charm.notifications_manager.recipient_group_id(smtp_account_id)
+            for config_id in (channel_id, group_id, smtp_account_id):
+                try:
+                    self.charm.notifications_manager.delete_config(config_id)
+                except OpenSearchHttpError:
+                    logger.exception("Failed deleting notifications config %s", config_id)
+
+        # Keystore cleanup after configs: keys may be absent when smtp_account_id exists
         if keys:
             self.charm.keystore_manager.remove_entries(keys)
             self.charm.opensearch_keystore_events.reload_event.emit()
@@ -272,15 +282,6 @@ class SmtpEvents(Object):
             return
 
         self.charm.remove_plugin_secret(label)
-
-        # delete in dependency order: channel, then group, then smtp account
-        channel_id = self.charm.notifications.email_channel_id(smtp_account_id)
-        group_id = self.charm.notifications.recipient_group_id(smtp_account_id)
-        for config_id in (channel_id, group_id, smtp_account_id):
-            try:
-                self.charm.notifications.delete_config(config_id)
-            except OpenSearchHttpError:
-                logger.exception("Failed deleting notifications config %s", config_id)
 
         if self.charm.opensearch_peer_cm.is_provider(typ="main"):
             self.charm.peer_cluster_provider.refresh_relation_data(event)

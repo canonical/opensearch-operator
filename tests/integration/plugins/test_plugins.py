@@ -152,11 +152,26 @@ async def _notifications_list_configs(ops_test: OpsTest, base_url: str) -> dict[
 
 
 def _cfg_name(item: dict) -> str | None:
+    """Return the config name from a notifications config item.
+
+    Args:
+        item: A single config item.
+
+    Returns:
+        The value of config.name, or None if missing.
+    """
     return (item.get("config") or {}).get("name")
 
 
 def _iter_configs(configs_resp: Any):
-    """Yield config items across known response shape."""
+    """Yield config items from a notifications list-configs response.
+
+    Args:
+        configs_resp: Response body from GET /_plugins/_notifications/configs.
+
+    Yields:
+        Individual config item dicts.
+    """
     if not isinstance(configs_resp, dict):
         return
     for key in ("config_list", "configs", "items"):
@@ -167,6 +182,15 @@ def _iter_configs(configs_resp: Any):
 
 
 def _find_config_by_name(configs_resp: Any, name: str) -> dict | None:
+    """Find a notifications config item by its config name.
+
+    Args:
+        configs_resp: Response body from GET /_plugins/_notifications/configs.
+        name: The config name to match (e.g. config.config.name).
+
+    Returns:
+        The matching config item dict, or None if not found.
+    """
     for item in _iter_configs(configs_resp):
         if _cfg_name(item) == name:
             return item
@@ -180,6 +204,21 @@ async def _wait_until_config_present(
     timeout: int = 180,
     poll: int = 5,
 ) -> dict:
+    """Poll until a notifications config with the given name appears.
+
+    Args:
+        ops_test: Pytest plugin for Juju ops_test.
+        base_url: OpenSearch base URL (e.g. https://<ip>:9200).
+        config_name: Name of the config to wait for.
+        timeout: Maximum seconds to wait.
+        poll: Seconds between list-configs requests.
+
+    Returns:
+        The config item dict once found.
+
+    Raises:
+        asyncio.TimeoutError: If the config does not appear within timeout.
+    """
     async with asyncio.timeout(timeout):
         while True:
             resp = await _notifications_list_configs(ops_test, base_url)
@@ -195,6 +234,18 @@ async def _wait_until_config_absent(
     timeout: int = 180,
     poll: int = 5,
 ) -> None:
+    """Poll until a notifications config with the given name is no longer listed.
+
+    Args:
+        ops_test: Pytest plugin for Juju ops_test.
+        base_url: OpenSearch base URL (e.g. https://<ip>:9200).
+        config_name: Name of the config to wait for removal.
+        timeout: Maximum seconds to wait.
+        poll: Seconds between list-configs requests.
+
+    Raises:
+        asyncio.TimeoutError: If the config is still present after timeout.
+    """
     async with asyncio.timeout(timeout):
         while True:
             resp = await _notifications_list_configs(ops_test, base_url)

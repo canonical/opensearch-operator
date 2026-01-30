@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 import pytest
 import yaml
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
-from charms.opensearch.v0.opensearch_notifications import (
+from charms.opensearch.v0.opensearch_notifications_manager import (
     NotificationsClientError,
     OpenSearchNotificationsManager,
     TransportSecurity,
@@ -236,9 +236,11 @@ def test_put_smtp_sender_when_called_then_creates_or_updates_payload(
 
 
 def test_smtp_account_id_from_relation() -> None:
-    assert OpenSearchNotificationsManager.smtp_account_id_from_relation(0) == "smtp-0"
-    assert OpenSearchNotificationsManager.smtp_account_id_from_relation(1) == "smtp-1"
-    assert OpenSearchNotificationsManager.smtp_account_id_from_relation(42) == "smtp-42"
+    assert OpenSearchNotificationsManager.smtp_account_id_from_relation(0) == "smtp-0_smtp-account"
+    assert OpenSearchNotificationsManager.smtp_account_id_from_relation(1) == "smtp-1_smtp-account"
+    assert (
+        OpenSearchNotificationsManager.smtp_account_id_from_relation(42) == "smtp-42_smtp-account"
+    )
 
 
 def test_get_smtp_config_uses_relation_id_for_config_id(
@@ -252,7 +254,7 @@ def test_get_smtp_config_uses_relation_id_for_config_id(
     config = client.get_smtp_config(params, relation_id=3)
 
     assert config.sender_email == "no-reply@example.com"
-    assert config.smtp_account_id == "smtp-3"
+    assert config.smtp_account_id == "smtp-3_smtp-account"
     assert config.label == f"{client.label(3)}"
     assert config.group_id == "smtp-3_recipients"
     assert config.channel_id == "smtp-3_email-channel"

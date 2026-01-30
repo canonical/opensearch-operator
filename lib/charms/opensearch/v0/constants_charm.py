@@ -98,8 +98,10 @@ InvalidProfileConfigOption = (
 SmtpWaitingRecipients = (
     "SMTP sender configured; waiting for recipients to create email group/channel."
 )
-SmtpNoRelationData = "No relation data found. Please check the relation with smtp-integrator."
-SMTPConfigurationError = "SMTP configuration failed, please check the logs for details."
+SmtpNoRelationData = (
+    "Relation to smtp-integrator has no data. Configure smtp-integrator and check unit logs."
+)
+SMTPConfigurationError = "SMTP configuration failed. Check smtp-integrator and unit logs."
 SmtpMissingRequiredParameters = "Parameters missing from smtp-integrator: {}."
 # Maintenance statuses
 InstallProgress = "Installing OpenSearch..."
