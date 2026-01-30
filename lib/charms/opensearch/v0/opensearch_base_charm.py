@@ -3,6 +3,7 @@
 
 """Base class for the OpenSearch Operators."""
 import abc
+import json
 import logging
 import random
 import time
@@ -46,12 +47,6 @@ from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import Status, all_units, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology, Node
 from charms.opensearch.v0.helper_networking import get_host_ip, units_ips
-from charms.opensearch.v0.helper_plugins import (
-    remove_plugin_secret as _remove_plugin_secret,
-)
-from charms.opensearch.v0.helper_plugins import (
-    store_plugin_secret as _store_plugin_secret,
-)
 from charms.opensearch.v0.helper_security import (
     cert_expiration_remaining_hours,
     generate_hashed_password,
@@ -120,6 +115,7 @@ from charms.opensearch.v0.state import OpenSearchClusterState
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
 )
+from ops import ModelError, SecretNotFoundError
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -309,12 +305,34 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         label: str,
         relation_name: Optional[str] = None,
     ) -> None:
-        """Create/update app-scoped plugin secret and store id in peers data."""
-        _store_plugin_secret(self, content=content, label=label, relation_name=relation_name)
+        """Create/update app-scoped plugin secret and store id in peers data.
+
+        Args:
+            content: dictionary of the secret payload
+            label: label of the secret to store
+            relation_name: name of the relation from which the secret content came
+        """
+        self.secrets.put(Scope.APP, label, json.dumps(content))
+        secret_id = self.secrets.get_secret_id(Scope.APP, label)
+        if not secret_id:
+            logger.error("Could not create secret with label: %s", label)
+        self.plugin_manager.put_plugin_config(
+            Scope.APP, label=label, secret_id=secret_id, relation_name=relation_name
+        )
 
     def remove_plugin_secret(self, label: str) -> None:
-        """Delete app-scoped plugin secret and remove id from peers data."""
-        _remove_plugin_secret(self, label=label)
+        """Delete app-scoped plugin secret and remove id from peers data.
+
+        Args:
+            label: label of the secret to remove
+        """
+        try:
+            self.secrets.delete(Scope.APP, label)
+        except SecretNotFoundError:
+            logger.error("Can't find secret '%s'", label)
+        except ModelError as e:
+            logger.error("Cannot delete secret %s: %s", label, e)
+        self.plugin_manager.remove_plugin_config(Scope.APP, label)
 
     @property
     @abc.abstractmethod

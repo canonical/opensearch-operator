@@ -100,7 +100,6 @@ SmtpWaitingRecipients = (
 )
 SmtpNoRelationData = "No relation data found. Please check the relation with smtp-integrator."
 SMTPConfigurationError = "SMTP configuration failed, please check the logs for details."
-SmtpDuplicateSender = "Duplicate SMTP sender email across smtp relations: {}."
 SmtpMissingRequiredParameters = "Parameters missing from smtp-integrator: {}."
 # Maintenance statuses
 InstallProgress = "Installing OpenSearch..."

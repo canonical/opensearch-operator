@@ -47,10 +47,8 @@ juju config smtp-integrator \
 ```
 
 **Important**
-The [OpenSearch documentation](https://docs.opensearch.org/2.19/observing-your-data/notifications/index/#create-email-sender) requires a unique sender name when creating an email sender. 
-The value of smtp-sender is used to derive the OpenSearch SMTP sender config, the email channel and the email recipient group. Sender names are automatically generated from the sender email address and must be unique across relations.
-Duplicate sender addresses across multiple SMTP relations are rejected and will result in a blocked status.
-
+The [OpenSearch documentation](https://docs.opensearch.org/2.19/observing-your-data/notifications/index/#create-email-sender) requires the SMTP integration relation ID when creating an email sender. 
+The relation ID is used to derive the OpenSearch SMTP sender config, the email channel and the email recipient group.
 ## Integrate the SMTP integrator and OpenSearch
 
 Integrate the SMTP integrator with the OpenSearch application:

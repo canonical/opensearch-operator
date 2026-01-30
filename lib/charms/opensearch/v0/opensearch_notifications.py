@@ -11,7 +11,6 @@ This client wraps OpenSearchDistribution.request() to manage notifications confi
 
 from __future__ import annotations
 
-import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
@@ -112,18 +111,18 @@ class OpenSearchNotificationsManager:
         return f"{smtp_account_id}_email-channel"
 
     @staticmethod
-    def smtp_account_id_from_email(sender_email: str) -> str:
+    def smtp_account_id_from_relation(relation_id: int) -> str:
         """Return smtp account config id for this relation.
 
+        Config identity is relation-based such as smtp-relation ID.
+
         Args:
-            sender_email: sender email
+            relation_id: Juju relation id
 
         Returns:
             smtp account config id
         """
-        s = sender_email.strip().lower()
-        s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
-        return f"smtp-sender-{s}"
+        return f"smtp-{relation_id}"
 
     def get_smtp_config(self, parameters: SmtpRelationData, relation_id: int) -> SmtpConfig:
         """Derive SMTP-related config IDs and normalized values from relation data.
@@ -137,7 +136,7 @@ class OpenSearchNotificationsManager:
             channel_id, and transport_security.
         """
         sender_email = str(parameters.smtp_sender)
-        smtp_account_id = self.smtp_account_id_from_email(sender_email)
+        smtp_account_id = self.smtp_account_id_from_relation(relation_id)
         label = self.label(relation_id)
         group_id = self.recipient_group_id(smtp_account_id)
         channel_id = self.email_channel_id(smtp_account_id)

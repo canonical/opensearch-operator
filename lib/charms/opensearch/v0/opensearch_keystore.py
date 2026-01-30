@@ -73,7 +73,9 @@ class OpenSearchKeystore:
             try:
                 self._opensearch.run_bin("keystore", f"remove {key}")
             except OpenSearchCmdError as e:
-                if e.err and "does not exist in the keystore" in e.err:
+                # distro passes stderr as first arg (e.cmd); some callers set e.err
+                err_text = e.err or e.cmd or ""
+                if "does not exist in the keystore" in err_text:
                     continue
                 raise
 

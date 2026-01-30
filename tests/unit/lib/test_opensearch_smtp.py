@@ -94,7 +94,6 @@ class SmtpTestCharm(CharmBase):
     deps: dict | None = None
 
     relation_params_by_id: dict[int, object] = {}
-    force_duplicate_sender: str | None = None
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -164,6 +163,26 @@ def deps():
     notifications.put_email_channel = MagicMock()
     notifications.delete_config = MagicMock()
 
+    def _get_smtp_config(params, relation_id: int):
+        label = OpenSearchNotificationsManager.label(relation_id)
+        sid = f"smtp-{relation_id}"
+        return SimpleNamespace(
+            smtp_account_id=sid,
+            label=label,
+            group_id=f"{sid}_recipients",
+            channel_id=f"{sid}_email-channel",
+            sender_email=getattr(params, "smtp_sender", "x@y.com"),
+            transport_security=MagicMock(),
+        )
+
+    notifications.get_smtp_config = MagicMock(side_effect=_get_smtp_config)
+    notifications.smtp_account_id_from_relation = (
+        OpenSearchNotificationsManager.smtp_account_id_from_relation
+    )
+    notifications.label = OpenSearchNotificationsManager.label
+    notifications.email_channel_id = OpenSearchNotificationsManager.email_channel_id
+    notifications.recipient_group_id = OpenSearchNotificationsManager.recipient_group_id
+
     plugin_manager = MagicMock()
     plugin_manager.put_plugin_config = MagicMock()
     plugin_manager.remove_plugin_config = MagicMock()
@@ -199,32 +218,29 @@ def ctx(deps) -> Context:
 @pytest.fixture(autouse=True)
 def _reset_injection():
     SmtpTestCharm.relation_params_by_id = {}
-    SmtpTestCharm.force_duplicate_sender = None
     yield
     SmtpTestCharm.relation_params_by_id = {}
-    SmtpTestCharm.force_duplicate_sender = None
 
 
 class TestHelpers:
     @pytest.mark.parametrize(
-        "sender_email,expected_prefix",
+        "relation_id,expected",
         [
-            ("No-Reply@Example.com", "smtp-sender-no-reply-example-com"),
-            ("  A.B+C@x.y  ", "smtp-sender-a-b-c-x-y"),
-            ("xxx_yyy@bar.com", "smtp-sender-xxx-yyy-bar-com"),
+            (0, "smtp-0"),
+            (1, "smtp-1"),
+            (42, "smtp-42"),
         ],
     )
-    def test_smtp_account_id_from_email(self, sender_email, expected_prefix) -> None:
+    def test_smtp_account_id_from_relation(self, relation_id, expected) -> None:
         assert (
-            OpenSearchNotificationsManager.smtp_account_id_from_email(sender_email)
-            == expected_prefix
+            OpenSearchNotificationsManager.smtp_account_id_from_relation(relation_id) == expected
         )
 
     @pytest.mark.parametrize(
         "smtp_account_id,expected",
         [
-            ("smtp-sender-x", "smtp-sender-x_recipients"),
-            ("smtp-sender-a-b", "smtp-sender-a-b_recipients"),
+            ("smtp-0", "smtp-0_recipients"),
+            ("smtp-1", "smtp-1_recipients"),
         ],
     )
     def test_recipient_group_id(self, smtp_account_id, expected) -> None:
@@ -233,8 +249,8 @@ class TestHelpers:
     @pytest.mark.parametrize(
         "smtp_account_id,expected",
         [
-            ("smtp-sender-x", "smtp-sender-x_email-channel"),
-            ("smtp-sender-a-b", "smtp-sender-a-b_email-channel"),
+            ("smtp-0", "smtp-0_email-channel"),
+            ("smtp-1", "smtp-1_email-channel"),
         ],
     )
     def test_email_channel_id(self, smtp_account_id, expected) -> None:
@@ -242,48 +258,6 @@ class TestHelpers:
 
     def test_label(self) -> None:
         assert OpenSearchNotificationsManager.label(7) == f"{SMTP_SECRET_LABEL}-7"
-
-
-class TestDuplicateSenderEmails:
-    def test_has_duplicate_sender_emails_when_duplicate_then_returns_duplicated_email(
-        self, ctx, deps
-    ) -> None:
-        rel1 = smtp_relation(1)
-        rel2 = smtp_relation(2)
-
-        # each relation returns same sender
-        SmtpTestCharm.relation_params_by_id = {
-            1: mk_params(smtp_sender="same@example.com"),
-            2: mk_params(smtp_sender="same@example.com"),
-        }
-
-        ctx.run(
-            ctx.on.relation_changed(rel1),
-            State(leader=True, relations=[rel1, rel2]),
-        )
-        if deps["status"].set.called:
-            status = deps["status"].set.call_args.args[0]
-            assert "duplicate" in getattr(status, "message", "").lower()
-
-    def test_has_duplicate_sender_emails_when_unique_then_return_none(self, ctx, deps) -> None:
-        rel1 = smtp_relation(1)
-        rel2 = smtp_relation(2)
-
-        SmtpTestCharm.relation_params_by_id = {
-            1: mk_params(smtp_sender="a@example.com"),
-            2: mk_params(smtp_sender="b@example.com"),
-        }
-
-        # run relation-changed, should not set blocked for duplicates
-        ctx.run(
-            ctx.on.relation_changed(rel1),
-            State(leader=True, relations=[rel1, rel2]),
-        )
-
-        # We must not block for duplicate when senders are unique
-        if deps["status"].set.called:
-            status = deps["status"].set.call_args.args[0]
-            assert "duplicate" not in getattr(status, "message", "").lower()
 
 
 class TestSmtpCredentialsChanged:
@@ -354,25 +328,6 @@ class TestSmtpCredentialsChanged:
         for field in missing_fields:
             assert field in status.message
 
-    def test_credentials_changed_when_duplicate_sender_detected_then_leader_sets_blocked_duplicate(
-        self, ctx, deps
-    ) -> None:
-        rel1 = smtp_relation(1)
-        rel2 = smtp_relation(2)
-
-        SmtpTestCharm.relation_params_by_id = {1: mk_params(), 2: mk_params()}
-        SmtpTestCharm.force_duplicate_sender = "dup@example.com"
-
-        ctx.run(
-            ctx.on.relation_changed(rel1),
-            State(leader=True, relations=[rel1, rel2]),
-        )
-
-        deps["status"].set.assert_called()
-        status = deps["status"].set.call_args.args[0]
-        assert isinstance(status, BlockedStatus)
-        assert "duplicate" in status.message.lower()
-
     @pytest.mark.parametrize(
         "recipients,expect_waiting,expect_group_calls",
         [
@@ -418,86 +373,19 @@ class TestSmtpCredentialsChanged:
         deps["notifications"].put_email_group.assert_not_called()
         deps["notifications"].put_email_channel.assert_not_called()
 
-    def test_credentials_changed_when_sender_changes_then_deletes_old_configs_then_creates_new(
-        self, deps, monkeypatch
-    ) -> None:
-        rel_id = 5
-        label = OpenSearchNotificationsManager.label(rel_id)
-        old_smtp_account_id = "smtp-sender-old-example-com"
-        plugin_config_info = {
-            label: SimpleNamespace(cleanup={"smtp_account_id": [old_smtp_account_id]})
-        }
-        params = mk_params(smtp_sender="new@example.com", recipients=["a@b.com"])
-
-        charm = MagicMock()
-        charm.unit.is_leader.return_value = True
-        charm.status = MagicMock()
-        charm.state = SimpleNamespace(unit=SimpleNamespace(plugin_config_info=plugin_config_info))
-        charm.opensearch_peer_cm = MagicMock()
-        charm.opensearch_peer_cm.deployment_desc.return_value = SimpleNamespace(
-            typ=DeploymentType.MAIN_ORCHESTRATOR
-        )
-        charm.opensearch = MagicMock()
-        charm.opensearch.is_node_up.return_value = True
-        charm.notifications = MagicMock()
-        charm.notifications.get_smtp_config = MagicMock(
-            return_value=SimpleNamespace(
-                smtp_account_id="smtp-sender-new-example-com",
-                label=label,
-                group_id="smtp-sender-new-example-com_recipients",
-                channel_id="smtp-sender-new-example-com_email-channel",
-                sender_email="new@example.com",
-                transport_security=MagicMock(),
-            )
-        )
-        charm.notifications.label = OpenSearchNotificationsManager.label
-        charm.notifications.email_channel_id = OpenSearchNotificationsManager.email_channel_id
-        charm.notifications.recipient_group_id = OpenSearchNotificationsManager.recipient_group_id
-        charm.notifications.put_smtp_sender = deps["notifications"].put_smtp_sender
-        charm.notifications.put_email_group = deps["notifications"].put_email_group
-        charm.notifications.put_email_channel = deps["notifications"].put_email_channel
-        charm.notifications.delete_config = deps["notifications"].delete_config
-        charm.keystore_manager = deps["keystore_manager"]
-        charm.plugin_manager = deps["plugin_manager"]
-        charm.opensearch_keystore_events = deps["opensearch_keystore_events"]
-        charm.store_plugin_secret = deps["store_plugin_secret"]
-        charm.opensearch_peer_cm.is_provider.return_value = False
-
-        ev = MagicMock()
-        ev.relation.id = rel_id
-
-        handler = SmtpEvents(charm)
-        handler.smtp.get_relation_data_from_relation = MagicMock(return_value=params)
-        monkeypatch.setattr(handler, "_has_duplicate_sender_emails", lambda: None)
-        handler._on_smtp_credentials_changed(ev)
-
-        old_channel_id = OpenSearchNotificationsManager.email_channel_id(old_smtp_account_id)
-        old_group_id = OpenSearchNotificationsManager.recipient_group_id(old_smtp_account_id)
-        deps["notifications"].delete_config.assert_has_calls(
-            [call(old_channel_id), call(old_group_id), call(old_smtp_account_id)],
-            any_order=False,
-        )
-        deps["notifications"].put_smtp_sender.assert_called_once()
-        call_kw = deps["notifications"].put_smtp_sender.call_args.kwargs
-        assert call_kw["smtp_account_id"] == "smtp-sender-new-example-com"
-
     def test_credentials_changed_when_sender_unchanged_then_no_delete_calls(
         self, ctx, deps
     ) -> None:
         rel = smtp_relation(3)
-        # default mk_params uses smtp_sender="no-reply@example.com"
-        same_smtp_account_id = "smtp-sender-no-reply-example-com"
-        label = OpenSearchNotificationsManager.label(rel.id)
-
-        deps["state"].unit.plugin_config_info[label] = SimpleNamespace(
-            cleanup={"smtp_account_id": [same_smtp_account_id]}
-        )
         SmtpTestCharm.relation_params_by_id = {3: mk_params()}
 
         ctx.run(ctx.on.relation_changed(rel), State(leader=True, relations=[rel]))
 
+        # with relation_id as config_id we update in place
         deps["notifications"].delete_config.assert_not_called()
         deps["notifications"].put_smtp_sender.assert_called_once()
+        call_kw = deps["notifications"].put_smtp_sender.call_args.kwargs
+        assert call_kw["smtp_account_id"] == "smtp-3"
 
     def test_credentials_changed_when_no_plugin_config_then_no_delete_calls(
         self, ctx, deps
@@ -513,38 +401,40 @@ class TestSmtpCredentialsChanged:
 
 
 class TestSmtpCredentialsGone:
-    def test_credentials_gone_when_deployment_not_ready_then_no_ops(self, ctx, deps) -> None:
+    def test_credentials_gone_when_deployment_not_ready_then_still_cleans(self, ctx, deps) -> None:
         deps["opensearch_peer_cm"].deployment_desc.return_value = None
         rel = smtp_relation(1)
 
         ctx.run(ctx.on.relation_broken(rel), State(leader=True, relations=[rel]))
 
-        deps["keystore_manager"].remove_entries.assert_not_called()
-        deps["notifications"].delete_config.assert_not_called()
+        # We always clean up on relation broken (config id derived from relation id)
+        derived_keys = [
+            "opensearch.notifications.core.email.smtp-1.username",
+            "opensearch.notifications.core.email.smtp-1.password",
+        ]
+        deps["keystore_manager"].remove_entries.assert_called_once_with(derived_keys)
+        assert deps["notifications"].delete_config.call_count == 3
 
-    def test_crendentials_gone_when_plugin_config_missing_then_no_operation(
+    def test_credentials_gone_when_plugin_config_missing_then_still_cleans_using_derived_ids(
         self, ctx, deps
     ) -> None:
         rel = smtp_relation(1)
-        ctx.run(ctx.on.relation_broken(rel), State(leader=True, relations=[rel]))
 
-        deps["keystore_manager"].remove_entries.assert_not_called()
-        deps["notifications"].delete_config.assert_not_called()
+        ctx.run(ctx.on.relation_broken(rel), State(leader=True, relations=[rel]))
+        derived_keys = [
+            "opensearch.notifications.core.email.smtp-1.username",
+            "opensearch.notifications.core.email.smtp-1.password",
+        ]
+        deps["keystore_manager"].remove_entries.assert_called_once_with(derived_keys)
+        assert deps["notifications"].delete_config.call_count == 3
 
     def test_credentials_gone_when_present_then_removes_entries_and_deletes_configs(
         self, deps
     ) -> None:
         rel_id = 3
         label = OpenSearchNotificationsManager.label(rel_id)
-        smtp_account_id = "smtp-sender-x"
-        plugin_config_info = {
-            label: SimpleNamespace(
-                cleanup={
-                    "keys": ["k1", "k2"],
-                    "smtp_account_id": [smtp_account_id],
-                }
-            )
-        }
+        smtp_account_id = f"smtp-{rel_id}"
+        plugin_config_info = {label: SimpleNamespace(cleanup={"keys": ["k1", "k2"]})}
 
         charm = MagicMock()
         charm.unit.is_leader.return_value = True
@@ -552,6 +442,9 @@ class TestSmtpCredentialsGone:
         charm.state = SimpleNamespace(unit=SimpleNamespace(plugin_config_info=plugin_config_info))
         charm.notifications = MagicMock()
         charm.notifications.label = OpenSearchNotificationsManager.label
+        charm.notifications.smtp_account_id_from_relation = (
+            OpenSearchNotificationsManager.smtp_account_id_from_relation
+        )
         charm.notifications.email_channel_id = OpenSearchNotificationsManager.email_channel_id
         charm.notifications.recipient_group_id = OpenSearchNotificationsManager.recipient_group_id
         charm.keystore_manager = deps["keystore_manager"]
@@ -568,7 +461,11 @@ class TestSmtpCredentialsGone:
         handler = SmtpEvents(charm)
         handler._on_smtp_credentials_gone(ev)
 
-        deps["keystore_manager"].remove_entries.assert_called_once_with(["k1", "k2"])
+        derived_keys = [
+            f"opensearch.notifications.core.email.{smtp_account_id}.username",
+            f"opensearch.notifications.core.email.{smtp_account_id}.password",
+        ]
+        deps["keystore_manager"].remove_entries.assert_called_once_with(derived_keys)
         deps["opensearch_keystore_events"].reload_event.emit.assert_called_once()
         deps["plugin_manager"].remove_plugin_config.assert_any_call(scope=Scope.UNIT, label=label)
 
@@ -577,18 +474,6 @@ class TestSmtpCredentialsGone:
         deps["notifications"].delete_config.assert_has_calls(
             [call(channel_id), call(group_id), call(smtp_account_id)], any_order=False
         )
-
-    def test_credentials_gone_when_keystore_reload_fails_then_no_deletes(self, ctx, deps) -> None:
-        deps["keystore_manager"].reload.return_value = False
-        rel = smtp_relation(3)
-        label = OpenSearchNotificationsManager.label(rel.id)
-
-        deps["state"].unit.plugin_config_info[label] = SimpleNamespace(
-            cleanup={"keys": ["k1"], "smtp_account_id": ["smtp-sender-x"]}
-        )
-
-        ctx.run(ctx.on.relation_broken(rel), State(leader=True, relations=[rel]))
-        deps["notifications"].delete_config.assert_not_called()
 
 
 class TestSecretChanged:

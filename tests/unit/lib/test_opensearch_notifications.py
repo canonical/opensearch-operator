@@ -115,7 +115,7 @@ class NotificationsManagerCharm(CharmBase):
         self.client._exists = MagicMock(return_value=exists)
 
         self.client.put_smtp_sender(
-            smtp_account_id="smtp-sender-x",
+            smtp_account_id="smtp-0",
             host="smtp.example.com",
             port=25,
             transport_security=ts,
@@ -232,7 +232,31 @@ def test_put_smtp_sender_when_called_then_creates_or_updates_payload(
 
     # distinguish create vs update by path
     if exists:
-        assert "smtp-sender-x" in path
+        assert "smtp-0" in path
+
+
+def test_smtp_account_id_from_relation() -> None:
+    assert OpenSearchNotificationsManager.smtp_account_id_from_relation(0) == "smtp-0"
+    assert OpenSearchNotificationsManager.smtp_account_id_from_relation(1) == "smtp-1"
+    assert OpenSearchNotificationsManager.smtp_account_id_from_relation(42) == "smtp-42"
+
+
+def test_get_smtp_config_uses_relation_id_for_config_id(
+    opensearch_mock: MagicMock,
+) -> None:
+    client = OpenSearchNotificationsManager(opensearch_mock)
+    params = MagicMock()
+    params.smtp_sender = "no-reply@example.com"
+    params.transport_security = TransportSec("starttls")
+
+    config = client.get_smtp_config(params, relation_id=3)
+
+    assert config.sender_email == "no-reply@example.com"
+    assert config.smtp_account_id == "smtp-3"
+    assert config.label == f"{client.label(3)}"
+    assert config.group_id == "smtp-3_recipients"
+    assert config.channel_id == "smtp-3_email-channel"
+    assert config.transport_security == TransportSecurity.STARTTLS
 
 
 @pytest.mark.parametrize(

@@ -19,7 +19,6 @@ from charms.data_platform_libs.v0.data_interfaces import SecretError
 from charms.opensearch.v0.constants_charm import (
     SMTP_SECRET_LABEL,
     SMTPConfigurationError,
-    SmtpDuplicateSender,
     SmtpMissingRequiredParameters,
     SmtpNoRelationData,
     SmtpRelationInvalid,
@@ -62,27 +61,6 @@ class SmtpEvents(Object):
             self.charm.on[self.relation_name].relation_broken, self._on_smtp_credentials_gone
         )
         self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
-
-    def _has_duplicate_sender_emails(self) -> str | None:
-        """Return duplicate sender email if one exists, else None.
-
-        Returns:
-            The first duplicate sender email found, or None.
-        """
-        seen: dict[str, int] = {}
-        for rel in self.charm.model.relations[self.relation_name]:
-            try:
-                data = self.smtp.get_relation_data_from_relation(rel)
-            except Exception:
-                # ignore the error, handler will take care of it
-                continue
-            if not data or not data.smtp_sender:
-                continue
-            sender = str(data.smtp_sender)
-            if sender in seen and seen[sender] != rel.id:
-                return sender
-            seen[sender] = rel.id
-        return None
 
     def _on_smtp_credentials_changed(self, event: SmtpDataAvailableEvent) -> None:  # noqa: C901
         """Configure notifications sender/group/channel and keystore creds for this relation.
@@ -148,43 +126,9 @@ class SmtpEvents(Object):
                 SmtpMissingRequiredParameters, pattern=Status.CheckPattern.Interpolated, app=True
             )
 
-        duplicated_sender_emails = self._has_duplicate_sender_emails()
-        if duplicated_sender_emails:
-            if self.charm.unit.is_leader():
-                msg = SmtpDuplicateSender.format(", ".join(duplicated_sender_emails))
-                self.charm.status.set(
-                    BlockedStatus(msg),
-                    app=True,
-                )
-                return
-        else:
-            # clear any previous duplicate warning
-            if self.charm.unit.is_leader():
-                self.charm.status.clear(
-                    SmtpDuplicateSender,
-                    pattern=Status.CheckPattern.Start,
-                    app=True,
-                )
-
         config = self.charm.notifications.get_smtp_config(parameters, event.relation.id)
 
-        # If sender changed, remove old notification configs so one relation has one valid config
-        if self.charm.unit.is_leader():
-            if plugin_config := self.charm.state.unit.plugin_config_info.get(config.label):
-                smtp_account_ids = plugin_config.cleanup.get("smtp_account_id")
-                if smtp_account_ids and smtp_account_ids[0] != config.smtp_account_id:
-                    old_id = smtp_account_ids[0]
-                    channel_id = self.charm.notifications.email_channel_id(old_id)
-                    group_id = self.charm.notifications.recipient_group_id(old_id)
-                    for config_id in (channel_id, group_id, old_id):
-                        try:
-                            self.charm.notifications.delete_config(config_id)
-                        except OpenSearchHttpError:
-                            logger.exception(
-                                "Failed deleting old notifications config %s", config_id
-                            )
-
-        # create/update SMTP sender config
+        # create/update SMTP sender config (config_id is relation-based)
         if self.charm.unit.is_leader():
             try:
                 self.charm.notifications.put_smtp_sender(
@@ -297,28 +241,22 @@ class SmtpEvents(Object):
             )
 
         label = self.charm.notifications.label(event.relation.id)
+        smtp_account_id = self.charm.notifications.smtp_account_id_from_relation(event.relation.id)
+        keys = [
+            f"opensearch.notifications.core.email.{smtp_account_id}.username",
+            f"opensearch.notifications.core.email.{smtp_account_id}.password",
+        ]
 
-        if not (plugin_config := self.charm.state.unit.plugin_config_info.get(label)):
-            return
-
-        keys = plugin_config.cleanup.get("keys", [])
-        smtp_account_ids = plugin_config.cleanup.get("smtp_account_id")
-
-        if keys:
-            self.charm.keystore_manager.remove_entries(keys)
-
+        self.charm.keystore_manager.remove_entries(keys)
         self.charm.opensearch_keystore_events.reload_event.emit()
-
         self.charm.plugin_manager.remove_plugin_config(scope=Scope.UNIT, label=label)
 
         if not self.charm.unit.is_leader():
             return
 
-        # remove secrets and OpenSearch configs created by this relation
         self.charm.remove_plugin_secret(label)
 
-        # Delete in dependency order: channel, then group, then smtp account
-        smtp_account_id = smtp_account_ids[0]
+        # delete in dependency order: channel, then group, then smtp account
         channel_id = self.charm.notifications.email_channel_id(smtp_account_id)
         group_id = self.charm.notifications.recipient_group_id(smtp_account_id)
         for config_id in (channel_id, group_id, smtp_account_id):
