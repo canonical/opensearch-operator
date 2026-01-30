@@ -47,8 +47,7 @@ juju config smtp-integrator \
 ```
 
 **Important**
-The [OpenSearch documentation](https://docs.opensearch.org/2.19/observing-your-data/notifications/index/#create-email-sender) requires the SMTP integration relation ID when creating an email sender. 
-The relation ID is used to derive the OpenSearch SMTP sender config, the email channel and the email recipient group.
+The [OpenSearch documentation](https://docs.opensearch.org/2.19/observing-your-data/notifications/index/#create-email-sender) requires a stable identifier for the SMTP sender config, email channel, and email recipient group; the charm uses the SMTP integration relation ID for this.
 ## Integrate the SMTP integrator and OpenSearch
 
 Integrate the SMTP integrator with the OpenSearch application:

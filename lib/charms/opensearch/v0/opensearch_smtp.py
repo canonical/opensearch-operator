@@ -241,14 +241,31 @@ class SmtpEvents(Object):
             )
 
         label = self.charm.notifications.label(event.relation.id)
-        smtp_account_id = self.charm.notifications.smtp_account_id_from_relation(event.relation.id)
-        keys = [
-            f"opensearch.notifications.core.email.{smtp_account_id}.username",
-            f"opensearch.notifications.core.email.{smtp_account_id}.password",
-        ]
+        plugin_config = self.charm.state.unit.plugin_config_info.get(label)
+        if not plugin_config:
+            return
+        cleanup = plugin_config.cleanup or {}
+        # smtp_account_id is always stored per relation, keys only when auth is used
+        # if no keys, smtp_account_id may still exist
+        keys = list(cleanup.get("keys", []))
+        smtp_account_ids = cleanup.get("smtp_account_id")
+        smtp_account_id = smtp_account_ids[0] if smtp_account_ids else None
 
-        self.charm.keystore_manager.remove_entries(keys)
-        self.charm.opensearch_keystore_events.reload_event.emit()
+        # No smtp_account_id; nothing to clean in keystore or notifications
+        if not smtp_account_id:
+            self.charm.plugin_manager.remove_plugin_config(scope=Scope.UNIT, label=label)
+            if self.charm.unit.is_leader():
+                self.charm.remove_plugin_secret(label)
+                if self.charm.opensearch_peer_cm.is_provider(typ="main"):
+                    self.charm.peer_cluster_provider.refresh_relation_data(event)
+            return
+
+        # Keystore: keys may be absent while smtp_account_id exists
+        # only remove entries when keys present
+        if keys:
+            self.charm.keystore_manager.remove_entries(keys)
+            self.charm.opensearch_keystore_events.reload_event.emit()
+
         self.charm.plugin_manager.remove_plugin_config(scope=Scope.UNIT, label=label)
 
         if not self.charm.unit.is_leader():
@@ -291,10 +308,11 @@ class SmtpEvents(Object):
         if not (keys := plugin_config.get("keys")):
             return
 
+        smtp_account_id_list = plugin_config.get("smtp_account_id") or []
         self.charm.plugin_manager.put_plugin_config(
             scope=Scope.UNIT,
             label=label,
-            cleanup={"keys": list(keys.keys())},
+            cleanup={"keys": list(keys.keys()), "smtp_account_id": smtp_account_id_list},
         )
 
         self.charm.keystore_manager.put_entries(keys)

@@ -401,40 +401,26 @@ class TestSmtpCredentialsChanged:
 
 
 class TestSmtpCredentialsGone:
-    def test_credentials_gone_when_deployment_not_ready_then_still_cleans(self, ctx, deps) -> None:
-        deps["opensearch_peer_cm"].deployment_desc.return_value = None
+    def test_credentials_gone_when_plugin_config_missing_then_no_ops(self, ctx, deps) -> None:
         rel = smtp_relation(1)
-
         ctx.run(ctx.on.relation_broken(rel), State(leader=True, relations=[rel]))
 
-        # We always clean up on relation broken (config id derived from relation id)
-        derived_keys = [
-            "opensearch.notifications.core.email.smtp-1.username",
-            "opensearch.notifications.core.email.smtp-1.password",
-        ]
-        deps["keystore_manager"].remove_entries.assert_called_once_with(derived_keys)
-        assert deps["notifications"].delete_config.call_count == 3
-
-    def test_credentials_gone_when_plugin_config_missing_then_still_cleans_using_derived_ids(
-        self, ctx, deps
-    ) -> None:
-        rel = smtp_relation(1)
-
-        ctx.run(ctx.on.relation_broken(rel), State(leader=True, relations=[rel]))
-        derived_keys = [
-            "opensearch.notifications.core.email.smtp-1.username",
-            "opensearch.notifications.core.email.smtp-1.password",
-        ]
-        deps["keystore_manager"].remove_entries.assert_called_once_with(derived_keys)
-        assert deps["notifications"].delete_config.call_count == 3
+        deps["keystore_manager"].remove_entries.assert_not_called()
+        deps["notifications"].delete_config.assert_not_called()
 
     def test_credentials_gone_when_present_then_removes_entries_and_deletes_configs(
         self, deps
     ) -> None:
+        """When cleanup has both keys and smtp_account_id, clean keystore and notifications."""
         rel_id = 3
         label = OpenSearchNotificationsManager.label(rel_id)
         smtp_account_id = f"smtp-{rel_id}"
-        plugin_config_info = {label: SimpleNamespace(cleanup={"keys": ["k1", "k2"]})}
+        stored_keys = ["k1", "k2"]
+        plugin_config_info = {
+            label: SimpleNamespace(
+                cleanup={"keys": stored_keys, "smtp_account_id": [smtp_account_id]}
+            )
+        }
 
         charm = MagicMock()
         charm.unit.is_leader.return_value = True
@@ -442,9 +428,6 @@ class TestSmtpCredentialsGone:
         charm.state = SimpleNamespace(unit=SimpleNamespace(plugin_config_info=plugin_config_info))
         charm.notifications = MagicMock()
         charm.notifications.label = OpenSearchNotificationsManager.label
-        charm.notifications.smtp_account_id_from_relation = (
-            OpenSearchNotificationsManager.smtp_account_id_from_relation
-        )
         charm.notifications.email_channel_id = OpenSearchNotificationsManager.email_channel_id
         charm.notifications.recipient_group_id = OpenSearchNotificationsManager.recipient_group_id
         charm.keystore_manager = deps["keystore_manager"]
@@ -461,11 +444,7 @@ class TestSmtpCredentialsGone:
         handler = SmtpEvents(charm)
         handler._on_smtp_credentials_gone(ev)
 
-        derived_keys = [
-            f"opensearch.notifications.core.email.{smtp_account_id}.username",
-            f"opensearch.notifications.core.email.{smtp_account_id}.password",
-        ]
-        deps["keystore_manager"].remove_entries.assert_called_once_with(derived_keys)
+        deps["keystore_manager"].remove_entries.assert_called_once_with(stored_keys)
         deps["opensearch_keystore_events"].reload_event.emit.assert_called_once()
         deps["plugin_manager"].remove_plugin_config.assert_any_call(scope=Scope.UNIT, label=label)
 
@@ -474,6 +453,83 @@ class TestSmtpCredentialsGone:
         deps["notifications"].delete_config.assert_has_calls(
             [call(channel_id), call(group_id), call(smtp_account_id)], any_order=False
         )
+
+    def test_credentials_gone_when_no_keys_then_no_keystore_cleanup_still_deletes_notifications(
+        self, deps
+    ) -> None:
+        """smtp_account_id is always stored. keys may be absent. Only notifications cleaned."""
+        rel_id = 2
+        label = OpenSearchNotificationsManager.label(rel_id)
+        smtp_account_id = f"smtp-{rel_id}"
+        plugin_config_info = {
+            label: SimpleNamespace(cleanup={"keys": [], "smtp_account_id": [smtp_account_id]})
+        }
+
+        charm = MagicMock()
+        charm.unit.is_leader.return_value = True
+        charm.status = MagicMock()
+        charm.state = SimpleNamespace(unit=SimpleNamespace(plugin_config_info=plugin_config_info))
+        charm.notifications = MagicMock()
+        charm.notifications.label = OpenSearchNotificationsManager.label
+        charm.notifications.email_channel_id = OpenSearchNotificationsManager.email_channel_id
+        charm.notifications.recipient_group_id = OpenSearchNotificationsManager.recipient_group_id
+        charm.keystore_manager = deps["keystore_manager"]
+        charm.opensearch_keystore_events = deps["opensearch_keystore_events"]
+        charm.plugin_manager = deps["plugin_manager"]
+        charm.remove_plugin_secret = deps["remove_plugin_secret"]
+        charm.notifications.delete_config = deps["notifications"].delete_config
+        charm.opensearch_peer_cm = MagicMock()
+        charm.opensearch_peer_cm.is_provider.return_value = False
+
+        ev = MagicMock()
+        ev.relation.id = rel_id
+
+        handler = SmtpEvents(charm)
+        handler._on_smtp_credentials_gone(ev)
+
+        deps["keystore_manager"].remove_entries.assert_not_called()
+        deps["opensearch_keystore_events"].reload_event.emit.assert_not_called()
+        deps["plugin_manager"].remove_plugin_config.assert_any_call(scope=Scope.UNIT, label=label)
+
+        channel_id = OpenSearchNotificationsManager.email_channel_id(smtp_account_id)
+        group_id = OpenSearchNotificationsManager.recipient_group_id(smtp_account_id)
+        deps["notifications"].delete_config.assert_has_calls(
+            [call(channel_id), call(group_id), call(smtp_account_id)], any_order=False
+        )
+
+    def test_credentials_gone_when_no_smtp_account_id_then_no_keystore_or_notification_cleanup(
+        self, deps
+    ) -> None:
+        """No smtp_account_id: no keystore removal, no notification cleanup."""
+        rel_id = 1
+        label = OpenSearchNotificationsManager.label(rel_id)
+        plugin_config_info = {
+            label: SimpleNamespace(cleanup={"keys": ["key1", "key2"], "smtp_account_id": []})
+        }
+
+        charm = MagicMock()
+        charm.unit.is_leader.return_value = True
+        charm.status = MagicMock()
+        charm.state = SimpleNamespace(unit=SimpleNamespace(plugin_config_info=plugin_config_info))
+        charm.notifications = deps["notifications"]
+        charm.notifications.label = OpenSearchNotificationsManager.label
+        charm.keystore_manager = deps["keystore_manager"]
+        charm.opensearch_keystore_events = deps["opensearch_keystore_events"]
+        charm.plugin_manager = deps["plugin_manager"]
+        charm.remove_plugin_secret = deps["remove_plugin_secret"]
+        charm.opensearch_peer_cm = MagicMock()
+        charm.opensearch_peer_cm.is_provider.return_value = False
+
+        ev = MagicMock()
+        ev.relation.id = rel_id
+
+        handler = SmtpEvents(charm)
+        handler._on_smtp_credentials_gone(ev)
+
+        deps["keystore_manager"].remove_entries.assert_not_called()
+        deps["opensearch_keystore_events"].reload_event.emit.assert_not_called()
+        deps["plugin_manager"].remove_plugin_config.assert_any_call(scope=Scope.UNIT, label=label)
+        deps["notifications"].delete_config.assert_not_called()
 
 
 class TestSecretChanged:
@@ -535,7 +591,7 @@ class TestSecretChanged:
         charm.plugin_manager.put_plugin_config.assert_called_once_with(
             scope=Scope.UNIT,
             label="plugin-notifications-7",
-            cleanup={"keys": ["k1", "k2"]},
+            cleanup={"keys": ["k1", "k2"], "smtp_account_id": []},
         )
         charm.keystore_manager.put_entries.assert_called_once_with({"k1": "v1", "k2": "v2"})
         charm.opensearch_keystore_events.reload_event.emit.assert_called_once()
