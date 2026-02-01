@@ -1,0 +1,286 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'opensearch': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'active', 'since': '01 Feb 2026 02:24:25Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/0': {'workload-status': {'current': 'active', 'since': '01 Feb 2026 02:24:25Z'}, 'juju-status': {'current': 'idle', 'since': '01 Feb 2026 02:25:32Z', 'version': '3.6.14'}, 'leader': True, 'machine': '1', 'open-ports': ['9200/tcp'], 'public-address': '10.143.225.141'}, 'opensearch/1': {'workload-status': {'current': 'active', 'since': '01 Feb 2026 02:25:27Z'}, 'juju-status': {'current': 'idle', 'since': '01 Feb 2026 02:25:36Z', 'version': '3.6.14'}, 'machine': '2', 'open-ports': ['9200/tcp'], 'public-address': '10.143.225.82'}, 'opensearch/2': {'workload-status': {'current': 'active', 'since': '01 Feb 2026 02:24:57Z'}, 'juju-status': {'current': 'idle', 'since': '01 Feb 2026 02:25:31Z', 'version': '3.6.14'}, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.143.225.17'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 317, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '01 Feb 2026 02:22:44Z'}, 'relations': {'certificates': [{'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '01 Feb 2026 02:22:44Z'}, 'juju-status': {'current': 'idle', 'since': '01 Feb 2026 02:24:52Z', 'version': '3.6.14'}, 'leader': True, 'machine': '0', 'public-address': '10.143.225.122'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/gcs-integrator-8
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:26:56Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+gcs-integrator                     waiting    0/1  gcs-integrator            1/edge      8  no       waiting for machine
+opensearch                         active       3  opensearch                            0  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent       Machine  Public address  Ports     Message
+gcs-integrator/0             waiting   allocating  4                                  waiting for machine
+opensearch/0*                active    idle        1        10.143.225.141  9200/tcp  
+opensearch/1                 active    idle        2        10.143.225.82   9200/tcp  
+opensearch/2                 active    idle        3        10.143.225.17   9200/tcp  
+self-signed-certificates/0*  active    idle        0        10.143.225.122            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.143.225.122  juju-3631d3-0  ubuntu@24.04  github-runner  Running
+1        started  10.143.225.141  juju-3631d3-1  ubuntu@24.04  github-runner  Running
+2        started  10.143.225.82   juju-3631d3-2  ubuntu@24.04  github-runner  Running
+3        started  10.143.225.17   juju-3631d3-3  ubuntu@24.04  github-runner  Running
+4        pending                  pending        ubuntu@24.04                 Creating container
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:26:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 gcs-integrator -- expected units: 1 -- current: 0
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:27:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: gcs-integrator - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: gcs waiting -- message: waiting for machine
+		gcs-integrator-0.2ad  -- (10.143.225.15) -- [allocating (since: 02:26:56)] waiting: waiting for machine
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:27:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:27:50 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:360 opensearch and gcs-integrator are not integrated yet
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:1118 Integrated opensearch:gcs-credentials <-> gcs-integrator:gcs-credentials.
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:334 Adding Juju secret for GCS service account JSON
+[32mINFO    [0m integration.ha.helpers:helpers.py:607 Data keys to insert: dict_keys(['secret-key'])
+[32mINFO    [0m integration.ha.helpers:helpers.py:613 Add secret return code=0 stdout=secret:d5vbk9tah0bde80a88b0
+ stderr=
+[32mINFO    [0m integration.ha.helpers:helpers.py:620 Secret uri: secret:d5vbk9tah0bde80a88b0
+[32mINFO    [0m integration.ha.helpers:helpers.py:626 Grant secret return code=0 stdout= stderr=
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:342 Juju secret for GCS credentials added. Secret URI: secret:d5vbk9tah0bde80a88b0
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:347 Setting up configuration for gcs-integrator charm...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  gcs-integrator/0 [executing] blocked: Missing config(s): 'bucket', 'credentials'
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:28:12Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+gcs-integrator                     active       1  gcs-integrator            1/edge      8  no       
+opensearch                         blocked      3  opensearch                            0  no       Backup relation data missing or incomplete.
+self-signed-certificates           active       1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+gcs-integrator/0*            active    idle   4        10.143.225.15             
+opensearch/0*                active    idle   1        10.143.225.141  9200/tcp  
+opensearch/1                 active    idle   2        10.143.225.82   9200/tcp  
+opensearch/2                 active    idle   3        10.143.225.17   9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.143.225.122            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.143.225.122  juju-3631d3-0  ubuntu@24.04  github-runner  Running
+1        started  10.143.225.141  juju-3631d3-1  ubuntu@24.04  github-runner  Running
+2        started  10.143.225.82   juju-3631d3-2  ubuntu@24.04  github-runner  Running
+3        started  10.143.225.17   juju-3631d3-3  ubuntu@24.04  github-runner  Running
+4        started  10.143.225.15   juju-3631d3-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:28:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:28:13 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:1531 Opensearch app is blocked because of invalid GCS credentials.
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:334 Adding Juju secret for GCS service account JSON
+[32mINFO    [0m integration.ha.helpers:helpers.py:607 Data keys to insert: dict_keys(['secret-key'])
+[32mINFO    [0m integration.ha.helpers:helpers.py:613 Add secret return code=0 stdout=secret:d5vbkfdah0bde80a88c0
+ stderr=
+[32mINFO    [0m integration.ha.helpers:helpers.py:620 Secret uri: secret:d5vbkfdah0bde80a88c0
+[32mINFO    [0m integration.ha.helpers:helpers.py:626 Grant secret return code=0 stdout= stderr=
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:342 Juju secret for GCS credentials added. Secret URI: secret:d5vbkfdah0bde80a88c0
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:347 Setting up configuration for gcs-integrator charm...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  gcs-integrator/0 [idle] active: 
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:28:30Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+gcs-integrator                     active      1  gcs-integrator            1/edge      8  no       
+opensearch                         active      3  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+gcs-integrator/0*            active    idle   4        10.143.225.15             
+opensearch/0*                active    idle   1        10.143.225.141  9200/tcp  
+opensearch/1                 active    idle   2        10.143.225.82   9200/tcp  
+opensearch/2                 active    idle   3        10.143.225.17   9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.143.225.122            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.143.225.122  juju-3631d3-0  ubuntu@24.04  github-runner  Running
+1        started  10.143.225.141  juju-3631d3-1  ubuntu@24.04  github-runner  Running
+2        started  10.143.225.82   juju-3631d3-2  ubuntu@24.04  github-runner  Running
+3        started  10.143.225.17   juju-3631d3-3  ubuntu@24.04  github-runner  Running
+4        started  10.143.225.15   juju-3631d3-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:28:30 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.d5e* -- (10.143.225.141) -- [idle (since: 02:28:24)] active: 
+		opensearch-1.d5e  -- (10.143.225.82) -- [idle (since: 02:28:23)] active: 
+		opensearch-2.d5e  -- (10.143.225.17) -- [idle (since: 02:28:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:28:41 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.d5e* -- (10.143.225.141) -- [idle (since: 02:28:24)] active: 
+		opensearch-1.d5e  -- (10.143.225.82) -- [idle (since: 02:28:23)] active: 
+		opensearch-2.d5e  -- (10.143.225.17) -- [idle (since: 02:28:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:28:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.d5e* -- (10.143.225.141) -- [idle (since: 02:28:24)] active: 
+		opensearch-1.d5e  -- (10.143.225.82) -- [idle (since: 02:28:23)] active: 
+		opensearch-2.d5e  -- (10.143.225.17) -- [idle (since: 02:28:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:29:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.d5e* -- (10.143.225.141) -- [idle (since: 02:28:24)] active: 
+		opensearch-1.d5e  -- (10.143.225.82) -- [idle (since: 02:28:23)] active: 
+		opensearch-2.d5e  -- (10.143.225.17) -- [idle (since: 02:28:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:29:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.d5e* -- (10.143.225.141) -- [idle (since: 02:28:24)] active: 
+		opensearch-1.d5e  -- (10.143.225.82) -- [idle (since: 02:28:23)] active: 
+		opensearch-2.d5e  -- (10.143.225.17) -- [idle (since: 02:28:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:29:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.d5e* -- (10.143.225.141) -- [idle (since: 02:28:24)] active: 
+		opensearch-1.d5e  -- (10.143.225.82) -- [idle (since: 02:28:23)] active: 
+		opensearch-2.d5e  -- (10.143.225.17) -- [idle (since: 02:28:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:29:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.d5e* -- (10.143.225.141) -- [idle (since: 02:28:24)] active: 
+		opensearch-1.d5e  -- (10.143.225.82) -- [idle (since: 02:28:23)] active: 
+		opensearch-2.d5e  -- (10.143.225.17) -- [idle (since: 02:28:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:29:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:29:47 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:1545 Opensearch recovered after providing valid GCS credentials.
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.143.225.141:9200/_snapshot/gcs-repository
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:29:49Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+gcs-integrator                     active      1  gcs-integrator            1/edge      8  no       
+opensearch                         active      3  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+gcs-integrator/0*            active    idle   4        10.143.225.15             
+opensearch/0*                active    idle   1        10.143.225.141  9200/tcp  
+opensearch/1                 active    idle   2        10.143.225.82   9200/tcp  
+opensearch/2                 active    idle   3        10.143.225.17   9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.143.225.122            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.143.225.122  juju-3631d3-0  ubuntu@24.04  github-runner  Running
+1        started  10.143.225.141  juju-3631d3-1  ubuntu@24.04  github-runner  Running
+2        started  10.143.225.82   juju-3631d3-2  ubuntu@24.04  github-runner  Running
+3        started  10.143.225.17   juju-3631d3-3  ubuntu@24.04  github-runner  Running
+4        started  10.143.225.15   juju-3631d3-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 02:22:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:22:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:22:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:22:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:22:49 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:22:49 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:22:52 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:22:52 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:23:58 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:24:04 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:24:05 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:24:07 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:24:51 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:24:52 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:27:18 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+machine-4: 02:27:31 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:27:31 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:190 Cleaning backups from cloud buckets
+[33mWARNING [0m integration.ha.test_backups:test_backups.py:216 Failed to clean up backups: SSL validation failed for https://10.151.33.188:445/testbucket?prefix=opensearch%2F145bf5eb-f7df-458f-9f7d-407580404a75%2F&encoding-type=url [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1000)
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:511 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.25.1 Python/3.12.3 (Linux-6.14.0-37-generic-x86_64-with-glibc2.39)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e75a15b0-ff15-11f0-8667-00163eea2d80'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:547 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': '2b5602c3-201e-00cd-5522-938238000000'
+    'x-ms-client-request-id': 'e75a15b0-ff15-11f0-8667-00163eea2d80'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Sun, 01 Feb 2026 02:29:58 GMT'
