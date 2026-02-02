@@ -319,6 +319,13 @@ async def test_setup_large_cluster(ops_test: OpsTest, charm, series, microk8s_mo
         f"{DATA_APP}:opensearch-client", f"{DATA_INTEGRATOR_NAME}:opensearch"
     )
 
+    # Let Juju settle while the cluster forms TLS + security index + peer orchestration
+    await ops_test.model.wait_for_idle(
+        apps = [MAIN_APP, DATA_APP, FAILOVER_APP, DATA_INTEGRATOR_NAME],
+        timeout = 3600,
+        raise_on_error = False,
+    )
+
     await wait_until(
         ops_test,
         apps=[MAIN_APP, DATA_APP, FAILOVER_APP],

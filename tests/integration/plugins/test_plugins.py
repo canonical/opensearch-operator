@@ -138,6 +138,17 @@ async def _wait_for_units(
         )
 
 
+def _get_relation_id(model, endpoint1: str, endpoint2: str) -> int:
+    """Return relation id for endpoints like 'app:relation'."""
+    app1, rel1 = endpoint1.split(":")
+    app2, rel2 = endpoint2.split(":")
+    for rel in model.relations:
+        eps = {(e.application_name, e.name) for e in rel.endpoints}
+        if (app1, rel1) in eps and (app2, rel2) in eps:
+            return rel.id
+    raise RuntimeError(f"Relation not found between {endpoint1} and {endpoint2}")
+
+
 async def _notifications_list_configs(ops_test: OpsTest, base_url: str) -> dict[str, Any]:
     """Fetch all notification configs from the OpenSearch Notifications plugin API.
 
@@ -1597,9 +1608,15 @@ async def test_smtp_relation_when_related_with_smtp_integrator_then_creates_noti
     leader_unit_ip = await get_leader_unit_ip(ops_test)
     base_url = f"https://{leader_unit_ip}:9200"
 
-    smtp_sender_cfg_name = "smtp-sender-no-reply-example-com"
-    email_channel_cfg_name = f"{smtp_sender_cfg_name}_email-channel"
-    email_group_cfg_name = f"{smtp_sender_cfg_name}_recipients"
+    relation_id = _get_relation_id(
+        ops_test.model,
+        f"{APP_NAME}:smtp",
+        f"{SMTP_INTEGRATOR_APP_NAME}:smtp",
+    )
+
+    smtp_sender_cfg_name = f"smtp-{relation_id}_smtp-account"
+    email_channel_cfg_name = f"smtp-{relation_id}_email-channel"
+    email_group_cfg_name = f"smtp-{relation_id}_recipients"
 
     sender_cfg = await _wait_until_config_present(ops_test, base_url, smtp_sender_cfg_name)
     channel_cfg = await _wait_until_config_present(ops_test, base_url, email_channel_cfg_name)
