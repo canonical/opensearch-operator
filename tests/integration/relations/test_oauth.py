@@ -13,7 +13,13 @@ from integration.helpers import CONFIG_OPTS, get_leader_unit_ip
 from integration.helpers_deployments import wait_until
 from juju.client.client import Action
 from juju.model import Model
+from oauth_tools import (
+    ExternalIdpService,
+    deploy_identity_bundle,
+)
 from pytest_operator.plugin import OpsTest
+
+pytest_plugins = ["oauth_tools.fixtures"]
 
 IDENTITY_PLATFORM_NAME = "identity-platform"
 DATA_INTEGRATOR_NAME = "data-integrator"
@@ -52,14 +58,26 @@ async def test_deploy(ops_test: OpsTest, charm, series, microk8s_model: Model):
             DATA_INTEGRATOR_NAME,
             config=DATA_INTEGRATOR_CONFIG,
         ),
-        microk8s_model.deploy(
-            IDENTITY_PLATFORM_NAME,
-            channel="edge",
-            trust=True,
-        ),
     )
     await gather(
         ops_test.model.wait_for_idle(timeout=1000), microk8s_model.wait_for_idle(timeout=1000)
+    )
+
+
+@pytest.mark.abort_on_fail
+@pytest.mark.skip_if_deployed
+async def test_deploy_identity_bundle(
+    ops_test: OpsTest, ops_test_microk8s: OpsTest, ext_idp_service: ExternalIdpService
+):
+    """Deploy identity platform on K8s and wait for both models to complete deployments."""
+    await deploy_identity_bundle(
+        ops_test=ops_test_microk8s,
+        bundle_url="./tests/integration/bundle-iam.yaml",
+        ext_idp_service=ext_idp_service,
+    )
+    await gather(
+        ops_test.model.wait_for_idle(),
+        ops_test_microk8s.model.wait_for_idle(raise_on_error=False),
     )
 
 
