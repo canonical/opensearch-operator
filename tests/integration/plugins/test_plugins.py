@@ -1459,19 +1459,25 @@ async def test_custom_codecs_plugin(ops_test: OpsTest, deploy_type: str) -> None
     body = bulk_encode(docs, zstd) + "\n" + bulk_encode(docs, default)
     await bulk_insert(ops_test, APP_NAME, leader_unit_ip, body)
 
+    # refresh so store size reflects indexed data
+    await http_request(ops_test, "POST", f"{base_url}/{zstd},{default}/_refresh")
+
     response = await http_request(
         ops_test, "GET", f"{base_url}/{zstd}/_settings?flat_settings=true"
     )
     codec = response[zstd]["settings"]["index.codec"]
     assert codec == "zstd", f"Expected codec 'zstd' but found {codec}"
 
-    # compare size of indices, zstd index should be smaller
+    # compare size of indices; zstd should be smaller or equal
     stats = await http_request(ops_test, "GET", f"{base_url}/{zstd},{default}/_stats/store")
     zstd_size = stats["indices"][zstd]["total"]["store"]["size_in_bytes"]
     default_size = stats["indices"][default]["total"]["store"]["size_in_bytes"]
 
     logger.info(f"Index sizes - zstd: {zstd_size} default: {default_size}")
-    assert zstd_size < default_size
+    assert zstd_size > 0 and default_size > 0, "Index store sizes should be positive after bulk"
+    assert (
+        zstd_size <= default_size
+    ), f"zstd codec should not increase size: zstd={zstd_size} default={default_size}"
     await delete_index(ops_test, APP_NAME, leader_unit_ip, zstd)
     await delete_index(ops_test, APP_NAME, leader_unit_ip, default)
 

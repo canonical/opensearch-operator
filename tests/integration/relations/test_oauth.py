@@ -81,7 +81,11 @@ async def test_setup_relations(ops_test: OpsTest, microk8s_model: Model):
         "opensearch:opensearch-client", f"{DATA_INTEGRATOR_NAME}:opensearch"
     )
 
-    await gather(ops_test.model.wait_for_idle(status="active"), microk8s_model.wait_for_idle())
+    # Require identity platform to be active so OAuth setup can succeed
+    await gather(
+        ops_test.model.wait_for_idle(status="active"),
+        microk8s_model.wait_for_idle(status="active", timeout=600),
+    )
 
 
 @pytest.mark.abort_on_fail
@@ -90,6 +94,9 @@ async def test_setup_oauth(ops_test: OpsTest, microk8s_model: Model):
 
     Also, acquire corresponding access token for the further testing.
     """
+    # Ensure Hydra is active before running the action
+    await microk8s_model.wait_for_idle(apps=["hydra"], status="active", timeout=300)
+
     action: Action = (
         await microk8s_model.applications["hydra"]
         .units[0]
@@ -106,9 +113,13 @@ async def test_setup_oauth(ops_test: OpsTest, microk8s_model: Model):
     global oauth_client_id
     oauth_client_id = action.results.get("client-id")
     oauth_client_secret = action.results.get("client-secret")
-    assert (
-        oauth_client_id and oauth_client_secret
-    ), "failed to retrieve oauth client id and secret from hydra"
+    if not (oauth_client_id and oauth_client_secret):
+        msg = (
+            "failed to retrieve oauth client id and secret from hydra; "
+            f"action status={getattr(action, 'status', 'unknown')}, "
+            f"results={action.results}"
+        )
+        raise AssertionError(msg)
 
     action = (
         await microk8s_model.applications["traefik-public"]
