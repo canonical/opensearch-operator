@@ -321,9 +321,9 @@ async def test_setup_large_cluster(ops_test: OpsTest, charm, series, microk8s_mo
 
     # Let Juju settle while the cluster forms TLS + security index + peer orchestration
     await ops_test.model.wait_for_idle(
-        apps = [MAIN_APP, DATA_APP, FAILOVER_APP, DATA_INTEGRATOR_NAME],
-        timeout = 3600,
-        raise_on_error = False,
+        apps=[MAIN_APP, DATA_APP, FAILOVER_APP, DATA_INTEGRATOR_NAME],
+        timeout=3600,
+        raise_on_error=False,
     )
 
     await wait_until(
