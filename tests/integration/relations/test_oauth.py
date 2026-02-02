@@ -54,7 +54,7 @@ async def test_deploy(ops_test: OpsTest, charm, series, microk8s_model: Model):
         ),
         microk8s_model.deploy(
             IDENTITY_PLATFORM_NAME,
-            channel="edge",
+            channel="stable",
             trust=True,
         ),
     )
