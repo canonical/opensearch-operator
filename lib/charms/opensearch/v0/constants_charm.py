@@ -77,6 +77,7 @@ BackupRelConflict = "Too many object storage relations. Only one is supported."
 BackupMisconfiguration = "opensearch {} repository setup failed. Check the {} config."
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
 SecretAccessError = "Failed to access secret, please check permissions."
+SmtpRelationInvalid = "SMTP relation must be established with the main-orchestrator cluster."
 JWTAuthConfigInvalid = (
     "Configuration for JWT authentication is invalid. Check and correct parameters."
 )
@@ -94,7 +95,14 @@ PClusterMainIsRequirer = "Main orchestrator cannot be a requirer"
 InvalidProfileConfigOption = (
     "Invalid profile configuration option. Only `production` and `testing` values are allowed."
 )
-
+SmtpWaitingRecipients = (
+    "SMTP sender configured; waiting for recipients to create email group/channel."
+)
+SmtpNoRelationData = (
+    "Relation to smtp-integrator has no data. Configure smtp-integrator and check unit logs."
+)
+SMTPConfigurationError = "SMTP configuration failed. Check smtp-integrator and unit logs."
+SmtpMissingRequiredParameters = "Parameters missing from smtp-integrator: {}."
 # Maintenance statuses
 InstallProgress = "Installing OpenSearch..."
 SecurityIndexInitProgress = "Initializing the security index..."
@@ -148,6 +156,8 @@ OAUTH_RELATION = "oauth"
 PERFORMANCE_PROFILE = "profile"
 
 JWT_CONFIG_RELATION = "jwt-configuration"
+
+SMTP_SECRET_LABEL = "plugin-notifications"
 
 # GCS Service account JSON
 

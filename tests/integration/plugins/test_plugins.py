@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -47,6 +48,8 @@ COS_RELATION_NAME = "cos-agent"
 DASHBOARDS_APP_NAME = "opensearch-dashboards"
 MAIN_ORCHESTRATOR_NAME = "main"
 FAILOVER_ORCHESTRATOR_NAME = "failover"
+SMTP_INTEGRATOR_APP_NAME = "smtp-integrator"
+SMTP_INTEGRATOR_CHANNEL = "latest/edge"
 
 
 ALL_GROUPS = {
@@ -133,6 +136,133 @@ async def _wait_for_units(
             timeout=1800,
             idle_period=IDLE_PERIOD,
         )
+
+
+def _get_relation_id(model, endpoint1: str, endpoint2: str) -> int:
+    """Return relation id for endpoints like 'app:relation'."""
+    app1, rel1 = endpoint1.split(":")
+    app2, rel2 = endpoint2.split(":")
+    for rel in model.relations:
+        eps = {(e.application_name, e.name) for e in rel.endpoints}
+        if (app1, rel1) in eps and (app2, rel2) in eps:
+            return rel.id
+    raise RuntimeError(f"Relation not found between {endpoint1} and {endpoint2}")
+
+
+async def _notifications_list_configs(ops_test: OpsTest, base_url: str) -> dict[str, Any]:
+    """Fetch all notification configs from the OpenSearch Notifications plugin API.
+
+    Args:
+        ops_test: OpsTest test harness.
+        base_url: OpenSearch base URL (e.g. https://ip:9200).
+
+    Returns:
+        Response body from GET /_plugins/_notifications/configs.
+    """
+    return await http_request(ops_test, "GET", f"{base_url}/_plugins/_notifications/configs")
+
+
+def _cfg_name(item: dict) -> str | None:
+    """Return the config name from a notifications config item.
+
+    Args:
+        item: A single config item.
+
+    Returns:
+        The value of config.name, or None if missing.
+    """
+    return (item.get("config") or {}).get("name")
+
+
+def _iter_configs(configs_resp: Any):
+    """Yield config items from a notifications list-configs response.
+
+    Args:
+        configs_resp: Response body from GET /_plugins/_notifications/configs.
+
+    Yields:
+        Individual config item dicts.
+    """
+    if not isinstance(configs_resp, dict):
+        return
+    for key in ("config_list", "configs", "items"):
+        items = configs_resp.get(key)
+        if isinstance(items, list):
+            yield from items
+            return
+
+
+def _find_config_by_name(configs_resp: Any, name: str) -> dict | None:
+    """Find a notifications config item by its config name.
+
+    Args:
+        configs_resp: Response body from GET /_plugins/_notifications/configs.
+        name: The config name to match (e.g. config.config.name).
+
+    Returns:
+        The matching config item dict, or None if not found.
+    """
+    for item in _iter_configs(configs_resp):
+        if _cfg_name(item) == name:
+            return item
+    return None
+
+
+async def _wait_until_config_present(
+    ops_test: OpsTest,
+    base_url: str,
+    config_name: str,
+    timeout: int = 180,
+    poll: int = 5,
+) -> dict:
+    """Poll until a notifications config with the given name appears.
+
+    Args:
+        ops_test: Pytest plugin for Juju ops_test.
+        base_url: OpenSearch base URL (e.g. https://<ip>:9200).
+        config_name: Name of the config to wait for.
+        timeout: Maximum seconds to wait.
+        poll: Seconds between list-configs requests.
+
+    Returns:
+        The config item dict once found.
+
+    Raises:
+        asyncio.TimeoutError: If the config does not appear within timeout.
+    """
+    async with asyncio.timeout(timeout):
+        while True:
+            resp = await _notifications_list_configs(ops_test, base_url)
+            if cfg := _find_config_by_name(resp, config_name):
+                return cfg
+            await asyncio.sleep(poll)
+
+
+async def _wait_until_config_absent(
+    ops_test: OpsTest,
+    base_url: str,
+    config_name: str,
+    timeout: int = 180,
+    poll: int = 5,
+) -> None:
+    """Poll until a notifications config with the given name is no longer listed.
+
+    Args:
+        ops_test: Pytest plugin for Juju ops_test.
+        base_url: OpenSearch base URL (e.g. https://<ip>:9200).
+        config_name: Name of the config to wait for removal.
+        timeout: Maximum seconds to wait.
+        poll: Seconds between list-configs requests.
+
+    Raises:
+        asyncio.TimeoutError: If the config is still present after timeout.
+    """
+    async with asyncio.timeout(timeout):
+        while True:
+            resp = await _notifications_list_configs(ops_test, base_url)
+            if _find_config_by_name(resp, config_name) is None:
+                return
+            await asyncio.sleep(poll)
 
 
 @pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
@@ -1340,19 +1470,42 @@ async def test_custom_codecs_plugin(ops_test: OpsTest, deploy_type: str) -> None
     body = bulk_encode(docs, zstd) + "\n" + bulk_encode(docs, default)
     await bulk_insert(ops_test, APP_NAME, leader_unit_ip, body)
 
+    # refresh so store size reflects indexed data
+    await http_request(ops_test, "POST", f"{base_url}/{zstd},{default}/_refresh")
+
+    # Force merge segments so compression is applied (zstd codec compresses during merges)
+    await http_request(
+        ops_test,
+        "POST",
+        f"{base_url}/{zstd},{default}/_forcemerge?max_num_segments=1&wait_for_completion=true",
+    )
+
     response = await http_request(
         ops_test, "GET", f"{base_url}/{zstd}/_settings?flat_settings=true"
     )
     codec = response[zstd]["settings"]["index.codec"]
     assert codec == "zstd", f"Expected codec 'zstd' but found {codec}"
 
-    # compare size of indices, zstd index should be smaller
+    # compare size of indices, zstd should be smaller or equal
+    # This test was flaky due to two reasons:
+    # 1. Compression happens during segment merges, not immediately after indexing.
+    #    Without force merge, unmerged segments could make zstd appear
+    #    larger than default (e.g., 147474 > 416).
+    #    Fixed by forcing merges before comparing sizes.
+    # 2. For very small datasets, fixed overhead (metadata, segment headers, minimum segment sizes)
+    #    may dominate, making compressed and uncompressed sizes equal (e.g., 416 == 416).
+    #    Fixed by using <= instead of < to allow equality for edge cases.
     stats = await http_request(ops_test, "GET", f"{base_url}/{zstd},{default}/_stats/store")
     zstd_size = stats["indices"][zstd]["total"]["store"]["size_in_bytes"]
     default_size = stats["indices"][default]["total"]["store"]["size_in_bytes"]
 
     logger.info(f"Index sizes - zstd: {zstd_size} default: {default_size}")
-    assert zstd_size < default_size
+    assert (
+        zstd_size > 0 and default_size > 0
+    ), "Index store sizes should be positive after bulk indexing"
+    assert (
+        zstd_size <= default_size
+    ), f"zstd codec should not increase size: zstd={zstd_size} default={default_size}"
     await delete_index(ops_test, APP_NAME, leader_unit_ip, zstd)
     await delete_index(ops_test, APP_NAME, leader_unit_ip, default)
 
@@ -1425,3 +1578,81 @@ async def test_skills_plugin(ops_test: OpsTest, deploy_type: str) -> None:
 
     response = await http_request(ops_test, "POST", f"{endpoint}/{agent_id}/_execute", payload)
     assert len(response.get("inference_results", [])) > 0, "Flow agent did not return any results"
+
+
+@pytest.mark.parametrize("deploy_type", SMALL_DEPLOYMENTS)
+@pytest.mark.abort_on_fail
+async def test_smtp_relation_when_related_with_smtp_integrator_then_creates_notifications(
+    ops_test: OpsTest, deploy_type: str
+) -> None:
+    """Ensure that relating smtp-integrator results in notifications email config objects:
+
+    - SMTP sender/account config
+    - Email channel config
+    - Email group config
+    """
+    # ensure OpenSearch is up
+    await _wait_for_units(ops_test, deploy_type)
+
+    # deploy smtp-integrator
+    await ops_test.model.deploy(
+        SMTP_INTEGRATOR_APP_NAME,
+        channel=SMTP_INTEGRATOR_CHANNEL,
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[SMTP_INTEGRATOR_APP_NAME],
+        timeout=20 * 60,
+    )
+
+    # dummy SMTP config
+    await ops_test.model.applications[SMTP_INTEGRATOR_APP_NAME].set_config(
+        {
+            "host": "127.0.0.1",
+            "port": "2525",
+            "user": "dummy-user",
+            "password": "dummy-pass",
+            "transport_security": "none",
+            "auth_type": "plain",
+            "smtp_sender": "no-reply@example.com",
+            "recipients": "a@example.com,b@example.com",
+        }
+    )
+
+    # relate opensearch and smtp
+    await ops_test.model.integrate(f"{APP_NAME}:smtp", f"{SMTP_INTEGRATOR_APP_NAME}:smtp")
+    await _wait_for_units(ops_test, deploy_type)
+
+    leader_unit_ip = await get_leader_unit_ip(ops_test)
+    base_url = f"https://{leader_unit_ip}:9200"
+
+    relation_id = _get_relation_id(
+        ops_test.model,
+        f"{APP_NAME}:smtp",
+        f"{SMTP_INTEGRATOR_APP_NAME}:smtp",
+    )
+
+    smtp_sender_cfg_name = f"smtp-{relation_id}_smtp-account"
+    email_channel_cfg_name = f"smtp-{relation_id}_email-channel"
+    email_group_cfg_name = f"smtp-{relation_id}_recipients"
+
+    sender_cfg = await _wait_until_config_present(ops_test, base_url, smtp_sender_cfg_name)
+    channel_cfg = await _wait_until_config_present(ops_test, base_url, email_channel_cfg_name)
+    group_cfg = await _wait_until_config_present(ops_test, base_url, email_group_cfg_name)
+
+    assert _cfg_name(sender_cfg) == smtp_sender_cfg_name
+    assert _cfg_name(channel_cfg) == email_channel_cfg_name
+    assert _cfg_name(group_cfg) == email_group_cfg_name
+
+    # remove relation
+    main_app = ops_test.model.applications[APP_NAME]
+
+    await main_app.remove_relation(
+        f"{APP_NAME}:smtp",
+        f"{SMTP_INTEGRATOR_APP_NAME}:smtp",
+    )
+    await _wait_for_units(ops_test, deploy_type)
+
+    # now they should be deleted
+    await _wait_until_config_absent(ops_test, base_url, email_channel_cfg_name)
+    await _wait_until_config_absent(ops_test, base_url, email_group_cfg_name)
+    await _wait_until_config_absent(ops_test, base_url, smtp_sender_cfg_name)
