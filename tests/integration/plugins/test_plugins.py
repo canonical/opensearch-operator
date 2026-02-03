@@ -1473,19 +1473,41 @@ async def test_custom_codecs_plugin(ops_test: OpsTest, deploy_type: str) -> None
     # refresh so store size reflects indexed data
     await http_request(ops_test, "POST", f"{base_url}/{zstd},{default}/_refresh")
 
+    # Force merge segments so compression is applied (zstd codec compresses during merges)
+    await http_request(
+        ops_test,
+        "POST",
+        f"{base_url}/{zstd}/_forcemerge?max_num_segments=1&wait_for_completion=true",
+    )
+    await http_request(
+        ops_test,
+        "POST",
+        f"{base_url}/{default}/_forcemerge?max_num_segments=1&wait_for_completion=true",
+    )
+
     response = await http_request(
         ops_test, "GET", f"{base_url}/{zstd}/_settings?flat_settings=true"
     )
     codec = response[zstd]["settings"]["index.codec"]
     assert codec == "zstd", f"Expected codec 'zstd' but found {codec}"
 
-    # compare size of indices; zstd should be smaller or equal
+    # compare size of indices, zstd should be smaller or equal
+    # This test was flaky due to two reasons:
+    # 1. Compression happens during segment merges, not immediately after indexing.
+    #    Without force merge, unmerged segments could make zstd appear
+    #    larger than default (e.g., 147474 > 416).
+    #    Fixed by forcing merges before comparing sizes.
+    # 2. For very small datasets, fixed overhead (metadata, segment headers, minimum segment sizes)
+    #    may dominate, making compressed and uncompressed sizes equal (e.g., 416 == 416).
+    #    Fixed by using <= instead of < to allow equality for edge cases.
     stats = await http_request(ops_test, "GET", f"{base_url}/{zstd},{default}/_stats/store")
     zstd_size = stats["indices"][zstd]["total"]["store"]["size_in_bytes"]
     default_size = stats["indices"][default]["total"]["store"]["size_in_bytes"]
 
     logger.info(f"Index sizes - zstd: {zstd_size} default: {default_size}")
-    assert zstd_size > 0 and default_size > 0, "Index store sizes should be positive after bulk"
+    assert (
+        zstd_size > 0 and default_size > 0
+    ), "Index store sizes should be positive after bulk indexing"
     assert (
         zstd_size <= default_size
     ), f"zstd codec should not increase size: zstd={zstd_size} default={default_size}"
