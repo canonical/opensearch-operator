@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Deploy a three-unit Charmed OpenSearch cluster with Juju using performance profiles for optimal resource usage."
+---
+
 (tutorial-2-deploy-opensearch)=
 # 2. Deploy OpenSearch
 

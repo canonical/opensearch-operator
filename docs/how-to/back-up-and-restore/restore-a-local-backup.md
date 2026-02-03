@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Restore Charmed OpenSearch data from local S3-compatible backups to recover from failures or data corruption."
+---
+
 (how-to-restore-a-local-backup)=
 # How to restore a local backup
 

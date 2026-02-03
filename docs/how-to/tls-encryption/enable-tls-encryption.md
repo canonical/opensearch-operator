@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Enable TLS encryption in Charmed OpenSearch using self-signed certificates or X.509 certificate authorities for secure communication."
+---
+
 (how-to-enable-tls-encryption)=
 # How to enable TLS encryption
 

@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Learn how to set up your development environment with LXD and Juju to deploy Charmed OpenSearch on Ubuntu."
+---
+
 (tutorial-1-set-up-the-environment)=
 # 1. Set up the environment
 

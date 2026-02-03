@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Minimum software and hardware requirements for deploying Charmed OpenSearch including Ubuntu, Juju, LXD, and storage specifications."
+---
+
 (reference-system-requirements)=
 # System requirements
 

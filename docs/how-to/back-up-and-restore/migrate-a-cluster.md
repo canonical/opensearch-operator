@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Migrate your Charmed OpenSearch cluster by restoring backups from a different cluster to a new deployment."
+---
+
 (how-to-migrate-a-cluster)=
 # How to migrate to a new cluster via restore
 

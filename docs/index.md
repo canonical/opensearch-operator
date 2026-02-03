@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Deploy and manage OpenSearch clusters with automated operations, TLS encryption, backups, and horizontal scaling on any cloud using Juju."
+---
+
 (index)=
 # Charmed OpenSearch Documentation
 

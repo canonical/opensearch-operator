@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Remove your Charmed OpenSearch deployment and clean up Juju resources to free up system resources after completing the tutorial."
+---
+
 (tutorial-7-clean-up-the-environment)=
 # 7. Clean up the environment
 

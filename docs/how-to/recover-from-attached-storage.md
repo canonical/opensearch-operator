@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Reuse and recover OpenSearch data from Juju-managed disks containing existing cluster metadata and data."
+---
+
 (how-to-recover-from-attached-storage)=
 # How to recover from attached storage
 

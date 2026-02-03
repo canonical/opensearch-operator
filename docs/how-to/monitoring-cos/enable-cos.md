@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Enable monitoring for Charmed OpenSearch by integrating with COS Lite bundle, Grafana, Loki, and Prometheus."
+---
+
 (how-to-monitoring-enable-cos)=
 # How to enable monitoring (COS)
 

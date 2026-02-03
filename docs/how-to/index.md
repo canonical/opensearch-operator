@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Step-by-step guides for deploying, managing, and maintaining Charmed OpenSearch including TLS, backups, monitoring, and scaling."
+---
+
 (how-to-index)=
 # How-to guides
 

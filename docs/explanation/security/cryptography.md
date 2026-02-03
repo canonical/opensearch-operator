@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Understand cryptography implementation in Charmed OpenSearch including resource checksums, source verification, and SHA validation."
+---
+
 (explanation-security-cryptography)=
 # Cryptography
 
