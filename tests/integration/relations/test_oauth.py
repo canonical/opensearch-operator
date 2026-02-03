@@ -13,7 +13,13 @@ from integration.helpers import CONFIG_OPTS, get_leader_unit_ip
 from integration.helpers_deployments import wait_until
 from juju.client.client import Action
 from juju.model import Model
+from oauth_tools import (
+    ExternalIdpService,
+    deploy_identity_bundle,
+)
 from pytest_operator.plugin import OpsTest
+
+pytest_plugins = ["oauth_tools.fixtures"]
 
 IDENTITY_PLATFORM_NAME = "identity-platform"
 DATA_INTEGRATOR_NAME = "data-integrator"
@@ -52,14 +58,26 @@ async def test_deploy(ops_test: OpsTest, charm, series, microk8s_model: Model):
             DATA_INTEGRATOR_NAME,
             config=DATA_INTEGRATOR_CONFIG,
         ),
-        microk8s_model.deploy(
-            IDENTITY_PLATFORM_NAME,
-            channel="edge",
-            trust=True,
-        ),
     )
     await gather(
         ops_test.model.wait_for_idle(timeout=1000), microk8s_model.wait_for_idle(timeout=1000)
+    )
+
+
+@pytest.mark.abort_on_fail
+@pytest.mark.skip_if_deployed
+async def test_deploy_identity_bundle(
+    ops_test: OpsTest, ops_test_microk8s: OpsTest, ext_idp_service: ExternalIdpService
+):
+    """Deploy identity platform on K8s and wait for both models to complete deployments."""
+    await deploy_identity_bundle(
+        ops_test=ops_test_microk8s,
+        bundle_url="./tests/integration/bundle-iam.yaml",
+        ext_idp_service=ext_idp_service,
+    )
+    await gather(
+        ops_test.model.wait_for_idle(),
+        ops_test_microk8s.model.wait_for_idle(raise_on_error=False),
     )
 
 
@@ -81,7 +99,11 @@ async def test_setup_relations(ops_test: OpsTest, microk8s_model: Model):
         "opensearch:opensearch-client", f"{DATA_INTEGRATOR_NAME}:opensearch"
     )
 
-    await gather(ops_test.model.wait_for_idle(status="active"), microk8s_model.wait_for_idle())
+    # Require identity platform to be active so OAuth setup can succeed
+    await gather(
+        ops_test.model.wait_for_idle(status="active"),
+        microk8s_model.wait_for_idle(status="active", timeout=600),
+    )
 
 
 @pytest.mark.abort_on_fail
@@ -90,6 +112,9 @@ async def test_setup_oauth(ops_test: OpsTest, microk8s_model: Model):
 
     Also, acquire corresponding access token for the further testing.
     """
+    # Ensure Hydra is active before running the action
+    await microk8s_model.wait_for_idle(apps=["hydra"], status="active", timeout=300)
+
     action: Action = (
         await microk8s_model.applications["hydra"]
         .units[0]
@@ -106,9 +131,13 @@ async def test_setup_oauth(ops_test: OpsTest, microk8s_model: Model):
     global oauth_client_id
     oauth_client_id = action.results.get("client-id")
     oauth_client_secret = action.results.get("client-secret")
-    assert (
-        oauth_client_id and oauth_client_secret
-    ), "failed to retrieve oauth client id and secret from hydra"
+    if not (oauth_client_id and oauth_client_secret):
+        msg = (
+            "failed to retrieve oauth client id and secret from hydra; "
+            f"action status={getattr(action, 'status', 'unknown')}, "
+            f"results={action.results}"
+        )
+        raise AssertionError(msg)
 
     action = (
         await microk8s_model.applications["traefik-public"]
@@ -290,13 +319,15 @@ async def test_setup_large_cluster(ops_test: OpsTest, charm, series, microk8s_mo
         f"{DATA_APP}:opensearch-client", f"{DATA_INTEGRATOR_NAME}:opensearch"
     )
 
+    # Let Juju settle while the cluster forms TLS + security index + peer orchestration
     await wait_until(
         ops_test,
-        apps=[MAIN_APP, DATA_APP, FAILOVER_APP],
+        apps=[MAIN_APP, DATA_APP, FAILOVER_APP, DATA_INTEGRATOR_NAME],
         apps_full_statuses={
             MAIN_APP: {"active": []},
             DATA_APP: {"active": []},
             FAILOVER_APP: {"active": []},
+            DATA_INTEGRATOR_NAME: {"active": []},
         },
         units_statuses=["active"],
         wait_for_exact_units={app: units for app, units in APP_UNITS.items()},
