@@ -46,6 +46,17 @@ if TYPE_CHECKING:
     from charms.opensearch.v0.opensearch_base_charm import OpenSearchBaseCharm
 
 
+# The unique Charmhub library identifier, never change it
+LIBID = "fe35a0fa3a02488782bf33df2f0b9474"
+
+# Increment this major API version when introducing breaking changes
+LIBAPI = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
+
+
 class NotificationsEvents(Object):
     """Events handler for smtp events"""
 
