@@ -1477,12 +1477,7 @@ async def test_custom_codecs_plugin(ops_test: OpsTest, deploy_type: str) -> None
     await http_request(
         ops_test,
         "POST",
-        f"{base_url}/{zstd}/_forcemerge?max_num_segments=1&wait_for_completion=true",
-    )
-    await http_request(
-        ops_test,
-        "POST",
-        f"{base_url}/{default}/_forcemerge?max_num_segments=1&wait_for_completion=true",
+        f"{base_url}/{zstd},{default}/_forcemerge?max_num_segments=1&wait_for_completion=true",
     )
 
     response = await http_request(
