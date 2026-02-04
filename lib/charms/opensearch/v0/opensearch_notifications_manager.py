@@ -21,6 +21,16 @@ from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.smtp_integrator.v0.smtp import SmtpRelationData
 from tenacity import retry, stop_after_attempt, wait_fixed
 
+# The unique Charmhub library identifier, never change it
+LIBID = "b0a8faa47b7e4678a940e47410a4baa4"
+
+# Increment this major API version when introducing breaking changes
+LIBAPI = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
+
 
 class NotificationsClientError(RuntimeError):
     """Raises when Notifications API operations fail."""
