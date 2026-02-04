@@ -14,7 +14,7 @@ to ensure smooth restores.
 
 For security reasons, charm credentials are not stored inside backups.
 So, if you plan to restore to a backup at any point in the future,
-you will need the new user password as well as certificates/keys for your existing cluster.
+you will need the admin user password as well as certificates/keys for the cluster you are restoring into.
 
 You can retrieve the credentials of the admin user with the following command:
 
@@ -93,7 +93,7 @@ backups: |2-
 </details>
 
 (how-to-restore-a-local-backup)=
-## Restore a local backup
+## Restore a backup
 
 To restore a backup that was made from a different cluster, (i.e. cluster migration via restore),
 see [How to migrate to a new cluster](how-to-migrate-a-cluster).
