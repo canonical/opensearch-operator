@@ -4,30 +4,34 @@ myst:
     description: "Enable monitoring for Charmed OpenSearch by integrating with COS Lite bundle, Grafana, Loki, and Prometheus."
 ---
 
-(how-to-monitoring-enable-cos)=
-# How to enable monitoring (COS)
+(how-to-monitoring)=
+# Enable monitoring
 
-```{note}
-All commands are written for juju >= v.`3.1.7`.
-```
+This guide shows how to enable monitoring using Canonical Observability Stack (COS).
 
-## Prerequisites
+The OpenSearch charm uses COS to connect to Grafana and Prometheus to use monitoring,
+alert rules, and log features.
+
+For explanation of monitoring features, see the [Monitoring](explanation-monitoring)
+explanation page.
+
+Prerequisites:
 
 * A deployed [Charmed OpenSearch operator](tutorial-2-deploy-opensearch)
 * A deployed [`cos-lite` bundle in a Kubernetes environment](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s)
 
 ## Offer interfaces via the COS controller
 
-First, we will switch to the COS K8s environment and offer COS interfaces to be cross-model
+First, switch to the COS K8s environment and offer COS interfaces to be cross-model
 integrated with the Charmed OpenSearch model.
 
-To switch to the Kubernetes controller for the COS model, run
+To switch to the Kubernetes controller for the COS model:
 
 ```shell
 juju switch <k8s_cos_controller>:<cos_model_name>
 ```
 
-To offer the COS interfaces, run
+To offer the COS interfaces:
 
 ```shell
 juju offer grafana:grafana-dashboard
@@ -37,16 +41,16 @@ juju offer prometheus:receive-remote-write
 
 ## Consume offers via the OpenSearch model
 
-Next, we will switch to the Charmed OpenSearch model, find offers, and consume them.
+Next, switch to the Charmed OpenSearch model, find offers, and consume them.
 
 We are currently on the Kubernetes controller for the COS model.
-To switch to the OpenSearch model, run
+To switch to the OpenSearch model:
 
 ```shell
 juju switch <db_controller>:<opensearch_model_name>
 ```
 
-To consume offers to be reachable in the current model, run
+To consume offers to be reachable in the current model:
 
 ```shell
 juju consume <k8s_cos_controller>:admin/cos.grafana
@@ -97,7 +101,7 @@ The dashboard provides selectors to filter which cluster to watch at the time.
 
 To connect to the Grafana web interface, follow the
 [Browse dashboards](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s#heading--browse-dashboards)
-section of the MicroK8s "Getting started" guide.
+section of the MicroK8s "Getting started" guide:
 
 ```shell
 juju run grafana/leader get-admin-password --model <k8s_cos_controller>:<cos_model_name>
@@ -107,7 +111,7 @@ juju run grafana/leader get-admin-password --model <k8s_cos_controller>:<cos_mod
 
 After accessing Grafana web interface, select the “Charmed OpenSearch” dashboard.
 
-The dashboard filters for juju-specific elements, e.g. application name, unit, model;
+The dashboard filters for Juju-specific elements, e.g. application name, unit, model;
 and also OpenSearch’s cluster and roles.
 The cluster dropdown lets you choose which cluster’s statistics to display.
 You can also filter the view by selecting specific node roles, including nodes that span different models or applications.
@@ -115,3 +119,12 @@ You can also filter the view by selecting specific node roles, including nodes t
 ![Charmed-Opensearch Dashboard 1|690x342](img/dash1.png)
 
 ![Charmed-Opensearch Dashboard 2|690x324](img/dash2.png)
+
+![Charmed-Opensearch Dashboard 3|690x336](img/cos-1.png)
+
+```{toctree}
+:titlesonly:
+:hidden:
+
+Perform load testing <perform-load-testing>
+```

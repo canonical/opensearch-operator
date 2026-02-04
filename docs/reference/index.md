@@ -12,7 +12,6 @@ and other reference material for fast lookup.
 
 * [Release notes](reference-release-notes-index)
 * [System requirements](reference-system-requirements)
-* [Software testing](reference-software-testing)
 
 Additionally, you can find automatically generated metadata in the following tabs on Charmhub:
 
@@ -30,6 +29,6 @@ Additionally, you can find automatically generated metadata in the following tab
 :hidden:
 
 release-notes/index
-Software testing <software-testing>
+alert-rules
 system-requirements
 ```

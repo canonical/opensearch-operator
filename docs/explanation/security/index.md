@@ -119,7 +119,7 @@ Refer to the
 for more information.
 
 For instructions, see the
-[How to integrate the Charmed OpenSearch deployment with COS](how-to-monitoring-enable-cos) guide.
+[How to integrate the Charmed OpenSearch deployment with COS](how-to-monitoring) guide.
 
 ## Additional resources
 
