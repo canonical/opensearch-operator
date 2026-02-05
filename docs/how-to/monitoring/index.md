@@ -139,7 +139,7 @@ While COS and Grafana provide excellent infrastructure monitoring, metrics, and 
 * **Custom visualizations** - Create charts, graphs, maps, and other visual representations of your data
 * **Dashboard builder** - Combine multiple visualizations into comprehensive, interactive dashboards
 * **Index management** - View, create, and manage your indices and index patterns
-* **Dev Tools** - Run queries and explore your data using the integrated console
+* **{spellexception}`Dev` Tools** - Run queries and explore your data using the integrated console
 * **Advanced features** - Access OpenSearch-specific capabilities like anomaly detection, alerting, and more
 
 **Grafana vs. OpenSearch Dashboards:**
