@@ -14,7 +14,7 @@ alert rules, and log features.
 
 ```{note}
 For exploring and visualizing your indexed data, deploy
-[Charmed OpenSearch Dashboards](https://canonical-charmed-opensearch-dashboards.readthedocs-hosted.com/2/).
+[Charmed OpenSearch Dashboards](https://canonical-charmed-opensearch-dashboards.readthedocs-hosted.com/).
 While COS monitors infrastructure health, OpenSearch Dashboards provides tools for data exploration
 and custom visualizations.
 ```
@@ -131,7 +131,7 @@ You can also filter the view by selecting specific node roles, including nodes t
 
 ## OpenSearch Dashboards for data visualization and exploration
 
-While COS and Grafana provide excellent infrastructure monitoring, metrics, and alerting capabilities, they are focused on operational observability of your OpenSearch cluster itself. For exploring and visualizing the actual data stored in your OpenSearch indices, you should deploy [Charmed OpenSearch Dashboards](https://canonical-charmed-opensearch-dashboards.readthedocs-hosted.com/2/).
+While COS and Grafana provide excellent infrastructure monitoring, metrics, and alerting capabilities focused on the health of your OpenSearch cluster, OpenSearch Dashboards is designed for exploring and visualizing the actual data stored in your indices.
 
 **OpenSearch Dashboards provides:**
 
@@ -149,7 +149,7 @@ While COS and Grafana provide excellent infrastructure monitoring, metrics, and 
 
 For most production deployments, you'll want both: COS/Grafana for operational monitoring and OpenSearch Dashboards for data analytics and visualization.
 
-To get started with OpenSearch Dashboards, see the [Charmed OpenSearch Dashboards documentation](https://canonical-charmed-opensearch-dashboards.readthedocs-hosted.com/2/).
+To get started with OpenSearch Dashboards, see the [Charmed OpenSearch Dashboards documentation](https://canonical-charmed-opensearch-dashboards.readthedocs-hosted.com/).
 
 ```{toctree}
 :titlesonly:
