@@ -1,0 +1,347 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  01:56:06Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch-data                    active     1/2  opensearch                            0  no       
+opensearch-failover                blocked    0/1  opensearch                            1  no       Cannot start. Waiting for peer cluster relation...
+opensearch-main                    blocked    0/1  opensearch                            2  no       Cannot run cluster with current roles. Waiting for data node...
+self-signed-certificates           active     0/1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports  Message
+opensearch-data/0            unknown   lost       3        10.179.33.176          agent lost, see 'juju show-status-log opensearch-data/0'
+opensearch-data/1*           active    executing  4        10.179.33.30           
+opensearch-failover/0*       unknown   lost       2        10.179.33.252          agent lost, see 'juju show-status-log opensearch-failover/0'
+opensearch-main/0*           unknown   lost       1        10.179.33.108          agent lost, see 'juju show-status-log opensearch-main/0'
+self-signed-certificates/0*  unknown   lost       0        10.179.33.50           agent lost, see 'juju show-status-log self-signed-certificates/0'
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        down     10.179.33.50   juju-2a91b6-0  ubuntu@24.04  github-runner  Running
+1        down     10.179.33.108  juju-2a91b6-1  ubuntu@24.04  github-runner  Running
+2        down     10.179.33.252  juju-2a91b6-2  ubuntu@24.04  github-runner  Running
+3        down     10.179.33.176  juju-2a91b6-3  ubuntu@24.04  github-runner  Running
+4        started  10.179.33.30   juju-2a91b6-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 01:46:11 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:46:11 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:46:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:46:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:46:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:46:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:46:30 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:46:30 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:46:32 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:46:32 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:48:06 ERROR unit.self-signed-certificates/0.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:48:10 ERROR unit.self-signed-certificates/0.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-1: 01:48:12 ERROR unit.opensearch-data/1.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:48:12 ERROR unit.opensearch-data/1.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:48:13 ERROR unit.opensearch-data/1.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:48:13 ERROR unit.opensearch-data/1.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:48:15 ERROR unit.opensearch-data/1.juju-log certificates:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:48:15 ERROR unit.opensearch-data/1.juju-log certificates:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:48:16 ERROR unit.opensearch-data/1.juju-log certificates:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:48:16 ERROR unit.opensearch-data/1.juju-log certificates:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:48:16 ERROR unit.opensearch-data/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:48:16 ERROR unit.opensearch-data/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:48:18 ERROR unit.opensearch-data/1.juju-log node-lock-fallback:7: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:48:18 ERROR unit.opensearch-data/1.juju-log node-lock-fallback:7: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:48:18 ERROR unit.opensearch-data/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:48:18 ERROR unit.opensearch-data/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:48:19 ERROR unit.opensearch-data/1.juju-log node-lock-fallback:7: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:48:19 ERROR unit.opensearch-data/1.juju-log node-lock-fallback:7: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:48:19 ERROR unit.opensearch-data/0.juju-log certificates:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:48:19 ERROR unit.opensearch-data/0.juju-log certificates:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 01:48:20 ERROR unit.self-signed-certificates/0.juju-log certificates:10: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 01:48:20 ERROR unit.opensearch-data/0.juju-log certificates:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:48:20 ERROR unit.opensearch-data/0.juju-log certificates:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:48:20 ERROR unit.opensearch-data/1.juju-log opensearch-peers:6: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:48:20 ERROR unit.opensearch-data/1.juju-log opensearch-peers:6: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:48:20 ERROR unit.opensearch-data/1.juju-log opensearch-peers:6: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:48:20 ERROR unit.opensearch-data/1.juju-log opensearch-peers:6: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:48:21 ERROR unit.opensearch-data/0.juju-log node-lock-fallback:7: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:48:21 ERROR unit.opensearch-data/0.juju-log node-lock-fallback:7: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:48:21 ERROR unit.opensearch-data/1.juju-log opensearch-peers:6: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:48:21 ERROR unit.opensearch-data/1.juju-log opensearch-peers:6: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:48:23 ERROR unit.opensearch-data/0.juju-log node-lock-fallback:7: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:48:23 ERROR unit.opensearch-data/0.juju-log node-lock-fallback:7: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:48:23 ERROR unit.opensearch-data/1.juju-log opensearch-peers:6: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:48:23 ERROR unit.opensearch-data/1.juju-log opensearch-peers:6: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:48:23 ERROR unit.opensearch-data/1.juju-log opensearch-peers:6: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:48:23 ERROR unit.opensearch-data/1.juju-log opensearch-peers:6: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:48:24 ERROR unit.opensearch-data/0.juju-log opensearch-peers:6: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:48:24 ERROR unit.opensearch-data/0.juju-log opensearch-peers:6: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:48:24 ERROR unit.opensearch-data/0.juju-log opensearch-peers:6: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:48:24 ERROR unit.opensearch-data/0.juju-log opensearch-peers:6: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:48:24 ERROR unit.opensearch-data/1.juju-log upgrade-version-a:8: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:48:24 ERROR unit.opensearch-data/1.juju-log upgrade-version-a:8: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:48:25 ERROR unit.opensearch-data/0.juju-log opensearch-peers:6: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:48:25 ERROR unit.opensearch-data/0.juju-log opensearch-peers:6: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-failover-0: 01:48:25 ERROR unit.opensearch-failover/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-failover-0: 01:48:25 ERROR unit.opensearch-failover/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-data-1: 01:48:25 ERROR unit.opensearch-data/1.juju-log upgrade-version-a:8: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:48:25 ERROR unit.opensearch-data/1.juju-log upgrade-version-a:8: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:48:26 ERROR unit.opensearch-data/0.juju-log upgrade-version-a:8: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:48:26 ERROR unit.opensearch-data/0.juju-log upgrade-version-a:8: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-failover-0: 01:48:26 ERROR unit.opensearch-failover/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-failover-0: 01:48:27 ERROR unit.opensearch-failover/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-data-1: 01:48:27 ERROR unit.opensearch-data/1.juju-log upgrade-version-a:8: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:48:27 ERROR unit.opensearch-data/1.juju-log upgrade-version-a:8: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:48:28 ERROR unit.opensearch-data/0.juju-log opensearch-peers:6: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:48:28 ERROR unit.opensearch-data/0.juju-log opensearch-peers:6: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:48:28 ERROR unit.opensearch-data/0.juju-log opensearch-peers:6: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:48:28 ERROR unit.opensearch-data/0.juju-log opensearch-peers:6: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-failover-0: 01:48:28 ERROR unit.opensearch-failover/0.juju-log certificates:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-failover-0: 01:48:28 ERROR unit.opensearch-failover/0.juju-log certificates:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-data-0: 01:48:29 ERROR unit.opensearch-data/0.juju-log upgrade-version-a:8: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-failover-0: 01:48:29 ERROR unit.opensearch-failover/0.juju-log certificates:10: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-data-0: 01:48:29 ERROR unit.opensearch-data/0.juju-log upgrade-version-a:8: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-failover-0: 01:48:29 ERROR unit.opensearch-failover/0.juju-log certificates:10: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-data-0: 01:48:30 ERROR unit.opensearch-data/0.juju-log upgrade-version-a:8: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:48:30 ERROR unit.opensearch-data/0.juju-log upgrade-version-a:8: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-failover-0: 01:48:31 ERROR unit.opensearch-failover/0.juju-log opensearch-peers:3: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-failover-0: 01:48:31 ERROR unit.opensearch-failover/0.juju-log opensearch-peers:3: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-failover-0: 01:48:31 ERROR unit.opensearch-failover/0.juju-log opensearch-peers:3: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-failover-0: 01:48:31 ERROR unit.opensearch-failover/0.juju-log opensearch-peers:3: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-failover-0: 01:48:32 ERROR unit.opensearch-failover/0.juju-log upgrade-version-a:5: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-failover-0: 01:48:32 ERROR unit.opensearch-failover/0.juju-log upgrade-version-a:5: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-self-signed-certificates-0: 01:48:41 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-main-0: 01:48:47 ERROR unit.opensearch-main/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:48:47 ERROR unit.opensearch-main/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:48:49 ERROR unit.opensearch-main/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:48:49 ERROR unit.opensearch-main/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-self-signed-certificates-0: 01:48:51 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-main-0: 01:48:51 ERROR unit.opensearch-main/0.juju-log certificates:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:48:51 ERROR unit.opensearch-main/0.juju-log certificates:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:48:52 ERROR unit.opensearch-main/0.juju-log certificates:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:48:52 ERROR unit.opensearch-main/0.juju-log certificates:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:48:55 ERROR unit.opensearch-main/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:48:55 ERROR unit.opensearch-main/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:48:57 ERROR unit.opensearch-main/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:48:57 ERROR unit.opensearch-main/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:48:59 ERROR unit.opensearch-main/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:48:59 ERROR unit.opensearch-main/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:49:00 ERROR unit.opensearch-main/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:49:00 ERROR unit.opensearch-main/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:49:02 ERROR unit.opensearch-main/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:49:02 ERROR unit.opensearch-main/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:49:03 ERROR unit.opensearch-main/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:49:03 ERROR unit.opensearch-main/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:49:05 ERROR unit.opensearch-main/0.juju-log certificates:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:49:05 ERROR unit.opensearch-main/0.juju-log certificates:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:49:07 ERROR unit.opensearch-main/0.juju-log upgrade-version-a:2: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:49:07 ERROR unit.opensearch-main/0.juju-log upgrade-version-a:2: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:49:08 ERROR unit.opensearch-main/0.juju-log opensearch-peers:0: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:49:08 ERROR unit.opensearch-main/0.juju-log opensearch-peers:0: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:49:08 ERROR unit.opensearch-main/0.juju-log opensearch-peers:0: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:49:08 ERROR unit.opensearch-main/0.juju-log opensearch-peers:0: Missing profile requirements: ['At least 1 data nodes are required.']
+machine-2: 01:50:08 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.179.33.252:52748: use of closed network connection
+machine-2: 01:50:08 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-4: 01:50:08 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.179.33.30:45322: use of closed network connection
+machine-4: 01:50:08 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-1: 01:50:08 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.179.33.108:50078: use of closed network connection
+machine-0: 01:50:08 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.179.33.50:42014: use of closed network connection
+machine-0: 01:50:08 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-3: 01:50:08 ERROR juju.worker.dependency "migration-minion" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-3: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-3: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-3: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-3: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-3: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-3: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-3: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-3: 01:50:08 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.179.33.176:51642: use of closed network connection
+machine-3: 01:50:08 ERROR juju.worker.dependency "upgrade-series" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-3: 01:50:08 ERROR juju.worker.dependency "api-address-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-3: 01:50:08 ERROR juju.worker.dependency "valid-credential-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-1: 01:50:08 ERROR juju.worker.dependency "proxy-config-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-3: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:50:08 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-1: 01:50:08 ERROR juju.worker.dependency "machiner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-1: 01:50:08 ERROR juju.worker.dependency "ssh-authkeys-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-3: 01:50:08 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-1: 01:50:08 ERROR juju.worker.dependency "migration-inactive-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-1: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:50:08 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:50:08 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-1: 01:50:11 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-1" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-3: 01:50:11 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-3" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-0: 01:50:11 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-0" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-4: 01:50:11 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-4" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-2: 01:50:11 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-2" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-3: 01:50:15 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-3" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-4: 01:50:15 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-4" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-1: 01:50:15 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-1" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-2: 01:50:15 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-2" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-0: 01:50:15 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-0" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-2: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:50:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.179.33.252:47990: use of closed network connection
+machine-2: 01:50:50 ERROR juju.worker.dependency "migration-minion" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-1: 01:50:50 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-2: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:50:50 ERROR juju.worker.dependency "upgrade-series" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-2: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:50:50 ERROR juju.worker.dependency "machine-action-runner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-2: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:50:50 ERROR juju.worker.dependency "state-converter" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-2: 01:50:50 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-2: 01:50:50 ERROR juju.worker.dependency "reboot-executor" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-2: 01:50:50 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-3: 01:50:50 ERROR juju.worker.dependency "proxy-config-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 01:50:50 ERROR juju.worker.dependency "migration-minion" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-3: 01:50:50 ERROR juju.worker.dependency "machiner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-3: 01:50:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.179.33.176:52940: use of closed network connection
+machine-0: 01:50:50 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-3: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-3: 01:50:50 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-3: 01:50:50 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-4: 01:50:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.179.33.30:44876: use of closed network connection
+machine-4: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-4: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-4: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-4: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-4: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-4: 01:50:50 ERROR juju.worker.dependency "ssh-authkeys-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-4: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-4: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-4: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-4: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-4: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-4: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-4: 01:50:50 ERROR juju.worker.dependency "instance-mutater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-4: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-4: 01:50:50 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-4: 01:50:50 ERROR juju.worker.dependency "machiner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-4: 01:50:50 ERROR juju.worker.dependency "machine-action-runner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-4: 01:50:50 ERROR juju.worker.dependency "upgrade-series" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-4: 01:50:50 ERROR juju.worker.dependency "valid-credential-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-4: 01:50:50 ERROR juju.worker.dependency "state-converter" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-4: 01:50:50 ERROR juju.worker.dependency "reboot-executor" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-4: 01:50:50 ERROR juju.worker.dependency "migration-inactive-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-4: 01:50:50 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-1: 01:50:55 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-1" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-3: 01:50:55 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-3" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-4: 01:50:55 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-4" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-2: 01:50:55 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-2" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-0: 01:50:55 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-0" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-1: 01:51:32 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:51:32 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:51:32 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:51:32 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:51:32 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:51:32 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:51:32 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 01:51:32 ERROR juju.worker.dependency "proxy-config-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-2: 01:51:32 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.179.33.252:41734: use of closed network connection
+machine-1: 01:51:32 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-2: 01:51:32 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:51:32 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:51:32 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:51:32 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-3: 01:51:32 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.179.33.176:53142: use of closed network connection
+machine-2: 01:51:32 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:51:32 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:51:32 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:51:32 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-4: 01:51:32 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-3: 01:51:32 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:51:32 ERROR juju.worker.dependency "machiner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-3: 01:51:32 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-4: 01:51:32 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 01:51:32 ERROR juju.worker.dependency "reboot-executor" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 01:51:32 ERROR juju.worker.dependency "migration-inactive-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-2: 01:51:32 ERROR juju.worker.dependency "machine-action-runner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 01:51:32 ERROR juju.worker.dependency "migration-minion" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-2: 01:51:32 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 01:51:32 ERROR juju.worker.dependency "valid-credential-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-2: 01:51:32 ERROR juju.worker.dependency "ssh-authkeys-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-2: 01:51:32 ERROR juju.worker.dependency "proxy-config-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 01:51:32 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-2: 01:51:32 ERROR juju.worker.dependency "upgrade-series" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-2: 01:51:32 ERROR juju.worker.dependency "reboot-executor" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-2: 01:51:32 ERROR juju.worker.dependency "instance-mutater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-2: 01:51:32 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-4: 01:51:39 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-4" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-2: 01:51:39 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-2" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-0: 01:51:39 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-0" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-1: 01:51:40 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-1" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+machine-3: 01:51:40 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [96419c] "machine-3" cannot open api: unable to connect to API: apiserver shutdown in progress (Service Unavailable)
+unit-opensearch-data-0: 01:51:58 ERROR unit.opensearch-data/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:51:58 ERROR unit.opensearch-data/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-main-0: 01:53:27 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:53:27 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-data-1: 01:53:27 ERROR unit.opensearch-data/1.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:53:27 ERROR unit.opensearch-data/1.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:53:27 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:53:27 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:53:29 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:53:29 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:53:29 ERROR unit.opensearch-data/1.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:53:29 ERROR unit.opensearch-data/1.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-main-0: 01:53:29 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:53:29 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-data-0: 01:53:30 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:53:30 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:53:30 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:53:30 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:53:30 ERROR unit.opensearch-data/1.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:53:30 ERROR unit.opensearch-data/1.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-1: 01:53:30 ERROR unit.opensearch-data/1.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-1: 01:53:30 ERROR unit.opensearch-data/1.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-main-0: 01:53:31 ERROR unit.opensearch-main/0.juju-log opensearch-peers:0: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:53:31 ERROR unit.opensearch-main/0.juju-log opensearch-peers:0: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:53:31 ERROR unit.opensearch-main/0.juju-log opensearch-peers:0: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:53:31 ERROR unit.opensearch-main/0.juju-log opensearch-peers:0: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:53:32 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:53:33 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:53:33 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:53:33 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:53:34 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:53:34 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:53:36 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:53:36 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:53:37 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:53:37 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-data-0: 01:53:55 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:53:55 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:53:55 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:53:55 ERROR unit.opensearch-data/0.juju-log peer-cluster:12: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-main-0: 01:53:57 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:53:57 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:53:57 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:53:57 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-self-signed-certificates-0: 01:53:59 ERROR unit.self-signed-certificates/0.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:54:23 ERROR unit.self-signed-certificates/0.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
