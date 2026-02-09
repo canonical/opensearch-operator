@@ -114,8 +114,10 @@ lint-md: pymarkdownlnt-install
 vale-install: install
 	@. $(VENV); test -d $(SPHINXDIR)/venv/lib/python*/site-packages/vale || pip install rst2html vale
 	@. $(VENV); test -f $(VALE_CONFIG) || python3 $(SPHINXDIR)/get_vale_conf.py
-	@echo "Installing US-only spelling dictionary..."
-	@. $(VENV); python3 $(SPHINXDIR)/get_us_only_dict.py
+	@echo "Installing US-only spelling dictionary from local files..."
+	@mkdir -p $(SPHINXDIR)/styles/config/dictionaries
+	@cp $(SPHINXDIR)/dictionaries/en_US.dic $(SPHINXDIR)/styles/config/dictionaries/en_US.dic
+	@cp $(SPHINXDIR)/dictionaries/en_US.aff $(SPHINXDIR)/styles/config/dictionaries/en_US.aff
 	@echo '.Name=="Canonical.400-Enforce-inclusive-terms"' > $(SPHINXDIR)/styles/woke.filter
 	@echo '.Level=="error" and .Name!="Canonical.500-Repeated-words" and .Name!="Canonical.000-US-spellcheck"' > $(SPHINXDIR)/styles/error.filter
 	@echo '.Name=="Canonical.000-US-spellcheck"' > $(SPHINXDIR)/styles/spelling.filter

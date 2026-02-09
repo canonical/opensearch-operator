@@ -9,17 +9,18 @@ This repository uses a **US-only spelling dictionary** for Vale spell checking t
 **Dictionary**: SCOWL-based Hunspell en_US dictionary  
 **Source**: [wordlist.sourceforge.net](https://wordlist.sourceforge.net/)  
 **Version**: 2020.12.07  
-**License**: Multiple FOSS licenses (MIT-like and public domain)
+**License**: Multiple FOSS licenses (MIT-like and public domain)  
+**Location in repo**: `.sphinx/dictionaries/`
 
 This dictionary is based on SCOWL (Spell Checker Oriented Word Lists), a well-maintained and widely-used open-source project that provides high-quality spelling dictionaries.
 
 ## How It Works
 
 The spelling check is performed by Vale using the Hunspell dictionary format:
-- **Dictionary file**: `.sphinx/styles/config/dictionaries/en_US.dic` (word list)
-- **Affix file**: `.sphinx/styles/config/dictionaries/en_US.aff` (rules for word forms)
+- **Source files**: `.sphinx/dictionaries/en_US.dic` and `.sphinx/dictionaries/en_US.aff` (stored in repository)
+- **Deployed to**: `.sphinx/styles/config/dictionaries/` (copied during vale-install)
 
-The US-only dictionary is automatically downloaded and installed by the `vale-install` target in the Makefile.
+The US-only dictionary files are stored in the repository and copied to the Vale configuration directory when running `make spelling` or any target that depends on `vale-install`.
 
 ## Running Spell Check
 
@@ -37,24 +38,15 @@ Project-specific terms and proper nouns can be added to `.custom_wordlist.txt` a
 
 ## Verification
 
-The dictionary installation script verifies that:
-- ✓ US spellings are present (color, center, organize, analyze, behavior)
-- ✗ UK spellings are NOT present (colour, centre, organise, analyse, behaviour)
-
-## Manual Dictionary Update
-
-To manually update or reinstall the dictionary:
-
-```bash
-cd docs
-python3 .sphinx/get_us_only_dict.py --overwrite
-```
+The dictionary has been verified to contain:
+- ✓ US spellings: color, center, organize, analyze, behavior, license, defense
+- ✗ UK spellings NOT present: colour, centre, organise, analyse, behaviour, licence, defence
 
 ## Difference from Previous Setup
 
 **Previous**: The dictionary came from the Canonical documentation style guide and contained **both US and UK spellings**, meaning UK variants were not flagged as errors.
 
-**Current**: The dictionary is sourced from SCOWL and contains **only US spellings**, ensuring consistent American English usage and flagging any UK spelling variants.
+**Current**: The dictionary is sourced from SCOWL and contains **only US spellings** (49,569 entries vs 81,536 in the mixed dictionary), ensuring consistent American English usage and flagging any UK spelling variants.
 
 ## Examples of What Will Be Caught
 
@@ -68,3 +60,11 @@ python3 .sphinx/get_us_only_dict.py --overwrite
 | licence (noun)      | license              |
 | defence             | defense              |
 | programme           | program              |
+
+## Updating the Dictionary
+
+The dictionary files are stored in the repository at `.sphinx/dictionaries/`. To update to a newer version:
+
+1. Download the latest en_US dictionary from https://wordlist.sourceforge.net/
+2. Replace the files in `.sphinx/dictionaries/`
+3. Commit the updated dictionary files
