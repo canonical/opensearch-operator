@@ -70,6 +70,7 @@ variable "self-signed-certificates" {
     channel     = optional(string, "1/stable")
     revision    = optional(string, null)
     base        = optional(string, "ubuntu@24.04")
+    units       = optional(number, 1)
     constraints = optional(string, "arch=amd64")
     machines    = optional(list(string), [])
     config      = optional(map(string), { "ca-common-name" : "CA" })
