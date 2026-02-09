@@ -1,0 +1,60 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  01:41:14Z
+
+App                       Version  Status       Scale  Charm                     Channel   Rev  Exposed  Message
+application                        unknown          1  application                           0  no       
+opensearch                         maintenance      3  opensearch                            0  no       Installing OpenSearch...
+opensearch-dashboards              maintenance      1  opensearch-dashboards     2/edge     59  no       installing Opensearch Dashboards...
+self-signed-certificates           active           1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports  Message
+application/0*               unknown      idle       2        10.3.174.198           
+opensearch-dashboards/0*     maintenance  executing  1        10.3.174.42            (install) installing Opensearch Dashboards...
+opensearch/0*                maintenance  executing  3        10.3.174.127           (install) Installing OpenSearch...
+opensearch/1                 maintenance  executing  4        10.3.174.69            (install) Installing OpenSearch...
+opensearch/2                 maintenance  executing  5        10.3.174.158           (install) Installing OpenSearch...
+self-signed-certificates/0*  active       idle       0        10.3.174.125           
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.3.174.125  juju-960f23-0  ubuntu@24.04  github-runner  Running
+1        started  10.3.174.42   juju-960f23-1  ubuntu@22.04  github-runner  Running
+2        started  10.3.174.198  juju-960f23-2  ubuntu@22.04  github-runner  Running
+3        started  10.3.174.127  juju-960f23-3  ubuntu@24.04  github-runner  Running
+4        started  10.3.174.69   juju-960f23-4  ubuntu@24.04  github-runner  Running
+5        down     10.3.174.158  juju-960f23-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 01:39:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:39:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:40:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:40:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:40:21 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:40:21 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:40:22 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:40:22 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:40:25 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+machine-4: 01:40:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:40:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:40:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:40:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:41:10 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.3.174.69:36992: use of closed network connection
+machine-2: 01:41:10 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.3.174.198:41766: use of closed network connection
+machine-1: 01:41:10 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.3.174.42:49212: use of closed network connection
+machine-0: 01:41:10 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.3.174.125:35184: use of closed network connection
+machine-3: 01:41:10 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.3.174.127:57120: use of closed network connection
+machine-1: 01:41:10 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-0: 01:41:10 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-3: 01:41:10 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-2: 01:41:10 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 01:41:10 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 01:41:10 ERROR juju.worker.dependency "proxy-config-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-5: 01:41:10 ERROR juju.worker.dependency "machine-action-runner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-5: 01:41:10 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-2: 01:41:10 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-2: 01:41:10 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-4: 01:41:10 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
