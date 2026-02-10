@@ -1,0 +1,129 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:34:10Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+grafana-agent                      blocked      3  grafana-agent             1/stable  605  no       Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch                         active       3  opensearch                            0  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0*                active    idle   1        10.98.158.12    9200/tcp  
+  grafana-agent/0*           blocked   idle            10.98.158.12              Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/1                 active    idle   2        10.98.158.7     9200/tcp  
+  grafana-agent/2            blocked   idle            10.98.158.7               Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/2                 active    idle   3        10.98.158.23    9200/tcp  
+  grafana-agent/1            blocked   idle            10.98.158.23              Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+self-signed-certificates/0*  active    idle   0        10.98.158.155             
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.98.158.155  juju-6c9006-0  ubuntu@24.04  github-runner  Running
+1        started  10.98.158.12   juju-6c9006-1  ubuntu@24.04  github-runner  Running
+2        started  10.98.158.7    juju-6c9006-2  ubuntu@24.04  github-runner  Running
+3        started  10.98.158.23   juju-6c9006-3  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 02:14:03 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:14:03 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:14:11 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:14:11 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:14:12 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:14:12 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:14:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:14:14 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:15:09 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:15:24 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:16:18 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:16:20 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:16:26 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:16:28 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:16:31 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:16:32 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:17:27 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:18:27 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:19:29 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-grafana-agent-0: 02:19:36 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/0: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-1: 02:19:36 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/1: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-2: 02:19:37 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/2: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-self-signed-certificates-0: 02:20:20 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:21:29 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:22:30 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:23:27 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+machine-4: 02:24:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:24:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:24:37 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:24:58 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:25:00 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-dashboards-0: 02:25:02 ERROR unit.opensearch-dashboards/0.juju-log Request GET to http://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x749e23ea4230>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:25:03 ERROR unit.opensearch-dashboards/0.juju-log Request GET to http://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x72c0c30a8140>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:25:04 ERROR unit.opensearch-dashboards/0.juju-log Request GET to http://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x737a069ca1e0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:25:06 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a52721c3290>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:25:10 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a527219aa50>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:25:15 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a5272198500>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:25:20 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a5272198bf0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:25:25 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a52721996d0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-self-signed-certificates-0: 02:25:27 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-dashboards-0: 02:25:30 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a5272199370>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:25:35 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a52721990a0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:25:40 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a5272198c20>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:25:45 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a527219aba0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:25:50 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a5272199eb0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:25:55 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a527219a510>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:26:00 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a527219b9e0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:26:05 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a527219a5d0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:26:10 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a5272199940>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:26:15 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a5272198980>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:26:20 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a5272198b00>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:26:25 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a5272198a10>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:26:30 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a527219bd40>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-self-signed-certificates-0: 02:26:34 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-dashboards-0: 02:26:35 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a5272198f20>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:26:40 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7a5272198200>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:26:42 ERROR unit.opensearch-dashboards/0.juju-log opensearch-client:10: Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x76d90b65f7a0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:26:44 ERROR unit.opensearch-dashboards/0.juju-log opensearch-client:10: Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x714f5fb094f0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:26:46 ERROR unit.opensearch-dashboards/0.juju-log opensearch-client:10: Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7ff2175c3fe0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 02:26:48 ERROR unit.opensearch-dashboards/0.juju-log opensearch-client:10: Request GET to https://10.98.158.84:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.98.158.84', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x74bf6e43b320>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-self-signed-certificates-0: 02:27:32 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:28:30 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-1: 02:29:24 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "9f5a69b3-402a-42ef-863d-fed2126c9006:r#10#opensearch-dashboards": settings 9f5a69b3-402a-42ef-863d-fed2126c9006:r#10#opensearch-dashboards not found (not found)
+unit-opensearch-2: 02:31:07 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-grafana-agent-2: 02:31:10 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-1: 02:31:24 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-0: 02:31:31 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-grafana-agent-1: 02:31:37 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-grafana-agent-0: 02:31:41 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 02:31:56 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 02:31:57 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:32:53 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:33:59 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
