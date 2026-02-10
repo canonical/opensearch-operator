@@ -378,18 +378,24 @@ async def test_small_deployment_build_and_deploy(
     if cloud_name == "azure":
         backup_integrator = AZURE_INTEGRATOR
         backup_integrator_channel = AZURE_INTEGRATOR_CHANNEL
+        backup_integrator_revision = None
     elif cloud_name == "gcs":
         backup_integrator = GCS_INTEGRATOR
         backup_integrator_channel = GCS_INTEGRATOR_CHANNEL
+        backup_integrator_revision = 28
     else:
         backup_integrator = S3_INTEGRATOR
         backup_integrator_channel = S3_INTEGRATOR_CHANNEL
-
+        backup_integrator_revision = None
     await asyncio.gather(
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
-        ops_test.model.deploy(backup_integrator, channel=backup_integrator_channel),
+        ops_test.model.deploy(
+            backup_integrator,
+            channel=backup_integrator_channel,
+            revision=backup_integrator_revision,
+        ),
         ops_test.model.deploy(charm, num_units=3, series=series, config=CONFIG_OPTS),
     )
 
