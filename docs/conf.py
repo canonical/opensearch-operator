@@ -301,6 +301,7 @@ extensions = [
 
 exclude_patterns = [
     "doc-cheat-sheet*",
+    "**/README*",
 ]
 
 # Adds custom CSS files, located under 'html_static_path'
