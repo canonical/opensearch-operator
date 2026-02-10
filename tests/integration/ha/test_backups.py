@@ -856,12 +856,15 @@ async def test_restore_to_new_cluster(
     if cloud_name == "azure":
         backup_integrator = AZURE_INTEGRATOR
         backup_integrator_channel = AZURE_INTEGRATOR_CHANNEL
+        backup_integrator_revision = None
     elif cloud_name == "gcs":
         backup_integrator = GCS_INTEGRATOR
         backup_integrator_channel = GCS_INTEGRATOR_CHANNEL
+        backup_integrator_revision = 28
     else:
         backup_integrator = S3_INTEGRATOR
         backup_integrator_channel = S3_INTEGRATOR_CHANNEL
+        backup_integrator_revision = None
 
     logging.info("Destroying the application")
     await asyncio.gather(
@@ -879,7 +882,11 @@ async def test_restore_to_new_cluster(
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
         ),
-        ops_test.model.deploy(backup_integrator, channel=backup_integrator_channel),
+        ops_test.model.deploy(
+            backup_integrator,
+            channel=backup_integrator_channel,
+            revision=backup_integrator_revision,
+        ),
         ops_test.model.deploy(charm, num_units=3, series=series, config=CONFIG_OPTS),
     )
 
@@ -1114,7 +1121,7 @@ async def _ensure_only_gcs_integrator_related(ops_test: OpsTest, app: str) -> No
     await _drop_azure_relation_if_any(ops_test, app)
 
     if GCS_INTEGRATOR not in ops_test.model.applications:
-        await ops_test.model.deploy(GCS_INTEGRATOR, channel=GCS_INTEGRATOR_CHANNEL)
+        await ops_test.model.deploy(GCS_INTEGRATOR, channel=GCS_INTEGRATOR_CHANNEL, revision=28)
         await wait_until(
             ops_test,
             apps=[GCS_INTEGRATOR],
