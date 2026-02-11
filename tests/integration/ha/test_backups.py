@@ -382,7 +382,7 @@ async def test_small_deployment_build_and_deploy(
     elif cloud_name == "gcs":
         backup_integrator = GCS_INTEGRATOR
         backup_integrator_channel = GCS_INTEGRATOR_CHANNEL
-        backup_integrator_revision = 28
+        backup_integrator_revision = 48
     else:
         backup_integrator = S3_INTEGRATOR
         backup_integrator_channel = S3_INTEGRATOR_CHANNEL
@@ -458,7 +458,7 @@ async def test_large_deployment_build_and_deploy(
     elif cloud_name == "gcs":
         backup_integrator = GCS_INTEGRATOR
         backup_integrator_channel = GCS_INTEGRATOR_CHANNEL
-        backup_integrator_revision = 28
+        backup_integrator_revision = 48
     else:
         backup_integrator = S3_INTEGRATOR
         backup_integrator_channel = S3_INTEGRATOR_CHANNEL
@@ -860,7 +860,7 @@ async def test_restore_to_new_cluster(
     elif cloud_name == "gcs":
         backup_integrator = GCS_INTEGRATOR
         backup_integrator_channel = GCS_INTEGRATOR_CHANNEL
-        backup_integrator_revision = 28
+        backup_integrator_revision = 48
     else:
         backup_integrator = S3_INTEGRATOR
         backup_integrator_channel = S3_INTEGRATOR_CHANNEL
