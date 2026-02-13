@@ -12,6 +12,13 @@ This guide shows how to enable monitoring using Canonical Observability Stack (C
 The OpenSearch charm uses COS to connect to Grafana and Prometheus to use monitoring,
 alert rules, and log features.
 
+```{note}
+For exploring and visualizing your indexed data, deploy
+[Charmed OpenSearch Dashboards](https://canonical-charmed-opensearch-dashboards.readthedocs-hosted.com/).
+While COS monitors infrastructure health, OpenSearch Dashboards provides tools for data exploration
+and custom visualizations.
+```
+
 For explanation of monitoring features, see the [Monitoring](explanation-monitoring)
 explanation page.
 
@@ -121,6 +128,28 @@ You can also filter the view by selecting specific node roles, including nodes t
 ![Charmed-Opensearch Dashboard 2|690x324](img/dash2.png)
 
 ![Charmed-Opensearch Dashboard 3|690x336](img/cos-1.png)
+
+## OpenSearch Dashboards for data visualization and exploration
+
+While COS and Grafana provide excellent infrastructure monitoring, metrics, and alerting capabilities focused on the health of your OpenSearch cluster, OpenSearch Dashboards is designed for exploring and visualizing the actual data stored in your indices.
+
+**OpenSearch Dashboards provides:**
+
+* **Interactive data exploration** - Query and filter your indexed data with an intuitive interface
+* **Custom visualizations** - Create charts, graphs, maps, and other visual representations of your data
+* **Dashboard builder** - Combine multiple visualizations into comprehensive, interactive dashboards
+* **Index management** - View, create, and manage your indices and index patterns
+* **{spellexception}`Dev` Tools** - Run queries and explore your data using the integrated console
+* **Advanced features** - Access OpenSearch-specific capabilities like anomaly detection, alerting, and more
+
+**Grafana vs. OpenSearch Dashboards:**
+
+* **Grafana** (via COS) - Best for monitoring cluster health, performance metrics, resource usage, and operational alerts
+* **OpenSearch Dashboards** - Best for exploring your business/application data, creating custom analytics, and building user-facing dashboards
+
+For most production deployments, you'll want both: COS/Grafana for operational monitoring and OpenSearch Dashboards for data analytics and visualization.
+
+To get started with OpenSearch Dashboards, see the [Charmed OpenSearch Dashboards documentation](https://canonical-charmed-opensearch-dashboards.readthedocs-hosted.com/).
 
 ```{toctree}
 :titlesonly:
