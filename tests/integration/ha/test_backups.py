@@ -1121,7 +1121,7 @@ async def _ensure_only_gcs_integrator_related(ops_test: OpsTest, app: str) -> No
     await _drop_azure_relation_if_any(ops_test, app)
 
     if GCS_INTEGRATOR not in ops_test.model.applications:
-        await ops_test.model.deploy(GCS_INTEGRATOR, channel=GCS_INTEGRATOR_CHANNEL, revision=28)
+        await ops_test.model.deploy(GCS_INTEGRATOR, channel=GCS_INTEGRATOR_CHANNEL, revision=63)
         await wait_until(
             ops_test,
             apps=[GCS_INTEGRATOR],
