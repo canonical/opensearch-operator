@@ -52,6 +52,11 @@ parts:
     after:
       - poetry-deps
     poetry-export-extra-args: ['--only', 'main,charm-libs']
+    build-environment:
+      # Ensure pip build isolation env has a setuptools that provides `pkg_resources`
+      - PIP_CONSTRAINT: "$CRAFT_PROJECT_DIR/pip-constraints.txt"
+      # Force pip to not "reuse" preinstalled distro setuptools without pkg_resources
+      - PIP_IGNORE_INSTALLED: "1"
     build-packages:
       - libffi-dev  # Needed to build Python dependencies with Rust from source
       - libssl-dev  # Needed to build Python dependencies with Rust from source
@@ -74,7 +79,7 @@ parts:
       # rpds-py (Python package) >=0.19.0 requires rustc >=1.76, which is not available in the
       # Ubuntu 22.04 archive. Install rustc and cargo using rustup instead of the Ubuntu archive
       rustup set profile minimal
-      rustup default 1.92.0  # renovate: charmcraft-rust-latest
+      rustup default 1.93.0  # renovate: charmcraft-rust-latest
 
       craftctl default
       # Include requirements.txt in *.charm artifact for easier debugging
