@@ -118,6 +118,15 @@ class ObjectStorageType(str, Enum):
     CONFLICT = "conflict"
 
 
+class ObjectStorageConfigValidationError(Exception):
+    """Raise when relation data is present but fails validation."""
+
+    def __init__(self, object_storage_type: ObjectStorageType, error: ValidationError):
+        super().__init__(str(error))
+        self.object_storage_type = object_storage_type
+        self.error = error
+
+
 class VerifyBackupCredentialsEvent(EventBase):
     """Event to verify backup credentials on main orchestrator leader unit."""
 
@@ -205,9 +214,20 @@ class OpenSearchSnapshotEvents(Object):
         if self.charm.unit.is_leader():
             self.charm.status.clear(BackupRelConflict, app=True)
 
-        object_storage_config = self.charm.snapshots_manager.get_storage_config(
-            object_storage_type
-        )
+        try:
+            object_storage_config = self.charm.snapshots_manager.get_storage_config(
+                object_storage_type
+            )
+        except ObjectStorageConfigValidationError as e:
+            logger.warning(
+                "%s object storage configuration is invalid: %s",
+                e.object_storage_type,
+                e.error,
+            )
+            if self.charm.unit.is_leader():
+                self.charm.status.clear(BackupRelDataIncomplete, app=True)
+                self.charm.status.set(BlockedStatus(BackupCredentialIncorrect), app=True)
+            return
 
         if (
             not object_storage_config
@@ -631,9 +651,19 @@ class OpenSearchSnapshotEvents(Object):
         """Verify that stored backup credentials are still valid."""
         credential_dict = {}
         object_storage_type = self.charm.snapshots_manager.get_storage_type()
-        object_storage_config = self.charm.snapshots_manager.get_storage_config(
-            object_storage_type
-        )
+        try:
+            object_storage_config = self.charm.snapshots_manager.get_storage_config(
+                object_storage_type
+            )
+        except ObjectStorageConfigValidationError as e:
+            logger.warning(
+                "%s object storage configuration is invalid: %s",
+                e.object_storage_type,
+                e.error,
+            )
+            if self.charm.unit.is_leader():
+                self.charm.status.set(BlockedStatus(BackupCredentialIncorrect), app=True)
+            return
 
         if not object_storage_type or not object_storage_config:
             return
@@ -978,6 +1008,10 @@ class OpenSearchSnapshotEvents(Object):
                     return "Object storage configuration not ready."
                 if not self.charm.snapshots_manager.is_repository_created(object_storage_type):
                     return "The opensearch repository could not be created yet."
+            except ObjectStorageConfigValidationError:
+                if self.charm.unit.is_leader():
+                    self.charm.status.set(BlockedStatus(BackupCredentialIncorrect), app=True)
+                return "Object storage credentials are invalid."
             except OpenSearchHttpError as e:
                 return f"Action failed with: {str(e)}."
 
@@ -1080,33 +1114,36 @@ class OpenSearchSnapshotsManager:
             # TODO: Do not get data from the events
             info = self.charm.snapshot_events.s3_requirer.get_s3_connection_info()
 
+            if not info:
+                return None
             try:
-                s3 = S3RelData.from_relation(info) if info else None
+                s3 = S3RelData.from_relation(info)
             except ValidationError as e:
-                logger.warning("validation error while building s3 payload: %s", e)
-                s3 = None
-            return ObjectStorageConfig(s3=s3) if s3 else None
+                raise ObjectStorageConfigValidationError(object_storage_type, e) from e
+            return ObjectStorageConfig(s3=s3)
 
         if object_storage_type == ObjectStorageType.AZURE:
             # TODO: Do not get data from the events
             info = self.charm.snapshot_events.azure_requirer.get_azure_storage_connection_info()
+            if not info:
+                return None
             try:
-                azure = AzureRelData.from_relation(info) if info else None
+                azure = AzureRelData.from_relation(info)
             except ValidationError as e:
-                logger.warning("validation error while building azure payload: %s", e)
-                azure = None
-            return ObjectStorageConfig(azure=azure) if azure else None
+                raise ObjectStorageConfigValidationError(object_storage_type, e) from e
+            return ObjectStorageConfig(azure=azure)
 
         if object_storage_type == ObjectStorageType.GCS:
             # TODO: Do not get data from the events
             gcs_rel = self.charm.model.get_relation(GCS_RELATION)
             info = self.charm.snapshot_events.gcs_requirer.get_storage_connection_info(gcs_rel)
+            if not info:
+                return None
             try:
-                gcs = GcsRelData.from_relation(info) if info else None
+                gcs = GcsRelData.from_relation(info)
             except ValidationError as e:
-                logger.warning("validation error while building gcs payload: %s", e)
-                gcs = None
-            return ObjectStorageConfig(gcs=gcs) if gcs else None
+                raise ObjectStorageConfigValidationError(object_storage_type, e) from e
+            return ObjectStorageConfig(gcs=gcs)
 
         peer_data = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)
         if object_storage_type == ObjectStorageType.S3_PCLUSTER:
