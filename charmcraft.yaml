@@ -52,11 +52,6 @@ parts:
     after:
       - poetry-deps
     poetry-export-extra-args: ['--only', 'main,charm-libs']
-    build-environment:
-      # Ensure pip build isolation env has a setuptools that provides `pkg_resources`
-      - PIP_CONSTRAINT: "$CRAFT_PROJECT_DIR/pip-constraints.txt"
-      # Force pip to not "reuse" preinstalled distro setuptools without pkg_resources
-      - PIP_IGNORE_INSTALLED: "1"
     build-packages:
       - libffi-dev  # Needed to build Python dependencies with Rust from source
       - libssl-dev  # Needed to build Python dependencies with Rust from source
