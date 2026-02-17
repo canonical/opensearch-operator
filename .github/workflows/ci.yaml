@@ -176,6 +176,9 @@ jobs:
     name: Build charm | ${{ matrix.path }}
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v32.1.0
     with:
+      # charmcraftcache fails hard if the charm/branch is not in charmcraftcache-hub.
+      # Disable it until the charm is re-added to the hub cache.
+      cache: false
       path-to-charm-directory: ${{ matrix.path }}
       cache: false
 
