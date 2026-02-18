@@ -121,9 +121,8 @@ class ObjectStorageType(str, Enum):
 class ObjectStorageConfigValidationError(Exception):
     """Raise when relation data is present but fails validation."""
 
-    def __init__(self, object_storage_type: ObjectStorageType, error: ValidationError):
+    def __init__(self, error: ValidationError):
         super().__init__(str(error))
-        self.object_storage_type = object_storage_type
         self.error = error
 
 
@@ -221,7 +220,7 @@ class OpenSearchSnapshotEvents(Object):
         except ObjectStorageConfigValidationError as e:
             logger.warning(
                 "%s object storage configuration is invalid: %s",
-                e.object_storage_type,
+                object_storage_type,
                 e.error,
             )
             if self.charm.unit.is_leader():
@@ -658,7 +657,7 @@ class OpenSearchSnapshotEvents(Object):
         except ObjectStorageConfigValidationError as e:
             logger.warning(
                 "%s object storage configuration is invalid: %s",
-                e.object_storage_type,
+                object_storage_type,
                 e.error,
             )
             if self.charm.unit.is_leader():
@@ -1112,14 +1111,12 @@ class OpenSearchSnapshotsManager:
 
         if object_storage_type == ObjectStorageType.S3:
             # TODO: Do not get data from the events
-            info = self.charm.snapshot_events.s3_requirer.get_s3_connection_info()
-
-            if not info:
+            if not (info := self.charm.snapshot_events.s3_requirer.get_s3_connection_info()):
                 return None
             try:
                 s3 = S3RelData.from_relation(info)
             except ValidationError as e:
-                raise ObjectStorageConfigValidationError(object_storage_type, e) from e
+                raise ObjectStorageConfigValidationError(e) from e
             return ObjectStorageConfig(s3=s3)
 
         if object_storage_type == ObjectStorageType.AZURE:
@@ -1130,19 +1127,22 @@ class OpenSearchSnapshotsManager:
             try:
                 azure = AzureRelData.from_relation(info)
             except ValidationError as e:
-                raise ObjectStorageConfigValidationError(object_storage_type, e) from e
+                raise ObjectStorageConfigValidationError(e) from e
             return ObjectStorageConfig(azure=azure)
 
         if object_storage_type == ObjectStorageType.GCS:
             # TODO: Do not get data from the events
             gcs_rel = self.charm.model.get_relation(GCS_RELATION)
-            info = self.charm.snapshot_events.gcs_requirer.get_storage_connection_info(gcs_rel)
-            if not info:
+            if not (
+                info := self.charm.snapshot_events.gcs_requirer.get_storage_connection_info(
+                    gcs_rel
+                )
+            ):
                 return None
             try:
                 gcs = GcsRelData.from_relation(info)
             except ValidationError as e:
-                raise ObjectStorageConfigValidationError(object_storage_type, e) from e
+                raise ObjectStorageConfigValidationError(e) from e
             return ObjectStorageConfig(gcs=gcs)
 
         peer_data = self.charm.opensearch_peer_cm.rel_data(peek_secrets=True)

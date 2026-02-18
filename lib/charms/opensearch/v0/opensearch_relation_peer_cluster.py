@@ -629,7 +629,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             except ObjectStorageConfigValidationError as e:
                 logger.warning(
                     "Invalid %s object storage configuration: %s",
-                    e.object_storage_type,
+                    ObjectStorageType.GCS,
                     e.error,
                 )
                 return None
@@ -670,7 +670,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             except ObjectStorageConfigValidationError as e:
                 logger.warning(
                     "Invalid %s object storage configuration: %s",
-                    e.object_storage_type,
+                    ObjectStorageType.AZURE,
                     e.error,
                 )
                 return None
@@ -713,7 +713,7 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             except ObjectStorageConfigValidationError as e:
                 logger.warning(
                     "Invalid %s object storage configuration: %s",
-                    e.object_storage_type,
+                    ObjectStorageType.S3,
                     e.error,
                 )
                 return None
