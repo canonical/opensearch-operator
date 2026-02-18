@@ -1,0 +1,59 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'gcs-integrator': {'charm': 'gcs-integrator', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'gcs-integrator', 'charm-rev': 10, 'charm-channel': '1/edge', 'exposed': False, 'application-status': {'current': 'active', 'since': '18 Feb 2026 01:49:41Z'}, 'relations': {'gcs-credentials': [{'related-application': 'opensearch', 'interface': 'gcs', 'scope': 'global'}], 'status-peers': [{'related-application': 'gcs-integrator', 'interface': 'status_peers', 'scope': 'global'}]}, 'units': {'gcs-integrator/0': {'workload-status': {'current': 'active', 'since': '18 Feb 2026 01:49:41Z'}, 'juju-status': {'current': 'idle', 'since': '18 Feb 2026 01:56:09Z', 'version': '3.6.14'}, 'leader': True, 'machine': '1', 'public-address': '10.58.160.227'}}, 'endpoint-bindings': {'': 'alpha', 'gcs-credentials': 'alpha', 'status-peers': 'alpha'}}, 'opensearch': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'active', 'since': '18 Feb 2026 01:47:24Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'gcs-credentials': [{'related-application': 'gcs-integrator', 'interface': 'gcs', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/0': {'workload-status': {'current': 'active', 'since': '18 Feb 2026 01:57:47Z'}, 'juju-status': {'current': 'idle', 'since': '18 Feb 2026 01:57:58Z', 'version': '3.6.14'}, 'leader': True, 'machine': '2', 'open-ports': ['9200/tcp'], 'public-address': '10.58.160.33'}, 'opensearch/1': {'workload-status': {'current': 'active', 'since': '18 Feb 2026 01:47:40Z'}, 'juju-status': {'current': 'idle', 'since': '18 Feb 2026 01:58:07Z', 'version': '3.6.14'}, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.58.160.53'}, 'opensearch/2': {'workload-status': {'current': 'active', 'since': '18 Feb 2026 01:47:19Z'}, 'juju-status': {'current': 'idle', 'since': '18 Feb 2026 01:57:56Z', 'version': '3.6.14'}, 'machine': '4', 'open-ports': ['9200/tcp'], 'public-address': '10.58.160.167'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'smtp': 'alpha', 'upgrade-version-a': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 317, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '18 Feb 2026 01:43:47Z'}, 'relations': {'certificates': [{'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '18 Feb 2026 01:43:47Z'}, 'juju-status': {'current': 'idle', 'since': '18 Feb 2026 01:46:25Z', 'version': '3.6.14'}, 'leader': True, 'machine': '0', 'public-address': '10.58.160.184'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m root:test_backups.py:853 Destroying the application
+[32mINFO    [0m root:test_backups.py:860 Deploying a new cluster
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:00:40Z
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 01:43:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:43:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:43:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:43:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:43:57 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:43:57 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:44:02 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:44:02 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:44:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:44:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:46:12 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:46:13 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:46:19 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:46:21 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:46:23 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:46:24 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-gcs-integrator-0: 01:48:36 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-0: 01:48:36 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-self-signed-certificates-0: 01:49:25 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-gcs-integrator-0: 01:49:36 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 01:49:37 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 01:49:38 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 01:49:39 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 01:49:40 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-self-signed-certificates-0: 01:54:02 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+machine-1: 01:58:12 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:190 Cleaning backups from cloud buckets
+[33mWARNING [0m integration.ha.test_backups:test_backups.py:216 Failed to clean up backups: SSL validation failed for https://10.151.33.151:445/testbucket?prefix=opensearch%2F6002c566-b72e-4cb1-bbbc-420092ac7730%2F&encoding-type=url [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1000)
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:511 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.28.0 Python/3.12.3 (Linux-6.14.0-37-generic-x86_64-with-glibc2.39)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'a793aae4-0c6d-11f1-ba2e-00163e8647b1'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:554 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': '4f0035bf-101e-00b4-587a-a07e1c000000'
+    'x-ms-client-request-id': 'a793aae4-0c6d-11f1-ba2e-00163e8647b1'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Wed, 18 Feb 2026 02:00:52 GMT'
