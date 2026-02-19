@@ -85,5 +85,12 @@ tutorial/index
 how-to/index
 reference/index
 explanation/index
-Dashboards charm docs<https://canonical-charmed-opensearch-dashboards.readthedocs-hosted.com/>
+```
+
+```{toctree}
+:caption: OpenSearch Dashboards
+:titlesonly:
+:hidden:
+
+Dashboards documentation <dashboards/docs/index>
 ```

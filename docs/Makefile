@@ -76,6 +76,8 @@ pymarkdownlnt-install:
 	@. $(VENV); test -d $(SPHINXDIR)/venv/lib/python*/site-packages/pymarkdown || pip install pymarkdownlnt
 
 install: $(VENVDIR)
+	@echo "... pulling submodule in dashboards folder"
+	@git submodule update --init dashboards
 
 run: install
 	. $(VENV); $(VENVDIR)/bin/sphinx-autobuild -b dirhtml --host $(SPHINX_HOST) --port $(SPHINX_PORT) "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS)
