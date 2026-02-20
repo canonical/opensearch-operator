@@ -20,7 +20,7 @@ requires minimal effort on your end.
 
 TLS is enabled by integrating Charmed OpenSearch with the
 [Self Signed Certificates Charm](https://charmhub.io/self-signed-certificates).
-This charm centralises TLS certificate management consistently and handles operations
+This charm centralizes TLS certificate management consistently and handles operations
 like providing, requesting, and renewing TLS certificates.
 
 In this section, you will learn how to enable security in your OpenSearch deployment using TLS encryption.
