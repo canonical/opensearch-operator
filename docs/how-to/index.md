@@ -56,7 +56,7 @@ Optimize Cluster Performance <optimize-cluster-performance>
 Integrate with an application <integrate-with-an-application>
 back-up-and-restore/index
 Manage persistent storage <persistent-storage>
-upgrade/index
+Upgrade <upgrade>
 Access using OAuth <access-using-oauth>
 Enable JWT Authentication <enable-jwt-authentication>
 Enable email notifications <add-smtp-credentials>
