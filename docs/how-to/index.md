@@ -50,7 +50,7 @@ The following guides cover key processes and common tasks for managing and using
 :hidden:
 
 deploy/index
-tls-encryption/index
+TLS encryption <tls-encryption>
 Scale horizontally <scale-horizontally>
 Optimize Cluster Performance <optimize-cluster-performance>
 Integrate with an application <integrate-with-an-application>
