@@ -25,8 +25,6 @@ Check the [X.509 certificates topic](https://charmhub.io/topics/security-with-x-
 for an overview of the signed and self-signed certificate charms available.
 ```
 
-### Enable TLS
-
 First, deploy the TLS charm and configure the name of the Certificate Authority:
 
 ```shell
@@ -41,14 +39,14 @@ juju integrate self-signed-certificates opensearch
 
 After the deployment has settled, you can see the relation by running `juju status --relations` .
 
-### Disable TLS
+## Disable TLS
 
 TLS is a requirement for Charmed OpenSearch, therefore TLS should not be disabled.
 
-### Manage certificates
+## Manage certificates
 
 (how-to-check-tls-keys)=
-#### Check certificates in use
+### Check certificates in use
 
 To check the certificates in use by OpenSearch, you can run:
 
@@ -57,7 +55,7 @@ openssl s_client -showcerts -connect leader_unit_IP:port < /dev/null | grep issu
 ```
 
 (how-to-update-tls-keys)=
-#### Update keys
+### Update keys
 
 Updates to private keys for certificate signing requests (CSR) can be made via the `set-tls-private-key` action. Charmed OpenSearch uses three types of certificates:
 
@@ -97,11 +95,7 @@ juju run opensearch/leader set-tls-private-key category=unit-transport key="$(ba
 ```
 
 (how-to-rotate-tls-ca-certificates)=
-## Rotate TLS/CA certificates
-
-This section describes the process of rotating TLS and CA certificates.
-
-### Rotation of TLS certificates
+## Rotate TLS certificates
 
 Charmed OpenSearch uses three types of TLS certificates:
 
@@ -115,7 +109,7 @@ Two scenarios trigger the rotation of TLS certificates:
 2. You want to rotate the certificate: In this case, you can manually request a new certificate.
 
 (manual-rotate-tls-cert)=
-#### Manually rotate the TLS certificates
+### Manually rotate the TLS certificates
 
 You can manually start a rotation of the TLS certificates by changing the TLS private key for the type of certificate you want to rotate.
 
@@ -133,7 +127,7 @@ Once the new certificate is signed, it will be automatically applied to the Open
 For more information on the different approaches to update the key please refer to the
 [Update keys](how-to-update-tls-keys) section above.
 
-### Rotation of CA certificates
+## Rotate CA certificates
 
 The CA certificate is used to sign the TLS certificates.
 The CA certificate is provided to the OpenSearch cluster by the operator you are using
@@ -141,7 +135,7 @@ to provide the certificates. In this section, we will describe the process of ro
 the CA certificate using the [`self-signed-certificates` operator](https://charmhub.io/self-signed-certificates)
 and the [`manual-tls` operator](https://charmhub.io/manual-tls-certificates).
 
-#### Rotate the CA certificates using the `self-signed-certificates operator`
+### Using the `self-signed-certificates operator`
 
 Currently, the `self-signed-certificates operator` does not support the rotation of the CA certificate.
 If you need to rotate the CA certificate, you will need to start the rotation process manually.
@@ -177,7 +171,7 @@ openssl s_client -showcerts -connect leader_unit_IP:port < /dev/null | grep issu
 Where `leader_unit_IP` is the IP address of the leader unit and `port` is the port number of the OpenSearch service.
 This command will show the issuer of the certificate in use which should include the new CA certificate common name.
 
-#### Rotate the CA certificates using the `manual-tls operator`
+### Using the `manual-tls operator`
 
 The `manual-tls operator` is used to manually provide the TLS certificates to the OpenSearch cluster.
 To rotate the CA certificate using the `manual-tls operator`,
