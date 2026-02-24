@@ -1,0 +1,98 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:26:27Z
+
+App                       Version  Status       Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           blocked          2  opensearch                2/edge    208  no       Failed to apply config changes on the plugin.
+main                               maintenance      3  opensearch                2/edge    208  no       Installing OpenSearch...
+opensearch                         blocked          3  opensearch                2/edge    208  no       Cannot start. Waiting for peer cluster relation...
+self-signed-certificates           active           1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports     Message
+failover/0                   blocked      idle       3        10.128.64.17              Failed to apply config changes on the plugin.
+failover/1*                  maintenance  executing  4        10.128.64.101             (install) Installing OpenSearch...
+main/0*                      active       idle       5        10.128.64.113   9200/tcp  
+main/1                       active       idle       6        10.128.64.16    9200/tcp  
+main/2                       maintenance  executing  7        10.128.64.220             (install) Installing OpenSearch...
+opensearch/0*                active       idle       0        10.128.64.90              
+opensearch/1                 active       idle       1        10.128.64.77              
+opensearch/2                 active       idle       2        10.128.64.241             
+self-signed-certificates/0*  active       idle       8        10.128.64.123             
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.128.64.90   juju-8ab7dc-0  ubuntu@24.04  github-runner  Running
+1        started  10.128.64.77   juju-8ab7dc-1  ubuntu@24.04  github-runner  Running
+2        started  10.128.64.241  juju-8ab7dc-2  ubuntu@24.04  github-runner  Running
+3        started  10.128.64.17   juju-8ab7dc-3  ubuntu@24.04  github-runner  Running
+4        started  10.128.64.101  juju-8ab7dc-4  ubuntu@24.04  github-runner  Running
+5        started  10.128.64.113  juju-8ab7dc-5  ubuntu@24.04  github-runner  Running
+6        started  10.128.64.16   juju-8ab7dc-6  ubuntu@24.04  github-runner  Running
+7        started  10.128.64.220  juju-8ab7dc-7  ubuntu@24.04  github-runner  Running
+8        started  10.128.64.123  juju-8ab7dc-8  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 01:56:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:56:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:56:47 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for opensearch/0: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+machine-4: 01:56:49 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:56:49 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-1: 01:56:49 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for failover/1: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-opensearch-0: 01:56:50 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for opensearch/0: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+machine-5: 01:56:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:56:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-main-0: 01:56:51 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for main/0: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-failover-1: 01:56:52 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for failover/1: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+machine-1: 01:56:54 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:56:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 01:56:54 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for opensearch/1: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-main-0: 01:56:55 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for main/0: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-opensearch-0: 01:56:55 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for opensearch/0: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-failover-1: 01:56:56 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for failover/1: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+machine-7: 01:56:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 01:56:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 01:56:58 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for opensearch/1: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-main-2: 01:56:58 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for main/2: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+machine-2: 01:56:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:56:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 01:56:58 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for opensearch/2: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-main-0: 01:56:59 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for main/0: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-opensearch-0: 01:57:00 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for opensearch/0: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+machine-8: 01:57:01 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 01:57:01 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:57:01 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/self-signed-certificates-317" for self-signed-certificates/0: failed to download charm "ch:amd64/self-signed-certificates-317" from API server: download request with archiveSha256 length 0 not valid
+unit-failover-1: 01:57:01 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for failover/1: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-main-2: 01:57:01 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for main/2: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-opensearch-1: 01:57:02 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for opensearch/1: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-opensearch-2: 01:57:02 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for opensearch/2: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-main-0: 01:57:04 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for main/0: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+machine-3: 01:57:04 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:57:04 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-failover-0: 01:57:04 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for failover/0: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-self-signed-certificates-0: 01:57:05 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/self-signed-certificates-317" for self-signed-certificates/0: failed to download charm "ch:amd64/self-signed-certificates-317" from API server: download request with archiveSha256 length 0 not valid
+unit-main-2: 01:57:05 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for main/2: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+machine-6: 01:57:06 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:57:06 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-main-1: 01:57:06 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for main/1: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-opensearch-2: 01:57:06 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for opensearch/2: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-opensearch-0: 01:57:07 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for opensearch/0: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-failover-1: 01:57:07 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for failover/1: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-opensearch-1: 01:57:07 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for opensearch/1: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-failover-0: 01:57:08 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/opensearch-208" for failover/0: failed to download charm "ch:amd64/opensearch-208" from API server: download request with archiveSha256 length 0 not valid
+unit-self-signed-certificates-0: 01:57:09 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/self-signed-certificates-317" for self-signed-certificates/0: failed to download charm "ch:amd64/self-signed-certificates-317" from API server: download request with archiveSha256 length 0 not valid
+unit-self-signed-certificates-0: 01:58:17 ERROR unit.self-signed-certificates/0.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:58:31 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:58:32 ERROR unit.self-signed-certificates/0.juju-log certificates:10: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:58:40 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:58:41 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:58:45 ERROR unit.self-signed-certificates/0.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:59:29 ERROR unit.self-signed-certificates/0.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:00:00 ERROR unit.self-signed-certificates/0.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:02:35 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:07:34 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:13:08 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:17:35 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:21:41 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...

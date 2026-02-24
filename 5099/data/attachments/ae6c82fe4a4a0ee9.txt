@@ -1,0 +1,221 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:09:42Z
+
+App                       Version  Status       Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch-data                    active           1  opensearch                            2  no       
+opensearch-failover                maintenance      3  opensearch                            1  no       Installing OpenSearch...
+opensearch-main                    active           1  opensearch                            0  no       
+self-signed-certificates           active           1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports     Message
+opensearch-data/0*           active       idle       4        10.109.105.9    9200/tcp  
+opensearch-failover/0*       maintenance  executing  1        10.109.105.93             (install) Installing OpenSearch...
+opensearch-failover/1        active       idle       2        10.109.105.70             
+opensearch-failover/2        active       idle       3        10.109.105.251            
+opensearch-main/0*           active       idle       5        10.109.105.208  9200/tcp  
+self-signed-certificates/0*  active       idle       0        10.109.105.49             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.109.105.49   juju-fe6f92-0  ubuntu@24.04  github-runner  Running
+1        started  10.109.105.93   juju-fe6f92-1  ubuntu@24.04  github-runner  Running
+2        started  10.109.105.70   juju-fe6f92-2  ubuntu@24.04  github-runner  Running
+3        started  10.109.105.251  juju-fe6f92-3  ubuntu@24.04  github-runner  Running
+4        started  10.109.105.9    juju-fe6f92-4  ubuntu@24.04  github-runner  Running
+5        started  10.109.105.208  juju-fe6f92-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 01:38:02 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:38:02 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:38:12 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:38:12 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:38:12 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:38:12 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:38:15 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:38:15 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:38:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:38:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:38:20 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:38:20 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:39:46 ERROR unit.self-signed-certificates/0.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 01:39:53 ERROR unit.opensearch-data/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:39:53 ERROR unit.opensearch-data/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:39:54 ERROR unit.opensearch-data/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:39:54 ERROR unit.opensearch-data/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:39:55 ERROR unit.opensearch-data/0.juju-log certificates:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:39:55 ERROR unit.opensearch-data/0.juju-log certificates:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:39:56 ERROR unit.opensearch-data/0.juju-log certificates:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:39:56 ERROR unit.opensearch-data/0.juju-log certificates:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:39:57 ERROR unit.opensearch-data/0.juju-log opensearch-peers:5: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:39:57 ERROR unit.opensearch-data/0.juju-log opensearch-peers:5: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:39:57 ERROR unit.opensearch-data/0.juju-log opensearch-peers:5: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:39:57 ERROR unit.opensearch-data/0.juju-log opensearch-peers:5: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:39:58 ERROR unit.opensearch-data/0.juju-log upgrade-version-a:4: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:39:58 ERROR unit.opensearch-data/0.juju-log upgrade-version-a:4: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:40:20 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:40:20 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 01:40:21 ERROR unit.self-signed-certificates/0.juju-log certificates:10: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 01:40:22 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:40:22 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:40:22 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:40:22 ERROR unit.opensearch-data/0.juju-log peer-cluster:14: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:40:45 ERROR unit.opensearch-data/0.juju-log opensearch-peers:5: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:40:45 ERROR unit.opensearch-data/0.juju-log opensearch-peers:5: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:40:45 ERROR unit.opensearch-data/0.juju-log opensearch-peers:5: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:40:45 ERROR unit.opensearch-data/0.juju-log opensearch-peers:5: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:40:49 ERROR unit.opensearch-data/0.juju-log peer-cluster:13: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:40:49 ERROR unit.opensearch-data/0.juju-log peer-cluster:13: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 01:40:49 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-data-0: 01:40:50 ERROR unit.opensearch-data/0.juju-log peer-cluster:13: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:40:50 ERROR unit.opensearch-data/0.juju-log peer-cluster:13: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:40:50 ERROR unit.opensearch-data/0.juju-log peer-cluster:13: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:40:50 ERROR unit.opensearch-data/0.juju-log peer-cluster:13: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-main-0: 01:40:56 ERROR unit.opensearch-main/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:40:56 ERROR unit.opensearch-main/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:40:59 ERROR unit.opensearch-main/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:40:59 ERROR unit.opensearch-main/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-self-signed-certificates-0: 01:41:00 ERROR unit.self-signed-certificates/0.juju-log certificates:9: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-main-0: 01:41:00 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:41:00 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:41:01 ERROR unit.opensearch-main/0.juju-log certificates:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:41:01 ERROR unit.opensearch-main/0.juju-log certificates:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:41:04 ERROR unit.opensearch-main/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:41:04 ERROR unit.opensearch-main/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:41:06 ERROR unit.opensearch-main/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:41:06 ERROR unit.opensearch-main/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:41:07 ERROR unit.opensearch-main/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:41:07 ERROR unit.opensearch-main/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:41:09 ERROR unit.opensearch-main/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:41:09 ERROR unit.opensearch-main/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:41:10 ERROR unit.opensearch-main/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:41:10 ERROR unit.opensearch-main/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:41:12 ERROR unit.opensearch-main/0.juju-log Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:41:12 ERROR unit.opensearch-main/0.juju-log Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-data-0: 01:41:13 ERROR unit.opensearch-data/0.juju-log peer-cluster:13: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:41:13 ERROR unit.opensearch-data/0.juju-log peer-cluster:13: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:41:13 ERROR unit.opensearch-data/0.juju-log peer-cluster:13: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:41:13 ERROR unit.opensearch-data/0.juju-log peer-cluster:13: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-main-0: 01:41:13 ERROR unit.opensearch-main/0.juju-log certificates:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:41:13 ERROR unit.opensearch-main/0.juju-log certificates:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:41:14 ERROR unit.opensearch-main/0.juju-log certificates:9: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:41:14 ERROR unit.opensearch-main/0.juju-log certificates:9: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:41:16 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:13: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:41:16 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:13: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:41:16 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:13: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:41:16 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:13: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:41:17 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:41:17 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:41:17 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:41:17 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:12: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:41:19 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:13: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:41:19 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:13: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:41:20 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:13: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:41:20 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:13: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-main-0: 01:41:21 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:13: Missing cluster topology requirements: At least 1 data nodes are required.
+unit-opensearch-main-0: 01:41:21 ERROR unit.opensearch-main/0.juju-log peer-cluster-orchestrator:13: Missing profile requirements: ['At least 1 data nodes are required.']
+unit-opensearch-data-0: 01:41:35 ERROR unit.opensearch-data/0.juju-log peer-cluster:13: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:41:35 ERROR unit.opensearch-data/0.juju-log peer-cluster:13: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-data-0: 01:41:36 ERROR unit.opensearch-data/0.juju-log peer-cluster:13: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-data-0: 01:41:36 ERROR unit.opensearch-data/0.juju-log peer-cluster:13: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-self-signed-certificates-0: 01:42:00 ERROR unit.self-signed-certificates/0.juju-log certificates:11: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:43:13 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:48:45 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-failover-1: 01:48:51 ERROR unit.opensearch-failover/1.juju-log Failed to install/upgrade opensearch. 
+Snap: 'opensearch' -- command ['snap', 'install', 'opensearch', '--revision="98"'] failed!
+Stdout:
+2026-02-24T01:38:46Z INFO Waiting for automatic snapd restart...
+
+Stderr:
+error: cannot perform the following tasks:
+- Download snap "core24" (1349) from channel "stable" (download too slow: 0.00 bytes/sec)
+
+Latest logs:
+Feb 24 01:38:37 juju-fe6f92-2 groupadd[2189]: group added to /etc/group: name=snap_daemon, GID=584788
+Feb 24 01:38:37 juju-fe6f92-2 groupadd[2189]: group added to /etc/gshadow: name=snap_daemon
+Feb 24 01:38:37 juju-fe6f92-2 groupadd[2189]: new group: name=snap_daemon, GID=584788
+Feb 24 01:38:37 juju-fe6f92-2 useradd[2195]: new user: name=snap_daemon, UID=584788, GID=584788, home=/nonexistent, shell=/usr/bin/false, from=none
+Feb 24 01:38:46 juju-fe6f92-2 snapd[1419]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Feb 24 01:38:46 juju-fe6f92-2 snapd[1419]: daemon.go:556: gracefully waiting for running hooks
+Feb 24 01:38:46 juju-fe6f92-2 snapd[1419]: daemon.go:558: done waiting for running hooks
+Feb 24 01:38:49 juju-fe6f92-2 snapd[1419]: overlord.go:538: Released state lock file
+Feb 24 01:38:49 juju-fe6f92-2 systemd[1]: snapd.service: Deactivated successfully.
+Feb 24 01:38:49 juju-fe6f92-2 systemd[1]: snapd.service: Scheduled restart job, restart counter is at 1.
+Feb 24 01:38:49 juju-fe6f92-2 systemd[1]: Starting snapd.service - Snap Daemon...
+Feb 24 01:38:50 juju-fe6f92-2 snapd[2399]: overlord.go:294: Acquiring state lock file
+Feb 24 01:38:50 juju-fe6f92-2 snapd[2399]: overlord.go:299: Acquired state lock file
+Feb 24 01:38:50 juju-fe6f92-2 snapd[2399]: daemon.go:276: started snapd/2.73+ubuntu24.04 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-37-generic.
+Feb 24 01:38:50 juju-fe6f92-2 snapd[2399]: daemon.go:370: adjusting startup timeout by 35s (pessimistic estimate of 30s plus 5s per snap)
+Feb 24 01:38:50 juju-fe6f92-2 snapd[2399]: backends.go:70: AppArmor status: apparmor is enabled and all features are available
+Feb 24 01:38:50 juju-fe6f92-2 snapd[2399]: backend.go:145: reloading profiles for snap-confine
+Feb 24 01:38:50 juju-fe6f92-2 systemd[1]: Started snapd.service - Snap Daemon.
+Feb 24 01:48:50 juju-fe6f92-2 snapd[2399]: devicemgr.go:2796: no NTP sync after 10m0s, trying auto-refresh anyway
+Feb 24 01:48:51 juju-fe6f92-2 snapd[2399]: taskrunner.go:304: Change 4 task (Download snap "core24" (1349) from channel "stable") failed: download too slow: 0.00 bytes/sec
+
+unit-opensearch-failover-0: 01:48:56 ERROR unit.opensearch-failover/0.juju-log Failed to install/upgrade opensearch. 
+Snap: 'opensearch' -- command ['snap', 'install', 'opensearch', '--revision="98"'] failed!
+Stdout:
+2026-02-24T01:38:37Z INFO Waiting for automatic snapd restart...
+
+Stderr:
+error: cannot perform the following tasks:
+- Download snap "opensearch" (98) from channel "stable" (download too slow: 764.23 bytes/sec)
+
+Latest logs:
+Feb 24 01:38:31 juju-fe6f92-1 groupadd[2195]: group added to /etc/group: name=snap_daemon, GID=584788
+Feb 24 01:38:31 juju-fe6f92-1 groupadd[2195]: group added to /etc/gshadow: name=snap_daemon
+Feb 24 01:38:31 juju-fe6f92-1 groupadd[2195]: new group: name=snap_daemon, GID=584788
+Feb 24 01:38:31 juju-fe6f92-1 useradd[2201]: new user: name=snap_daemon, UID=584788, GID=584788, home=/nonexistent, shell=/usr/bin/false, from=none
+Feb 24 01:38:37 juju-fe6f92-1 snapd[1421]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Feb 24 01:38:37 juju-fe6f92-1 snapd[1421]: daemon.go:556: gracefully waiting for running hooks
+Feb 24 01:38:37 juju-fe6f92-1 snapd[1421]: daemon.go:558: done waiting for running hooks
+Feb 24 01:38:40 juju-fe6f92-1 snapd[1421]: overlord.go:538: Released state lock file
+Feb 24 01:38:40 juju-fe6f92-1 systemd[1]: snapd.service: Deactivated successfully.
+Feb 24 01:38:40 juju-fe6f92-1 systemd[1]: snapd.service: Scheduled restart job, restart counter is at 1.
+Feb 24 01:38:40 juju-fe6f92-1 systemd[1]: Starting snapd.service - Snap Daemon...
+Feb 24 01:38:40 juju-fe6f92-1 snapd[2398]: overlord.go:294: Acquiring state lock file
+Feb 24 01:38:40 juju-fe6f92-1 snapd[2398]: overlord.go:299: Acquired state lock file
+Feb 24 01:38:40 juju-fe6f92-1 snapd[2398]: daemon.go:276: started snapd/2.73+ubuntu24.04 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-37-generic.
+Feb 24 01:38:40 juju-fe6f92-1 snapd[2398]: daemon.go:370: adjusting startup timeout by 35s (pessimistic estimate of 30s plus 5s per snap)
+Feb 24 01:38:40 juju-fe6f92-1 snapd[2398]: backends.go:70: AppArmor status: apparmor is enabled and all features are available
+Feb 24 01:38:40 juju-fe6f92-1 snapd[2398]: backend.go:145: reloading profiles for snap-confine
+Feb 24 01:38:40 juju-fe6f92-1 systemd[1]: Started snapd.service - Snap Daemon.
+Feb 24 01:48:40 juju-fe6f92-1 snapd[2398]: devicemgr.go:2796: no NTP sync after 10m0s, trying auto-refresh anyway
+Feb 24 01:48:56 juju-fe6f92-1 snapd[2398]: taskrunner.go:304: Change 4 task (Download snap "opensearch" (98) from channel "stable") failed: download too slow: 764.23 bytes/sec
+
+unit-self-signed-certificates-0: 01:53:15 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:58:34 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-opensearch-failover-1: 01:58:58 ERROR unit.opensearch-failover/1.juju-log Failed to install/upgrade opensearch. 
+Snap: 'opensearch' -- command ['snap', 'install', 'opensearch', '--revision="98"'] failed!
+Stderr:
+error: cannot perform the following tasks:
+- Download snap "opensearch" (98) from channel "stable" (download too slow: 327.89 bytes/sec)
+
+Latest logs:
+Feb 24 01:38:37 juju-fe6f92-2 groupadd[2189]: new group: name=snap_daemon, GID=584788
+Feb 24 01:38:37 juju-fe6f92-2 useradd[2195]: new user: name=snap_daemon, UID=584788, GID=584788, home=/nonexistent, shell=/usr/bin/false, from=none
+Feb 24 01:38:46 juju-fe6f92-2 snapd[1419]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Feb 24 01:38:46 juju-fe6f92-2 snapd[1419]: daemon.go:556: gracefully waiting for running hooks
+Feb 24 01:38:46 juju-fe6f92-2 snapd[1419]: daemon.go:558: done waiting for running hooks
+Feb 24 01:38:49 juju-fe6f92-2 snapd[1419]: overlord.go:538: Released state lock file
+Feb 24 01:38:49 juju-fe6f92-2 systemd[1]: snapd.service: Deactivated successfully.
+Feb 24 01:38:49 juju-fe6f92-2 systemd[1]: snapd.service: Scheduled restart job, restart counter is at 1.
+Feb 24 01:38:49 juju-fe6f92-2 systemd[1]: Starting snapd.service - Snap Daemon...
+Feb 24 01:38:50 juju-fe6f92-2 snapd[2399]: overlord.go:294: Acquiring state lock file
+Feb 24 01:38:50 juju-fe6f92-2 snapd[2399]: overlord.go:299: Acquired state lock file
+Feb 24 01:38:50 juju-fe6f92-2 snapd[2399]: daemon.go:276: started snapd/2.73+ubuntu24.04 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-37-generic.
+Feb 24 01:38:50 juju-fe6f92-2 snapd[2399]: daemon.go:370: adjusting startup timeout by 35s (pessimistic estimate of 30s plus 5s per snap)
+Feb 24 01:38:50 juju-fe6f92-2 snapd[2399]: backends.go:70: AppArmor status: apparmor is enabled and all features are available
+Feb 24 01:38:50 juju-fe6f92-2 snapd[2399]: backend.go:145: reloading profiles for snap-confine
+Feb 24 01:38:50 juju-fe6f92-2 systemd[1]: Started snapd.service - Snap Daemon.
+Feb 24 01:48:50 juju-fe6f92-2 snapd[2399]: devicemgr.go:2796: no NTP sync after 10m0s, trying auto-refresh anyway
+Feb 24 01:48:51 juju-fe6f92-2 snapd[2399]: taskrunner.go:304: Change 4 task (Download snap "core24" (1349) from channel "stable") failed: download too slow: 0.00 bytes/sec
+Feb 24 01:48:53 juju-fe6f92-2 snapd[2399]: api_snaps.go:536: Installing snap "opensearch" revision 98
+Feb 24 01:58:58 juju-fe6f92-2 snapd[2399]: taskrunner.go:304: Change 6 task (Download snap "opensearch" (98) from channel "stable") failed: download too slow: 327.89 bytes/sec
+
+unit-self-signed-certificates-0: 02:00:18 ERROR unit.self-signed-certificates/0.juju-log certificates:10: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:03:13 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:07:47 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
