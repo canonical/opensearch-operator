@@ -6,7 +6,7 @@ s, and rotating TLS/CA certificates."
 ---
 
 (how-to-guides-tls-encryption-index)=
-# TLS encryption
+# How to manage TLS encryption
 
 This guide shows how to enable TLS encryption for a Charmed OpenSearch deployment and manage its
 certificates, including updating private keys and rotating TLS and CA certificates.

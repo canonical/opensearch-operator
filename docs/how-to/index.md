@@ -49,17 +49,17 @@ The following guides cover key processes and common tasks for managing and using
 :titlesonly:
 :hidden:
 
-deploy/index
+Deploy <deploy/index>
 TLS encryption <tls-encryption>
-Scale horizontally <scale-horizontally>
-Optimize Cluster Performance <optimize-cluster-performance>
 Integrate with an application <integrate-with-an-application>
-back-up-and-restore/index
+Scale horizontally <scale-horizontally>
+Back up and restore <back-up-and-restore/index>
 Manage persistent storage <persistent-storage>
 Upgrade <upgrade>
-Access using OAuth <access-using-oauth>
-Enable JWT Authentication <enable-jwt-authentication>
-Enable email notifications <add-smtp-credentials>
 Enable monitoring <monitoring>
+Enable email notifications <add-smtp-credentials>
+Access using OAuth <access-using-oauth>
+Enable JWT authentication <enable-jwt-authentication>
+Optimize cluster performance <optimize-cluster-performance>
 Perform load testing <perform-load-testing>
 ```
