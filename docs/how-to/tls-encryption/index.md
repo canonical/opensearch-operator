@@ -1,14 +1,17 @@
 ---
 myst:
   html_meta:
-    description: "Secure your Charmed OpenSearch deployment with TLS encryption, including enabling encryption, managing certificates, and rotating TLS/CA certificates."
+    description: "Secure your Charmed OpenSearch deployment with TLS encryption, including enabling encryption, managing certificate
+s, and rotating TLS/CA certificates."
 ---
 
 (how-to-guides-tls-encryption-index)=
 # TLS encryption
 
-For guidance on how to enable TLS encryption,
-see also the [Tutorial](tutorial-3-enable-encryption).
+This guide shows how to enable TLS encryption for a Charmed OpenSearch deployment and manage its
+certificates, including updating private keys and rotating TLS and CA certificates.
+
+For a step-by-step introduction to enabling TLS encryption, see the [Tutorial](tutorial-3-enable-encryption).
 
 (how-to-enable-tls-encryption)=
 ## Enable TLS encryption
