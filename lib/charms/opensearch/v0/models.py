@@ -120,6 +120,7 @@ class App(Model):
         values["short_id"] = md5(values["id"].encode()).hexdigest()[:3]
         return values
 
+
 class Node(Model):
     """Data class representing a node in a cluster."""
 
@@ -255,6 +256,7 @@ class PeerClusterConfig(Model):
 
         return values
 
+
 class DeploymentDescription(Model):
     """Model class describing the current state of a deployment / sub-cluster."""
 
@@ -278,6 +280,7 @@ class DeploymentDescription(Model):
             values["promotion_time"] = datetime.now().timestamp()
 
         return values
+
 
 class S3RelDataCredentials(Model):
     """Model class for credentials passed on the PCluster relation."""
@@ -617,6 +620,7 @@ class PeerClusterRelDataCredentials(Model):
     azure: Optional[AzureRelDataCredentials] = None
     gcs: Optional[GcsRelDataCredentials] = None
 
+
 class PeerClusterApp(Model):
     """Model class for representing an application part of a large deployment."""
 
@@ -636,7 +640,7 @@ class PeerClusterFleetApps(RootModel[dict[str, PeerClusterApp]]):
     def __getitem__(self, item: str) -> PeerClusterApp:
         """Implements the getitem magic method."""
         return self.root[item]
-    
+
 
 class PluginConfigInfo(Model):
     """Model class for representing data needed to add or remove plugin configuration"""
