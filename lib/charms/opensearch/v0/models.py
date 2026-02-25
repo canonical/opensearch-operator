@@ -289,7 +289,7 @@ class S3RelDataCredentials(Model):
     class Config:
         """Model config of this pydantic model."""
 
-        validate_by_name = True
+        populate_by_name = True
 
 
 class JWTAuthConfiguration(Model):
@@ -324,7 +324,7 @@ class S3RelData(Model):
     class Config:
         """Model config of this pydantic model."""
 
-        validate_by_name = True
+        populate_by_name = True
 
     @model_validator(mode="before")
     @classmethod
@@ -428,7 +428,7 @@ class AzureRelDataCredentials(Model):
     class Config:
         """Model config of this pydantic model."""
 
-        validate_by_name = True
+        populate_by_name = True
 
 
 class AzureRelData(Model):
@@ -449,7 +449,7 @@ class AzureRelData(Model):
     class Config:
         """Model config of this pydantic model."""
 
-        validate_by_name = True
+        populate_by_name = True
 
     @model_validator(mode="before")
     @classmethod
@@ -505,7 +505,7 @@ class GcsRelDataCredentials(Model):
     class Config:
         """Model config of this pydantic model."""
 
-        validate_by_name = True
+        populate_by_name = True
 
     @validator("secret_key", pre=True)
     def _normalize_secret_key(cls, values):  # noqa: N805
@@ -549,7 +549,7 @@ class GcsRelData(Model):
     class Config:
         """Model config of this pydantic model."""
 
-        validate_by_name = True
+        populate_by_name = True
 
     @model_validator(mode="before")
     @classmethod
