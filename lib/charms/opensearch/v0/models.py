@@ -352,7 +352,8 @@ class S3RelData(Model):
 
         return self
 
-    @field_validator("s3_tls_ca_chain", mode="before", check_fields=False)
+    @field_validator("tls_ca_chain", mode="before", check_fields=False)
+    @classmethod
     def _tls_chain(cls, v):  # noqa: N805
         if v is None:
             return None
