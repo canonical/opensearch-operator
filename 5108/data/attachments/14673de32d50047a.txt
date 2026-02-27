@@ -1,0 +1,242 @@
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:358 main and gcs-integrator already integrated
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:358 main and gcs-integrator already integrated
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:334 Adding Juju secret for GCS service account JSON
+[32mINFO    [0m integration.ha.helpers:helpers.py:607 Data keys to insert: dict_keys(['secret-key'])
+[32mINFO    [0m integration.ha.helpers:helpers.py:613 Add secret return code=0 stdout=secret:d6gfgd2n03ech32o64n0
+ stderr=
+[32mINFO    [0m integration.ha.helpers:helpers.py:620 Secret uri: secret:d6gfgd2n03ech32o64n0
+[32mINFO    [0m integration.ha.helpers:helpers.py:626 Grant secret return code=0 stdout= stderr=
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:342 Juju secret for GCS credentials added. Secret URI: secret:d6gfgd2n03ech32o64n0
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:347 Setting up configuration for gcs-integrator charm...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  gcs-integrator/0 [executing] blocked: Missing config(s): 'bucket', 'credentials'
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  gcs-integrator/0 [idle] active: 
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:568 GCS cloud is selected.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  01:50:15Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           active       2  opensearch                            0  no       
+gcs-integrator                     active       1  gcs-integrator            1/edge     10  no       
+main                               blocked      1  opensearch                            2  no       Backup configuration error: bad credentials, permissions, invalid CA, or unsupported configuration.
+opensearch                         active       1  opensearch                            1  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+failover/0                   active    idle   4        10.127.131.3    9200/tcp  
+failover/1*                  active    idle   5        10.127.131.234  9200/tcp  
+gcs-integrator/0*            active    idle   0        10.127.131.8              
+main/0*                      active    idle   3        10.127.131.111  9200/tcp  
+opensearch/0*                active    idle   2        10.127.131.65   9200/tcp  
+self-signed-certificates/0*  active    idle   1        10.127.131.31             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.127.131.8    juju-c24c08-0  ubuntu@24.04  github-runner  Running
+1        started  10.127.131.31   juju-c24c08-1  ubuntu@24.04  github-runner  Running
+2        started  10.127.131.65   juju-c24c08-2  ubuntu@24.04  github-runner  Running
+3        started  10.127.131.111  juju-c24c08-3  ubuntu@24.04  github-runner  Running
+4        started  10.127.131.3    juju-c24c08-4  ubuntu@24.04  github-runner  Running
+5        started  10.127.131.234  juju-c24c08-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:50:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 01:50:16 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:602 Opensearch is blocked by invalid config/credentials.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  01:50:17Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           active       2  opensearch                            0  no       
+gcs-integrator                     active       1  gcs-integrator            1/edge     10  no       
+main                               blocked      1  opensearch                            2  no       Backup configuration error: bad credentials, permissions, invalid CA, or unsupported configuration.
+opensearch                         active       1  opensearch                            1  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+failover/0                   active    executing  4        10.127.131.3    9200/tcp  
+failover/1*                  active    executing  5        10.127.131.234  9200/tcp  
+gcs-integrator/0*            active    executing  0        10.127.131.8              
+main/0*                      active    idle       3        10.127.131.111  9200/tcp  
+opensearch/0*                active    executing  2        10.127.131.65   9200/tcp  
+self-signed-certificates/0*  active    idle       1        10.127.131.31             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.127.131.8    juju-c24c08-0  ubuntu@24.04  github-runner  Running
+1        started  10.127.131.31   juju-c24c08-1  ubuntu@24.04  github-runner  Running
+2        started  10.127.131.65   juju-c24c08-2  ubuntu@24.04  github-runner  Running
+3        started  10.127.131.111  juju-c24c08-3  ubuntu@24.04  github-runner  Running
+4        started  10.127.131.3    juju-c24c08-4  ubuntu@24.04  github-runner  Running
+5        started  10.127.131.234  juju-c24c08-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:50:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: failover - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: failover active -- message: None
+		failover-0.970  -- (10.127.131.3) -- [executing (since: 01:50:16)] active: 
+		failover-1.970* -- (10.127.131.234) -- [executing (since: 01:50:16)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:50:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 01:50:30 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  01:50:47Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           active       2  opensearch                            0  no       
+gcs-integrator                     active       1  gcs-integrator            1/edge     10  no       
+main                               blocked      1  opensearch                            2  no       Backup configuration error: bad credentials, permissions, invalid CA, or unsupported configuration.
+opensearch                         active       1  opensearch                            1  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+failover/0                   active    idle   4        10.127.131.3    9200/tcp  
+failover/1*                  active    idle   5        10.127.131.234  9200/tcp  
+gcs-integrator/0*            active    idle   0        10.127.131.8              
+main/0*                      active    idle   3        10.127.131.111  9200/tcp  
+opensearch/0*                active    idle   2        10.127.131.65   9200/tcp  
+self-signed-certificates/0*  active    idle   1        10.127.131.31             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.127.131.8    juju-c24c08-0  ubuntu@24.04  github-runner  Running
+1        started  10.127.131.31   juju-c24c08-1  ubuntu@24.04  github-runner  Running
+2        started  10.127.131.65   juju-c24c08-2  ubuntu@24.04  github-runner  Running
+3        started  10.127.131.111  juju-c24c08-3  ubuntu@24.04  github-runner  Running
+4        started  10.127.131.3    juju-c24c08-4  ubuntu@24.04  github-runner  Running
+5        started  10.127.131.234  juju-c24c08-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:50:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 01:50:48 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  01:50:57Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           active      2  opensearch                            0  no       
+gcs-integrator                     active      1  gcs-integrator            1/edge     10  no       
+main                               active      1  opensearch                            2  no       
+opensearch                         active      1  opensearch                            1  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+failover/0                   active    idle   4        10.127.131.3    9200/tcp  
+failover/1*                  active    idle   5        10.127.131.234  9200/tcp  
+gcs-integrator/0*            active    idle   0        10.127.131.8              
+main/0*                      active    idle   3        10.127.131.111  9200/tcp  
+opensearch/0*                active    idle   2        10.127.131.65   9200/tcp  
+self-signed-certificates/0*  active    idle   1        10.127.131.31             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.127.131.8    juju-c24c08-0  ubuntu@24.04  github-runner  Running
+1        started  10.127.131.31   juju-c24c08-1  ubuntu@24.04  github-runner  Running
+2        started  10.127.131.65   juju-c24c08-2  ubuntu@24.04  github-runner  Running
+3        started  10.127.131.111  juju-c24c08-3  ubuntu@24.04  github-runner  Running
+4        started  10.127.131.3    juju-c24c08-4  ubuntu@24.04  github-runner  Running
+5        started  10.127.131.234  juju-c24c08-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:50:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.6f0* -- (10.127.131.111) -- [idle (since: 01:50:56)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:51:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.6f0* -- (10.127.131.111) -- [idle (since: 01:50:56)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:51:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.6f0* -- (10.127.131.111) -- [idle (since: 01:50:56)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:51:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.6f0* -- (10.127.131.111) -- [idle (since: 01:50:56)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:51:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.6f0* -- (10.127.131.111) -- [idle (since: 01:50:56)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:51:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.6f0* -- (10.127.131.111) -- [idle (since: 01:50:56)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:52:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main active -- message: None
+		main-0.6f0* -- (10.127.131.111) -- [idle (since: 01:50:56)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+01:52:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 01:52:14 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:654 Cleaned up misconfigured backup relation from main; main is active again.
