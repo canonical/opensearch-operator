@@ -1,0 +1,126 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'opensearch': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'active', 'since': '01 Mar 2026 09:50:44Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/0': {'workload-status': {'current': 'active', 'since': '01 Mar 2026 10:02:20Z'}, 'juju-status': {'current': 'idle', 'since': '01 Mar 2026 10:17:50Z', 'version': '3.6.14'}, 'leader': True, 'machine': '1', 'open-ports': ['9200/tcp'], 'public-address': '10.239.71.102'}, 'opensearch/1': {'workload-status': {'current': 'active', 'since': '01 Mar 2026 10:17:18Z'}, 'juju-status': {'current': 'idle', 'since': '01 Mar 2026 10:17:59Z', 'version': '3.6.14'}, 'machine': '2', 'open-ports': ['9200/tcp'], 'public-address': '10.239.71.190'}, 'opensearch/2': {'workload-status': {'current': 'active', 'since': '01 Mar 2026 09:50:57Z'}, 'juju-status': {'current': 'idle', 'since': '01 Mar 2026 10:18:06Z', 'version': '3.6.14'}, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.239.71.42'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'smtp': 'alpha', 'upgrade-version-a': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 317, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '01 Mar 2026 09:47:53Z'}, 'relations': {'certificates': [{'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '01 Mar 2026 09:47:53Z'}, 'juju-status': {'current': 'idle', 'since': '01 Mar 2026 10:16:51Z', 'version': '3.6.14'}, 'leader': True, 'machine': '0', 'public-address': '10.239.71.239'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.239.71.102:9200/_cluster/state/cluster_manager_node
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.239.71.102:9200/_nodes
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.239.71.102:9200/
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.239.71.102:9200/
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.239.71.102:9200/
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.239.71.102:9200/
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.239.71.190:9200/_cluster/state/cluster_manager_node
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.239.71.190:9200/_nodes
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  10:27:34Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      3  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch/0                 active    executing  1        10.239.71.102   9200/tcp  
+opensearch/1*                active    idle       2        10.239.71.190   9200/tcp  
+opensearch/2                 active    idle       3        10.239.71.42    9200/tcp  
+self-signed-certificates/0*  active    idle       0        10.239.71.239             
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.239.71.239  juju-8af967-0  ubuntu@24.04  github-runner  Running
+1        started  10.239.71.102  juju-8af967-1  ubuntu@24.04  github-runner  Running
+2        started  10.239.71.190  juju-8af967-2  ubuntu@24.04  github-runner  Running
+3        started  10.239.71.42   juju-8af967-3  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+10:27:34 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.374  -- (10.239.71.102) -- [idle (since: 10:27:34)] active: 
+		opensearch-1.374* -- (10.239.71.190) -- [idle (since: 10:27:22)] active: 
+		opensearch-2.374  -- (10.239.71.42) -- [idle (since: 10:22:54)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+10:27:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.374  -- (10.239.71.102) -- [idle (since: 10:27:34)] active: 
+		opensearch-1.374* -- (10.239.71.190) -- [idle (since: 10:27:22)] active: 
+		opensearch-2.374  -- (10.239.71.42) -- [idle (since: 10:22:54)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+10:27:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.374  -- (10.239.71.102) -- [idle (since: 10:27:34)] active: 
+		opensearch-1.374* -- (10.239.71.190) -- [idle (since: 10:27:22)] active: 
+		opensearch-2.374  -- (10.239.71.42) -- [idle (since: 10:22:54)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+10:28:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.374  -- (10.239.71.102) -- [idle (since: 10:27:34)] active: 
+		opensearch-1.374* -- (10.239.71.190) -- [idle (since: 10:27:22)] active: 
+		opensearch-2.374  -- (10.239.71.42) -- [idle (since: 10:22:54)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+10:28:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.374  -- (10.239.71.102) -- [idle (since: 10:27:34)] active: 
+		opensearch-1.374* -- (10.239.71.190) -- [idle (since: 10:27:22)] active: 
+		opensearch-2.374  -- (10.239.71.42) -- [idle (since: 10:22:54)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+10:28:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.374  -- (10.239.71.102) -- [idle (since: 10:27:34)] active: 
+		opensearch-1.374* -- (10.239.71.190) -- [idle (since: 10:27:22)] active: 
+		opensearch-2.374  -- (10.239.71.42) -- [idle (since: 10:22:54)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+10:28:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.374  -- (10.239.71.102) -- [idle (since: 10:27:34)] active: 
+		opensearch-1.374* -- (10.239.71.190) -- [idle (since: 10:27:22)] active: 
+		opensearch-2.374  -- (10.239.71.42) -- [idle (since: 10:22:54)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+10:28:50 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 10:28:51 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.239.71.102:9200/
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.239.71.102:9200/_nodes
+[32mINFO    [0m integration.ha.helpers:helpers.py:248 Continuous writes result: namespace(max_stored_id=703, count=704, last_expected_id=703)
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.239.71.190:9200/series_index/_search_shards
+[32mINFO    [0m integration.ha.conftest:conftest.py:73 
+
+
+
+The writes have been cleared.
