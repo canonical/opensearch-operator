@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Set up Azure Storage for Charmed OpenSearch backups using the Azure Storage Integrator charm and configure integration."
+---
+
 (how-to-back-up-configure-azure-storage)=
 # How to configure Azure storage
 

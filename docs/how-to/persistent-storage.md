@@ -1,5 +1,11 @@
-(how-to-recover-from-attached-storage)=
-# How to recover from attached storage
+---
+myst:
+  html_meta:
+    description: "Reuse and recover OpenSearch data from Juju-managed disks containing existing cluster metadata and data."
+---
+
+(how-to-persistent-storage)=
+# How to manage persistent storage
 
 This document describes the steps needed to reuse disks that contain data
 and metadata of an OpenSearch cluster.

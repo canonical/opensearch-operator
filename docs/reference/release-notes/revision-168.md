@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Charmed OpenSearch Revision 168 release notes - large scale deployments, security automations, monitoring, and backup features."
+---
+
 (reference-release-notes-revision-168)=
 # Revision 168 release notes
 <sub>24 September 2024</sub>
@@ -32,7 +38,7 @@ TLS certificates without any downtime.
 Integrate with the Canonical Observability Stack (COS) and the OpenSearch Dashboards charm
 to monitor operational performance and visualize stored data across all clusters.
 
-* [How to enable monitoring](how-to-monitoring-enable-cos)
+* [How to enable monitoring](how-to-monitoring)
 * [OpenSearch Dashboards: How to connect to OpenSearch](https://charmhub.io/opensearch-dashboards/docs/h-db-connect)
 
 ### Backups
@@ -99,7 +105,7 @@ It packages:
 The following issues are known and scheduled to be fixed in the next maintenance release.
 
 * We currently do not support node role repurposing from cluster manager to a non cluster manager
-* Storage re-attachment from previous clusters is not currently automated. For manual instructions, see the how-to guide [How to recover from attached storage](how-to-recover-from-attached-storage).
+* Storage re-attachment from previous clusters is not currently automated. For manual instructions, see the how-to guide [How to recover from attached storage](how-to-persistent-storage).
 
 ## Join the community
 

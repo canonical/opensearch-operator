@@ -3,6 +3,7 @@
 
 """Base class for the OpenSearch Operators."""
 import abc
+import json
 import logging
 import random
 import time
@@ -79,6 +80,10 @@ from charms.opensearch.v0.opensearch_keystore import (
 )
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
+from charms.opensearch.v0.opensearch_notifications_events import NotificationsEvents
+from charms.opensearch.v0.opensearch_notifications_manager import (
+    OpenSearchNotificationsManager,
+)
 from charms.opensearch.v0.opensearch_oauth import OAuthHandler
 from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchPeerClustersManager,
@@ -110,6 +115,7 @@ from charms.opensearch.v0.state import OpenSearchClusterState
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
 )
+from ops import ModelError, SecretNotFoundError
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -240,6 +246,9 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
 
         self.plugin_manager = OpenSearchPluginManager(self.state)
         self.plugin_events = OpenSearchPluginEvents(self)
+        self.notifications_manager = OpenSearchNotificationsManager(self.opensearch)
+        self.notifications_events = NotificationsEvents(self)
+
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
         self.peer_cluster_provider = OpenSearchPeerClusterProvider(self)
@@ -298,6 +307,42 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # Ensure that only one instance of the `_on_peer_relation_changed` handler exists
         # in the deferred event queue
         self._is_peer_rel_changed_deferred = False
+
+    def store_plugin_secret(
+        self,
+        *,
+        content: dict,
+        label: str,
+        relation_name: Optional[str] = None,
+    ) -> None:
+        """Create/update app-scoped plugin secret and store id in peers data.
+
+        Args:
+            content: dictionary of the secret payload
+            label: label of the secret to store
+            relation_name: name of the relation from which the secret content came
+        """
+        self.secrets.put(Scope.APP, label, json.dumps(content))
+        secret_id = self.secrets.get_secret_id(Scope.APP, label)
+        if not secret_id:
+            logger.error("Could not create secret with label: %s", label)
+        self.plugin_manager.put_plugin_config(
+            Scope.APP, label=label, secret_id=secret_id, relation_name=relation_name
+        )
+
+    def remove_plugin_secret(self, label: str) -> None:
+        """Delete app-scoped plugin secret and remove id from peers data.
+
+        Args:
+            label: label of the secret to remove
+        """
+        try:
+            self.secrets.delete(Scope.APP, label)
+        except SecretNotFoundError:
+            logger.error("Can't find secret '%s'", label)
+        except ModelError as e:
+            logger.error("Cannot delete secret %s: %s", label, e)
+        self.plugin_manager.remove_plugin_config(Scope.APP, label)
 
     @property
     @abc.abstractmethod

@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Connect client applications to Charmed OpenSearch using the Data Integrator charm to manage users, credentials, and access permissions."
+---
+
 (tutorial-4-integrate-with-a-client-application)=
 # 4. Integrate with a client application
 

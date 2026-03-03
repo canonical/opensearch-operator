@@ -30,7 +30,6 @@ from charms.opensearch.v0.constants_secrets import (
 from charms.opensearch.v0.constants_tls import CertType
 from charms.opensearch.v0.helper_charm import Status, all_units, diff, format_unit_name
 from charms.opensearch.v0.helper_cluster import ClusterTopology
-from charms.opensearch.v0.helper_plugins import remove_plugin_secret
 from charms.opensearch.v0.models import (
     AzureRelDataCredentials,
     DeploymentDescription,
@@ -50,7 +49,10 @@ from charms.opensearch.v0.models import (
 )
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchHttpError
 from charms.opensearch.v0.opensearch_internal_data import Scope
-from charms.opensearch.v0.opensearch_snapshots import ObjectStorageType
+from charms.opensearch.v0.opensearch_snapshots import (
+    ObjectStorageConfigValidationError,
+    ObjectStorageType,
+)
 from ops import (
     BlockedStatus,
     EventBase,
@@ -619,10 +621,18 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(GCS_RELATION):
                 return None
 
-            object_storage_config = (
-                self.charm.snapshots_manager.get_storage_config(ObjectStorageType.GCS)
-                or ObjectStorageConfig()
-            )
+            try:
+                object_storage_config = (
+                    self.charm.snapshots_manager.get_storage_config(ObjectStorageType.GCS)
+                    or ObjectStorageConfig()
+                )
+            except ObjectStorageConfigValidationError as e:
+                logger.warning(
+                    "Invalid %s object storage configuration: %s",
+                    ObjectStorageType.GCS,
+                    e.error,
+                )
+                return None
             gcs = object_storage_config.gcs
             if not (gcs and gcs.credentials and gcs.credentials.secret_key):
                 return None
@@ -652,10 +662,18 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
             if not self.charm.model.get_relation(AZURE_RELATION):
                 return None
 
-            object_storage_config = (
-                self.charm.snapshots_manager.get_storage_config(ObjectStorageType.AZURE)
-                or ObjectStorageConfig()
-            )
+            try:
+                object_storage_config = (
+                    self.charm.snapshots_manager.get_storage_config(ObjectStorageType.AZURE)
+                    or ObjectStorageConfig()
+                )
+            except ObjectStorageConfigValidationError as e:
+                logger.warning(
+                    "Invalid %s object storage configuration: %s",
+                    ObjectStorageType.AZURE,
+                    e.error,
+                )
+                return None
             azure = object_storage_config.azure
             if not (azure and azure.credentials and azure.credentials.storage_account):
                 return None
@@ -687,10 +705,18 @@ class OpenSearchPeerClusterProvider(OpenSearchPeerClusterRelation):
         if deployment_desc.typ == DeploymentType.MAIN_ORCHESTRATOR:
             if not self.charm.model.get_relation(S3_RELATION):
                 return None
-            object_storage_config = (
-                self.charm.snapshots_manager.get_storage_config(ObjectStorageType.S3)
-                or ObjectStorageConfig()
-            )
+            try:
+                object_storage_config = (
+                    self.charm.snapshots_manager.get_storage_config(ObjectStorageType.S3)
+                    or ObjectStorageConfig()
+                )
+            except ObjectStorageConfigValidationError as e:
+                logger.warning(
+                    "Invalid %s object storage configuration: %s",
+                    ObjectStorageType.S3,
+                    e.error,
+                )
+                return None
             s3_cfg = object_storage_config.s3
             if not (
                 s3_cfg
@@ -1231,7 +1257,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         add, remove = diff(configs_from_relation.keys(), current_app_plugin_info.keys())
 
         for label in remove:
-            remove_plugin_secret(self.charm, label)
+            self.charm.remove_plugin_secret(label)
 
         for label in add:
             plugin = configs_from_relation[label]
@@ -1259,7 +1285,7 @@ class OpenSearchPeerClusterRequirer(OpenSearchPeerClusterRelation):
         """Removes stored plugin configurations"""
         plugins_labels = self.charm.state.app.plugin_config_info.keys()
         for label in plugins_labels:
-            remove_plugin_secret(self.charm, label)
+            self.charm.remove_plugin_secret(label)
 
     def apply_orchestrator_status(self) -> None:
         """Sets or clears status based on presence of local orchestrators."""

@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Step-by-step guides for deploying, managing, and maintaining Charmed OpenSearch including TLS, backups, monitoring, and scaling."
+---
+
 (how-to-index)=
 # How-to guides
 
@@ -19,7 +25,7 @@ The following guides cover key processes and common tasks for managing and using
 * [Integrate with an application](how-to-integrate-with-an-application)
 * [Perform load testing](how-to-perform-load-testing)
 * [Optimize Cluster Performance with Profiles](how-to-optimize-cluster-performance)
-* [Recover from attached storage](how-to-recover-from-attached-storage)
+* [Manage persistent storage](how-to-persistent-storage)
 * [Access using OAuth](how-to-access-using-oauth)
 
 ## Backup and restore
@@ -37,8 +43,7 @@ The following guides cover key processes and common tasks for managing and using
 
 ## Monitoring (COS)
 
-* [Monitoring (COS)](how-to-monitoring-cos-index)
-  * [Enable COS](how-to-monitoring-enable-cos)
+* [Monitoring (COS)](how-to-monitoring)
 
 ```{toctree}
 :titlesonly:
@@ -50,9 +55,10 @@ Scale horizontally <scale-horizontally>
 Optimize Cluster Performance <optimize-cluster-performance>
 Integrate with an application <integrate-with-an-application>
 back-up-and-restore/index
-recover-from-attached-storage
+Manage persistent storage <persistent-storage>
 upgrade/index
 Access using OAuth <access-using-oauth>
 Enable JWT Authentication <enable-jwt-authentication>
-monitoring-cos/index
+Enable email notifications <add-smtp-credentials>
+monitoring/index
 ```
