@@ -151,9 +151,4 @@ For most production deployments, you'll want both: COS/Grafana for operational m
 
 To get started with OpenSearch Dashboards, see the [Charmed OpenSearch Dashboards documentation](https://canonical-charmed-opensearch-dashboards.readthedocs-hosted.com/).
 
-```{toctree}
-:titlesonly:
-:hidden:
 
-Perform load testing <perform-load-testing>
-```

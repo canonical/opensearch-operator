@@ -5,7 +5,7 @@ myst:
 ---
 
 (how-to-guides-deploy-index)=
-# Deploy
+# How to deploy
 
 For guidance on how to set up environment and deploy OpenSearch with Juju charms,
 see the [Tutorial](tutorial-index) and the following guides:

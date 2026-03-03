@@ -27,7 +27,7 @@ For more details, see the [Security](explanation-security-index) topic overview 
 :titlesonly:
 :hidden:
 
-security/index
+Security <security/index>
 monitoring
 Software testing <software-testing>
 ```
