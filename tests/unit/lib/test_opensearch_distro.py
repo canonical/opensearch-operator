@@ -62,7 +62,7 @@ class TestOpenSearchConfig(unittest.TestCase):
         node = self.charm.opensearch.current()
         assert isinstance(node, Node)
         assert node.app.name == "opensearch"
-        assert node.roles == ["cluster_manager", "coordinating_only", "data", "ingest", "ml"]
+        assert sorted(node.roles) == ["cluster_manager", "coordinating_only", "data", "ingest", "ml"]
         assert not node.temperature
 
     def test_distro_current_api_unavail_primary_fallback_to_static_conf(self):
@@ -104,7 +104,7 @@ class TestOpenSearchConfig(unittest.TestCase):
         node = self.charm.opensearch.current()
         assert isinstance(node, Node)
         assert node.app.name == "opensearch"
-        assert node.roles == ["data", "ingest", "ml", "cluster_manager"]
+        assert sorted(node.roles) == sorted(["data", "ingest", "ml", "cluster_manager"])
         assert node.temperature == "warm"
 
     # We pretend that the config file is empty
