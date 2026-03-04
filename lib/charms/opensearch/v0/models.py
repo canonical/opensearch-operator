@@ -291,7 +291,6 @@ class S3RelDataCredentials(Model):
     model_config = ConfigDict(populate_by_name=True)
 
 
-
 class JWTAuthConfiguration(Model):
     """Model class for the configuration parameters of JWT authentication."""
 
