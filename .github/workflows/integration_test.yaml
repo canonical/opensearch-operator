@@ -118,13 +118,6 @@ jobs:
         run: |
           sudo lxc image copy ubuntu:568f69ff1166 local:
           sudo lxc image alias create "juju/ubuntu@22.04/amd64" 568f69ff1166
-      - name: Setup tmate session
-        uses: canonical/action-tmate@main
-        with:
-          detached: true
-        env:
-          AZURE_STORAGE_ACCOUNT: ${{ secrets.AZURE_STORAGE_ACCOUNT }}
-          AZURE_SECRET_KEY: ${{ secrets.AZURE_SECRET_KEY }}
       - name: Run spread job
         timeout-minutes: 180
         id: spread
