@@ -21,7 +21,7 @@ from opensearch import OpenSearchSnap
 logger = logging.getLogger(__name__)
 
 FORCE_ACTION_NAME = "force-upgrade"
-ROLLBACK_OVERRIDE_VERSION_ACTION_NAME = "rollback-override-version"
+ROLLBACK_OVERRIDE_VERSION_ACTION_NAME = "force-refresh-start"
 _SNAP_REVISION = str(constants_charm.OPENSEARCH_SNAP_REVISION)
 
 

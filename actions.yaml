@@ -69,19 +69,31 @@ pre-upgrade-check:
 
 resume-upgrade:
   description: Upgrade remaining units (after you manually verified that upgraded units are healthy).
-  
+
 force-upgrade:
   description: |
     Potential of *data loss* and *downtime*
         
     Force upgrade of this unit.
-    
+
     Use to
     - force incompatible upgrade and/or
     - continue upgrade if 1+ upgraded units have non-active status
 
-rollback-override-version:
+# TODO to be changed when implementing refresh V3
+force-refresh-start:
   description: |
-    Use with extreme caution. Potential of *data loss* and *downtime*
+    Potential of data loss and downtime
 
-    Override the current version of OpenSearch on disk to allow rollback to proceed.
+    Force refresh of first unit
+
+    Must run with at least one of the parameters `=false`
+  params:
+    check-compatibility:
+      type: boolean
+      default: true
+      description: |
+        Potential of data loss and downtime
+
+        If `false`, force refresh if new version of OpenSearch and/or charm is not compatible with previous version
+  additionalProperties: false

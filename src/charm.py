@@ -49,7 +49,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         )
         self.framework.observe(
             self.on[machine_upgrade.ROLLBACK_OVERRIDE_VERSION_ACTION_NAME].action,
-            self._on_rollback_override_version_action,
+            self._on_refresh_force_start_action,
         )
 
     @property
@@ -116,7 +116,10 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
             if self._upgrade.is_rollback:
                 logger.warning("Rollback detected")
                 self.unit.status = BlockedStatus(
-                    "Rollback incompatible. Run 'juju run <unit> rollback-override-version' to override node version and attempt startup procedure"
+                    "Rollback incompatible. Run 'juju run <unit> force-refresh-start' with `check-compatibility` set to false to override node version and attempt startup procedure"
+                )
+                logger.warning(
+                    "Rollback incompatible. Run 'juju run <unit> force-refresh-start' with `check-compatibility` set to false to override node version and attempt startup procedure"
                 )
                 self.node_lock.release()
                 return
@@ -236,15 +239,19 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         event.set_results({"result": f"Forcefully upgraded {self.unit.name}"})
         logger.debug("Forced upgrade")
 
-    def _on_rollback_override_version_action(self, event: ops.ActionEvent) -> None:
+    def _on_refresh_force_start_action(self, event: ops.ActionEvent) -> None:
         if not self._upgrade or not self._upgrade.is_rollback:
-            message = "No rollback in progress"
-            logger.debug(f"Rollback override version event failed: {message}")
-            event.fail(message)
+            logger.debug("For refresh start event failed: No rollback in progress")
+            event.fail("No rollback in progress")
             return
         if self._upgrade.unit_state is not upgrade.UnitState.OUTDATED:
             message = "Unit already upgraded"
             logger.debug(f"Force upgrade event failed: {message}")
+            event.fail(message)
+            return
+        if event.params.get("check-compatibility", True):
+            message = "Rollbacks are not supported. This action will attempt to start the unit with the current version of OpenSearch. If the current version is incompatible with the cluster, the unit may fail to start. Rerun with `check-compatibility` set to false to override this check and attempt startup procedure."
+            logger.debug("Refresh force start event failed: %s", message)
             event.fail(message)
             return
         self._upgrade_opensearch_event.emit(override_version=True)

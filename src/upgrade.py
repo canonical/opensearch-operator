@@ -332,5 +332,5 @@ class Upgrade(abc.ABC):
             )
             return True
 
-        logger.debug("Rollback not supported from %s to %s", unit_bag_version, version_on_disk)
+        logger.warning("Rollback not supported from %s to %s", unit_bag_version, version_on_disk)
         return False
