@@ -3,7 +3,7 @@
 
 OpenSearch does not support rolling back to a previous version.
 If a unit has already been upgraded, performing `juju refresh`
-to a previous revision will result in OpenSearch failing to start on that unit.
+to a previous revision might result in OpenSearch failing to start on that unit.
 In this case, a manual recovery is required.
 Follow the steps in this section to restore the cluster to a healthy, operational state.
 

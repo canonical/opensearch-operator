@@ -71,6 +71,10 @@ Notice that the OpenSearch charm is at revision **145**.
 It may cause an unpredictable OpenSearch state. 
 ```
 
+```{caution}
+**Caution**:  Rollbacks in Charmed OpenSearch are a best-effort process. It is recommended to perform a backup and restore to a new deployment with the desired OpenSearch version instead of performing a rollback. Rollbacks carry the potential of *data loss* and *downtime*.
+```
+
 ### Rollback a charm revision with the same workload version
 
 You can initiate the rollback by running the `refresh` command with the revision of
@@ -122,7 +126,24 @@ We do not recommend performing a rollback to a charm revision with a different O
 #### It is possible to perform a best-effort rollback between the two workload revisions
 In this case both the charm code and the workload will be rolled back to the previous version. However, since this is rollback is a dangerous operation, manual intervention is required to rollback the workload version. The charm will be blocked and a message will be displayed indicating that you need to run the `force-refresh-start` action with the `check-compatibility=false` to continue with the best-effort rollback of the workload version. 
 ```shell
+Model    Controller  Cloud/Region         Version  SLA          Timestamp
+testing  lxd         localhost/localhost  3.6.14   unsupported  08:36:09Z
 
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         blocked      3  opensearch                            2  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+self-signed-certificates           active       1  self-signed-certificates  1/stable  586  no
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0                 active    idle   1        10.149.40.7     9200/tcp  OpenSearch 2.18.0 running; Snap rev 66; Charmed operator 1+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-...
+opensearch/1                 active    idle   2        10.149.40.93    9200/tcp  OpenSearch 2.18.0 running; Snap rev 66; Charmed operator 1+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-...
+opensearch/2*                blocked   idle   3        10.149.40.126   9200/tcp  Rollback incompatible. Run 'juju run <unit> force-refresh-start' with `check-compatibility` set to false to override ...
+self-signed-certificates/0*  active    idle   0        10.149.40.252
+
+Machine  State    Address        Inst id        Base          AZ   Message
+0        started  10.149.40.252  juju-f44a9a-0  ubuntu@24.04  xof  Running
+1        started  10.149.40.7    juju-f44a9a-1  ubuntu@24.04  xof  Running
+2        started  10.149.40.93   juju-f44a9a-2  ubuntu@24.04  xof  Running
+3        started  10.149.40.126  juju-f44a9a-3  ubuntu@24.04  xof  Running
 ```
 #### It is not possible to perform a rollback between the two workload revisions 
 In this case, the charm code will be rolled back but the OpenSearch workload will remain in the newer version. The charm will be blocked and a message will be displayed indicating that you need to refresh back to a charm revision with the same workload version or perform a backup and restore to a new deployment.
@@ -136,8 +157,8 @@ opensearch                         blocked      3  opensearch                   
 self-signed-certificates           active       1  self-signed-certificates  1/stable  586  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
-opensearch/6*                active    idle   7        10.149.40.239   9200/tcp  OpenSearch 2.18.0 running; Snap rev 66; Charmed operator 1+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-...
-opensearch/7                 active    idle   8        10.149.40.64    9200/tcp  OpenSearch 2.18.0 running; Snap rev 66; Charmed operator 1+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-...
+opensearch/6*                active    idle   7        10.149.40.239   9200/tcp  OpenSearch 2.17.0 running; Snap rev 58; Charmed operator 1+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-...
+opensearch/7                 active    idle   8        10.149.40.64    9200/tcp  OpenSearch 2.17.0 running; Snap rev 58; Charmed operator 1+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-...
 opensearch/8                 blocked   idle   9        10.149.40.31    9200/tcp  Rollback unsupported. Refresh to a newer revision or consult the recovery documentation
 self-signed-certificates/0*  active    idle   0        10.149.40.55
 
