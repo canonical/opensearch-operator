@@ -550,6 +550,7 @@ The response should look similar to the following example:
 }
 ```
 
+(how-to-recover-rollback)=
 ## Recovering from a rollback
 
 OpenSearch does not support rolling back to a previous version.
