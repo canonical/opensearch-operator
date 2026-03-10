@@ -26,7 +26,7 @@ it will be most beneficial if:
 | ------- | ---------- |
 | 1. [**Set up the environment**](tutorial-1-set-up-the-environment) | Set up a cloud environment for your deployment with LXD |
 | 2. [**Deploy OpenSearch**](tutorial-2-deploy-opensearch) | Learn how to deploy OpenSearch with Juju |
-| 3. [**Enable TLS encryption**](tutorial-3-enable-encryption) | Enable security in your deployment by integrating with a TLS certificates operator |
+| 3. [**Enable encryption**](tutorial-3-enable-encryption) | Enable security in your deployment by integrating with a TLS certificates operator |
 | 4. [**Integrate with a client application**](tutorial-4-integrate-with-a-client-application) | Learn how to integrate a client app with OpenSearch and manage users |
 | 5. [**Manage passwords**](tutorial-5-manage-passwords) | Learn about password management and rotation |
 | 6. [**Scale horizontally**](tutorial-6-scale-horizontally) | Scale your application by adding or removing Juju units |

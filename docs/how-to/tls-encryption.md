@@ -1,15 +1,104 @@
 ---
 myst:
   html_meta:
-    description: "Rotate TLS and CA certificates in Charmed OpenSearch manually or automatically for enhanced security and compliance."
+    description: "Secure your Charmed OpenSearch deployment with TLS encryption, including enabling encryption, managing certificate
+s, and rotating TLS/CA certificates."
 ---
 
+(how-to-guides-tls-encryption-index)=
+# How to manage TLS encryption
+
+This guide shows how to enable TLS encryption for a Charmed OpenSearch deployment and manage its
+certificates, including updating private keys and rotating TLS and CA certificates.
+
+For a step-by-step introduction to enabling TLS encryption, see the [Tutorial](tutorial-3-enable-encryption).
+
+(how-to-enable-tls-encryption)=
+## Enable TLS encryption
+
+This guide will show how to enable TLS using the
+[`self-signed-certificates` operator](https://github.com/canonical/self-signed-certificates-operator)
+as an example.
+
+```{caution}
+**[Self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate)
+are not recommended for a production environment.**
+
+Check the [X.509 certificates topic](https://charmhub.io/topics/security-with-x-509-certificates)
+for an overview of the signed and self-signed certificate charms available.
+```
+
+First, deploy the TLS charm and configure the name of the Certificate Authority:
+
+```shell
+juju deploy self-signed-certificates --config ca-common-name="My CA"
+```
+
+To enable TLS on Charmed OpenSearch, integrate the two applications:
+
+```shell
+juju integrate self-signed-certificates opensearch
+```
+
+After the deployment has settled, you can see the relation by running `juju status --relations` .
+
+## Disable TLS
+
+TLS is a requirement for Charmed OpenSearch, therefore TLS should not be disabled.
+
+## Manage certificates
+
+(how-to-check-tls-keys)=
+### Check certificates in use
+
+To check the certificates in use by OpenSearch, you can run:
+
+```shell
+openssl s_client -showcerts -connect leader_unit_IP:port < /dev/null | grep issuer
+```
+
+(how-to-update-tls-keys)=
+### Update keys
+
+Updates to private keys for certificate signing requests (CSR) can be made via the `set-tls-private-key` action. Charmed OpenSearch uses three types of certificates:
+
+* `app-admin`: used for administrative actions on opensearch
+* `unit-transport`: used for internal communication between opensearch nodes
+* `unit-http`: used for external communication between opensearch and clients (users or applications)
+
+The private key for `app-admin` can only be applied on the leader-unit.
+
+Updates to each of these can be done with auto-generated keys:
+
+```shell
+juju run opensearch/leader set-tls-private-key category=app-admin
+juju run opensearch/leader set-tls-private-key category=unit-transport
+juju run opensearch/leader set-tls-private-key category=unit-http
+```
+
+It is also possible to use self-generated keys:
+
+```shell
+openssl genrsa -out unit-http.pem 3072
+openssl genrsa -out unit-transport.pem 3072
+openssl genrsa -out app-admin.pem 3072
+```
+
+Apply the private key for `app-admin` to the juju leader:
+
+```shell
+juju run opensearch/leader set-tls-private-key category=app-admin key="$(base64 -w0 app-admin.pem)"
+```
+
+Apply the private keys for `unit-transport` and `unit-http` to all units (including the leader):
+
+```shell
+juju run opensearch/leader set-tls-private-key category=unit-http key="$(base64 -w0 unit-http.pem)"
+juju run opensearch/leader set-tls-private-key category=unit-transport key="$(base64 -w0 unit-transport.pem)"
+```
+
 (how-to-rotate-tls-ca-certificates)=
-# How to rotate TLS/CA certificates
-
-This document describes the process of rotating TLS and CA certificates.
-
-## Rotation of TLS certificates
+## Rotate TLS certificates
 
 Charmed OpenSearch uses three types of TLS certificates:
 
@@ -39,9 +128,9 @@ The new CSR will be sent to the operator you are using to provide the certificat
 Once the new certificate is signed, it will be automatically applied to the OpenSearch cluster.
 
 For more information on the different approaches to update the key please refer to the
-["Update keys" section of How to enable TLS encryption](how-to-update-tls-keys).
+[Update keys](how-to-update-tls-keys) section above.
 
-## Rotation of CA certificates
+## Rotate CA certificates
 
 The CA certificate is used to sign the TLS certificates.
 The CA certificate is provided to the OpenSearch cluster by the operator you are using
@@ -49,7 +138,7 @@ to provide the certificates. In this section, we will describe the process of ro
 the CA certificate using the [`self-signed-certificates` operator](https://charmhub.io/self-signed-certificates)
 and the [`manual-tls` operator](https://charmhub.io/manual-tls-certificates).
 
-### Rotate the CA certificates using the `self-signed-certificates operator`
+### Using the `self-signed-certificates operator`
 
 Currently, the `self-signed-certificates operator` does not support the rotation of the CA certificate.
 If you need to rotate the CA certificate, you will need to start the rotation process manually.
@@ -75,8 +164,7 @@ Until the rolling restart is complete, the OpenSearch cluster will ignore the ne
 and not apply them to the nodes. This will only be done once all nodes in the cluster have updated
 the new CA and can communicate using the newly issued TLS certificates.
 
-As indicated in the
-["Check certificates in use" section of How to enable TLS encryption](how-to-check-tls-keys),
+As indicated in the [Check certificates in use](how-to-check-tls-keys) section above,
 you can check the certificates in use by running the following command:
 
 ```bash
@@ -86,7 +174,7 @@ openssl s_client -showcerts -connect leader_unit_IP:port < /dev/null | grep issu
 Where `leader_unit_IP` is the IP address of the leader unit and `port` is the port number of the OpenSearch service.
 This command will show the issuer of the certificate in use which should include the new CA certificate common name.
 
-### Rotate the CA certificates using the `manual-tls operator`
+### Using the `manual-tls operator`
 
 The `manual-tls operator` is used to manually provide the TLS certificates to the OpenSearch cluster.
 To rotate the CA certificate using the `manual-tls operator`,
@@ -126,8 +214,7 @@ is only required if the issuer, the subject or the subject alternative names (sa
 the new certificate are different than before. If they stay the same, the new TLS certificates
 can be reloaded on the fly.
 
-As indicated in the
-["Check certificates in use" section of How to enable TLS encryption](how-to-check-tls-keys),
+As indicated in the [Check certificates in use](how-to-check-tls-keys) section above,
 you can check the certificates in use by running the following command:
 
 ```bash

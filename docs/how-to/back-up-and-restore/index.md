@@ -5,7 +5,7 @@ myst:
 ---
 
 (how-to-guides-back-up-and-restore-index)=
-# Back up and restore
+# How to back up and restore
 
 This guide contains recommended steps and useful commands for creating and managing backups
 to ensure smooth restores.
