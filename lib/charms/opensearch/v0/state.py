@@ -12,7 +12,9 @@ from charms.opensearch.v0.constants_charm import PERFORMANCE_PROFILE, PeerRelati
 from charms.opensearch.v0.models import (
     DeploymentDescription,
     PeerClusterApp,
+    PeerClusterOrchestrators,
     PerformanceType,
+    PluginConfigInfo,
 )
 from ops import Object
 
@@ -63,6 +65,23 @@ class OpenSearchApp:
             return None
         return DeploymentDescription.from_dict(deployment_desc_dict)
 
+    @property
+    def orchestrators(self) -> PeerClusterOrchestrators | None:
+        """Return PeerClusterOrchestrators from peer relation"""
+        orchestrators_dict = self.relation_data.get_object(self.scope, "orchestrators")
+        if not orchestrators_dict:
+            return None
+        return PeerClusterOrchestrators.from_dict(orchestrators_dict)
+
+    @property
+    def plugin_config_info(self) -> Dict[str, PluginConfigInfo]:
+        """Returns configuration information for plugins this app is managing"""
+        plugin_config_info = self.relation_data.get_object(self.scope, "plugin_config_info") or {}
+        return {
+            label: PluginConfigInfo.from_dict(plugin)
+            for label, plugin in plugin_config_info.items()
+        }
+
 
 class OpenSearchUnit:
     """State/Relation data collection for an opensearch node (juju unit)."""
@@ -84,6 +103,12 @@ class OpenSearchUnit:
                 else TestingProfile()
             )
         return None
+
+    @property
+    def plugin_config_info(self) -> Dict[str, PluginConfigInfo]:
+        """Returns configuration information for plugins this unit is managing"""
+        plugin_configs = self.relation_data.get_object(self.scope, "plugin_config_info") or {}
+        return {label: PluginConfigInfo.from_dict(info) for label, info in plugin_configs.items()}
 
 
 class OpenSearchClusterState(Object):

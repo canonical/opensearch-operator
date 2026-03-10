@@ -3,18 +3,44 @@
 # See LICENSE file for licensing details.
 
 import asyncio
-import pathlib
-import subprocess
+from asyncio import sleep
 from typing import Any, AsyncGenerator
 
 import pytest
-import yaml
 from juju.controller import Controller
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
-from tenacity import Retrying, stop_after_delay, wait_fixed
 
 MICROK8S_CLOUD_NAME = "uk8s"
+
+
+@pytest.fixture(scope="module")
+async def ops_test_microk8s(
+    request, tmp_path_factory, ops_test: OpsTest
+) -> AsyncGenerator[OpsTest, Any]:
+    """Create second OpsTest object, that is connected to the MicroK8s cloud.
+
+    Automatically creates and destroys (unless keep models parameter is used)
+    corresponding Juju model. MicroK8s and uk8s cloud are set up by spread prepare
+    for OAuth tests.
+
+    Returns:
+        OpsTest object with MicroK8s connection and Juju model.
+    """
+    model_name = f"{ops_test.model_name}-uk8s"
+    request.config.option.controller = ops_test.controller_name
+    request.config.option.cloud = "uk8s"
+    request.config.option.model = model_name
+    request.config.option.model_alias = model_name
+    ops_res = OpsTest(request, tmp_path_factory)
+    await ops_res._setup_model()
+    yield ops_res
+    if not ops_test.keep_model:
+        await ops_res.forget_model(alias=model_name)
+        await ops_res._controller.destroy_model(model_name, destroy_storage=True, force=True)
+        while model_name in await ops_res._controller.list_models():
+            await sleep(5)
+    await ops_res._cleanup_models()
 
 
 @pytest.fixture(scope="module")
@@ -24,85 +50,7 @@ async def application_charm() -> str:
 
 
 @pytest.fixture(scope="module")
-async def microk8s_cloud(ops_test: OpsTest) -> AsyncGenerator[None, Any]:
-    """Install and configure MicroK8s as second cloud on the same juju controller.
-
-    Skips if it configured already. Automatically removes connection to the created
-    cloud and removes MicroK8s from system unless keep models parameter is used.
-    """
-    controller_name = next(
-        iter(yaml.safe_load(subprocess.check_output(["juju", "show-controller"])))
-    )
-
-    clouds = await ops_test._controller.clouds()
-    if f"cloud-{MICROK8S_CLOUD_NAME}" in clouds.clouds:
-        yield None
-        return
-
-    try:
-        subprocess.run(["sudo", "snap", "install", "--classic", "microk8s"], check=True)
-        subprocess.run(["sudo", "snap", "install", "--classic", "kubectl"], check=True)
-        subprocess.run(["sudo", "microk8s", "enable", "dns"], check=True)
-        subprocess.run(["sudo", "microk8s", "enable", "hostpath-storage"], check=True)
-        subprocess.run(
-            ["sudo", "microk8s", "enable", "metallb:10.64.140.43-10.64.140.49"],
-            check=True,
-        )
-
-        # Configure kubectl now
-        subprocess.run(["mkdir", "-p", str(pathlib.Path.home() / ".kube")], check=True)
-        kubeconfig = subprocess.check_output(["sudo", "microk8s", "config"])
-        with open(str(pathlib.Path.home() / ".kube" / "config"), "w") as f:
-            f.write(kubeconfig.decode())
-        for attempt in Retrying(stop=stop_after_delay(150), wait=wait_fixed(15)):
-            with attempt:
-                if (
-                    len(
-                        subprocess.check_output(
-                            "kubectl get po -A  --field-selector=status.phase!=Running",
-                            shell=True,
-                            stderr=subprocess.DEVNULL,
-                        ).decode()
-                    )
-                    != 0
-                ):  # We got sth different from "No resources found." in stderr
-                    raise Exception()
-
-        # Add microk8s to the kubeconfig
-        subprocess.run(
-            [
-                "juju",
-                "add-k8s",
-                MICROK8S_CLOUD_NAME,
-                "--client",
-                "--controller",
-                controller_name,
-            ],
-            check=True,
-        )
-    except subprocess.CalledProcessError as e:
-        pytest.exit(str(e))
-
-    yield None
-
-    if not ops_test.keep_model:
-        subprocess.run(
-            [
-                "juju",
-                "remove-cloud",
-                "--client",
-                "--controller",
-                controller_name,
-                MICROK8S_CLOUD_NAME,
-            ],
-            check=True,
-        )
-        subprocess.run(["sudo", "snap", "remove", "--purge", "microk8s"], check=True)
-        subprocess.run(["sudo", "snap", "remove", "--purge", "kubectl"], check=True)
-
-
-@pytest.fixture(scope="module")
-async def microk8s_model(ops_test: OpsTest, microk8s_cloud: None) -> AsyncGenerator[Model, Any]:
+async def microk8s_model(ops_test: OpsTest) -> AsyncGenerator[Model, Any]:
     """Create new Juju model on the connected MicroK8s cloud.
 
     Automatically destroys that model unless keep models parameter is used.

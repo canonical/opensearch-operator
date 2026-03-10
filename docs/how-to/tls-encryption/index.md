@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Secure your Charmed OpenSearch deployment with TLS encryption guides including certificate management and rotation."
+---
+
 (how-to-guides-tls-encryption-index)=
 # TLS encryption
 

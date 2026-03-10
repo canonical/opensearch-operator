@@ -2,21 +2,32 @@
 # See LICENSE file for licensing details.
 
 """Helpers for security related operations, such as password generation etc."""
+import json
 import logging
 import math
 import os
+import re
 import secrets
 import string
 import subprocess
 import tempfile
+import uuid
 from datetime import datetime
 from os.path import exists
 from typing import Optional, Tuple
 
 import bcrypt
+import boto3
+from azure.core.exceptions import AzureError, ResourceExistsError, ResourceNotFoundError
+from azure.storage.blob import ContainerClient
+from botocore.client import Config
+from botocore.exceptions import BotoCoreError, ClientError
 from charms.opensearch.v0.helper_charm import run_cmd
+from charms.opensearch.v0.models import ObjectStorageConfig
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
 from cryptography import x509
+from google.api_core.exceptions import Conflict, Forbidden, GoogleAPIError, NotFound
+from google.cloud import storage
 
 # The unique Charmhub library identifier, never change it
 LIBID = "224ce9884b0d47b997357fec522f11c7"
@@ -136,56 +147,143 @@ def split_ca_chain(pem_content: str) -> list[str]:
     return [f"{part}\n{end_cert_marker}" for part in parts]
 
 
+def _store_ca_chain(  # noqa: C901
+    *,
+    alias: str,
+    store_pwd: str,
+    store_path: str,
+    ca: str,
+    keep_previous: bool,
+    snap_user_with_write_permission: bool = False,
+    add_read_perm: bool = False,
+) -> bool:
+    """Common implementation to store a CA chain into a PKCS12 keystore."""
+    tmpdir = os.path.dirname(store_path)
+    starter_mode = "0664"
+    snap_user = "snap_daemon:root"
+    final_mode = "0640"
+    # import root first, then intermediates
+    certs = list(reversed(split_ca_chain(ca)))
+    if snap_user_with_write_permission and os.path.exists(store_path):
+        try:
+            run_cmd(f"sudo chmod {starter_mode} {store_path}")
+        except OpenSearchCmdError:
+            pass
+
+    for i, pem in enumerate(certs):
+        internal_alias = f"{alias}-{i}"
+        old_internal_alias = f"old-{alias}-{i}"
+
+        # rename existing alias to old-<alias>-<i> if requested
+        if keep_previous:
+            try:
+                run_cmd(
+                    f"{KEYTOOL} -changealias "
+                    f"-alias {internal_alias} -destalias {old_internal_alias} "
+                    f"-keystore {store_path} -storetype PKCS12",
+                    f"-storepass {store_pwd}",
+                )
+            except OpenSearchCmdError as e:
+                msg = (e.out or "") + (e.err or "")
+                if ("does not exist" not in msg) and ("Keystore file does not exist" not in msg):
+                    return False
+
+        # import the cert
+        try:
+            with tempfile.NamedTemporaryFile(
+                dir=tmpdir,
+                mode="w",
+                encoding="utf-8",
+                errors="replace",
+                delete=True,
+            ) as tmp:
+                tmp.write(pem)
+                tmp.flush()
+                tmp_path = tmp.name
+
+                try:
+                    run_cmd(
+                        f"{KEYTOOL} -importcert -noprompt "
+                        f"-alias {internal_alias} -keystore {store_path} -file {tmp_path} -storetype PKCS12",
+                        f"-storepass {store_pwd}",
+                    )
+                except OpenSearchCmdError as e:
+                    logger.error(
+                        "Failed to import cert for alias %s into %s: %s",
+                        internal_alias,
+                        store_path,
+                        (e.out or "") + (e.err or ""),
+                    )
+                    return False
+        except OSError as e:
+            # tmp file creation issues
+            logger.error("Failed to create temporary file for CA import: %s", e)
+            return False
+
+    # post-actions
+    try:
+        command = ""
+        if snap_user_with_write_permission:
+            command = f"sudo chown {snap_user} {store_path}; sudo chmod {final_mode} {store_path};"
+        if add_read_perm:
+            command += f"sudo chmod +r {store_path}"
+        run_cmd(command)
+    except OpenSearchCmdError:
+        pass
+
+    return True
+
+
+def store_s3_ca(
+    alias: str, store_pwd: str, store_path: str, ca: str, keep_previous: bool = True
+) -> bool:
+    """Add new CA cert(s) to the PKCS12 trust store for S3.
+
+    Args:
+        alias: Alias to use for the CA certs.
+        store_pwd: Password for the trust store.
+        store_path: Path to the trust store.
+        ca: CA cert(s) to store.
+        keep_previous: Whether to keep the previous CA certs in the trust store.
+
+    Returns:
+        bool: True if the operation succeeded, False otherwise.
+    """
+    logger.info("Storing CA cert(s) with alias: %s into truststore.", alias)
+    return _store_ca_chain(
+        alias=alias,
+        store_pwd=store_pwd,
+        store_path=store_path,
+        ca=ca,
+        keep_previous=keep_previous,
+        snap_user_with_write_permission=True,
+    )
+
+
 def store_ca(
     alias: str, store_pwd: str, store_path: str, ca: str, keep_previous: bool = True
 ) -> bool:
-    """Add new CA cert to trust store."""
-    # This loop and split are to handle when the CA is a chain with intermediate certs
-    certs = list(reversed(split_ca_chain(ca)))
+    """Add new CA cert(s) to a PKCS12 trust store (generic).
 
-    for index in range(len(certs)):
-        if keep_previous:
-            cmd = f"{KEYTOOL} -changealias -alias {alias}-{index} -destalias {OLD_CA_PREFIX}{alias}-{index} -keystore {store_path} -storetype PKCS12"
-            args = f"-storepass {store_pwd}"
-            try:
-                run_cmd(cmd, args)
-                logger.info(
-                    f"Current CA {alias}-{index} was renamed to {OLD_CA_PREFIX}{alias}-{index}."
-                )
-            except OpenSearchCmdError as e:
-                # This message means there was no "ca" alias or store before, if it happens ignore
-                if not (
-                    e.out is not None
-                    and (
-                        f"Alias <{alias}-{index}> does not exist" in e.out
-                        or "Keystore file does not exist" in e.out
-                    )
-                ):
-                    raise
+    Args:
+        alias: Alias to use for the CA certs.
+        store_pwd: Password for the trust store.
+        store_path: Path to the trust store.
+        ca: CA cert(s) to store.
+        keep_previous: Whether to keep the previous CA certs in the trust store.
 
-        with tempfile.NamedTemporaryFile(
-            mode="w+t", dir=os.path.dirname(store_path)
-        ) as ca_tmp_file:
-            ca_tmp_file.write(certs[index])
-            ca_tmp_file.flush()
-            try:
-                run_cmd(
-                    f"""{KEYTOOL} -importcert \
-                    -noprompt \
-                    -alias {alias}-{index} \
-                    -keystore {store_path} \
-                    -file {ca_tmp_file.name} \
-                    -storetype PKCS12
-                    """,
-                    f"-storepass {store_pwd}",
-                )
-                run_cmd(f"sudo chmod +r {store_path}")
-                logger.info("New CA was added to truststore.")
-            except OpenSearchCmdError as e:
-                logger.error("Error storing the ca-cert: %s", e)
-                return False
-
-    return True
+    Returns:
+        bool: True if the operation succeeded, False otherwise.
+    """
+    logger.info("Storing CA cert(s) with alias: %s into truststore.", alias)
+    return _store_ca_chain(
+        alias=alias,
+        store_pwd=store_pwd,
+        store_path=store_path,
+        ca=ca,
+        keep_previous=keep_previous,
+        add_read_perm=True,
+    )
 
 
 def list_aliases(store_pwd: str, store_path: str) -> Optional[list[str]]:
@@ -209,42 +307,61 @@ def list_aliases(store_pwd: str, store_path: str) -> Optional[list[str]]:
         return None
 
 
-def list_cas(store_pwd: str, store_path: str) -> Optional[dict[str, str]]:
-    """List the CAs currently stored in a trust store."""
+def list_cas(store_pwd: str, store_path: str) -> Optional[dict[str, str]]:  # noqa: C901
+    """List the CAs currently stored in a trust store.
+
+    Args:
+        store_pwd: Password for the trust store.
+        store_path: Path to the trust store.
+
+    Returns:
+        A mapping from base alias to full concatenated PEM chain.
+        If an alias is partitioned as <alias>-0, <alias>-1, ... in the store,
+        they are reassembled and returned under the base <alias> key.
+    """
     if not exists(store_path):
         return None
 
     cmd = f"openssl pkcs12 -in {store_path}"
     args = f"-passin pass:{store_pwd}"
     try:
-        stored_certs = run_cmd(cmd, args).out
+        stored_certs = run_cmd(cmd, args, use_errors_replace=True).out
     except OpenSearchCmdError as e:
         logging.error("Error reading the current truststore: %s", e)
         return None
 
-    # parse output to retrieve the current CA (in case there are many)
-    certificates = split_ca_chain(stored_certs)
+    # split by -----END CERTIFICATE-----
+    cert_blocks = split_ca_chain(stored_certs)
 
     start_cert_marker = "-----BEGIN CERTIFICATE-----"
+    chains: dict[str, list[tuple[int, str]]] = {}
 
-    certs = {}
-    for cert in certificates:
-        alias = [line for line in cert.split("\n") if line.strip().startswith("friendlyName:")][0]
-        alias = alias.split("friendlyName:")[-1].strip()
-
-        alias_split = alias.split("-")  # support for CA chains with multiple intermediate CAs
-        ca_index = int(alias_split[-1])
-        ca_alias = "-".join(alias_split[:-1])
-        certs.setdefault(ca_alias, []).insert(
-            ca_index, f"{start_cert_marker}{cert.split(start_cert_marker)[1]}"
+    for block in cert_blocks:
+        # find the friendlyName: line produced by openssl pkcs12
+        alias_line = next(
+            (line for line in block.split("\n") if line.strip().startswith("friendlyName:")), None
         )
+        alias = alias_line.split("friendlyName:", 1)[-1].strip()
+        pem = f"{start_cert_marker}{block.split(start_cert_marker, 1)[1]}".strip()
 
-    # since we add a suffix for the index of the CA chain content, we need to re-arrange the output
-    cas = {}
-    for alias, certs_list in certs.items():
-        cas[alias] = "\n".join(certs_list)
+        # parse optional trailing -<int> index
+        base = alias
+        idx = 0
+        parts = alias.rsplit("-", 1)
+        if len(parts) == 2 and parts[1].isdigit():
+            # Only treat as index if suffix is purely digits
+            idx = int(parts[1])
+            base = parts[0]
 
-    return cas
+        chains.setdefault(base, []).append((idx, pem))
+
+    # reassemble chains in index order
+    out: dict[str, str] = {}
+    for base, items in chains.items():
+        items.sort(key=lambda t: t[0])
+        out[base] = "\n".join(p for _, p in items if p)
+
+    return out
 
 
 def read_ca(alias: str, store_pwd: str, store_path: str) -> Optional[str]:
@@ -253,8 +370,15 @@ def read_ca(alias: str, store_pwd: str, store_path: str) -> Optional[str]:
 
 
 def remove_ca(alias: str, store_pwd: str, store_path: str) -> None:
-    """Remove old CA cert from trust store."""
+    """Remove old CA cert from the truststore.
+
+    Args:
+        alias: Alias to use for the CA certs.
+        store_pwd: Password for the trust store.
+        store_path: Path to the trust store.
+    """
     if not exists(store_path):
+        logger.debug("Truststore %s does not exist, nothing to remove.", store_path)
         return
 
     list_cmd = f"{KEYTOOL} -list -keystore {store_path} -alias {alias} -storetype PKCS12"
@@ -262,14 +386,136 @@ def remove_ca(alias: str, store_pwd: str, store_path: str) -> None:
     try:
         run_cmd(list_cmd, list_args)
     except OpenSearchCmdError as e:
-        # This message means there was no "ca" alias or store before, if it happens ignore
-        if e.out and f"Alias <{alias}> does not exist" in e.out:
+        if _is_alias_missing_error(e, alias):
+            logger.debug(
+                "Alias %s not found in %s when listing before delete, ignoring.",
+                alias,
+                store_path,
+            )
             return
+        # Anything else is a real error
+        raise
 
     del_cmd = f"{KEYTOOL} -delete -keystore {store_path} -alias {alias} -storetype PKCS12"
     del_args = f"-storepass {store_pwd}"
-    run_cmd(del_cmd, del_args)
+    try:
+        run_cmd(del_cmd, del_args)
+    except OpenSearchCmdError as e:
+        if _is_alias_missing_error(e, alias):
+            logger.debug(
+                "Alias %s already gone from %s when deleting, ignoring.",
+                alias,
+                store_path,
+            )
+            return
+        raise
+
     logger.info("Removed %s from truststore.", alias)
+
+
+def _is_alias_missing_error(exc: OpenSearchCmdError, alias: str) -> bool:
+    """Return True if keytool says that given alias does not exist.
+
+    Args:
+        exc: The OpenSearchCmdError to check.
+        alias: The alias that was attempted to be deleted.
+
+    Returns:
+        bool: True if the error message indicates that the alias does not exist.
+    """
+    msg = (exc.out or "") + (exc.err or "")
+    return f"Alias <{alias}> does not exist" in msg
+
+
+def _collect_aliases_to_remove(alias_base: str, store_pwd: str, store_path: str) -> list[str]:
+    """List aliases that should be removed (base, base-*, old-base-*).
+
+    Args:
+        alias_base: The base alias to match.
+        store_pwd: Password for the trust store.
+        store_path: Path to the trust store.
+
+    Returns:
+        List of aliases to remove.
+    """
+    # Get all aliases from the keystore
+    all_aliases = list_aliases(store_pwd=store_pwd, store_path=store_path)
+    if all_aliases is None:
+        logger.debug("Could not list aliases from %s, no aliases to remove.", store_path)
+        return []
+
+    aliases_to_remove: list[str] = []
+    for name in all_aliases:
+        if name.startswith(f"{alias_base}-"):
+            # Verify the suffix is a digit
+            suffix = name.split("-")[-1]
+            if suffix.isdigit():
+                aliases_to_remove.append(name)
+
+    return aliases_to_remove
+
+
+def _remove_ca_aliases(alias_base: str, store_pwd: str, store_path: str) -> None:
+    """Core logic to delete aliases for a given base name.
+
+    Args:
+        alias_base: The base alias to match.
+        store_pwd: Password for the trust store.
+        store_path: Path to the trust store.
+    """
+    aliases_to_remove = _collect_aliases_to_remove(
+        alias_base=alias_base, store_pwd=store_pwd, store_path=store_path
+    )
+
+    if not aliases_to_remove:
+        logger.debug("No aliases matching %s/* found in %s.", alias_base, store_path)
+        return
+    logger.info("Aliases: %s going to be removed", ", ".join(aliases_to_remove))
+    for name in aliases_to_remove:
+        del_cmd = f"{KEYTOOL} -delete -keystore {store_path} " f"-alias {name} -storetype PKCS12"
+        del_args = f"-storepass {store_pwd}"
+        try:
+            run_cmd(del_cmd, del_args)
+            logger.info("Removed %s from truststore %s.", name, store_path)
+        except OpenSearchCmdError as e:
+            # If the alias is not found, just ignore it. It can be removed before delete.
+            if _is_alias_missing_error(e, name):
+                logger.debug(
+                    "Alias %s already gone from %s when deleting, ignoring.",
+                    name,
+                    store_path,
+                )
+                continue
+            raise
+
+
+def remove_s3_ca(alias: str, store_pwd: str, store_path: str) -> None:
+    """Remove S3 CA cert(s) from the truststore.
+
+    Args:
+        alias: Alias to use for the CA certs.
+        store_pwd: Password for the trust store.
+        store_path: Path to the trust store.
+    """
+    if not alias:
+        logger.debug("remove_s3_ca called with empty alias, nothing to do.")
+        return
+
+    if not exists(store_path):
+        logger.debug("Trust store %s does not exist, nothing to remove.", store_path)
+        return
+
+    try:
+        run_cmd(f"sudo chmod 0664 {store_path}")
+    except OpenSearchCmdError as e:
+        logger.warning(
+            "Failed to chmod 0664 on %s before S3 CA removal: %s%s",
+            store_path,
+            e.out or "",
+            e.err or "",
+        )
+    _remove_ca_aliases(alias_base=alias, store_pwd=store_pwd, store_path=store_path)
+    logger.info("Removed %s from truststore %s.", alias, store_path)
 
 
 def store_key_pair(
@@ -337,6 +583,7 @@ def get_cert_issuer_from_path(store_pwd: str, store_path: str) -> Optional[str]:
             -passin pass:{store_pwd} \
             | openssl x509 -noout -issuer
             """,
+            use_errors_replace=True,
         ).out
     except OpenSearchCmdError as e:
         logger.error("Error reading the current certificate: %s", e)
@@ -351,10 +598,501 @@ def get_cert_issuer_from_keystore(store_pwd: str, store_path: str) -> Optional[s
     cmd = f"openssl pkcs12 -in {store_path} -nodes"
     args = f"-passin pass:{store_pwd} | openssl x509 -noout -issuer"
     try:
-        return run_cmd(command=cmd, args=args).out
+        return run_cmd(command=cmd, args=args, use_errors_replace=True).out
     except OpenSearchCmdError as e:
         logger.error("Error reading the current certificate: %s", e)
         return None
     except AttributeError as e:
         logger.error("Error reading secret: %s", e)
         return None
+
+
+def _normalize_certificate_chain(text: Optional[str]) -> str:
+    """Normalize a PEM chain string before hashing.
+
+    Args:
+        text (Optional[str]): PEM chain string to be normalized.
+
+    Returns:
+        str: Normalized PEM chain string.
+    """
+    if not text:
+        return ""
+    return "\n".join(line.strip() for line in text.strip().splitlines() if line.strip())
+
+
+def normalize_certificate_chain_unordered(chain: str) -> list[str]:
+    """Normalize a PEM chain into a sorted list of cert blocks for comparison.
+
+    Args:
+        chain: PEM chain string.
+
+    Returns:
+        list[str]: List of certificate blocks, sorted by normalized content.
+
+    This makes comparison robust to:
+    - whitespace differences
+    - order of certificates within the chain
+    """
+    blocks = _split_pem_chain(chain)
+    # Use existing _normalize_certificate_chain on each block to clean whitespace etc.
+    normalized_blocks = [
+        _normalize_certificate_chain(block) for block in blocks if block and block.strip()
+    ]
+    # Sort so order does not matter
+    return sorted(normalized_blocks)
+
+
+def _split_pem_chain(chain: str) -> list[str]:
+    """Split a PEM chain into individual certificate blocks.
+
+    Args:
+        chain: PEM chain string.
+
+    Returns:
+        list[str]: List of certificate blocks.
+    """
+    if not chain:
+        return []
+
+    # Match complete / valid certificate blocks
+    pattern = r"-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----"
+    matches = re.findall(pattern, chain, flags=re.DOTALL)
+
+    return [
+        "\n".join(line.strip() for line in cert.splitlines() if line.strip()) for cert in matches
+    ]
+
+
+def get_s3_bucket_resource(s3_parameters: dict[str, str], verify: str | bool = True):
+    """Build a boto3 S3 Bucket resource from connection parameters.
+
+    Args:
+        s3_parameters: Mapping containing S3 connection information.
+        verify: TLS verification option passed to boto3.
+            - True: verify using system CAs
+            - False: disable TLS verification
+            - str: path to a CA bundle file (file containing a custom CA)
+
+    Returns:
+        boto3.resources.factory.s3.Bucket: Bucket resource handle
+
+    Raises:
+        KeyError: If required keys are missing from s3_parameters.
+        BotoCoreError: If boto3 fails to initialise the client/resource.
+    """
+    s3_resource = boto3.resource(
+        "s3",
+        region_name=s3_parameters.get("region"),
+        endpoint_url=s3_parameters["endpoint"],
+        aws_access_key_id=s3_parameters["access-key"],
+        aws_secret_access_key=s3_parameters["secret-key"],
+        config=Config(
+            # https://github.com/boto/boto3/issues/4400#issuecomment-2600742103
+            request_checksum_calculation="when_required",
+            response_checksum_validation="when_required",
+        ),
+        verify=verify,
+    )
+    return s3_resource.Bucket(s3_parameters["bucket"])
+
+
+def create_s3_bucket(s3_parameters: dict[str, str], verify: str | bool = True) -> None:
+    """Create the configured S3 bucket.
+
+    Args:
+        s3_parameters: Mapping containing S3 connection information
+                same as get_s3_bucket_resource().
+        verify: TLS verification option passed to boto3.
+
+    Raises:
+        ClientError: If bucket creation fails for reasons other than already exists.
+        BotoCoreError: If boto3 fails to initialise or make API calls.
+    """
+    region = s3_parameters.get("region")
+    bucket = get_s3_bucket_resource(s3_parameters, verify=verify)
+    is_aws_endpoint = "amazonaws.com" in (s3_parameters.get("endpoint", "").lower())
+
+    try:
+        # setting the `LocationConstraint` to the default value of us-east-1 will fail
+        # https://github.com/aws/aws-sdk-js/issues/3647
+        if is_aws_endpoint and region and region != "us-east-1":
+            bucket.create(CreateBucketConfiguration={"LocationConstraint": region})
+        else:
+            bucket.create()
+        bucket.wait_until_exists()
+
+    except ClientError as e:
+        msg = str(e)
+        if (
+            "BucketAlreadyOwnedByYou" in msg
+            or "BucketAlreadyExists" in msg
+            or "BucketNameUnavailable" in msg
+        ):
+            logger.info(f"Using existing bucket {s3_parameters['bucket']}")
+            return
+
+        logger.error(e, exc_info=True)
+        raise
+
+    logger.info(f"Bucket {s3_parameters['bucket']} is ready")
+
+
+def verify_s3_credentials(storage_config: ObjectStorageConfig) -> bool:  # noqa: C901
+    """Validate S3 credentials and CA using boto3.
+
+    Args:
+        storage_config: ObjectStorageConfig containing S3 settings (endpoint, bucket,
+            region, base_path, credentials, and optional tls_ca_chain).
+
+    Returns:
+        True if credentials (and CA) work with S3, False otherwise.
+
+    All errors are logged with the full traceback here.
+    This function may create the bucket if it does not exist.
+    """
+    ca_tmp_path = None
+    verify_param: str | bool = True
+
+    # If we have a custom CA chain, write it to a temp file and pass it to boto3
+    if storage_config.s3.tls_ca_chain:
+        fd, ca_tmp_path = tempfile.mkstemp(prefix="opensearch-s3-ca-", suffix=".pem")
+        with os.fdopen(fd, "w") as f:
+            f.write(storage_config.s3.tls_ca_chain)
+        verify_param = ca_tmp_path
+
+    s3_params: dict[str, str] = {
+        "access-key": storage_config.s3.credentials.access_key,
+        "secret-key": storage_config.s3.credentials.secret_key,
+        "bucket": storage_config.s3.bucket,
+        "endpoint": storage_config.s3.endpoint,
+        "region": storage_config.s3.region or "",
+        "path": (storage_config.s3.base_path or "").strip("/"),
+    }
+
+    try:
+        logger.info(
+            "Verifying S3 with endpoint=%r bucket=%r region=%r has_ca=%r verify=%r",
+            storage_config.s3.endpoint,
+            storage_config.s3.bucket,
+            storage_config.s3.region,
+            bool(storage_config.s3.tls_ca_chain),
+            verify_param,
+        )
+
+        bucket = get_s3_bucket_resource(s3_params, verify=verify_param)
+
+        # check bucket exists + credentials/TLS are valid
+        try:
+            bucket.meta.client.head_bucket(Bucket=storage_config.s3.bucket)
+        except ClientError as e:
+            status_code = e.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+            error_code = e.response.get("Error", {}).get("Code")
+            bucket_missing = status_code == 404 or error_code in {"NoSuchBucket", "404"}
+
+            if bucket_missing:
+                logger.warning(
+                    "S3 bucket %r not found; attempting to create it.", storage_config.s3.bucket
+                )
+                create_s3_bucket(s3_params, verify=verify_param)
+            else:
+                # auth/TLS/permission issue
+                raise
+
+        # write/delete to verify RW access
+        prefix = s3_params["path"]
+        probe_key = (
+            f"{prefix}/.opensearch-verify-{uuid.uuid4().hex}"
+            if prefix
+            else f".opensearch-verify-{uuid.uuid4().hex}"
+        )
+
+        bucket.put_object(
+            Key=probe_key,
+            Body=b"opensearch-verify",
+            ContentType="text/plain",
+        )
+        bucket.Object(probe_key).delete()
+
+        logger.info("S3 credential validation with boto3 succeeded.")
+        return True
+
+    except (BotoCoreError, ClientError) as e:
+        logger.error("S3 credential validation with boto3 failed: %s", e, exc_info=True)
+        return False
+
+    finally:
+        if ca_tmp_path:
+            try:
+                os.remove(ca_tmp_path)
+            except FileNotFoundError:
+                pass
+
+
+def get_azure_container_client(azure_parameters: dict[str, str]) -> ContainerClient:
+    """Build an Azure Blob Storage ContainerClient from connection parameters.
+
+    Args:
+        azure_parameters: Mapping containing Azure connection information. Expected keys:
+            - storage-account: Storage account name
+            - container: Container name
+            - secret-key: Account key (credential)
+            - account-url: Optional account URL. If omitted,
+                    defaults to a public Azure endpoint for the storage account.
+
+    Returns:
+        ContainerClient: Client bound to the target container.
+    """
+    if not (account_url := azure_parameters.get("account-url")):
+        account_url = f"https://{azure_parameters['storage-account']}.blob.core.windows.net"
+
+    return ContainerClient(
+        account_url=account_url,
+        container_name=azure_parameters["container"],
+        credential=azure_parameters["secret-key"],
+    )
+
+
+def create_azure_container(azure_parameters: dict[str, str]) -> None:
+    """Create the configured Azure blob container if it does not exist.
+
+    Args:
+        azure_parameters: Same mapping as get_azure_container_client().
+
+    Raises:
+        AzureError: The Azure SDK errors other than already exists.
+    """
+    container_client = get_azure_container_client(azure_parameters)
+    try:
+        container_client.create_container()
+        logger.info(f"Container {azure_parameters['container']} created")
+    except ResourceExistsError:
+        logger.info(f"Container {azure_parameters['container']} already exists")
+    except AzureError as e:
+        logger.error(
+            "Failed to create container %s: %s", azure_parameters["container"], e, exc_info=True
+        )
+        raise
+
+
+def verify_azure_credentials(storage_config: ObjectStorageConfig) -> bool:
+    """Validate Azure Blob Storage credentials using azure-storage-blob.
+
+    Args:
+        storage_config: ObjectStorageConfig containing Azure settings (endpoint,
+            base_path, container, and credentials).
+
+    Returns:
+        True if credentials allow container access and write/delete operations,
+        False otherwise.
+    """
+    if storage_config.azure.connection_protocol not in {"http", "https"}:
+        logger.warning(
+            "Azure Storage credential validation failed: unsupported connection protocol %s",
+            storage_config.azure.connection_protocol,
+        )
+        return False
+
+    try:
+        account_name = storage_config.azure.credentials.storage_account
+        account_key = storage_config.azure.credentials.secret_key
+        container_name = storage_config.azure.container
+
+        # Custom endpoint if present, else default public endpoint
+        raw_endpoint = storage_config.azure.endpoint or ""
+        if not (account_url := raw_endpoint.rsplit("/", 1)[0] if raw_endpoint else ""):
+            account_url = f"https://{account_name}.blob.core.windows.net"
+
+        azure_params: dict[str, str] = {
+            "storage-account": account_name,
+            "secret-key": account_key,
+            "container": container_name,
+            "account-url": account_url,
+        }
+
+        container_client = get_azure_container_client(azure_params)
+
+        # ensure container exists and it also validates the credentials
+        try:
+            container_client.get_container_properties()
+        except ResourceNotFoundError:
+            logger.warning(
+                "Azure container %r not found; attempting to create it.", container_name
+            )
+            create_azure_container(azure_params)
+            container_client = get_azure_container_client(azure_params)
+
+        # write/delete to validate RW access
+        prefix = (storage_config.azure.base_path or "").strip("/")
+        probe_name = (
+            f"{prefix}/.opensearch-verify-{uuid.uuid4().hex}"
+            if prefix
+            else f".opensearch-verify-{uuid.uuid4().hex}"
+        )
+
+        blob_client = container_client.get_blob_client(probe_name)
+        blob_client.upload_blob(b"opensearch-verify", overwrite=True)
+        blob_client.delete_blob()
+
+        logger.info("Azure Storage credential validation succeeded.")
+        return True
+
+    except AzureError as e:
+        logger.error("Azure Storage credential validation failed: %s", e, exc_info=True)
+        return False
+
+
+def get_gcs_client(service_account_json: str) -> storage.Client:
+    """Build a GCS client from a service-account JSON string.
+
+    Args:
+        service_account_json: JSON string for a service account key.
+
+    Returns:
+        google.cloud.storage.Client: Authenticated GCS client.
+
+    Raises:
+        ValueError: If the input is empty or not valid JSON.
+        GoogleAPIError: If the client cannot be created due to SDK errors.
+    """
+    if not service_account_json:
+        raise ValueError("Missing GCS secret_key (service account JSON).")
+
+    try:
+        service_account = json.loads(service_account_json)
+    except (TypeError, ValueError) as e:
+        raise ValueError("GCS secret_key is not valid JSON.") from e
+
+    client_kwargs: dict = {}
+    if project_id := service_account.get("project_id"):
+        client_kwargs["project"] = project_id
+
+    return storage.Client.from_service_account_info(service_account, **client_kwargs)
+
+
+def create_gcs_bucket(client: storage.Client, bucket: storage.Bucket) -> None:
+    """Create a GCS bucket.
+
+    Args:
+        client: Authenticated google-cloud-storage client.
+        bucket: Bucket handle to create.
+
+    Raises:
+        Conflict: If the bucket name is already taken (GCS bucket names are global).
+        Forbidden: If the service account lacks storage.buckets.create permission.
+        GoogleAPIError: For other GCS API errors.
+    """
+    try:
+        client.create_bucket(bucket)
+        logger.info("Created GCS bucket %r.", bucket.name)
+    except Conflict:
+        # GCS bucket names are global, and conflict means that name already taken
+        logger.error(
+            "GCS bucket %r could not be created because the name is already in use globally. "
+            "Choose a unique bucket name (GCS bucket names are global).",
+            bucket.name,
+        )
+        raise
+    except Forbidden as e:
+        logger.error(
+            "Bucket %r cannot be created (forbidden). "
+            "Service account likely missing storage.buckets.create. Error: %s",
+            bucket.name,
+            e,
+            exc_info=True,
+        )
+        raise
+
+
+def verify_gcs_credentials(object_storage_config: ObjectStorageConfig) -> bool:  # noqa: C901
+    """Validate GCS credentials using google-cloud-storage.
+
+    Args:
+        object_storage_config: ObjectStorageConfig containing GCS
+            settings (service-account JSON and bucket name).
+
+    Returns:
+        True if the service account can access the bucket (or create it if missing) and
+        can write/delete an object in it; False otherwise.
+
+    Behavior:
+        - If the configured bucket does not exist, try to create it.
+        - Verify access via write and delete a small dummy blob.
+    """
+    if not object_storage_config.gcs.credentials:
+        logger.error("GCS credential validation failed: missing credentials block.")
+        return False
+
+    service_account_json = object_storage_config.gcs.credentials.secret_key
+    bucket_name = object_storage_config.gcs.bucket
+
+    if not service_account_json:
+        logger.error("GCS credential validation failed: secret_key is empty.")
+        return False
+    if not bucket_name:
+        logger.error("GCS credential validation failed: bucket name is missing.")
+        return False
+
+    try:
+        client = get_gcs_client(service_account_json)
+        bucket = client.bucket(bucket_name)
+
+        # ensure bucket exists or create
+        try:
+            exists = bucket.exists()
+        except Forbidden:
+            # Some environments return 403 for exists() when the caller lacks storage.buckets.get.
+            # In this case we best-effort try to create. But it may still fail
+            # if bucket exists or permission is missing.
+            logger.warning(
+                "GCS bucket existence check returned 403 for %r; attempting to create it.",
+                bucket_name,
+            )
+            exists = False
+
+        if not exists:
+            logger.warning("GCS bucket %r not found; attempting to create it.", bucket_name)
+            try:
+                create_gcs_bucket(client, bucket)
+            except (Conflict, Forbidden):
+                # this is already logged in the helper
+                return False
+
+        # write/delete to validate RW access
+        prefix = (object_storage_config.gcs.base_path or "").strip("/")
+        probe_name = (
+            f"{prefix}/.opensearch-verify-{uuid.uuid4().hex}"
+            if prefix
+            else f".opensearch-verify-{uuid.uuid4().hex}"
+        )
+
+        blob = bucket.blob(probe_name)
+        blob.upload_from_string(b"opensearch-verify", content_type="text/plain")
+        blob.delete()
+
+        logger.info("GCS credential validation succeeded.")
+        return True
+
+    except (ValueError, TypeError, KeyError) as e:
+        logger.error("GCS credential validation failed: invalid credentials: %s", e, exc_info=True)
+        return False
+
+    except Forbidden as e:
+        logger.error(
+            "GCS credential validation failed: forbidden (missing permissions). Error: %s",
+            e,
+            exc_info=True,
+        )
+        return False
+
+    except NotFound as e:
+        logger.error(
+            "GCS credential validation failed: not found (endpoint/resource mismatch). Error: %s",
+            e,
+            exc_info=True,
+        )
+        return False
+
+    except GoogleAPIError as e:
+        logger.error("GCS credential validation failed: %s", e, exc_info=True)
+        return False

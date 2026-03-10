@@ -49,11 +49,7 @@ class PrecheckFailed(status_exception.StatusException):
 
     def __init__(self, message: str):
         self.message = message
-        super().__init__(
-            ops.BlockedStatus(
-                f"Rollback with `juju refresh`. Pre-upgrade check failed: {self.message}"
-            )
-        )
+        super().__init__(ops.BlockedStatus(f"Pre-upgrade check failed: {self.message}"))
 
 
 class UnitState(str, enum.Enum):
@@ -171,11 +167,9 @@ class Upgrade(abc.ABC):
             # Statuses over 120 characters are truncated in `juju status` as of juju 3.1.6 and
             # 2.9.45
             return ops.BlockedStatus(
-                f"Upgrading. Verify highest unit is healthy & run `{RESUME_ACTION_NAME}` action. To rollback, `juju refresh` to last revision"
+                f"Upgrading. Verify highest unit is healthy & run `{RESUME_ACTION_NAME}` action."
             )
-        return ops.MaintenanceStatus(
-            "Upgrading. To rollback, `juju refresh` to the previous revision"
-        )
+        return ops.MaintenanceStatus("Upgrading.")
 
     @property
     def versions_set(self) -> bool:
@@ -292,8 +286,8 @@ class Upgrade(abc.ABC):
                 raise PrecheckFailed("Not all units are online for the current app.")
 
             if (
-                self._charm.backup.backup_manager.is_set()
-                and not self._charm.backup.backup_manager.is_idle()
+                self._charm.snapshots_manager.is_restore_in_progress()
+                or self._charm.snapshots_manager.is_snapshot_in_progress()
             ):
                 raise PrecheckFailed("Backup or restore is in progress")
 

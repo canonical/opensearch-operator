@@ -267,7 +267,7 @@ class ClusterState:
         """Get all shards of all indexes in the cluster."""
         # Get cluster state
         cluster_state = opensearch.request(
-            "GET", "/_cluster/state/metadata", host=host, alt_hosts=alt_hosts
+            "GET", "/_cluster/state?filter_path=metadata.indices", host=host, alt_hosts=alt_hosts
         )
         indices_state = cluster_state["metadata"]["indices"]
 

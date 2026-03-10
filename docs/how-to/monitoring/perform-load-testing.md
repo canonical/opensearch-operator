@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Perform load testing on Charmed OpenSearch deployments with COS monitoring on AWS and other cloud platforms."
+---
+
 (how-to-perform-load-testing)=
 # How to perform load testing on Charmed OpenSearch
 

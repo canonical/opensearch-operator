@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Release notes for all Charmed OpenSearch versions with new features, bug fixes, and upgrade information."
+---
+
 (reference-release-notes-index)=
 # Release notes
 
@@ -11,6 +17,7 @@ See also the [guide on how to perform minor upgrades](how-to-minor-upgrade).
 Stable releases are published in the `2/stable` channel of CharmHub, where `2` indicates the major version of OpenSearch.
 
 * [Revision 168](reference-release-notes-revision-168) - September 2024
+* [Revision 315](reference-release-notes-revision-315) - December 2025
 
 ## Release policy and schedule
 
@@ -26,4 +33,5 @@ as they become available.
 :hidden:
 
 Revision 168 <revision-168>
+Revision 315 <revision-315>
 ```

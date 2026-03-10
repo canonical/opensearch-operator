@@ -8,9 +8,11 @@ import re
 import subprocess
 from time import time_ns
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, List, Union
+from typing import TYPE_CHECKING, Iterable, List, Union
 
-from charms.opensearch.v0.constants_charm import PeerRelationName
+from charms.opensearch.v0.constants_charm import (
+    PeerRelationName,
+)
 from charms.opensearch.v0.helper_enums import BaseStrEnum
 from charms.opensearch.v0.models import App, PeerClusterApp
 from charms.opensearch.v0.opensearch_exceptions import OpenSearchCmdError
@@ -188,12 +190,13 @@ def trigger_peer_rel_changed(
         )
 
 
-def run_cmd(command: str, args: str = None) -> SimpleNamespace:
+def run_cmd(command: str, args: str = None, use_errors_replace: bool = False) -> SimpleNamespace:
     """Run command.
 
     Arg:
         command: can contain arguments
         args: command line arguments
+        use_errors_replace: replace errors with empty string
     """
     command_with_args = command
     if args is not None:
@@ -206,8 +209,7 @@ def run_cmd(command: str, args: str = None) -> SimpleNamespace:
     logger.debug(f"Executing command: {command}")
 
     try:
-        output = subprocess.run(
-            command_with_args,
+        run_kwargs = dict(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             shell=True,
@@ -215,6 +217,22 @@ def run_cmd(command: str, args: str = None) -> SimpleNamespace:
             encoding="utf-8",
             timeout=25,
             env=os.environ,
+        )
+
+        # OpenSSL's "pkcs12 -in" output may contain non-UTF-8 bytes in Bag Attributes
+        # (e.g., friendlyName: debian:netlock_arany_=class_gold=_fQtanúsítvány.pem). When Python
+        # decodes stdout/stderr as UTF-8, this can raise UnicodeDecodeError.
+        #
+        # We enable errors="replace" only when explicitly requested (e.g., in list_cas or
+        # certificate-issuer parsing), because those commands only need ASCII PEM blocks
+        # and not the exact attribute encoding. All other commands (keytool, chmod, x509)
+        # should fail if their output is not valid UTF-8.
+        if use_errors_replace:
+            run_kwargs["errors"] = "replace"
+
+        output = subprocess.run(
+            command_with_args,
+            **run_kwargs,
         )
 
         if output.returncode != 0:
@@ -231,3 +249,13 @@ def mask_sensitive_information(cmd: str) -> str:
     pattern = re.compile(r"(-tspass\s+|-kspass\s+|-storepass\s+|-new\s+|pass:)(\S+)")
 
     return re.sub(pattern, r"\1" + "xxx", cmd)
+
+
+def diff(desired: Iterable[str], current: Iterable[str]) -> tuple[set[str], set[str]]:
+    """Returns diff needed to turn current list into desired list"""
+    desired_labels = set(desired)
+    current_labels = set(current)
+
+    add = desired_labels - current_labels
+    remove = current_labels - desired_labels
+    return add, remove

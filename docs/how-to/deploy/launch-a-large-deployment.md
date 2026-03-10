@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Deploy large-scale Charmed OpenSearch clusters with node roles, data tiers, and production configurations for high-performance workloads."
+---
+
 (how-to-deploy-large)=
 # How to launch a large deployment
 

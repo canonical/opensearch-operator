@@ -1,12 +1,18 @@
+---
+myst:
+  html_meta:
+    description: "Deploy and manage OpenSearch clusters with automated operations, TLS encryption, backups, and horizontal scaling on any cloud using Juju."
+---
+
 (index)=
-# Charmed OpenSearch Documentation
+# Charmed OpenSearch documentation
 
 Charmed OpenSearch is an open-source software operator that packages the
 [OpenSearch](http://opensearch.org/) search and data analytics suite with simplified deployment,
 operation, and management via the Juju CLI. It can be deployed on physical and virtual machines,
 as well as other cloud and cloud-like environments, including AWS, Azure, OpenStack and VMWare.
 
-Charmed OpenSearch  has multiple operator features such as automated deployment, TLS encryption,
+Charmed OpenSearch has multiple operator features such as automated deployment, TLS encryption,
 user management, horizontal scaling, replication, password rotation, and easy integration
 with other applications.
 
@@ -32,8 +38,18 @@ The upper portion of this page describes the Operating System (OS) where the cha
 
 | | |
 |--|--|
-|  [**Tutorials**](tutorial-index)</br>  [Get started](tutorial-index) - a hands-on introduction to using the Charmed OpenSearch operator for new users </br> |  [**How-to guides**](how-to-guides-index) </br> Step-by-step guides covering key operations such as [scaling](how-to-scale-horizontally), [TLS encryption](how-to-enable-tls-encryption), or [monitoring](how-to-monitoring-enable-cos) |
-| [**Reference**](reference-index) </br> Technical information such as [system requirements](reference-system-requirements) | [Explanation](explanation-index) </br> Concepts - discussion and clarification of key topics  |
+| **Tutorial** | [Introduction](tutorial-index) • [Step 1: Environment setup](tutorial-1-set-up-the-environment) |
+| **Deployment** | [Deploy with LXD](how-to-deploy-lxd) • [Large deployment](how-to-deploy-large) • [Requirements](reference-system-requirements) |
+| **Operations** | [Horizontal scaling](how-to-scale-horizontally) • [Performance optimization](how-to-optimize-cluster-performance) • [Applications integration](how-to-integrate-with-an-application) • [Version upgrades](how-to-minor-upgrade) • [Version rollback](how-to-minor-rollback) • [Monitoring](how-to-monitoring) • [Load testing](how-to-perform-load-testing) • [Software testing](explanation-software-testing) • [Charmed OpenSearch Dashboards](https://canonical-charmed-opensearch-dashboards.readthedocs-hosted.com)|
+| **Backups** | [Create a backup](how-to-create-a-backup) • [Azure configuration](how-to-back-up-configure-azure-storage) • [S3 configuration](how-to-back-up-configure-s3) • [Restore from a local backup](how-to-restore-a-local-backup) • [Migrate a cluster](how-to-migrate-a-cluster) • [Recover from attached storage](how-to-persistent-storage) |
+| **Security** | [Overview](explanation-security-index) • [Enable encryption](how-to-enable-tls-encryption) • [Rotate certificates](how-to-rotate-tls-ca-certificates) • [OAuth](how-to-access-using-oauth) • [JWT Auth](how-to-guides-enable-jwt-authentication) • [Cryptography](explanation-security-cryptography) |
+
+## How the documentation is organised
+
+[Tutorial](tutorial-index): For new users needing to learn how to use Charmed OpenSearch <br>
+[How-to guides](how-to-index): For users needing step-by-step instructions to achieve a practical goal <br>
+[Reference](reference-index): For precise, theoretical, factual information to be used while working with the charm <br>
+[Explanation](explanation-index): For deeper understanding of key Charmed OpenSearch concepts <br>
 
 ## Project & community
 
@@ -47,7 +63,7 @@ fixes and constructive feedback:
 
 ## License & trademark
 
-The Charmed OpenSearch ROCK, Charmed OpenSearch Snap,
+The Charmed OpenSearch ROCK, Charmed OpenSearch snap,
 and Charmed OpenSearch Operator are free software, distributed under the
 [Apache Software License, version 2.0](https://github.com/canonical/charmed-opensearch-rock/blob/2-24.04/edge/licenses/LICENSE-rock).
 They install and operate OpenSearch, which is also licensed under the
@@ -69,4 +85,12 @@ tutorial/index
 how-to/index
 reference/index
 explanation/index
+```
+
+```{toctree}
+:caption: OpenSearch Dashboards
+:titlesonly:
+:hidden:
+
+Dashboards documentation <dashboards/docs/index>
 ```

@@ -169,7 +169,7 @@ html_context = {
 # TODO: If your documentation is hosted on https://docs.ubuntu.com/,
 #       uncomment and update as needed.
 
-slug = 'charmed-opensearch'
+# slug = 'charmed-opensearch'
 
 #######################
 # Sitemap configuration: https://sphinx-sitemap.readthedocs.io/
@@ -207,9 +207,13 @@ sitemap_excludes = [
 # Template and asset locations
 #######################
 
-#html_static_path = ["_static"]
-#templates_path = ["_templates"]
+html_static_path = [
+    ".sphinx/_static",
+]
 
+templates_path = [
+    ".sphinx/_templates",
+]
 
 #############
 # Redirects #
@@ -224,13 +228,9 @@ sitemap_excludes = [
 # NOTE: If undefined, set to None, or empty,
 #       the sphinx_reredirects extension will be disabled.
 
-redirects = {
-    'reference/doc-cheat-sheet-myst/': '/reference/myst-syntax-reference',
-    'reference/doc-cheat-sheet/': '/reference/rst-syntax-reference',
-    'reference/style-guide-myst/': '/reference/myst-syntax-reference',
-    'reference/style-guide/': '/reference/rst-syntax-reference',
-}
+# redirects = {}
 
+rediraffe_redirects = "redirects.txt"
 
 ###########################
 # Link checker exceptions #
@@ -294,23 +294,27 @@ extensions = [
     "sphinx_last_updated_by_git",
     "sphinx.ext.intersphinx",
     "sphinx_sitemap",
+    "sphinxext.rediraffe",
 ]
 
 # Excludes files or directories from processing
 
 exclude_patterns = [
     "doc-cheat-sheet*",
+    "**/README*",
 ]
 
 # Adds custom CSS files, located under 'html_static_path'
 
-# html_css_files = []
-
+html_css_files = [
+    "cookie-banner.css",
+]
 
 # Adds custom JavaScript files, located under 'html_static_path'
 
-# html_js_files = []
-
+html_js_files = [
+    "bundle.js",
+]
 
 # Specifies a reST snippet to be appended to each .rst file
 

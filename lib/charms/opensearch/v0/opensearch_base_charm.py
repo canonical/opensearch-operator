@@ -3,6 +3,7 @@
 
 """Base class for the OpenSearch Operators."""
 import abc
+import json
 import logging
 import random
 import time
@@ -30,8 +31,6 @@ from charms.opensearch.v0.constants_charm import (
     PClusterNoRelation,
     PeerClusterRelationName,
     PeerRelationName,
-    PluginConfigChangeError,
-    PluginConfigCheck,
     RequestUnitServiceOps,
     SecurityIndexInitProgress,
     ServiceIsStopping,
@@ -57,7 +56,6 @@ from charms.opensearch.v0.models import (
     DeploymentDescription,
     DeploymentType,
 )
-from charms.opensearch.v0.opensearch_backups import backup
 from charms.opensearch.v0.opensearch_config import OpenSearchConfig
 from charms.opensearch.v0.opensearch_distro import OpenSearchDistribution
 from charms.opensearch.v0.opensearch_exceptions import (
@@ -76,16 +74,25 @@ from charms.opensearch.v0.opensearch_fixes import OpenSearchFixes
 from charms.opensearch.v0.opensearch_health import HealthColors, OpenSearchHealth
 from charms.opensearch.v0.opensearch_internal_data import RelationDataStore, Scope
 from charms.opensearch.v0.opensearch_jwt import JwtHandler
-from charms.opensearch.v0.opensearch_keystore import OpenSearchKeystoreNotReadyError
+from charms.opensearch.v0.opensearch_keystore import (
+    OpenSearchKeystore,
+    OpenSearchKeystoreEvents,
+)
 from charms.opensearch.v0.opensearch_locking import OpenSearchNodeLock
 from charms.opensearch.v0.opensearch_nodes_exclusions import OpenSearchExclusions
+from charms.opensearch.v0.opensearch_notifications_events import NotificationsEvents
+from charms.opensearch.v0.opensearch_notifications_manager import (
+    OpenSearchNotificationsManager,
+)
 from charms.opensearch.v0.opensearch_oauth import OAuthHandler
 from charms.opensearch.v0.opensearch_peer_clusters import (
     OpenSearchPeerClustersManager,
     StartMode,
 )
-from charms.opensearch.v0.opensearch_plugin_manager import OpenSearchPluginManager
-from charms.opensearch.v0.opensearch_plugins import OpenSearchPluginError
+from charms.opensearch.v0.opensearch_plugin_manager import (
+    OpenSearchPluginEvents,
+    OpenSearchPluginManager,
+)
 from charms.opensearch.v0.opensearch_profile import (
     ProfilesManager,
 )
@@ -95,6 +102,10 @@ from charms.opensearch.v0.opensearch_relation_peer_cluster import (
 )
 from charms.opensearch.v0.opensearch_relation_provider import OpenSearchProvider
 from charms.opensearch.v0.opensearch_secrets import OpenSearchSecrets
+from charms.opensearch.v0.opensearch_snapshots import (
+    OpenSearchSnapshotEvents,
+    OpenSearchSnapshotsManager,
+)
 from charms.opensearch.v0.opensearch_tls import OLD_CA_ALIAS, OpenSearchTLS
 from charms.opensearch.v0.opensearch_users import (
     OpenSearchUserManager,
@@ -104,6 +115,7 @@ from charms.opensearch.v0.state import OpenSearchClusterState
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
 )
+from ops import ModelError, SecretNotFoundError
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -209,6 +221,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.opensearch_config = OpenSearchConfig(self.opensearch)
         self.opensearch_exclusions = OpenSearchExclusions(self)
         self.opensearch_fixes = OpenSearchFixes(self)
+        self.keystore_manager = OpenSearchKeystore(self.opensearch)
 
         self.peers_data = RelationDataStore(self, PeerRelationName)
         self.secrets = OpenSearchSecrets(self, PeerRelationName)
@@ -221,17 +234,21 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         self.health = OpenSearchHealth(self)
         self.node_lock = OpenSearchNodeLock(self)
 
-        self.plugin_manager = OpenSearchPluginManager(self)
-
-        self.backup = backup(self)
+        self.plugin_manager = OpenSearchPluginManager(self.state)
+        self.plugin_events = OpenSearchPluginEvents(self)
+        self.notifications_manager = OpenSearchNotificationsManager(self.opensearch)
+        self.notifications_events = NotificationsEvents(self)
 
         self.user_manager = OpenSearchUserManager(self)
         self.opensearch_provider = OpenSearchProvider(self)
         self.peer_cluster_provider = OpenSearchPeerClusterProvider(self)
         self.peer_cluster_requirer = OpenSearchPeerClusterRequirer(self)
-
-        # Managers
         self.profiles_manager = ProfilesManager(self.state, self.opensearch)
+        self.snapshots_manager = OpenSearchSnapshotsManager(self, self.opensearch)
+
+        # Events
+        self.opensearch_keystore_events = OpenSearchKeystoreEvents(self)
+        self.snapshot_events = OpenSearchSnapshotEvents(self)
 
         self.framework.observe(self._start_opensearch_event, self._start_opensearch)
         self.framework.observe(self._restart_opensearch_event, self._restart_opensearch)
@@ -280,6 +297,42 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         # Ensure that only one instance of the `_on_peer_relation_changed` handler exists
         # in the deferred event queue
         self._is_peer_rel_changed_deferred = False
+
+    def store_plugin_secret(
+        self,
+        *,
+        content: dict,
+        label: str,
+        relation_name: Optional[str] = None,
+    ) -> None:
+        """Create/update app-scoped plugin secret and store id in peers data.
+
+        Args:
+            content: dictionary of the secret payload
+            label: label of the secret to store
+            relation_name: name of the relation from which the secret content came
+        """
+        self.secrets.put(Scope.APP, label, json.dumps(content))
+        secret_id = self.secrets.get_secret_id(Scope.APP, label)
+        if not secret_id:
+            logger.error("Could not create secret with label: %s", label)
+        self.plugin_manager.put_plugin_config(
+            Scope.APP, label=label, secret_id=secret_id, relation_name=relation_name
+        )
+
+    def remove_plugin_secret(self, label: str) -> None:
+        """Delete app-scoped plugin secret and remove id from peers data.
+
+        Args:
+            label: label of the secret to remove
+        """
+        try:
+            self.secrets.delete(Scope.APP, label)
+        except SecretNotFoundError:
+            logger.error("Can't find secret '%s'", label)
+        except ModelError as e:
+            logger.error("Cannot delete secret %s: %s", label, e)
+        self.plugin_manager.remove_plugin_config(Scope.APP, label)
 
     @property
     @abc.abstractmethod
@@ -586,6 +639,10 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.unit.is_leader():
             # Recompute the node roles in case self-healing didn't trigger leader related event
             self._recompute_roles_if_needed(event)
+            if self.peers_data.get(Scope.APP, "missing_relations"):
+                # for failover promotions: this flag indicates that the user needs
+                # to relate integrators to this new main orchestrator
+                self.peer_cluster_provider.check_credentials_with_missing_relations()
             if self.model.relations[PeerClusterRelationName]:
                 self.peer_cluster_requirer.apply_orchestrator_status()
         elif event.relation.data.get(event.app):
@@ -694,7 +751,8 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # No cluster managers left in the cluster fleet
             # raise so we do not lose the cluster state
             if (
-                len(
+                self.opensearch.is_node_up()
+                and len(
                     [
                         app
                         for app in self.opensearch_peer_cm.apps_in_fleet()
@@ -870,54 +928,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 Scope.UNIT, PERFORMANCE_PROFILE, config_profile.type.value
             )
 
-        if not self.opensearch.is_node_up():
-            logger.debug("Node not up yet, deferring plugin check")
-            # possible enhancement:
-            # currently we wait for Opensearch to be started before applying any plugin
-            # this could be improved as some plugins don't require the service to run
-            event.defer()
-            return
-
-        plugin_needs_restart = False
-
-        try:
-            original_status = None
-            if self.unit.status.message not in [
-                PluginConfigChangeError,
-                PluginConfigCheck,
-            ]:
-                logger.debug(f"Plugin manager: storing status {self.unit.status.message}")
-                original_status = self.unit.status
-                self.status.set(MaintenanceStatus(PluginConfigCheck))
-
-            plugin_needs_restart = self.plugin_manager.run()
-        except (OpenSearchNotFullyReadyError, OpenSearchPluginError) as e:
-            if isinstance(e, OpenSearchNotFullyReadyError):
-                logger.warning("Plugin management: cluster not ready yet at config changed")
-            else:
-                logger.warning(f"{PluginConfigChangeError}: {str(e)}")
-                self.status.set(BlockedStatus(PluginConfigChangeError))
-            event.defer()
-            self.status.clear(PluginConfigCheck)
-        except OpenSearchKeystoreNotReadyError:
-            logger.warning("Keystore not ready yet")
-            # defer, and let it finish the status clearing down below
-            event.defer()
-        else:
-            self.status.clear(PluginConfigChangeError)
-            self.status.clear(PluginConfigCheck)
-            if original_status:
-                self.status.set(original_status)
-
         if not self.opensearch_provider.update_relations_roles_mapping():
             event.defer()
 
-        if self.opensearch.is_service_started() and (
-            plugin_needs_restart or profile_restart_needed
-        ):
+        if self.opensearch.is_service_started() and profile_restart_needed:
             logger.debug(
-                "Restarting opensearch due to config change: plugin_needs_restart=%s, profile_restart_needed=%s",
-                plugin_needs_restart,
+                "Restarting opensearch due to config change: profile_restart_needed=%s",
                 profile_restart_needed,
             )
             self._restart_opensearch_event.emit()
@@ -1054,6 +1070,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                         logger.info("on_tls_conf_set: Detected CA rotation complete in cluster")
                         self.tls.on_ca_certs_rotation_complete()
             else:
+                logger.debug("TLS not fully configured yet, deferring event.")
                 event.defer()
                 return
 
@@ -1156,7 +1173,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         if self.opensearch_peer_cm.is_consumer():
             self.peer_cluster_requirer.refresh_requirer_relation_data()
 
-        if self.opensearch.is_started():
+        if self.opensearch.is_started() and not self.opensearch.is_failed():
             try:
                 self._post_start_init(event)
             except (
@@ -1319,7 +1336,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     "PUT",
                     "/_cluster/settings",
                     # Reset to default value
-                    payload={"persistent": {"cluster.routing.allocation.enable": None}},
+                    payload={"persistent": {"cluster.routing.allocation.enable": "all"}},
                 )
             except OpenSearchHttpError:
                 logger.exception("Failed to re-enable allocation after upgrade")
@@ -1385,10 +1402,7 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             # If `health_ == HealthColors.YELLOW`, no shards are initializing or relocating
             # (otherwise `health_` would be `HealthColors.YELLOW_TEMP`)
             if health not in (HealthColors.GREEN, HealthColors.YELLOW):
-                logger.error(
-                    "Cluster is not healthy after upgrade. Manual intervention required. To rollback, "
-                    "`juju refresh` to the previous revision"
-                )
+                logger.error("Cluster is not healthy after upgrade. Manual intervention required.")
                 event.defer()
                 return
             elif health == HealthColors.YELLOW:
@@ -1482,7 +1496,23 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.status.set(WaitingStatus(ServiceIsStopping))
             return
 
-        self._start_opensearch_event.emit()
+        # Ignore the lock if you are the only data node and restarting
+        deployment_desc = self.opensearch_peer_cm.deployment_desc()
+        ignore_lock = (
+            self.unit.is_leader()
+            and (
+                "data" in deployment_desc.config.roles
+                or deployment_desc.start == StartMode.WITH_GENERATED_ROLES
+            )
+            and sum(
+                app.planned_units
+                for app in self.state.app.cluster_fleet_apps.values()
+                if "data" in app.roles
+            )
+            == 1
+        )
+        logger.debug("Restarting OpenSearch with ignore_lock=%s", ignore_lock)
+        self._start_opensearch_event.emit(ignore_lock=ignore_lock)
 
     def _upgrade_opensearch(self, event: _UpgradeOpenSearch) -> None:  # noqa: C901
         """Upgrade OpenSearch."""

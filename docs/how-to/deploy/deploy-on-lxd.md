@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Deploy Charmed OpenSearch on LXD containers with Juju, including prerequisites, sysctl configuration, and bootstrap steps."
+---
+
 (how-to-deploy-lxd)=
 # How to deploy on LXD
 

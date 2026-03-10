@@ -6,7 +6,7 @@ display-name: OpenSearch
 
 description: |
   Machine charm for OpenSearch
-docs: https://discourse.charmhub.io/t/charmed-opensearch-documentation/9729
+docs: https://discourse.charmhub.io/t/charmed-opensearch-documentation/19417
 summary: |
   Machine charm for OpenSearch
 
@@ -41,13 +41,16 @@ requires:
     limit: 1
   peer-cluster:
     interface: peer_cluster
-    limit: 2  # (main+failover)_cluster_orchestrator(s)
+    limit: 2 # (main+failover)_cluster_orchestrator(s)
     optional: true
   s3-credentials:
     interface: s3
     limit: 1
   azure-credentials:
     interface: azure
+    limit: 1
+  gcs-credentials:
+    interface: gcs
     limit: 1
   oauth:
     interface: oauth
@@ -57,9 +60,10 @@ requires:
     interface: jwt
     limit: 1
     optional: true
-
+  smtp:
+    interface: smtp
 
 storage:
   opensearch-data:
     type: filesystem
-    location: /var/snap/opensearch/common  # /mnt/opensearch/data
+    location: /var/snap/opensearch/common # /mnt/opensearch/data

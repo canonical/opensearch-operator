@@ -81,6 +81,7 @@ async def test_build_and_deploy_active(ops_test: OpsTest, charm, series) -> None
         units_statuses=["active"],
         timeout=1800,
         wait_for_exact_units=len(UNIT_IDS),
+        idle_period=IDLE_PERIOD,
     )
 
 

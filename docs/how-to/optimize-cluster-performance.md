@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Optimize Charmed OpenSearch performance using testing and production profiles to configure resources and JVM heap size."
+---
+
 (how-to-optimize-cluster-performance)=
 # How to optimize cluster performance with profiles
 

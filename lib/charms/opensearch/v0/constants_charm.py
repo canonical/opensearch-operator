@@ -47,7 +47,6 @@ ClusterHealthRedUpgrade = (
 )
 IndexCreationFailed = "failed to create {index} index - deferring index-requested event..."
 UserCreationFailed = "failed to create users for {rel_name} relation {id}"
-PluginConfigChangeError = "Failed to apply config changes on the plugin."
 
 CmVoRolesProvidedInvalid = (
     "cluster_manager and voting_only roles cannot be both set on the same nodes."
@@ -66,12 +65,19 @@ PClusterNoDataNode = "Cannot run cluster with current roles. Waiting for data no
 PClusterWrongNodesCountForQuorum = (
     "Less than 3 cluster-manager-eligible units in this cluster. Add more units."
 )
-PluginConfigError = "Unexpected error during plugin configuration, check the logs"
+PClusterMissingRelations = (
+    "Found credentials with missing relations. Add relation for {} and any client applications."
+)
 BackupSetupFailed = "Backup setup failed, check logs for details"
-BackupRelShouldNotExist = "This unit should not be related to backup relation"
+BackupRelShouldNotExist = "This application should not be related to backup relation"
 BackupRelDataIncomplete = "Backup relation data missing or incomplete."
+BackupCredentialIncorrect = "Backup configuration error: bad credentials, permissions, invalid CA, or unsupported configuration."
+BackupCredentialCleanupFailed = "Failed to remove keystore credentials or snapshot repository. Please check the logs for more details."
+BackupRelConflict = "Too many object storage relations. Only one is supported."
+BackupMisconfiguration = "opensearch {} repository setup failed. Check the {} config."
 BackupRelUneligible = "Only orchestrator clusters should relate to backup relation."
 SecretAccessError = "Failed to access secret, please check permissions."
+SmtpRelationInvalid = "SMTP relation must be established with the main-orchestrator cluster."
 JWTAuthConfigInvalid = (
     "Configuration for JWT authentication is invalid. Check and correct parameters."
 )
@@ -89,7 +95,14 @@ PClusterMainIsRequirer = "Main orchestrator cannot be a requirer"
 InvalidProfileConfigOption = (
     "Invalid profile configuration option. Only `production` and `testing` values are allowed."
 )
-
+SmtpWaitingRecipients = (
+    "SMTP sender configured; waiting for recipients to create email group/channel."
+)
+SmtpNoRelationData = (
+    "Relation to smtp-integrator has no data. Configure smtp-integrator and check unit logs."
+)
+SMTPConfigurationError = "SMTP configuration failed. Check smtp-integrator and unit logs."
+SmtpMissingRequiredParameters = "Parameters missing from smtp-integrator: {}."
 # Maintenance statuses
 InstallProgress = "Installing OpenSearch..."
 SecurityIndexInitProgress = "Initializing the security index..."
@@ -100,10 +113,10 @@ HorizontalScaleUpSuggest = "Horizontal scale up advised: {} shards unassigned."
 WaitingForOtherUnitServiceOps = "Waiting for other units to complete the ops on their service."
 NewIndexRequested = "new index {index} requested"
 RestoreInProgress = "Restore in progress..."
+BackupInProgress = "Backup in progress..."
 BackupSetupStart = "Backup setup started."
 BackupConfigureStart = "Configuring backup service..."
 BackupInDisabling = "Disabling backup service..."
-PluginConfigCheck = "Plugin configuration check."
 
 # Relation Interfaces
 ClientRelationName = "opensearch-client"
@@ -129,16 +142,23 @@ ClientUsersDict = "client_relation_users"
 
 
 # Opensearch Snap revision
-OPENSEARCH_SNAP_REVISION = 79  # Keep in sync with `workload_version` file
+OPENSEARCH_SNAP_REVISION = 98  # Keep in sync with `workload_version` file
 
 # User-face Backup ID format
 OPENSEARCH_BACKUP_ID_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 S3_RELATION = "s3-credentials"
 AZURE_RELATION = "azure-credentials"
+GCS_RELATION = "gcs-credentials"
 
 OAUTH_RELATION = "oauth"
 
 PERFORMANCE_PROFILE = "profile"
 
 JWT_CONFIG_RELATION = "jwt-configuration"
+
+SMTP_SECRET_LABEL = "plugin-notifications"
+
+# GCS Service account JSON
+
+GCS_SERVICE_ACCOUNT_JSON = "/var/snap/opensearch/common/home/snap_daemon/gcs_service_account.json"

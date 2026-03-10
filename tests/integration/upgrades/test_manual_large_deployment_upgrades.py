@@ -6,195 +6,220 @@ import asyncio
 import logging
 
 import pytest
+from charms.opensearch.v0.constants_charm import PClusterNoRelation
 from pytest_operator.plugin import OpsTest
 
 from ..ha.continuous_writes import ContinuousWrites
-from ..ha.helpers import assert_continuous_writes_consistency
-from ..helpers import APP_NAME, CONFIG_OPTS, IDLE_PERIOD, MODEL_CONFIG, run_action
-from ..helpers_deployments import get_application_units, wait_until
+from ..ha.helpers import (
+    assert_continuous_writes_consistency,
+    assert_continuous_writes_increasing,
+)
+from ..helpers import APP_NAME, MODEL_CONFIG, set_watermark
+from ..helpers_deployments import wait_until
 from ..tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
+from .helpers import (
+    IDLE_PERIOD,
+    OPENSEARCH_CHANNEL,
+    OPENSEARCH_CHARM,
+    UPGRADE_PARAMS,
+    VERSION_N,
+    VERSION_N_MINUS_1,
+    VERSION_N_MINUS_2,
+    VERSION_TO_REVISION,
+    assert_rollback_to_revision,
+    assert_upgrade_to_local,
+    assert_upgrade_to_revision,
+    assert_version_units,
+    testing_config_if_supported,
+)
 
 logger = logging.getLogger(__name__)
 
+MAIN_APP = "main"
+FAILOVER_APP = "failover"
 
-OPENSEARCH_ORIGINAL_CHARM_NAME = "opensearch"
-OPENSEARCH_INITIAL_CHANNEL = "2/edge"
-OPENSEARCH_MAIN_APP_NAME = "main"
-OPENSEARCH_FAILOVER_APP_NAME = "failover"
-
+REL_ORCHESTRATOR = "peer-cluster-orchestrator"
+REL_PEER = "peer-cluster"
+TIMEOUT = 1800
 
 charm = None
 
-
-WORKLOAD = {
+APPS = {
     APP_NAME: 3,
-    OPENSEARCH_FAILOVER_APP_NAME: 2,
-    OPENSEARCH_MAIN_APP_NAME: 1,
+    FAILOVER_APP: 2,
+    MAIN_APP: 3,
 }
 
 
-@pytest.mark.skip(reason="Fix with DPE-4528")
-@pytest.mark.abort_on_fail
-@pytest.mark.skip_if_deployed
-async def test_large_deployment_deploy_original_charm(ops_test: OpsTest, series) -> None:
-    """Build and deploy the charm for large deployment tests."""
+async def _build_env(ops_test: OpsTest, version: str, series: str) -> None:
+    """Sets up environment for given version and series"""
     await ops_test.model.set_config(MODEL_CONFIG)
+
     # Deploy TLS Certificates operator.
     tls_config = {"ca-common-name": "CN_CA"}
 
-    main_orchestrator_conf = {
-        "cluster_name": "backup-test",
-        "init_hold": False,
-        "roles": "cluster_manager",
-    }
-    failover_orchestrator_conf = {
-        "cluster_name": "backup-test",
-        "init_hold": True,
-        "roles": "cluster_manager",
-    }
-    data_hot_conf = {"cluster_name": "backup-test", "init_hold": True, "roles": "data.hot"}
-
+    revision = VERSION_TO_REVISION[version][series]
+    config = testing_config_if_supported(revision)
     await asyncio.gather(
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=tls_config
         ),
         ops_test.model.deploy(
-            OPENSEARCH_ORIGINAL_CHARM_NAME,
-            application_name=OPENSEARCH_MAIN_APP_NAME,
-            num_units=WORKLOAD[OPENSEARCH_MAIN_APP_NAME],
+            OPENSEARCH_CHARM,
+            channel=OPENSEARCH_CHANNEL,
+            application_name=MAIN_APP,
+            num_units=APPS[MAIN_APP],
+            revision=revision,
             series=series,
-            channel=OPENSEARCH_INITIAL_CHANNEL,
-            config=main_orchestrator_conf | CONFIG_OPTS,
+            config={"cluster_name": "upgrades"} | config,
         ),
         ops_test.model.deploy(
-            OPENSEARCH_ORIGINAL_CHARM_NAME,
-            application_name=OPENSEARCH_FAILOVER_APP_NAME,
-            num_units=WORKLOAD[OPENSEARCH_FAILOVER_APP_NAME],
+            OPENSEARCH_CHARM,
+            channel=OPENSEARCH_CHANNEL,
+            application_name=FAILOVER_APP,
+            num_units=APPS[FAILOVER_APP],
+            revision=revision,
             series=series,
-            channel=OPENSEARCH_INITIAL_CHANNEL,
-            config=failover_orchestrator_conf | CONFIG_OPTS,
+            config={"cluster_name": "upgrades", "init_hold": True, "roles": "cluster_manager"}
+            | config,
         ),
         ops_test.model.deploy(
-            OPENSEARCH_ORIGINAL_CHARM_NAME,
+            OPENSEARCH_CHARM,
+            channel=OPENSEARCH_CHANNEL,
             application_name=APP_NAME,
-            num_units=WORKLOAD[APP_NAME],
+            num_units=APPS[APP_NAME],
+            revision=revision,
             series=series,
-            channel=OPENSEARCH_INITIAL_CHANNEL,
-            config=data_hot_conf | CONFIG_OPTS,
+            config={"cluster_name": "upgrades", "init_hold": True, "roles": "data"} | config,
         ),
     )
 
-    # Large deployment setup
-    await ops_test.model.integrate("main:peer-cluster-orchestrator", "failover:peer-cluster")
-    await ops_test.model.integrate("main:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster")
-    await ops_test.model.integrate(
-        "failover:peer-cluster-orchestrator", f"{APP_NAME}:peer-cluster"
-    )
+    # integrate TLS to all applications
+    for app in list(APPS.keys()):
+        await ops_test.model.integrate(app, TLS_CERTIFICATES_APP_NAME)
 
-    # TLS setup
-    await ops_test.model.integrate("main", TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.integrate("failover", TLS_CERTIFICATES_APP_NAME)
-    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
-
-    # Charms except s3-integrator should be active
     await wait_until(
         ops_test,
-        apps=[
-            TLS_CERTIFICATES_APP_NAME,
-            OPENSEARCH_MAIN_APP_NAME,
-            OPENSEARCH_FAILOVER_APP_NAME,
-            APP_NAME,
-        ],
+        apps=list(APPS.keys()),
+        apps_full_statuses={
+            MAIN_APP: {"active": []},
+            FAILOVER_APP: {"blocked": [PClusterNoRelation]},
+            APP_NAME: {"blocked": [PClusterNoRelation]},
+        },
+        units_full_statuses={
+            MAIN_APP: {"units": {"active": []}},
+            FAILOVER_APP: {"units": {"active": []}},
+            APP_NAME: {"units": {"active": []}},
+        },
+        wait_for_exact_units={app: units for app, units in APPS.items()},
+        idle_period=IDLE_PERIOD,
+        timeout=TIMEOUT,
+    )
+
+    await ops_test.model.integrate(f"{MAIN_APP}:{REL_ORCHESTRATOR}", f"{APP_NAME}:{REL_PEER}")
+    await ops_test.model.integrate(f"{MAIN_APP}:{REL_ORCHESTRATOR}", f"{FAILOVER_APP}:{REL_PEER}")
+    await ops_test.model.integrate(f"{FAILOVER_APP}:{REL_ORCHESTRATOR}", f"{APP_NAME}:{REL_PEER}")
+
+    await wait_until(
+        ops_test,
+        apps=list(APPS.keys()),
         apps_statuses=["active"],
         units_statuses=["active"],
-        wait_for_exact_units={
-            TLS_CERTIFICATES_APP_NAME: 1,
-            OPENSEARCH_MAIN_APP_NAME: WORKLOAD[OPENSEARCH_MAIN_APP_NAME],
-            OPENSEARCH_FAILOVER_APP_NAME: WORKLOAD[OPENSEARCH_FAILOVER_APP_NAME],
-            APP_NAME: WORKLOAD[APP_NAME],
-        },
+        wait_for_exact_units={app: units for app, units in APPS.items()},
         idle_period=IDLE_PERIOD,
-        timeout=3600,
+        timeout=TIMEOUT,
     )
 
+    for app in list(APPS.keys()):
+        await set_watermark(ops_test, app)
 
-@pytest.mark.skip(reason="Fix with DPE-4528")
+
+@pytest.mark.group(id="happy_path_upgrade")
 @pytest.mark.abort_on_fail
-async def test_manually_upgrade_to_local(
-    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, charm
+@pytest.mark.skip_if_deployed
+async def test_deploy_starting_version(ops_test: OpsTest, series) -> None:
+    """Build and deploy the charm for large deployment tests."""
+    # deploy version n-2 for current series
+    await _build_env(ops_test, VERSION_N_MINUS_2, series)
+
+
+@pytest.mark.group(id="happy_path_upgrade")
+@pytest.mark.abort_on_fail
+@pytest.mark.skip("Can't upgrade between earlier versions")
+# TODO: re-enable after two versions available
+async def test_upgrade_to_n_minus_1(
+    ops_test: OpsTest, series: str, c_writes: ContinuousWrites, c_writes_runner
 ) -> None:
-    """Test upgrade from usptream to currently locally built version."""
-    units = await get_application_units(ops_test, OPENSEARCH_MAIN_APP_NAME)
-    leader_id = [u.id for u in units if u.is_leader][0]
-
-    action = await run_action(
-        ops_test,
-        leader_id,
-        "pre-upgrade-check",
-        app=OPENSEARCH_MAIN_APP_NAME,
-    )
-    assert action.status == "completed"
-
-    logger.info("Build charm locally")
-
-    async with ops_test.fast_forward():
-        for app, unit_count in WORKLOAD.items():
-            application = ops_test.model.applications[app]
-            units = await get_application_units(ops_test, app)
-            leader_id = [u.id for u in units if u.is_leader][0]
-
-            logger.info(f"Refresh app {app}, leader {leader_id}")
-
-            await application.refresh(path=charm)
-            logger.info("Refresh is over, waiting for the charm to settle")
-
-            if unit_count == 1:
-                # Upgrade already happened for this unit, wait for idle and continue
-                await wait_until(
-                    ops_test,
-                    apps=[app],
-                    apps_statuses=["active"],
-                    units_statuses=["active"],
-                    idle_period=IDLE_PERIOD,
-                    timeout=3600,
-                )
-                logger.info(f"Upgrade of app {app} finished")
-                continue
-
-            await wait_until(
-                ops_test,
-                apps=[app],
-                apps_statuses=["blocked"],
-                units_statuses=["active"],
-                wait_for_exact_units={
-                    app: unit_count,
-                },
-                idle_period=120,
-                timeout=3600,
-            )
-            # Resume the upgrade
-            action = await run_action(
-                ops_test,
-                leader_id,
-                "resume-upgrade",
-                app=app,
-            )
-            assert action.status == "completed"
-            logger.info(f"resume-upgrade: {action}")
-
-            await wait_until(
-                ops_test,
-                apps=[app],
-                apps_statuses=["active"],
-                units_statuses=["active"],
-                idle_period=IDLE_PERIOD,
-                timeout=3600,
-            )
-            logger.info(f"Upgrade of app {app} finished")
+    """Test minor version upgrade from n-2 to n-1."""
+    # upgrade to version n-1 revision for current series
+    revision = VERSION_TO_REVISION[VERSION_N_MINUS_1][series]
+    for app in list(APPS.keys()):
+        await assert_version_units(ops_test, app, VERSION_N_MINUS_2)
+        await assert_upgrade_to_revision(ops_test, app, revision)
+        await assert_version_units(ops_test, app, VERSION_N_MINUS_1)
 
     # continuous writes checks
-    await assert_continuous_writes_consistency(
-        ops_test,
-        c_writes,
-        [APP_NAME, OPENSEARCH_MAIN_APP_NAME],
-    )
+    await assert_continuous_writes_increasing(c_writes)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [APP_NAME, MAIN_APP])
+
+
+@pytest.mark.group(id="happy_path_upgrade")
+@pytest.mark.abort_on_fail
+async def test_upgrade_to_local(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, charm
+) -> None:
+    """Test upgrade to local charm from n-1."""
+    for app in [APP_NAME, FAILOVER_APP, MAIN_APP]:
+        await assert_upgrade_to_local(ops_test, app=app, charm=charm)
+        await assert_version_units(ops_test, app, VERSION_N)
+
+    # continuous writes checks
+    await assert_continuous_writes_increasing(c_writes)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [APP_NAME, MAIN_APP])
+
+
+@pytest.mark.parametrize("version", UPGRADE_PARAMS)
+@pytest.mark.abort_on_fail
+@pytest.mark.skip_if_deployed
+async def test_deploy_version(ops_test: OpsTest, version, series) -> None:
+    """Deploy OpenSearch at given version."""
+    await _build_env(ops_test, version, series)
+
+
+@pytest.mark.parametrize("version", UPGRADE_PARAMS)
+@pytest.mark.abort_on_fail
+@pytest.mark.skip("Rollbacks not supported")
+# TODO re-enable after rollbacks best effort support is added
+async def test_upgrade_rollback_from_local(
+    ops_test: OpsTest,
+    version: str,
+    charm: str,
+    series: str,
+    c_writes: ContinuousWrites,
+    c_writes_runner,
+) -> None:
+    """Test upgrade to local and rollback to given version."""
+    revision = VERSION_TO_REVISION[version][series]
+    for app in [APP_NAME, FAILOVER_APP, MAIN_APP]:
+        await assert_version_units(ops_test, app, version)
+        await assert_rollback_to_revision(ops_test, app, charm, revision)
+        await assert_version_units(ops_test, app, version)
+
+    # continuous writes checks
+    await assert_continuous_writes_increasing(c_writes)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [APP_NAME, MAIN_APP])
+
+
+@pytest.mark.parametrize("version", UPGRADE_PARAMS)
+@pytest.mark.abort_on_fail
+async def test_upgrade_from_version_to_local(
+    ops_test: OpsTest, c_writes: ContinuousWrites, c_writes_runner, version, charm
+) -> None:
+    """Test upgrade from usptream to local charm."""
+    for app in [APP_NAME, FAILOVER_APP, MAIN_APP]:
+        await assert_upgrade_to_local(ops_test, app=app, charm=charm)
+        await assert_version_units(ops_test, app, VERSION_N)
+
+    # continuous writes checks
+    await assert_continuous_writes_increasing(c_writes)
+    await assert_continuous_writes_consistency(ops_test, c_writes, [APP_NAME, MAIN_APP])
