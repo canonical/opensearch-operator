@@ -207,7 +207,7 @@ class _UpgradeOpenSearch(_StartOpenSearch):
 
     def restore(self, snapshot: Dict[str, Any]):
         super().restore(snapshot)
-        self.override_version = snapshot["override_version"]
+        self.override_version = snapshot.get("override_version", False)
 
 
 class OpenSearchBaseCharm(CharmBase, abc.ABC):

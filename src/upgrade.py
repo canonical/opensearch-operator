@@ -319,11 +319,11 @@ class Upgrade(abc.ABC):
             return False
 
         version_on_disk = self._current_versions["workload"]
-        compatibilty_matrix = self._charm.reconcile_compatibility_matrix()
+        compatibility_matrix = self._charm.reconcile_compatibility_matrix()
 
         if (
-            str(unit_bag_version) in compatibilty_matrix
-            and str(version_on_disk) in compatibilty_matrix[str(unit_bag_version)]
+            str(unit_bag_version) in compatibility_matrix
+            and str(version_on_disk) in compatibility_matrix[str(unit_bag_version)]
         ):
             logger.debug(
                 "Rollback supported from %s to %s",
