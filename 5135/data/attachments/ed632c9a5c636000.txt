@@ -1,0 +1,498 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  03:26:02Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      4  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0*                active    idle   1        10.102.12.216   9200/tcp  
+opensearch/1                 active    idle   2        10.102.12.110   9200/tcp  
+opensearch/2                 active    idle   3        10.102.12.111   9200/tcp  
+opensearch/3                 error     idle   4        10.102.12.227             hook failed: "config-changed"
+self-signed-certificates/0*  active    idle   0        10.102.12.38              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.102.12.38   juju-e0cd70-0  ubuntu@24.04  github-runner  Running
+1        started  10.102.12.216  juju-e0cd70-1  ubuntu@24.04  github-runner  Running
+2        started  10.102.12.110  juju-e0cd70-2  ubuntu@24.04  github-runner  Running
+3        started  10.102.12.111  juju-e0cd70-3  ubuntu@24.04  github-runner  Running
+4        started  10.102.12.227  juju-e0cd70-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 02:53:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:53:54 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:54:02 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:54:02 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:58:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:58:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:58:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:58:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 03:06:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 03:06:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-3: 03:07:37 ERROR unit.opensearch/3.juju-log Failed to install/upgrade opensearch. 
+Snap: 'opensearch' -- command ['snap', 'install', 'opensearch', '--revision="98"'] failed!
+Stdout:
+2026-03-13T03:06:34Z INFO Waiting for automatic snapd restart...
+
+Stderr:
+error: cannot perform the following tasks:
+- Fetch and check assertions for snap "opensearch" (98) (Get "https://api.snapcraft.io/v2/assertions/snap-revision/ro7rkQt_mHwqyGDEn19gFwzfGwCptq-V08FWEIsg-xkKfEhoGqXdVOpBKHs9UncD?max-format=0": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers))
+
+Latest logs:
+Mar 13 03:06:29 juju-e0cd70-4 useradd[2873]: new user: name=snapd-range-524288-root, UID=524288, GID=524288, home=/nonexistent, shell=/usr/bin/false, from=none
+Mar 13 03:06:29 juju-e0cd70-4 groupadd[2880]: group added to /etc/group: name=snap_daemon, GID=584788
+Mar 13 03:06:29 juju-e0cd70-4 groupadd[2880]: group added to /etc/gshadow: name=snap_daemon
+Mar 13 03:06:29 juju-e0cd70-4 groupadd[2880]: new group: name=snap_daemon, GID=584788
+Mar 13 03:06:29 juju-e0cd70-4 useradd[2886]: new user: name=snap_daemon, UID=584788, GID=584788, home=/nonexistent, shell=/usr/bin/false, from=none
+Mar 13 03:06:34 juju-e0cd70-4 snapd[2099]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Mar 13 03:06:34 juju-e0cd70-4 snapd[2099]: daemon.go:556: gracefully waiting for running hooks
+Mar 13 03:06:34 juju-e0cd70-4 snapd[2099]: daemon.go:558: done waiting for running hooks
+Mar 13 03:06:37 juju-e0cd70-4 snapd[2099]: overlord.go:538: Released state lock file
+Mar 13 03:06:37 juju-e0cd70-4 systemd[1]: snapd.service: Deactivated successfully.
+Mar 13 03:06:37 juju-e0cd70-4 systemd[1]: snapd.service: Scheduled restart job, restart counter is at 1.
+Mar 13 03:06:37 juju-e0cd70-4 systemd[1]: Starting snapd.service - Snap Daemon...
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: overlord.go:294: Acquiring state lock file
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: overlord.go:299: Acquired state lock file
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: daemon.go:276: started snapd/2.73+ubuntu24.04 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-37-generic.
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: daemon.go:370: adjusting startup timeout by 35s (pessimistic estimate of 30s plus 5s per snap)
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: backends.go:70: AppArmor status: apparmor is enabled and all features are available
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: backend.go:145: reloading profiles for snap-confine
+Mar 13 03:06:37 juju-e0cd70-4 systemd[1]: Started snapd.service - Snap Daemon.
+Mar 13 03:07:36 juju-e0cd70-4 snapd[3191]: taskrunner.go:304: Change 4 task (Fetch and check assertions for snap "opensearch" (98)) failed: Get "https://api.snapcraft.io/v2/assertions/snap-revision/ro7rkQt_mHwqyGDEn19gFwzfGwCptq-V08FWEIsg-xkKfEhoGqXdVOpBKHs9UncD?max-format=0": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)
+
+unit-opensearch-3: 03:08:19 ERROR unit.opensearch/3.juju-log Failed to install/upgrade opensearch. 
+Snap: 'opensearch' -- command ['snap', 'install', 'opensearch', '--revision="98"'] failed!
+Stderr:
+error: unable to contact snap store
+
+Latest logs:
+Mar 13 03:06:29 juju-e0cd70-4 groupadd[2880]: group added to /etc/group: name=snap_daemon, GID=584788
+Mar 13 03:06:29 juju-e0cd70-4 groupadd[2880]: group added to /etc/gshadow: name=snap_daemon
+Mar 13 03:06:29 juju-e0cd70-4 groupadd[2880]: new group: name=snap_daemon, GID=584788
+Mar 13 03:06:29 juju-e0cd70-4 useradd[2886]: new user: name=snap_daemon, UID=584788, GID=584788, home=/nonexistent, shell=/usr/bin/false, from=none
+Mar 13 03:06:34 juju-e0cd70-4 snapd[2099]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Mar 13 03:06:34 juju-e0cd70-4 snapd[2099]: daemon.go:556: gracefully waiting for running hooks
+Mar 13 03:06:34 juju-e0cd70-4 snapd[2099]: daemon.go:558: done waiting for running hooks
+Mar 13 03:06:37 juju-e0cd70-4 snapd[2099]: overlord.go:538: Released state lock file
+Mar 13 03:06:37 juju-e0cd70-4 systemd[1]: snapd.service: Deactivated successfully.
+Mar 13 03:06:37 juju-e0cd70-4 systemd[1]: snapd.service: Scheduled restart job, restart counter is at 1.
+Mar 13 03:06:37 juju-e0cd70-4 systemd[1]: Starting snapd.service - Snap Daemon...
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: overlord.go:294: Acquiring state lock file
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: overlord.go:299: Acquired state lock file
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: daemon.go:276: started snapd/2.73+ubuntu24.04 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-37-generic.
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: daemon.go:370: adjusting startup timeout by 35s (pessimistic estimate of 30s plus 5s per snap)
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: backends.go:70: AppArmor status: apparmor is enabled and all features are available
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: backend.go:145: reloading profiles for snap-confine
+Mar 13 03:06:37 juju-e0cd70-4 systemd[1]: Started snapd.service - Snap Daemon.
+Mar 13 03:07:36 juju-e0cd70-4 snapd[3191]: taskrunner.go:304: Change 4 task (Fetch and check assertions for snap "opensearch" (98)) failed: Get "https://api.snapcraft.io/v2/assertions/snap-revision/ro7rkQt_mHwqyGDEn19gFwzfGwCptq-V08FWEIsg-xkKfEhoGqXdVOpBKHs9UncD?max-format=0": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)
+Mar 13 03:07:39 juju-e0cd70-4 snapd[3191]: api_snaps.go:536: Installing snap "opensearch" revision 98
+
+unit-opensearch-3: 03:09:01 ERROR unit.opensearch/3.juju-log Failed to install/upgrade opensearch. 
+Snap: 'opensearch' -- command ['snap', 'install', 'opensearch', '--revision="98"'] failed!
+Stderr:
+error: unable to contact snap store
+
+Latest logs:
+Mar 13 03:06:29 juju-e0cd70-4 groupadd[2880]: group added to /etc/gshadow: name=snap_daemon
+Mar 13 03:06:29 juju-e0cd70-4 groupadd[2880]: new group: name=snap_daemon, GID=584788
+Mar 13 03:06:29 juju-e0cd70-4 useradd[2886]: new user: name=snap_daemon, UID=584788, GID=584788, home=/nonexistent, shell=/usr/bin/false, from=none
+Mar 13 03:06:34 juju-e0cd70-4 snapd[2099]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Mar 13 03:06:34 juju-e0cd70-4 snapd[2099]: daemon.go:556: gracefully waiting for running hooks
+Mar 13 03:06:34 juju-e0cd70-4 snapd[2099]: daemon.go:558: done waiting for running hooks
+Mar 13 03:06:37 juju-e0cd70-4 snapd[2099]: overlord.go:538: Released state lock file
+Mar 13 03:06:37 juju-e0cd70-4 systemd[1]: snapd.service: Deactivated successfully.
+Mar 13 03:06:37 juju-e0cd70-4 systemd[1]: snapd.service: Scheduled restart job, restart counter is at 1.
+Mar 13 03:06:37 juju-e0cd70-4 systemd[1]: Starting snapd.service - Snap Daemon...
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: overlord.go:294: Acquiring state lock file
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: overlord.go:299: Acquired state lock file
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: daemon.go:276: started snapd/2.73+ubuntu24.04 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-37-generic.
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: daemon.go:370: adjusting startup timeout by 35s (pessimistic estimate of 30s plus 5s per snap)
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: backends.go:70: AppArmor status: apparmor is enabled and all features are available
+Mar 13 03:06:37 juju-e0cd70-4 snapd[3191]: backend.go:145: reloading profiles for snap-confine
+Mar 13 03:06:37 juju-e0cd70-4 systemd[1]: Started snapd.service - Snap Daemon.
+Mar 13 03:07:36 juju-e0cd70-4 snapd[3191]: taskrunner.go:304: Change 4 task (Fetch and check assertions for snap "opensearch" (98)) failed: Get "https://api.snapcraft.io/v2/assertions/snap-revision/ro7rkQt_mHwqyGDEn19gFwzfGwCptq-V08FWEIsg-xkKfEhoGqXdVOpBKHs9UncD?max-format=0": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)
+Mar 13 03:07:39 juju-e0cd70-4 snapd[3191]: api_snaps.go:536: Installing snap "opensearch" revision 98
+Mar 13 03:08:21 juju-e0cd70-4 snapd[3191]: api_snaps.go:536: Installing snap "opensearch" revision 98
+
+unit-opensearch-3: 03:11:52 ERROR unit.opensearch/3.juju-log certificates:3: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/src/opensearch.py", line 55, in __init__
+    self._opensearch = cache["opensearch"]
+                       ~~~~~^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 988, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in _load_info
+    info = self._snap_client.get_snap_information(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 939, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 868, in _request
+    response = self._request_raw(method, path, query, headers, data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 916, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 515, in open
+    response = self._open(req, data)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 532, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 798, in http_open
+    return self.do_open(
+           ^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1348, in do_open
+    r = h.getresponse()
+        ^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 1448, in getresponse
+    response.begin()
+  File "/usr/lib/python3.12/http/client.py", line 336, in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 297, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/socket.py", line 707, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+TimeoutError: timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/src/charm.py", line 215, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 500, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 313, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/src/charm.py", line 30, in __init__
+    super().__init__(*args, distro=OpenSearchSnap)  # OpenSearchTarball
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 218, in __init__
+    self.opensearch = distro(self, PeerRelationName)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/src/opensearch.py", line 52, in __init__
+    for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(wait=5)):
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/tenacity/__init__.py", line 445, in __iter__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/tenacity/__init__.py", line 378, in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/tenacity/__init__.py", line 421, in exc_check
+    raise retry_exc from fut.exception()
+tenacity.RetryError: RetryError[<Future at 0x7ce5cb44be00 state=finished raised TimeoutError>]
+unit-opensearch-3: 03:11:52 ERROR juju.worker.uniter.operation hook "certificates-relation-created" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-3: 03:14:48 ERROR unit.opensearch/3.juju-log certificates:3: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/src/opensearch.py", line 55, in __init__
+    self._opensearch = cache["opensearch"]
+                       ~~~~~^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 988, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in _load_info
+    info = self._snap_client.get_snap_information(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 939, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 868, in _request
+    response = self._request_raw(method, path, query, headers, data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 916, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 515, in open
+    response = self._open(req, data)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 532, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 798, in http_open
+    return self.do_open(
+           ^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1348, in do_open
+    r = h.getresponse()
+        ^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 1448, in getresponse
+    response.begin()
+  File "/usr/lib/python3.12/http/client.py", line 336, in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 297, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/socket.py", line 707, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+TimeoutError: timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/src/charm.py", line 215, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 500, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 313, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/src/charm.py", line 30, in __init__
+    super().__init__(*args, distro=OpenSearchSnap)  # OpenSearchTarball
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 218, in __init__
+    self.opensearch = distro(self, PeerRelationName)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/src/opensearch.py", line 52, in __init__
+    for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(wait=5)):
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/tenacity/__init__.py", line 445, in __iter__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/tenacity/__init__.py", line 378, in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/tenacity/__init__.py", line 421, in exc_check
+    raise retry_exc from fut.exception()
+tenacity.RetryError: RetryError[<Future at 0x7c23308b3f80 state=finished raised TimeoutError>]
+unit-opensearch-3: 03:14:48 ERROR juju.worker.uniter.operation hook "certificates-relation-created" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-3: 03:17:49 ERROR unit.opensearch/3.juju-log certificates:3: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/src/opensearch.py", line 55, in __init__
+    self._opensearch = cache["opensearch"]
+                       ~~~~~^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 988, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in _load_info
+    info = self._snap_client.get_snap_information(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 939, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 868, in _request
+    response = self._request_raw(method, path, query, headers, data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 916, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 515, in open
+    response = self._open(req, data)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 532, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/operator_libs_linux/v2/snap.py", line 798, in http_open
+    return self.do_open(
+           ^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1348, in do_open
+    r = h.getresponse()
+        ^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 1448, in getresponse
+    response.begin()
+  File "/usr/lib/python3.12/http/client.py", line 336, in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 297, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/socket.py", line 707, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+TimeoutError: timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/src/charm.py", line 215, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 500, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 313, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/src/charm.py", line 30, in __init__
+    super().__init__(*args, distro=OpenSearchSnap)  # OpenSearchTarball
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 218, in __init__
+    self.opensearch = distro(self, PeerRelationName)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/src/opensearch.py", line 52, in __init__
+    for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(wait=5)):
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/tenacity/__init__.py", line 445, in __iter__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/tenacity/__init__.py", line 378, in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/tenacity/__init__.py", line 421, in exc_check
+    raise retry_exc from fut.exception()
+tenacity.RetryError: RetryError[<Future at 0x74be12ebff20 state=finished raised TimeoutError>]
+unit-opensearch-3: 03:17:49 ERROR juju.worker.uniter.operation hook "certificates-relation-created" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-3: 03:21:01 ERROR unit.opensearch/3.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/src/charm.py", line 215, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 502, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 486, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 421, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 465, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 870, in _on_config_changed
+    if self.opensearch_config.update_host_if_needed():
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/opensearch_config.py", line 405, in update_host_if_needed
+    node = self.load_node()
+           ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/opensearch_config.py", line 40, in load_node
+    return self._opensearch.config.load(self.CONFIG_YML)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/helper_conf_setter.py", line 189, in load
+    raise FileNotFoundError(f"{path} not found.")
+FileNotFoundError: /var/snap/opensearch/current/etc/opensearch/opensearch.yml not found.
+unit-opensearch-3: 03:21:01 ERROR juju.worker.uniter.operation hook "config-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-3: 03:21:41 ERROR unit.opensearch/3.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/src/charm.py", line 215, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 502, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 486, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 421, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 465, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 870, in _on_config_changed
+    if self.opensearch_config.update_host_if_needed():
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/opensearch_config.py", line 405, in update_host_if_needed
+    node = self.load_node()
+           ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/opensearch_config.py", line 40, in load_node
+    return self._opensearch.config.load(self.CONFIG_YML)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/helper_conf_setter.py", line 189, in load
+    raise FileNotFoundError(f"{path} not found.")
+FileNotFoundError: /var/snap/opensearch/current/etc/opensearch/opensearch.yml not found.
+unit-opensearch-3: 03:21:41 ERROR juju.worker.uniter.operation hook "config-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-3: 03:22:59 ERROR unit.opensearch/3.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/src/charm.py", line 215, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 502, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 486, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 421, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 465, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 870, in _on_config_changed
+    if self.opensearch_config.update_host_if_needed():
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/opensearch_config.py", line 405, in update_host_if_needed
+    node = self.load_node()
+           ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/opensearch_config.py", line 40, in load_node
+    return self._opensearch.config.load(self.CONFIG_YML)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/helper_conf_setter.py", line 189, in load
+    raise FileNotFoundError(f"{path} not found.")
+FileNotFoundError: /var/snap/opensearch/current/etc/opensearch/opensearch.yml not found.
+unit-opensearch-3: 03:22:59 ERROR juju.worker.uniter.operation hook "config-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-opensearch-3: 03:25:33 ERROR unit.opensearch/3.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/src/charm.py", line 215, in <module>
+    main(OpenSearchOperatorCharm)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 502, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 486, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 421, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 465, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/opensearch_base_charm.py", line 870, in _on_config_changed
+    if self.opensearch_config.update_host_if_needed():
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/opensearch_config.py", line 405, in update_host_if_needed
+    node = self.load_node()
+           ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/opensearch_config.py", line 40, in load_node
+    return self._opensearch.config.load(self.CONFIG_YML)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-3/charm/lib/charms/opensearch/v0/helper_conf_setter.py", line 189, in load
+    raise FileNotFoundError(f"{path} not found.")
+FileNotFoundError: /var/snap/opensearch/current/etc/opensearch/opensearch.yml not found.
+unit-opensearch-3: 03:25:33 ERROR juju.worker.uniter.operation hook "config-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...

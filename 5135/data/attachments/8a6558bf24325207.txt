@@ -1,0 +1,66 @@
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: PUT -- https://10.177.143.113:9200/_plugins/_security/api/internalusers/my_user
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.177.143.113:9200/_plugins/_security/api/internalusers/my_user
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:06:59Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      2  opensearch                            1  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/1*                active    idle   2        10.177.143.113  9200/tcp  
+opensearch/2                 active    idle   3        10.177.143.11   9200/tcp  
+self-signed-certificates/1*  active    idle   4        10.177.143.65             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+2        started  10.177.143.113  juju-27d433-2  ubuntu@24.04  github-runner  Running
+3        started  10.177.143.11   juju-27d433-3  ubuntu@24.04  github-runner  Running
+4        started  10.177.143.65   juju-27d433-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 01:41:03 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:41:03 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:41:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:41:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:51:37 ERROR unit.opensearch/0.juju-log Failed to install/upgrade opensearch. 
+Snap: 'opensearch' -- command ['snap', 'install', 'opensearch', '--revision="98"'] failed!
+Stdout:
+2026-03-13T01:41:20Z INFO Waiting for automatic snapd restart...
+
+Stderr:
+error: cannot perform the following tasks:
+- Download snap "opensearch" (98) from channel "stable" (download too slow: 0.00 bytes/sec)
+
+Latest logs:
+Mar 13 01:41:17 juju-27d433-0 groupadd[2854]: group added to /etc/group: name=snap_daemon, GID=584788
+Mar 13 01:41:17 juju-27d433-0 groupadd[2854]: group added to /etc/gshadow: name=snap_daemon
+Mar 13 01:41:17 juju-27d433-0 groupadd[2854]: new group: name=snap_daemon, GID=584788
+Mar 13 01:41:17 juju-27d433-0 useradd[2860]: new user: name=snap_daemon, UID=584788, GID=584788, home=/nonexistent, shell=/usr/bin/false, from=none
+Mar 13 01:41:20 juju-27d433-0 snapd[2086]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Mar 13 01:41:20 juju-27d433-0 snapd[2086]: daemon.go:556: gracefully waiting for running hooks
+Mar 13 01:41:20 juju-27d433-0 snapd[2086]: daemon.go:558: done waiting for running hooks
+Mar 13 01:41:23 juju-27d433-0 snapd[2086]: overlord.go:538: Released state lock file
+Mar 13 01:41:23 juju-27d433-0 systemd[1]: snapd.service: Deactivated successfully.
+Mar 13 01:41:23 juju-27d433-0 systemd[1]: snapd.service: Scheduled restart job, restart counter is at 1.
+Mar 13 01:41:23 juju-27d433-0 systemd[1]: Starting snapd.service - Snap Daemon...
+Mar 13 01:41:23 juju-27d433-0 snapd[3008]: overlord.go:294: Acquiring state lock file
+Mar 13 01:41:23 juju-27d433-0 snapd[3008]: overlord.go:299: Acquired state lock file
+Mar 13 01:41:23 juju-27d433-0 snapd[3008]: daemon.go:276: started snapd/2.73+ubuntu24.04 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-37-generic.
+Mar 13 01:41:23 juju-27d433-0 snapd[3008]: daemon.go:370: adjusting startup timeout by 35s (pessimistic estimate of 30s plus 5s per snap)
+Mar 13 01:41:23 juju-27d433-0 snapd[3008]: backends.go:70: AppArmor status: apparmor is enabled and all features are available
+Mar 13 01:41:23 juju-27d433-0 snapd[3008]: backend.go:145: reloading profiles for snap-confine
+Mar 13 01:41:23 juju-27d433-0 systemd[1]: Started snapd.service - Snap Daemon.
+Mar 13 01:51:23 juju-27d433-0 snapd[3008]: devicemgr.go:2796: no NTP sync after 10m0s, trying auto-refresh anyway
+Mar 13 01:51:37 juju-27d433-0 snapd[3008]: taskrunner.go:304: Change 4 task (Download snap "opensearch" (98) from channel "stable") failed: download too slow: 0.00 bytes/sec
+
+machine-2: 01:56:06 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:56:06 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:56:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:56:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:58:30 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:58:30 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...

@@ -1,0 +1,34 @@
+[32mINFO    [0m integration.spaces.test_wrong_space:test_wrong_space.py:86 IPs assigned to opensearch-peers: {0: '10.10.10.180', 1: '10.10.10.224', 2: '10.10.10.210'}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:05:25Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      3  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0*                active    idle   0        10.0.0.31       9200/tcp  
+opensearch/1                 active    idle   1        10.0.0.8        9200/tcp  
+opensearch/2                 active    idle   2        10.0.0.246      9200/tcp  
+self-signed-certificates/0*  active    idle   3        10.0.0.254                
+
+Machine  State    Address     Inst id        Base          AZ             Message
+0        started  10.0.0.31   juju-ec04f2-0  ubuntu@24.04  github-runner  Running
+1        started  10.0.0.8    juju-ec04f2-1  ubuntu@24.04  github-runner  Running
+2        started  10.0.0.246  juju-ec04f2-2  ubuntu@24.04  github-runner  Running
+3        started  10.0.0.254  juju-ec04f2-3  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 02:00:31 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:00:31 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:00:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:00:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:00:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:00:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:00:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:00:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
