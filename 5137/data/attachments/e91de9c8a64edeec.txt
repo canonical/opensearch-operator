@@ -1,0 +1,295 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'opensearch': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'active', 'since': '15 Mar 2026 02:27:21Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/0': {'workload-status': {'current': 'active', 'since': '15 Mar 2026 02:27:21Z'}, 'juju-status': {'current': 'idle', 'since': '15 Mar 2026 02:43:18Z', 'version': '3.6.14'}, 'machine': '1', 'open-ports': ['9200/tcp'], 'public-address': '10.97.52.156'}, 'opensearch/1': {'workload-status': {'current': 'active', 'since': '15 Mar 2026 02:01:50Z'}, 'juju-status': {'current': 'idle', 'since': '15 Mar 2026 02:43:24Z', 'version': '3.6.14'}, 'leader': True, 'machine': '2', 'open-ports': ['9200/tcp'], 'public-address': '10.97.52.148'}, 'opensearch/2': {'workload-status': {'current': 'active', 'since': '15 Mar 2026 02:01:28Z'}, 'juju-status': {'current': 'idle', 'since': '15 Mar 2026 02:43:11Z', 'version': '3.6.14'}, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.97.52.184'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'smtp': 'alpha', 'upgrade-version-a': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 586, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '15 Mar 2026 01:58:15Z'}, 'relations': {'certificates': [{'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '15 Mar 2026 01:58:15Z'}, 'juju-status': {'current': 'idle', 'since': '15 Mar 2026 02:26:51Z', 'version': '3.6.14'}, 'leader': True, 'machine': '0', 'public-address': '10.97.52.52'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.97.52.148:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.97.52.156:9200/
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.97.52.156:9200/
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.97.52.156:9200/
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.97.52.156:9200/
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.97.52.148:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:52:25Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active    2/3  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0                 unknown   lost   1        10.97.52.156    9200/tcp  agent lost, see 'juju show-status-log opensearch/0'
+opensearch/1*                active    idle   2        10.97.52.148    9200/tcp  
+opensearch/2                 active    idle   3        10.97.52.184    9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.97.52.52               
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.97.52.52   juju-8d1fb9-0  ubuntu@24.04  github-runner  Running
+1        down     10.97.52.156  juju-8d1fb9-1  ubuntu@24.04  github-runner  Running
+2        started  10.97.52.148  juju-8d1fb9-2  ubuntu@24.04  github-runner  Running
+3        started  10.97.52.184  juju-8d1fb9-3  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:52:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.e00  -- (10.97.52.156) -- [lost (since: 02:43:18)] unknown: agent lost, see 'juju show-status-log opensearch/0'
+		opensearch-1.e00* -- (10.97.52.148) -- [idle (since: 02:52:14)] active: 
+		opensearch-2.e00  -- (10.97.52.184) -- [idle (since: 02:50:10)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:52:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.e00  -- (10.97.52.156) -- [lost (since: 02:43:18)] unknown: agent lost, see 'juju show-status-log opensearch/0'
+		opensearch-1.e00* -- (10.97.52.148) -- [idle (since: 02:52:14)] active: 
+		opensearch-2.e00  -- (10.97.52.184) -- [idle (since: 02:50:10)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:52:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.e00  -- (10.97.52.156) -- [lost (since: 02:43:18)] unknown: agent lost, see 'juju show-status-log opensearch/0'
+		opensearch-1.e00* -- (10.97.52.148) -- [idle (since: 02:52:14)] active: 
+		opensearch-2.e00  -- (10.97.52.184) -- [idle (since: 02:50:10)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:52:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.e00  -- (10.97.52.156) -- [lost (since: 02:43:18)] unknown: agent lost, see 'juju show-status-log opensearch/0'
+		opensearch-1.e00* -- (10.97.52.148) -- [idle (since: 02:52:14)] active: 
+		opensearch-2.e00  -- (10.97.52.184) -- [idle (since: 02:50:10)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:53:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.e00  -- (10.97.52.156) -- [executing (since: 02:53:09)] active: 
+		opensearch-1.e00* -- (10.97.52.148) -- [idle (since: 02:52:14)] active: 
+		opensearch-2.e00  -- (10.97.52.184) -- [idle (since: 02:50:10)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:53:21 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.e00  -- (10.97.52.156) -- [idle (since: 02:53:11)] active: 
+		opensearch-1.e00* -- (10.97.52.148) -- [idle (since: 02:52:14)] active: 
+		opensearch-2.e00  -- (10.97.52.184) -- [idle (since: 02:50:10)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:53:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.e00  -- (10.97.52.156) -- [idle (since: 02:53:11)] active: 
+		opensearch-1.e00* -- (10.97.52.148) -- [idle (since: 02:52:14)] active: 
+		opensearch-2.e00  -- (10.97.52.184) -- [idle (since: 02:50:10)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:53:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.e00  -- (10.97.52.156) -- [idle (since: 02:53:11)] active: 
+		opensearch-1.e00* -- (10.97.52.148) -- [idle (since: 02:52:14)] active: 
+		opensearch-2.e00  -- (10.97.52.184) -- [idle (since: 02:50:10)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:53:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.e00  -- (10.97.52.156) -- [idle (since: 02:53:11)] active: 
+		opensearch-1.e00* -- (10.97.52.148) -- [idle (since: 02:52:14)] active: 
+		opensearch-2.e00  -- (10.97.52.184) -- [idle (since: 02:50:10)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:54:05 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.e00  -- (10.97.52.156) -- [idle (since: 02:53:11)] active: 
+		opensearch-1.e00* -- (10.97.52.148) -- [idle (since: 02:52:14)] active: 
+		opensearch-2.e00  -- (10.97.52.184) -- [idle (since: 02:50:10)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:54:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.e00  -- (10.97.52.156) -- [idle (since: 02:53:11)] active: 
+		opensearch-1.e00* -- (10.97.52.148) -- [idle (since: 02:52:14)] active: 
+		opensearch-2.e00  -- (10.97.52.184) -- [idle (since: 02:50:10)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:54:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:54:29 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.97.52.156:9200/
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.97.52.148:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.97.52.156:9200/_nodes
+[32mINFO    [0m integration.ha.helpers:helpers.py:248 Continuous writes result: namespace(max_stored_id=734, count=735, last_expected_id=734)
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.97.52.148:9200/series_index/_search_shards
+[32mINFO    [0m integration.ha.conftest:conftest.py:73 
+
+
+
+The writes have been cleared.
+
+
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:55:14Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      3  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0                 active    idle   1        10.97.52.156    9200/tcp  
+opensearch/1*                active    idle   2        10.97.52.148    9200/tcp  
+opensearch/2                 active    idle   3        10.97.52.184    9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.97.52.52               
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.97.52.52   juju-8d1fb9-0  ubuntu@24.04  github-runner  Running
+1        started  10.97.52.156  juju-8d1fb9-1  ubuntu@24.04  github-runner  Running
+2        started  10.97.52.148  juju-8d1fb9-2  ubuntu@24.04  github-runner  Running
+3        started  10.97.52.184  juju-8d1fb9-3  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 01:58:12 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:58:12 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:58:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:58:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:58:21 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:58:21 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:58:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:58:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:05:21 ERROR juju.worker.dependency "migration-inactive-flag" manifold worker returned unexpected error: codec.ReadHeader error: error receiving message: read tcp 10.97.52.126:47548->10.97.52.57:17070: read: connection timed out
+machine-1: 02:05:21 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: codec.ReadHeader error: error receiving message: read tcp 10.97.52.126:47548->10.97.52.57:17070: read: connection timed out
+machine-1: 02:05:24 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:05:28 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:05:33 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:05:38 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:05:44 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:05:52 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:06:01 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:06:13 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:06:26 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:06:43 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:07:01 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:07:26 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:07:51 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:08:25 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:09:03 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+unit-opensearch-0: 02:10:03 ERROR unit.opensearch/0.juju-log certificates:3: Error reloading TLS certificates via API: HTTP error self.response_code=None
+self.response_text='Host 10.97.52.173:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 02:10:03 ERROR unit.opensearch/0.juju-log certificates:3: Could not reload TLS certificates via API, will restart.
+unit-opensearch-1: 02:10:31 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 02:11:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-2: 02:11:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-0: 02:12:23 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+machine-1: 02:15:05 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: codec.ReadHeader error: error receiving message: read tcp 10.97.52.173:60668->10.97.52.57:17070: read: connection timed out
+machine-1: 02:15:08 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:15:12 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:15:17 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:15:22 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:15:29 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:15:37 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:15:47 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:15:57 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:16:11 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:16:26 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:16:46 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:17:08 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:17:38 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:18:08 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:18:50 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+machine-1: 02:19:32 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: network is unreachable
+unit-opensearch-0: 02:20:34 ERROR unit.opensearch/0.juju-log certificates:3: Error reloading TLS certificates via API: HTTP error self.response_code=None
+self.response_text='Host 10.97.52.156:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 02:20:34 ERROR unit.opensearch/0.juju-log certificates:3: Could not reload TLS certificates via API, will restart.
+unit-opensearch-1: 02:22:06 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-2: 02:26:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-0: 02:27:21 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 02:27:37 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+machine-3: 02:29:41 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: codec.ReadHeader error: error receiving message: read tcp 10.97.52.184:34478->10.97.52.57:17070: read: connection timed out
+machine-3: 02:29:45 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-3: 02:29:51 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-3: 02:29:57 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-3: 02:30:03 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-3: 02:30:09 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-3: 02:30:18 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-3: 02:30:31 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-3: 02:30:43 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-3: 02:30:55 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-3: 02:31:14 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-3: 02:31:34 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+machine-3: 02:31:59 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+machine-3: 02:32:29 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+machine-3: 02:33:01 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+machine-3: 02:33:43 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+machine-3: 02:34:29 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+machine-3: 02:35:25 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+machine-3: 02:36:36 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+machine-3: 02:37:57 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+machine-3: 02:39:33 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-3" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+machine-1: 02:44:40 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: codec.ReadHeader error: error receiving message: read tcp 10.97.52.156:50754->10.97.52.57:17070: read: no route to host
+machine-1: 02:44:43 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-1: 02:44:49 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-1: 02:44:55 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-1: 02:45:01 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-1: 02:45:10 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-1: 02:45:20 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-1: 02:45:29 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-1: 02:45:41 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-1: 02:45:56 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-1: 02:46:15 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: connect: no route to host
+machine-1: 02:46:36 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+machine-1: 02:47:01 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+machine-1: 02:47:29 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+machine-1: 02:48:05 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+machine-1: 02:48:44 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+machine-1: 02:49:31 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+unit-opensearch-1: 02:50:11 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+machine-1: 02:50:33 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+machine-1: 02:51:47 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5e3dce] "machine-1" cannot open api: unable to connect to API: dial tcp 10.97.52.57:17070: i/o timeout
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
