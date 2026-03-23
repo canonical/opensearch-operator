@@ -1,0 +1,44 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'opensearch': {'charm': 'opensearch', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'opensearch', 'charm-rev': 206, 'charm-channel': '2/edge', 'exposed': False, 'application-status': {'current': 'active', 'since': '23 Mar 2026 01:38:51Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/0': {'workload-status': {'current': 'active', 'since': '23 Mar 2026 01:38:03Z'}, 'juju-status': {'current': 'idle', 'since': '23 Mar 2026 01:38:57Z', 'version': '3.6.19'}, 'leader': True, 'machine': '0', 'open-ports': ['9200/tcp'], 'public-address': '10.144.239.33'}, 'opensearch/1': {'workload-status': {'current': 'waiting', 'message': 'Waiting for OpenSearch to start...', 'since': '23 Mar 2026 01:38:57Z'}, 'juju-status': {'current': 'executing', 'message': 'running opensearch-peers-relation-joined hook for opensearch/0', 'since': '23 Mar 2026 01:38:56Z', 'version': '3.6.19'}, 'machine': '1', 'public-address': '10.144.239.72'}, 'opensearch/2': {'workload-status': {'current': 'active', 'since': '23 Mar 2026 01:38:47Z'}, 'juju-status': {'current': 'executing', 'message': 'running opensearch-peers-relation-joined hook for opensearch/1', 'since': '23 Mar 2026 01:38:59Z', 'version': '3.6.19'}, 'machine': '2', 'open-ports': ['9200/tcp'], 'public-address': '10.144.239.212'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'node-lock-fallback': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'upgrade-version-a': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 586, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '23 Mar 2026 01:35:33Z'}, 'relations': {'certificates': [{'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '23 Mar 2026 01:35:33Z'}, 'juju-status': {'current': 'idle', 'since': '23 Mar 2026 01:38:43Z', 'version': '3.6.19'}, 'leader': True, 'machine': '3', 'public-address': '10.144.239.90'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:196 pre-upgrade-check: namespace(status='failed', response={'return-code': 0})
+[32mINFO    [0m integration.upgrades.conftest:conftest.py:29 
+
+
+
+The writes have been cleared.
+
+
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.19   unsupported  01:39:10Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      3  opensearch                2/edge    206  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch/0*                active    idle       0        10.144.239.33   9200/tcp  
+opensearch/1                 waiting   executing  1        10.144.239.72             Waiting for OpenSearch to start...
+opensearch/2                 active    idle       2        10.144.239.212  9200/tcp  
+self-signed-certificates/0*  active    idle       3        10.144.239.90             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.144.239.33   juju-e83052-0  ubuntu@24.04  github-runner  Running
+1        started  10.144.239.72   juju-e83052-1  ubuntu@24.04  github-runner  Running
+2        started  10.144.239.212  juju-e83052-2  ubuntu@24.04  github-runner  Running
+3        started  10.144.239.90   juju-e83052-3  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 01:35:23 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:35:23 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:35:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:35:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:35:30 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:35:30 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:35:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:35:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
