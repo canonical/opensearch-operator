@@ -33,6 +33,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup tmate session
+        uses: canonical/action-tmate@main
+        env:
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
       - name: Install tox & poetry
         run: |
           pipx install tox
