@@ -1,0 +1,15 @@
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.195.5.15:9200/_plugins/_security_analytics/rules?category=linux
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: PUT -- https://10.195.5.15:9200/log-index
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.195.5.15:9200/_plugins/_security_analytics/detectors
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:1425 
+Detectors response: {'_id': 'c_d7I50BoKERDTmXTQlJ', '_version': 1, 'detector': {'name': 'danger-detector', 'detector_type': 'linux', 'enabled': True, 'schedule': {'period': {'interval': 1, 'unit': 'MINUTES'}}, 'inputs': [{'detector_input': {'description': '', 'indices': ['log-index'], 'custom_rules': [{'id': 'Wvd7I50BoKERDTmXHgm3'}], 'pre_packaged_rules': []}}], 'triggers': [], 'last_update_time': '2026-03-25T05:32:51.259488718Z', 'enabled_time': '2026-03-25T05:32:51.259399064Z', 'threat_intel_enabled': False}}
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: PUT -- https://10.195.5.15:9200/_bulk
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.195.5.15:9200/log-index/_refresh
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:1437 Waiting for detector schedule period to pass...
+[32mINFO    [0m integration.plugins.test_plugins:test_plugins.py:1441 Waiting for security analytics finding to be reported...
+[32mINFO    [0m integration.plugins.helpers:helpers.py:154 Polling https://10.195.5.15:9200/_plugins/_security_analytics/findings/_search?detector_id=c_d7I50BoKERDTmXTQlJ...
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.195.5.15:9200/_plugins/_security_analytics/findings/_search?detector_id=c_d7I50BoKERDTmXTQlJ
+[32mINFO    [0m integration.plugins.helpers:helpers.py:162 Done. Condition met: {'total_findings': 1, 'findings': [{'detectorId': 'c_d7I50BoKERDTmXTQlJ', 'id': '0066b699-6a63-4adf-a490-30c71827c241', 'related_doc_ids': ['d_d7I50BoKERDTmXWQmn'], 'index': 'log-index', 'queries': [{'id': 'Wvd7I50BoKERDTmXHgm3', 'name': 'Critical Detector', 'fields': [], 'query': 'activity: "suspicious"', 'tags': ['low', 'linux'], 'query_field_names': ['activity']}], 'timestamp': 1774416831948, 'document_list': [{'index': 'log-index', 'id': 'd_d7I50BoKERDTmXWQmn', 'found': True, 'document': '{"name": "c", "activity": "suspicious"}'}]}]}
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: DELETE -- https://10.195.5.15:9200/_plugins/_security_analytics/detectors/c_d7I50BoKERDTmXTQlJ
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: DELETE -- https://10.195.5.15:9200/_plugins/_security_analytics/rules/Wvd7I50BoKERDTmXHgm3?category=linux
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: DELETE -- https://10.195.5.15:9200/log-index/
