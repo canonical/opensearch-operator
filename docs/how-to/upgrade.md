@@ -520,8 +520,8 @@ Machine  State    Address        Inst id        Base          AZ   Message
 
 ### Check the cluster's health
 
-Once the charm is rolled back, it is important to check the cluster’s health to ensure it is healthy.
-OpenSearch’s upstream documentation
+Once the charm is rolled back, it is important to check the cluster's health to ensure it is healthy.
+OpenSearch's upstream documentation
 [suggests the following check](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/):
 
 ```shell
