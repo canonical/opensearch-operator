@@ -363,7 +363,7 @@ After a `juju refresh`, if there are any version incompatibilities in charm revi
 its dependencies, or any other unexpected failure in the upgrade process,
 the process will be halted and enter a failure state.
 
-Even if the underlying OpenSearch cluster continues to work, it’s important to roll back the charm to
+Even if the underlying OpenSearch cluster continues to work, it's important to roll back the charm to
 a previous revision so that an update can be attempted after further inspection of the failure.
 
 ### Pre-rollback checks
@@ -428,7 +428,7 @@ the charm you want to rollback to. For example, to rollback to revision **144**,
 juju refresh opensearch --revision=144
 ```
 
-When deploying from a local charm file, you must have the previous revision’s `.charm` file.
+When deploying from a local charm file, you must have the previous revision's `.charm` file.
 Then, run:
 
 ```shell
