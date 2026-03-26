@@ -463,15 +463,14 @@ Notice that the OpenSearch charm is now at revision **144**.
 
 #### Rollback a charm revision with a different workload version
 
-If the charm revision you are rolling back to has a different workload version, the rollback process will attempt to roll back the workload version as well. However, since OpenSearch does not support downgrading, the rollback process will rollback the charm code then attempt a best-effort rollback of the OpenSearch workload. 
+If you roll back to a charm revision with a different workload version, the process will roll back the charm code and then make a best-effort attempt to roll back the workload, since OpenSearch does not support downgrades.
 
 This is a dangerous operation that may lead to an unhealthy OpenSearch cluster. It is recommended to instead perform a backup and restore of the cluster to a new deployment with the desired OpenSearch version.
 
-We do not recommend performing a rollback to a charm revision with a different OpenSearch version. However, if you choose to proceed, you can follow the same steps as rolling back to a charm revision with the same workload version. There are two possible outcomes after the rollback:
 
-##### It is possible to perform a best-effort rollback between the two workload revisions
+##### If the rollback between the versions is possible
 
-In this case both the charm code and the workload will be rolled back to the previous version. However, since this is rollback is a dangerous operation, manual intervention is required to rollback the workload version. The charm will be blocked and a message will be displayed indicating that you need to run the `force-refresh-start` action with the `check-compatibility=false` to continue with the best-effort rollback of the workload version. 
+In this case, both the charm code and the workload will be rolled back to the previous version. However, because rollback is a risky operation, rolling back the workload requires manual intervention. The charm will enter a blocked state and display a message instructing you to run the `force-refresh-start` action with `check-compatibility=false` to continue the best-effort workload rollback.
 
 ```shell
 Model    Controller  Cloud/Region         Version  SLA          Timestamp
@@ -494,8 +493,9 @@ Machine  State    Address        Inst id        Base          AZ   Message
 3        started  10.149.40.126  juju-f44a9a-3  ubuntu@24.04  xof  Running
 ```
 
-##### It is not possible to perform a rollback between the two workload revisions 
-In this case, the charm code will be rolled back but the OpenSearch workload will remain in the newer version. The charm will be blocked and a message will be displayed indicating that you need to refresh back to a charm revision with the same workload version or perform a backup and restore to a new deployment.
+##### If the rollback between the versions is not possible
+
+In this case, the charm code will be rolled back, but the OpenSearch workload will remain on the newer version. The charm will enter a blocked state and display a message instructing you to either refresh to a charm revision with the same workload version or perform a backup and restore to a new deployment.
 
 ```shell
 Model    Controller  Cloud/Region         Version  SLA          Timestamp
@@ -555,18 +555,17 @@ The response should look similar to the following example:
 (how-to-recover-rollback)=
 ## Recovering from a rollback
 
-OpenSearch does not support rolling back to a previous version.
-If a unit has already been upgraded, performing `juju refresh`
-to a previous revision might result in OpenSearch failing to start on that unit.
-In this case, a manual recovery is required.
-Follow the steps in this section to restore the cluster to a healthy, operational state.
+OpenSearch does not support downgrades.
+Running `juju refresh` to a previous revision may cause OpenSearch to fail to start.
+In that case, manual recovery is required.
+Follow the steps in this section to restore the cluster to a healthy state.
 
 For more information, please refer to the upstream
 [OpenSearch documentation about rolling upgrades](https://docs.opensearch.org/latest/migrate-or-upgrade/rolling-upgrade/#preparing-to-upgrade).
 
 ### Check Juju status
 
-Check Juju model status:
+First, check Juju model status:
 
 ```shell
 juju status
@@ -665,7 +664,7 @@ For example, in the following output, `index1` cannot be recovered as its curren
 Delete the problematic index identified in the previous step:
 
 ```{warning}
-If you do not have a snapshot containing this index, it will not be recoverable.
+If you do not have a snapshot containing this index, the data will be lost!
 ```
 
 ```text
