@@ -13,7 +13,7 @@ of foundational topics and concepts relevant to OpenSearch.
 For a deeper understanding of monitoring in Charmed OpenSearch,
 see the [Monitoring](explanation-monitoring) explanation page.
 
-Overview of our approach to testing Charmed OpenSearch is summarised in the
+Overview of our approach to testing Charmed OpenSearch is summarized in the
 [](explanation-software-testing) page.
 
 ## Security

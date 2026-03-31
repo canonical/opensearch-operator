@@ -14,7 +14,7 @@ This guide explains how to launch a large deployment of OpenSearch using Juju.
 
 When deploying OpenSearch at scale, it is important to understand the `roles` that nodes can assume on a cluster.
 
-Amongst the [multiple roles](https://opensearch.org/docs/latest/tuning-your-cluster/) supported by
+Among the [multiple roles](https://opensearch.org/docs/latest/tuning-your-cluster/) supported by
 OpenSearch, two notable roles are especially crucial for a successful cluster formation:
 
 - `cluster_manager`: assigned to nodes responsible for handling cluster-wide operations such as
