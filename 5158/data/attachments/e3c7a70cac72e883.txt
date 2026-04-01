@@ -1,0 +1,60 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.20   unsupported  08:07:05Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      2  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0*                active    idle   1        10.115.12.210   9200/tcp  
+opensearch/1                 active    idle   2        10.115.12.33    9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.115.12.30              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.115.12.30   juju-9efc79-0  ubuntu@24.04  github-runner  Running
+1        started  10.115.12.210  juju-9efc79-1  ubuntu@24.04  github-runner  Running
+2        started  10.115.12.33   juju-9efc79-2  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 07:45:42 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 07:45:42 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 07:45:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 07:45:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 07:50:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 07:50:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 08:01:16 ERROR unit.opensearch/1.juju-log Failed to install/upgrade opensearch. 
+Snap: 'opensearch' -- command ['snap', 'install', 'opensearch', '--revision="98"'] failed!
+Stdout:
+2026-04-01T07:50:51Z INFO Waiting for automatic snapd restart...
+
+Stderr:
+error: cannot perform the following tasks:
+- Download snap "opensearch" (98) from channel "stable" (download too slow: 0.00 bytes/sec)
+
+Latest logs:
+Apr 01 07:50:54 juju-9efc79-2 systemd[1]: snapd.service: Deactivated successfully.
+Apr 01 07:50:55 juju-9efc79-2 systemd[1]: snapd.service: Scheduled restart job, restart counter is at 1.
+Apr 01 07:50:55 juju-9efc79-2 systemd[1]: Starting snapd.service - Snap Daemon...
+Apr 01 07:50:56 juju-9efc79-2 snapd[2957]: overlord.go:294: Acquiring state lock file
+Apr 01 07:50:56 juju-9efc79-2 snapd[2957]: overlord.go:299: Acquired state lock file
+Apr 01 07:50:56 juju-9efc79-2 snapd[2957]: patch.go:64: Patching system state level 6 to sublevel 1...
+Apr 01 07:50:56 juju-9efc79-2 snapd[2957]: patch.go:64: Patching system state level 6 to sublevel 2...
+Apr 01 07:50:56 juju-9efc79-2 snapd[2957]: patch.go:64: Patching system state level 6 to sublevel 3...
+Apr 01 07:50:56 juju-9efc79-2 snapd[2957]: daemon.go:276: started snapd/2.74.1 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-37-generic.
+Apr 01 07:50:56 juju-9efc79-2 snapd[2957]: daemon.go:370: adjusting startup timeout by 35s (pessimistic estimate of 30s plus 5s per snap)
+Apr 01 07:50:56 juju-9efc79-2 snapd[2957]: backends.go:70: AppArmor status: apparmor is enabled and all features are available (using snapd provided apparmor_parser)
+Apr 01 07:50:56 juju-9efc79-2 snapd[2957]: backend.go:141: delegating reload of snap-confine profiles to system snap security profiles setup
+Apr 01 07:50:56 juju-9efc79-2 snapd[2957]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Apr 01 07:50:56 juju-9efc79-2 snapd[2957]: standby.go:95: will consider standby after: 5s
+Apr 01 07:50:56 juju-9efc79-2 systemd[1]: Started snapd.service - Snap Daemon.
+Apr 01 07:50:56 juju-9efc79-2 snapd[2957]: snapmgr.go:1659: performing periodic snap downloads cache cleanup
+Apr 01 07:50:56 juju-9efc79-2 snapd[2957]: cache.go:243: removed 0 entries/    0 from downloads cache
+Apr 01 07:51:14 juju-9efc79-2 snapd[2957]: cache.go:243: removed 0 entries/    0 from downloads cache
+Apr 01 08:00:56 juju-9efc79-2 snapd[2957]: devicemgr.go:2981: no NTP sync after 10m0s, trying auto-refresh anyway
+Apr 01 08:01:16 juju-9efc79-2 snapd[2957]: taskrunner.go:304: Change 4 task (Download snap "opensearch" (98) from channel "stable") failed: download too slow: 0.00 bytes/sec
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...

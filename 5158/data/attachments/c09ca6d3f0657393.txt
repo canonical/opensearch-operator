@@ -1,0 +1,534 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'gcs-integrator': {'charm': 'gcs-integrator', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'gcs-integrator', 'charm-rev': 225, 'charm-channel': '1/edge', 'exposed': False, 'application-status': {'current': 'active', 'since': '01 Apr 2026 07:09:49Z'}, 'relations': {'gcs-credentials': [{'related-application': 'opensearch', 'interface': 'gcs', 'scope': 'global'}], 'status-peers': [{'related-application': 'gcs-integrator', 'interface': 'status_peers', 'scope': 'global'}]}, 'units': {'gcs-integrator/0': {'workload-status': {'current': 'active', 'since': '01 Apr 2026 07:09:49Z'}, 'juju-status': {'current': 'idle', 'since': '01 Apr 2026 07:16:07Z', 'version': '3.6.20'}, 'leader': True, 'machine': '0', 'public-address': '10.210.130.213'}}, 'endpoint-bindings': {'': 'alpha', 'gcs-credentials': 'alpha', 'status-peers': 'alpha'}}, 'opensearch': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'active', 'since': '01 Apr 2026 07:07:24Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'gcs-credentials': [{'related-application': 'gcs-integrator', 'interface': 'gcs', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/0': {'workload-status': {'current': 'active', 'since': '01 Apr 2026 07:17:41Z'}, 'juju-status': {'current': 'idle', 'since': '01 Apr 2026 07:17:52Z', 'version': '3.6.20'}, 'leader': True, 'machine': '2', 'open-ports': ['9200/tcp'], 'public-address': '10.210.130.80'}, 'opensearch/1': {'workload-status': {'current': 'active', 'since': '01 Apr 2026 07:07:24Z'}, 'juju-status': {'current': 'idle', 'since': '01 Apr 2026 07:17:47Z', 'version': '3.6.20'}, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.210.130.17'}, 'opensearch/2': {'workload-status': {'current': 'active', 'since': '01 Apr 2026 07:07:41Z'}, 'juju-status': {'current': 'idle', 'since': '01 Apr 2026 07:18:01Z', 'version': '3.6.20'}, 'machine': '4', 'open-ports': ['9200/tcp'], 'public-address': '10.210.130.239'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'smtp': 'alpha', 'upgrade-version-a': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 586, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '01 Apr 2026 06:56:02Z'}, 'relations': {'certificates': [{'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '01 Apr 2026 06:56:02Z'}, 'juju-status': {'current': 'idle', 'since': '01 Apr 2026 07:06:34Z', 'version': '3.6.20'}, 'leader': True, 'machine': '1', 'public-address': '10.210.130.34'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m root:test_backups.py:853 Destroying the application
+[32mINFO    [0m root:test_backups.py:860 Deploying a new cluster
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/gcs-integrator-225
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/self-signed-certificates-586
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/opensearch-1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [allocating] waiting: waiting for machine
+  opensearch/3 [allocating] waiting: waiting for machine
+  opensearch/4 [allocating] waiting: waiting for machine
+  opensearch/5 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [executing] active: 
+  opensearch/3 [allocating] waiting: waiting for machine
+  opensearch/4 [allocating] waiting: waiting for machine
+  opensearch/5 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [executing] maintenance: Installing OpenSearch...
+  opensearch/5 [executing] maintenance: Installing OpenSearch...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [executing] maintenance: Installing OpenSearch...
+  opensearch/5 [executing] maintenance: Installing OpenSearch...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [executing] maintenance: Installing OpenSearch...
+  opensearch/5 [executing] maintenance: Installing OpenSearch...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [executing] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] waiting: Requesting lock on operation: start
+  opensearch/4 [executing] maintenance: Waiting for TLS to be fully configured...
+  opensearch/5 [executing] maintenance: Waiting for TLS to be fully configured...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] active: 
+  opensearch/4 [executing] waiting: Requesting lock on operation: start
+  opensearch/5 [idle] waiting: Requesting lock on operation: start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] active: 
+  opensearch/4 [idle] active: 
+  opensearch/5 [executing] waiting: Waiting for OpenSearch to start...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [idle] active: 
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [idle] active: 
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:889 Syncing credentials for gcs
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:334 Adding Juju secret for GCS service account JSON
+[32mINFO    [0m integration.ha.helpers:helpers.py:607 Data keys to insert: dict_keys(['secret-key'])
+[32mINFO    [0m integration.ha.helpers:helpers.py:613 Add secret return code=0 stdout=secret:kn22cregr81od3m4dtr0
+ stderr=
+[32mINFO    [0m integration.ha.helpers:helpers.py:620 Secret uri: secret:kn22cregr81od3m4dtr0
+[32mINFO    [0m integration.ha.helpers:helpers.py:626 Grant secret return code=0 stdout= stderr=
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:342 Juju secret for GCS credentials added. Secret URI: secret:kn22cregr81od3m4dtr0
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:347 Setting up configuration for gcs-integrator charm...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  gcs-integrator/1 [executing] blocked: Missing config(s): 'bucket', 'credentials'
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  gcs-integrator/1 [idle] active: 
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.20   unsupported  07:38:05Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+gcs-integrator                     active      1  gcs-integrator            1/edge    225  no       
+opensearch                         active      3  opensearch                            1  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+gcs-integrator/1*            active    idle   5        10.210.130.13             
+opensearch/3*                active    idle   7        10.210.130.14   9200/tcp  
+opensearch/4                 active    idle   8        10.210.130.232  9200/tcp  
+opensearch/5                 active    idle   9        10.210.130.134  9200/tcp  
+self-signed-certificates/1*  active    idle   6        10.210.130.196            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+5        started  10.210.130.13   juju-0d89fd-5  ubuntu@24.04  github-runner  Running
+6        started  10.210.130.196  juju-0d89fd-6  ubuntu@24.04  github-runner  Running
+7        started  10.210.130.14   juju-0d89fd-7  ubuntu@24.04  github-runner  Running
+8        started  10.210.130.232  juju-0d89fd-8  ubuntu@24.04  github-runner  Running
+9        started  10.210.130.134  juju-0d89fd-9  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+07:38:05 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.b03* -- (10.210.130.14) -- [idle (since: 07:37:58)] active: 
+		opensearch-4.b03  -- (10.210.130.232) -- [idle (since: 07:37:52)] active: 
+		opensearch-5.b03  -- (10.210.130.134) -- [idle (since: 07:37:52)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+07:38:16 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.b03* -- (10.210.130.14) -- [idle (since: 07:37:58)] active: 
+		opensearch-4.b03  -- (10.210.130.232) -- [idle (since: 07:37:52)] active: 
+		opensearch-5.b03  -- (10.210.130.134) -- [idle (since: 07:37:52)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+07:38:27 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.b03* -- (10.210.130.14) -- [idle (since: 07:37:58)] active: 
+		opensearch-4.b03  -- (10.210.130.232) -- [idle (since: 07:37:52)] active: 
+		opensearch-5.b03  -- (10.210.130.134) -- [idle (since: 07:37:52)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+07:38:38 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.b03* -- (10.210.130.14) -- [idle (since: 07:37:58)] active: 
+		opensearch-4.b03  -- (10.210.130.232) -- [idle (since: 07:37:52)] active: 
+		opensearch-5.b03  -- (10.210.130.134) -- [idle (since: 07:37:52)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+07:38:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.b03* -- (10.210.130.14) -- [idle (since: 07:37:58)] active: 
+		opensearch-4.b03  -- (10.210.130.232) -- [idle (since: 07:37:52)] active: 
+		opensearch-5.b03  -- (10.210.130.134) -- [idle (since: 07:37:52)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+07:39:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.b03* -- (10.210.130.14) -- [idle (since: 07:38:53)] active: 
+		opensearch-4.b03  -- (10.210.130.232) -- [idle (since: 07:38:53)] active: 
+		opensearch-5.b03  -- (10.210.130.134) -- [idle (since: 07:38:53)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+07:39:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.b03* -- (10.210.130.14) -- [idle (since: 07:38:53)] active: 
+		opensearch-4.b03  -- (10.210.130.232) -- [idle (since: 07:38:53)] active: 
+		opensearch-5.b03  -- (10.210.130.134) -- [idle (since: 07:38:53)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+07:39:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.b03* -- (10.210.130.14) -- [idle (since: 07:38:53)] active: 
+		opensearch-4.b03  -- (10.210.130.232) -- [idle (since: 07:38:53)] active: 
+		opensearch-5.b03  -- (10.210.130.134) -- [idle (since: 07:38:53)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+07:39:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.b03* -- (10.210.130.14) -- [idle (since: 07:38:53)] active: 
+		opensearch-4.b03  -- (10.210.130.232) -- [idle (since: 07:38:53)] active: 
+		opensearch-5.b03  -- (10.210.130.134) -- [idle (since: 07:38:53)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+07:39:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.b03* -- (10.210.130.14) -- [idle (since: 07:38:53)] active: 
+		opensearch-4.b03  -- (10.210.130.232) -- [idle (since: 07:38:53)] active: 
+		opensearch-5.b03  -- (10.210.130.134) -- [idle (since: 07:38:53)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+07:39:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.b03* -- (10.210.130.14) -- [idle (since: 07:38:53)] active: 
+		opensearch-4.b03  -- (10.210.130.232) -- [idle (since: 07:38:53)] active: 
+		opensearch-5.b03  -- (10.210.130.134) -- [idle (since: 07:38:53)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+07:40:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 07:40:08 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.210.130.14:9200/_recovery?human
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.210.130.14:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.210.130.14:9200/series_index/_count
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.210.130.14:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.210.130.14:9200/series_index/_count
+[32mINFO    [0m integration.ha.helpers:helpers.py:534 Index series_index has 306 documents, starting there
+[32mINFO    [0m integration.ha.helpers:helpers.py:248 Continuous writes result: namespace(max_stored_id=441, count=442, last_expected_id=441)
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.210.130.14:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.210.130.14:9200/_recovery?human
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.210.130.14:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.210.130.14:9200/series_index/_count
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.210.130.14:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.210.130.14:9200/series_index/_count
+[32mINFO    [0m integration.ha.helpers:helpers.py:534 Index series_index has 199 documents, starting there
+[32mINFO    [0m integration.ha.helpers:helpers.py:248 Continuous writes result: namespace(max_stored_id=334, count=335, last_expected_id=334)
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.210.130.14:9200/series_index/_search_shards
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:925 Final stage: backup+restore with active writes
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.210.130.14:9200/_recovery?human
+[32mINFO    [0m integration.ha.helpers:helpers.py:248 Continuous writes result: namespace(max_stored_id=151, count=152, last_expected_id=151)
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.210.130.14:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.210.130.14:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.210.130.14:9200/series_index/_count
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.210.130.14:9200/_recovery?human
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.210.130.14:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.210.130.14:9200/series_index/_count
+[32mINFO    [0m integration.ha.helpers:helpers.py:594 Testing restore for series_index - original count pre-restore: 152, and now, new count: 118
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.20   unsupported  07:45:12Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+gcs-integrator                     active      1  gcs-integrator            1/edge    225  no       
+opensearch                         active      3  opensearch                            1  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+gcs-integrator/1*            active    idle   5        10.210.130.13             
+opensearch/3*                active    idle   7        10.210.130.14   9200/tcp  
+opensearch/4                 active    idle   8        10.210.130.232  9200/tcp  
+opensearch/5                 active    idle   9        10.210.130.134  9200/tcp  
+self-signed-certificates/1*  active    idle   6        10.210.130.196            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+5        started  10.210.130.13   juju-0d89fd-5  ubuntu@24.04  github-runner  Running
+6        started  10.210.130.196  juju-0d89fd-6  ubuntu@24.04  github-runner  Running
+7        started  10.210.130.14   juju-0d89fd-7  ubuntu@24.04  github-runner  Running
+8        started  10.210.130.232  juju-0d89fd-8  ubuntu@24.04  github-runner  Running
+9        started  10.210.130.134  juju-0d89fd-9  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 06:54:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 06:54:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-gcs-integrator-0: 06:54:41 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/gcs-integrator-225" for gcs-integrator/0: failed to download charm "ch:amd64/gcs-integrator-225" from API server: download request with archiveSha256 length 0 not valid
+machine-1: 06:54:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 06:54:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 06:54:44 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/self-signed-certificates-586" for self-signed-certificates/0: failed to download charm "ch:amd64/self-signed-certificates-586" from API server: download request with archiveSha256 length 0 not valid
+unit-gcs-integrator-0: 06:54:45 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/gcs-integrator-225" for gcs-integrator/0: failed to download charm "ch:amd64/gcs-integrator-225" from API server: download request with archiveSha256 length 0 not valid
+machine-2: 06:54:45 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 06:54:45 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 06:54:48 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/self-signed-certificates-586" for self-signed-certificates/0: failed to download charm "ch:amd64/self-signed-certificates-586" from API server: download request with archiveSha256 length 0 not valid
+unit-gcs-integrator-0: 06:54:49 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/gcs-integrator-225" for gcs-integrator/0: failed to download charm "ch:amd64/gcs-integrator-225" from API server: download request with archiveSha256 length 0 not valid
+machine-3: 06:54:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 06:54:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 06:54:52 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/self-signed-certificates-586" for self-signed-certificates/0: failed to download charm "ch:amd64/self-signed-certificates-586" from API server: download request with archiveSha256 length 0 not valid
+machine-4: 06:54:55 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 06:54:55 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-gcs-integrator-0: 06:54:55 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/gcs-integrator-225" for gcs-integrator/0: failed to download charm "ch:amd64/gcs-integrator-225" from API server: download request with archiveSha256 length 0 not valid
+unit-self-signed-certificates-0: 06:54:57 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/self-signed-certificates-586" for self-signed-certificates/0: failed to download charm "ch:amd64/self-signed-certificates-586" from API server: download request with archiveSha256 length 0 not valid
+unit-gcs-integrator-0: 06:55:01 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/gcs-integrator-225" for gcs-integrator/0: failed to download charm "ch:amd64/gcs-integrator-225" from API server: download request with archiveSha256 length 0 not valid
+unit-self-signed-certificates-0: 06:55:04 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/self-signed-certificates-586" for self-signed-certificates/0: failed to download charm "ch:amd64/self-signed-certificates-586" from API server: download request with archiveSha256 length 0 not valid
+unit-gcs-integrator-0: 06:55:09 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/gcs-integrator-225" for gcs-integrator/0: failed to download charm "ch:amd64/gcs-integrator-225" from API server: download request with archiveSha256 length 0 not valid
+unit-self-signed-certificates-0: 06:55:12 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/self-signed-certificates-586" for self-signed-certificates/0: failed to download charm "ch:amd64/self-signed-certificates-586" from API server: download request with archiveSha256 length 0 not valid
+unit-gcs-integrator-0: 06:55:19 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/gcs-integrator-225" for gcs-integrator/0: failed to download charm "ch:amd64/gcs-integrator-225" from API server: download request with archiveSha256 length 0 not valid
+unit-self-signed-certificates-0: 06:55:20 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/self-signed-certificates-586" for self-signed-certificates/0: failed to download charm "ch:amd64/self-signed-certificates-586" from API server: download request with archiveSha256 length 0 not valid
+unit-gcs-integrator-0: 06:55:29 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/gcs-integrator-225" for gcs-integrator/0: failed to download charm "ch:amd64/gcs-integrator-225" from API server: download request with archiveSha256 length 0 not valid
+unit-self-signed-certificates-0: 06:55:31 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/self-signed-certificates-586" for self-signed-certificates/0: failed to download charm "ch:amd64/self-signed-certificates-586" from API server: download request with archiveSha256 length 0 not valid
+unit-gcs-integrator-0: 06:55:41 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/gcs-integrator-225" for gcs-integrator/0: failed to download charm "ch:amd64/gcs-integrator-225" from API server: download request with archiveSha256 length 0 not valid
+unit-self-signed-certificates-0: 06:55:44 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/self-signed-certificates-586" for self-signed-certificates/0: failed to download charm "ch:amd64/self-signed-certificates-586" from API server: download request with archiveSha256 length 0 not valid
+unit-opensearch-1: 07:00:13 ERROR unit.opensearch/1.juju-log Failed to install/upgrade opensearch. 
+Snap: 'opensearch' -- command ['snap', 'install', 'opensearch', '--revision="98"'] failed!
+Stdout:
+2026-04-01T06:55:07Z INFO Waiting for automatic snapd restart...
+
+Stderr:
+error: cannot perform the following tasks:
+- Download snap "core24" (1499) from channel "stable" (download too slow: 1843.92 bytes/sec)
+
+Latest logs:
+Apr 01 06:55:07 juju-0d89fd-3 snapd[1951]: daemon.go:558: done waiting for running hooks
+Apr 01 06:55:10 juju-0d89fd-3 snapd[1951]: overlord.go:538: Released state lock file
+Apr 01 06:55:10 juju-0d89fd-3 systemd[1]: snapd.service: Deactivated successfully.
+Apr 01 06:55:10 juju-0d89fd-3 systemd[1]: snapd.service: Scheduled restart job, restart counter is at 1.
+Apr 01 06:55:10 juju-0d89fd-3 systemd[1]: Starting snapd.service - Snap Daemon...
+Apr 01 06:55:11 juju-0d89fd-3 snapd[2874]: overlord.go:294: Acquiring state lock file
+Apr 01 06:55:11 juju-0d89fd-3 snapd[2874]: overlord.go:299: Acquired state lock file
+Apr 01 06:55:11 juju-0d89fd-3 snapd[2874]: patch.go:64: Patching system state level 6 to sublevel 1...
+Apr 01 06:55:11 juju-0d89fd-3 snapd[2874]: patch.go:64: Patching system state level 6 to sublevel 2...
+Apr 01 06:55:11 juju-0d89fd-3 snapd[2874]: patch.go:64: Patching system state level 6 to sublevel 3...
+Apr 01 06:55:11 juju-0d89fd-3 snapd[2874]: daemon.go:276: started snapd/2.74.1 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-37-generic.
+Apr 01 06:55:11 juju-0d89fd-3 snapd[2874]: daemon.go:370: adjusting startup timeout by 35s (pessimistic estimate of 30s plus 5s per snap)
+Apr 01 06:55:11 juju-0d89fd-3 snapd[2874]: backends.go:70: AppArmor status: apparmor is enabled and all features are available (using snapd provided apparmor_parser)
+Apr 01 06:55:11 juju-0d89fd-3 snapd[2874]: backend.go:141: delegating reload of snap-confine profiles to system snap security profiles setup
+Apr 01 06:55:11 juju-0d89fd-3 snapd[2874]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Apr 01 06:55:11 juju-0d89fd-3 snapd[2874]: standby.go:95: will consider standby after: 5s
+Apr 01 06:55:11 juju-0d89fd-3 systemd[1]: Started snapd.service - Snap Daemon.
+Apr 01 06:55:11 juju-0d89fd-3 snapd[2874]: snapmgr.go:1659: performing periodic snap downloads cache cleanup
+Apr 01 06:55:11 juju-0d89fd-3 snapd[2874]: cache.go:243: removed 0 entries/    0 from downloads cache
+Apr 01 07:00:13 juju-0d89fd-3 snapd[2874]: taskrunner.go:304: Change 4 task (Download snap "core24" (1499) from channel "stable") failed: download too slow: 1843.92 bytes/sec
+
+unit-gcs-integrator-0: 07:01:55 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-0: 07:01:55 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-opensearch-0: 07:05:13 ERROR unit.opensearch/0.juju-log Failed to install/upgrade opensearch. 
+Snap: 'opensearch' -- command ['snap', 'install', 'opensearch', '--revision="98"'] failed!
+Stderr:
+error: cannot perform the following tasks:
+- Download snap "snapd" (26382) from channel "stable" (download too slow: 0.00 bytes/sec)
+
+Latest logs:
+Apr 01 06:54:39 juju-0d89fd-2 snapd[1712]: patch.go:64: Patching system state level 6 to sublevel 1...
+Apr 01 06:54:39 juju-0d89fd-2 snapd[1712]: patch.go:64: Patching system state level 6 to sublevel 2...
+Apr 01 06:54:39 juju-0d89fd-2 snapd[1712]: patch.go:64: Patching system state level 6 to sublevel 3...
+Apr 01 06:54:39 juju-0d89fd-2 snapd[1712]: daemon.go:276: started snapd/2.73+ubuntu24.04.2 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-37-generic.
+Apr 01 06:54:39 juju-0d89fd-2 snapd[1712]: daemon.go:370: adjusting startup timeout by 30s (pessimistic estimate of 30s plus 5s per snap)
+Apr 01 06:54:39 juju-0d89fd-2 snapd[1712]: backends.go:70: AppArmor status: apparmor is enabled and all features are available
+Apr 01 06:54:39 juju-0d89fd-2 snapd[1712]: backend.go:145: reloading profiles for snap-confine
+Apr 01 06:54:40 juju-0d89fd-2 systemd[1]: Started snapd.service - Snap Daemon.
+Apr 01 06:54:58 juju-0d89fd-2 snapd[1712]: api_snaps.go:536: Installing snap "opensearch" revision 98
+Apr 01 06:54:58 juju-0d89fd-2 snapd[1712]: store_download.go:145: no host system xdelta3 available to use deltas
+Apr 01 06:54:58 juju-0d89fd-2 groupadd[2469]: group added to /etc/group: name=snapd-range-524288-root, GID=524288
+Apr 01 06:54:58 juju-0d89fd-2 groupadd[2469]: group added to /etc/gshadow: name=snapd-range-524288-root
+Apr 01 06:54:58 juju-0d89fd-2 groupadd[2469]: new group: name=snapd-range-524288-root, GID=524288
+Apr 01 06:54:58 juju-0d89fd-2 useradd[2475]: new user: name=snapd-range-524288-root, UID=524288, GID=524288, home=/nonexistent, shell=/usr/bin/false, from=none
+Apr 01 06:54:58 juju-0d89fd-2 groupadd[2482]: group added to /etc/group: name=snap_daemon, GID=584788
+Apr 01 06:54:58 juju-0d89fd-2 groupadd[2482]: group added to /etc/gshadow: name=snap_daemon
+Apr 01 06:54:58 juju-0d89fd-2 groupadd[2482]: new group: name=snap_daemon, GID=584788
+Apr 01 06:54:58 juju-0d89fd-2 useradd[2488]: new user: name=snap_daemon, UID=584788, GID=584788, home=/nonexistent, shell=/usr/bin/false, from=none
+Apr 01 07:04:40 juju-0d89fd-2 snapd[1712]: devicemgr.go:2796: no NTP sync after 10m0s, trying auto-refresh anyway
+Apr 01 07:05:13 juju-0d89fd-2 snapd[1712]: taskrunner.go:304: Change 4 task (Download snap "snapd" (26382) from channel "stable") failed: download too slow: 0.00 bytes/sec
+
+unit-gcs-integrator-0: 07:06:42 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-0: 07:06:42 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-0: 07:09:45 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 07:09:45 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 07:09:47 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 07:09:48 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 07:09:48 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+machine-0: 07:18:06 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 07:18:06 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 07:21:42 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 07:21:42 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 07:21:46 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 07:21:46 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 07:21:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 07:21:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 07:21:56 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 07:21:56 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-9: 07:22:00 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-9: 07:22:00 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-gcs-integrator-1: 07:26:03 ERROR unit.gcs-integrator/1.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-1: 07:26:03 ERROR unit.gcs-integrator/1.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-1: 07:30:54 ERROR unit.gcs-integrator/1.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-1: 07:30:54 ERROR unit.gcs-integrator/1.juju-log Could not decode secret 'None'.
+unit-opensearch-3: 07:32:32 ERROR unit.opensearch/3.juju-log Failed to install/upgrade opensearch. 
+Snap: 'opensearch' -- command ['snap', 'install', 'opensearch', '--revision="98"'] failed!
+Stdout:
+2026-04-01T07:22:12Z INFO Waiting for automatic snapd restart...
+
+Stderr:
+error: cannot perform the following tasks:
+- Download snap "opensearch" (98) from channel "stable" (download too slow: 0.00 bytes/sec)
+
+Latest logs:
+Apr 01 07:22:15 juju-0d89fd-7 systemd[1]: snapd.service: Deactivated successfully.
+Apr 01 07:22:15 juju-0d89fd-7 systemd[1]: snapd.service: Scheduled restart job, restart counter is at 1.
+Apr 01 07:22:15 juju-0d89fd-7 systemd[1]: Starting snapd.service - Snap Daemon...
+Apr 01 07:22:16 juju-0d89fd-7 snapd[2637]: overlord.go:294: Acquiring state lock file
+Apr 01 07:22:16 juju-0d89fd-7 snapd[2637]: overlord.go:299: Acquired state lock file
+Apr 01 07:22:16 juju-0d89fd-7 snapd[2637]: patch.go:64: Patching system state level 6 to sublevel 1...
+Apr 01 07:22:16 juju-0d89fd-7 snapd[2637]: patch.go:64: Patching system state level 6 to sublevel 2...
+Apr 01 07:22:16 juju-0d89fd-7 snapd[2637]: patch.go:64: Patching system state level 6 to sublevel 3...
+Apr 01 07:22:16 juju-0d89fd-7 snapd[2637]: daemon.go:276: started snapd/2.74.1 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-37-generic.
+Apr 01 07:22:16 juju-0d89fd-7 snapd[2637]: daemon.go:370: adjusting startup timeout by 35s (pessimistic estimate of 30s plus 5s per snap)
+Apr 01 07:22:16 juju-0d89fd-7 snapd[2637]: backends.go:70: AppArmor status: apparmor is enabled and all features are available (using snapd provided apparmor_parser)
+Apr 01 07:22:16 juju-0d89fd-7 snapd[2637]: backend.go:141: delegating reload of snap-confine profiles to system snap security profiles setup
+Apr 01 07:22:16 juju-0d89fd-7 snapd[2637]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Apr 01 07:22:16 juju-0d89fd-7 snapd[2637]: standby.go:95: will consider standby after: 5s
+Apr 01 07:22:16 juju-0d89fd-7 systemd[1]: Started snapd.service - Snap Daemon.
+Apr 01 07:22:17 juju-0d89fd-7 snapd[2637]: snapmgr.go:1659: performing periodic snap downloads cache cleanup
+Apr 01 07:22:17 juju-0d89fd-7 snapd[2637]: cache.go:243: removed 0 entries/    0 from downloads cache
+Apr 01 07:22:30 juju-0d89fd-7 snapd[2637]: cache.go:243: removed 0 entries/    0 from downloads cache
+Apr 01 07:32:16 juju-0d89fd-7 snapd[2637]: devicemgr.go:2981: no NTP sync after 10m0s, trying auto-refresh anyway
+Apr 01 07:32:32 juju-0d89fd-7 snapd[2637]: taskrunner.go:304: Change 4 task (Download snap "opensearch" (98) from channel "stable") failed: download too slow: 0.00 bytes/sec
+
+unit-gcs-integrator-1: 07:35:19 ERROR unit.gcs-integrator/1.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-1: 07:35:19 ERROR unit.gcs-integrator/1.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-1: 07:37:31 ERROR unit.gcs-integrator/1.juju-log gcs-credentials:12: Could not decode secret 'None'.
+unit-gcs-integrator-1: 07:37:32 ERROR unit.gcs-integrator/1.juju-log gcs-credentials:12: Could not decode secret 'None'.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:190 Cleaning backups from cloud buckets
+[33mWARNING [0m integration.ha.test_backups:test_backups.py:216 Failed to clean up backups: SSL validation failed for https://10.151.33.167:445/testbucket?prefix=opensearch%2F35b5fd75-3f5c-4517-9131-94691def8bda%2F&encoding-type=url [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1000)
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:511 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.28.0 Python/3.12.3 (Linux-6.14.0-37-generic-x86_64-with-glibc2.39)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'bb68c0d9-2d9e-11f1-a51d-00163ef0d3d2'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:554 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'bd3e0901-001e-0011-14ab-c12866000000'
+    'x-ms-client-request-id': 'bb68c0d9-2d9e-11f1-a51d-00163ef0d3d2'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Wed, 01 Apr 2026 07:45:20 GMT'

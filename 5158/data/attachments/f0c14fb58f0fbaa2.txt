@@ -1,0 +1,116 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.20   unsupported  07:20:12Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           active       2  opensearch                            1  no       
+grafana-agent                      waiting    0/4  grafana-agent             1/stable  605  no       agent initialising
+main                               active       1  opensearch                            0  no       
+opensearch                         active       1  opensearch                            2  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent       Machine  Public address  Ports     Message
+failover/0*                  active    idle        1        10.254.38.204   9200/tcp  
+  grafana-agent/1            waiting   allocating           10.254.38.204             agent initialising
+failover/1                   active    idle        2        10.254.38.160   9200/tcp  
+  grafana-agent/0*           waiting   allocating           10.254.38.160             agent initialising
+main/0*                      active    idle        4        10.254.38.189   9200/tcp  
+  grafana-agent/2            waiting   allocating           10.254.38.189             agent initialising
+opensearch/0*                active    idle        3        10.254.38.41    9200/tcp  
+  grafana-agent/3            waiting   allocating           10.254.38.41              agent initialising
+self-signed-certificates/0*  active    idle        0        10.254.38.114             
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.254.38.114  juju-5fd1cb-0  ubuntu@24.04  github-runner  Running
+1        started  10.254.38.204  juju-5fd1cb-1  ubuntu@24.04  github-runner  Running
+2        started  10.254.38.160  juju-5fd1cb-2  ubuntu@24.04  github-runner  Running
+3        started  10.254.38.41   juju-5fd1cb-3  ubuntu@24.04  github-runner  Running
+4        started  10.254.38.189  juju-5fd1cb-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 07:08:59 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 07:08:59 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 07:09:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 07:09:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 07:09:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 07:09:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 07:09:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 07:09:14 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 07:09:25 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 07:09:25 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 07:11:21 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 07:11:21 ERROR unit.opensearch/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 07:11:22 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 07:11:22 ERROR unit.opensearch/0.juju-log Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 07:11:23 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 07:11:23 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 07:11:24 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 07:11:24 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 07:11:24 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 07:11:24 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 07:11:50 ERROR unit.opensearch/0.juju-log certificates:14: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 07:11:50 ERROR unit.opensearch/0.juju-log certificates:14: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 07:11:51 ERROR unit.opensearch/0.juju-log certificates:14: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 07:11:51 ERROR unit.opensearch/0.juju-log certificates:14: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 07:11:53 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 07:11:53 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 07:11:53 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 07:11:53 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 07:12:18 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 07:12:18 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 07:12:18 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 07:12:18 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 07:12:42 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 07:12:42 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 07:12:43 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 07:12:43 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 07:13:07 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 07:13:07 ERROR unit.opensearch/0.juju-log peer-cluster:10: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 07:13:08 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 07:13:08 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-opensearch-0: 07:13:09 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing cluster topology requirements: At least 1 cluster manager nodes are required.
+unit-opensearch-0: 07:13:09 ERROR unit.opensearch/0.juju-log peer-cluster:11: Missing profile requirements: ['At least 1 cluster manager nodes are required.']
+unit-grafana-agent-0: 07:18:42 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/0: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-1: 07:18:42 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/1: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-2: 07:18:42 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/2: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-3: 07:18:42 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/3: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-1: 07:18:45 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/1: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-2: 07:18:45 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/2: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-0: 07:18:46 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/0: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-3: 07:18:46 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/3: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-2: 07:18:50 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/2: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-1: 07:18:50 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/1: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-0: 07:18:50 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/0: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-3: 07:18:50 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/3: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-2: 07:18:54 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/2: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-1: 07:18:55 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/1: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-3: 07:18:56 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/3: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-0: 07:18:56 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/0: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-2: 07:19:01 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/2: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-1: 07:19:01 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/1: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-0: 07:19:02 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/0: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-3: 07:19:02 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/3: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-1: 07:19:08 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/1: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-0: 07:19:09 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/0: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-2: 07:19:09 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/2: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-3: 07:19:10 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/3: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-1: 07:19:18 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/1: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-0: 07:19:18 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/0: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-2: 07:19:19 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/2: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-3: 07:19:20 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/3: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-1: 07:19:28 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/1: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-0: 07:19:29 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/0: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-3: 07:19:30 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/3: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-2: 07:19:30 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/2: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-1: 07:19:41 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/1: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-0: 07:19:41 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/0: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-3: 07:19:42 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/3: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-2: 07:19:43 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/2: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-1: 07:19:55 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/1: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-0: 07:19:57 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/0: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-3: 07:19:57 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/3: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-2: 07:19:58 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/2: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
