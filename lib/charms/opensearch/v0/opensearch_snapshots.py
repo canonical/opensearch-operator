@@ -9,6 +9,7 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, Tuple, Union
+import tempfile
 
 from charms.data_platform_libs.v0.azure_storage import (
     AzureStorageRequires,
@@ -300,12 +301,14 @@ class OpenSearchSnapshotEvents(Object):
                 }
             )
         elif object_storage_type == ObjectStorageType.GCS:
-            service_account_path = self.charm.snapshots_manager.write_gcs_service_account_json(
-                secret_key=object_storage_config.gcs.credentials.secret_key
-            )
-            self.charm.keystore_manager.put_file_entry(
-                key="gcs.client.default.credentials_file", filename=service_account_path
-            )
+            with tempfile.NamedTemporaryFile(dir=self.charm.opensearch.paths.conf) as tmp:
+                service_account_path = self.charm.snapshots_manager.write_gcs_service_account_json(
+                    secret_key=object_storage_config.gcs.credentials.secret_key,
+                    dst=tmp.name,
+                )
+                self.charm.keystore_manager.put_file_entry(
+                    key="gcs.client.default.credentials_file", filename=service_account_path
+                )
         else:
             raise ValueError(f"Unknown object storage type: {object_storage_type}")
 
@@ -497,12 +500,14 @@ class OpenSearchSnapshotEvents(Object):
                     }
                 )
             elif gcs_info:
-                service_account_path = self.charm.snapshots_manager.write_gcs_service_account_json(
-                    secret_key=gcs_info["secret_key"]
-                )
-                self.charm.keystore_manager.put_file_entry(
-                    key="gcs.client.default.credentials_file", filename=service_account_path
-                )
+                with tempfile.NamedTemporaryFile(dir=self.charm.opensearch.paths.conf) as tmp:
+                    service_account_path = self.charm.snapshots_manager.write_gcs_service_account_json(
+                        secret_key=gcs_info["secret_key"],
+                        dst=tmp.name
+                    )
+                    self.charm.keystore_manager.put_file_entry(
+                        key="gcs.client.default.credentials_file", filename=service_account_path
+                    )
 
             # Optional CA chain
             if s3_info and s3_info.get("s3_tls_ca_chain"):
@@ -1648,8 +1653,6 @@ class OpenSearchSnapshotsManager:
         try:
             self.charm.keystore_manager.remove_entries(keystore_entries)
             self.charm.opensearch_keystore_events.reload_event.emit()
-            if object_storage_type == ObjectStorageType.GCS or str(object_storage_type) == "gcs":
-                self.remove_gcs_service_account_json()
             logger.info("Removed keystore entries for %s", object_storage_type)
         except OpenSearchCmdError as e:
             parts = [
@@ -1824,22 +1827,3 @@ class OpenSearchSnapshotsManager:
 
         self.charm.opensearch.write_file(dst, content, override=True)
         return Path(dst)
-
-    def remove_gcs_service_account_json(
-        self,
-        dst: str = GCS_SERVICE_ACCOUNT_JSON,
-    ) -> None:
-        """Remove the GCS service account JSON file.
-
-        Args:
-            dst: Path to the service account file.
-
-        Raises:
-            OSError: if deletion fails for other reasons.
-        """
-        path = Path(dst)
-        try:
-            path.unlink()
-        except FileNotFoundError:
-            logger.warning("GCS service account JSON file not found, skipping removal: %s", dst)
-            return
