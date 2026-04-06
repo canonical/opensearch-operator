@@ -5,11 +5,11 @@
 import hashlib
 import json
 import logging
+import tempfile
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, Tuple, Union
-import tempfile
 
 from charms.data_platform_libs.v0.azure_storage import (
     AzureStorageRequires,
@@ -501,9 +501,10 @@ class OpenSearchSnapshotEvents(Object):
                 )
             elif gcs_info:
                 with tempfile.NamedTemporaryFile(dir=self.charm.opensearch.paths.conf) as tmp:
-                    service_account_path = self.charm.snapshots_manager.write_gcs_service_account_json(
-                        secret_key=gcs_info["secret_key"],
-                        dst=tmp.name
+                    service_account_path = (
+                        self.charm.snapshots_manager.write_gcs_service_account_json(
+                            secret_key=gcs_info["secret_key"], dst=tmp.name
+                        )
                     )
                     self.charm.keystore_manager.put_file_entry(
                         key="gcs.client.default.credentials_file", filename=service_account_path
