@@ -597,8 +597,8 @@ This unit will not recover automatically, and additional steps are required to r
 
 Retrieve the cluster health:
 
-```text
-GET _cluster/health?pretty
+```shell
+curl -X GET "10.45.114.156:9200/_cluster/health?pretty"
 ```
 
 If the cluster health is red, one or more primary shards cannot be allocated.
@@ -608,8 +608,8 @@ As the departed unit will not rejoin, these indices cannot be recovered and must
 
 Identify the problematic index from the output of:
 
-```text
-GET _cluster/allocation/explain?pretty
+```shell
+curl -X GET "10.45.114.156:9200/_cluster/allocation/explain?pretty"
 ```
 
 For example, in the following output, `index1` cannot be recovered as its current state is
@@ -666,14 +666,14 @@ Delete the problematic index identified in the previous step:
 If you do not have a snapshot containing this index, the data will be lost!
 ```
 
-```text
-DELETE /index1
+```shell
+curl -X DELETE "10.45.114.156:9200/index1"
 ```
 
 After deleting any orphaned indices, verify that the cluster returns to green or yellow health:
 
-```text
-GET _cluster/health?pretty
+```shell
+curl -X GET "10.45.114.156:9200/_cluster/health?pretty"
 ```
 
 ### Set allocation settings
@@ -681,13 +681,14 @@ GET _cluster/health?pretty
 During the upgrade process, the routing allocation setting may be restricted to `primaries`.
 Restore normal allocation by enabling all routing:
 
-```text
-PUT _cluster/settings
+```shell
+curl -X PUT "10.45.114.156:9200/_cluster/settings" -H 'Content-Type: application/json' -d'
 {
   "persistent": {
     "cluster.routing.allocation.enable": "all"
   }
 }
+'
 ```
 
 ### Add a new unit
@@ -735,8 +736,8 @@ Example response:
 
 If the departed unit holds the lock, delete the lock document:
 
-```text
-DELETE /.charm_node_lock/_doc/0?refresh=true
+```shell
+curl -X DELETE "10.45.114.156:9200/.charm_node_lock/_doc/0?refresh=true"
 ```
 
 Wait for the replacement unit to start and join the cluster.
@@ -763,8 +764,8 @@ Machine  State    Address        Inst id        Base          AZ  Message
 
 List the nodes in the current cluster:
 
-```text
-GET _cat/nodes
+```shell
+curl -X GET "10.45.114.156:9200/_cat/nodes"
 ```
 
 Confirm that the new node is present in the output, which will look similar to the following:
