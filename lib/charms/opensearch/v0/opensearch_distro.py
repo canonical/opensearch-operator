@@ -595,22 +595,24 @@ class OpenSearchDistribution(ABC):
             logger.error("Missing system requirements: %s", missing_requirements)
         return missing_requirements
 
-    def read_compatibility_matrix(self) -> Dict[str, List[str]]:
+    def read_compatibility_matrix(self) -> dict[str, set[str]]:
         """Read compatibility matrix from file."""
         path = pathlib.Path(self.paths.compatibility_matrix)
         if not path.exists():
             return {}
 
         try:
-            return json.loads(path.read_text())
+            return {key: set(value) for key, value in json.loads(path.read_text()).items()}
         except json.JSONDecodeError as e:
             logger.error(f"Failed to read compatibility matrix: {e}")
             return {}
 
-    def write_compatibility_matrix(self, matrix: Dict[str, List[str]]) -> None:
+    def write_compatibility_matrix(self, matrix: dict[str, set[str]]) -> None:
         """Write compatibility matrix to file."""
         try:
-            pathlib.Path(self.paths.compatibility_matrix).write_text(json.dumps(matrix, indent=4))
+            pathlib.Path(self.paths.compatibility_matrix).write_text(
+                json.dumps({key: list(value) for key, value in matrix.items()}, indent=4)
+            )
         except Exception as e:
             logger.error(f"Failed to write compatibility matrix: {e}")
 

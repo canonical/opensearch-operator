@@ -243,6 +243,7 @@ class OpenSearchOperatorCharm(OpenSearchBaseCharm):
         logger.debug("Forced upgrade")
 
     def _on_refresh_force_start_action(self, event: ops.ActionEvent) -> None:
+        """Handle force refresh start action for rollback scenario."""
         if not self._upgrade or not self._upgrade.is_rollback:
             logger.debug("For refresh start event failed: No rollback in progress")
             event.fail("No rollback in progress")

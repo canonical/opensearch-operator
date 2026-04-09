@@ -2082,17 +2082,14 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             )
         )
 
-    def reconcile_compatibility_matrix(self):
+    def reconcile_compatibility_matrix(self) -> None:
         """Reconcile compatibility matrix file."""
         disk_matrix = self.opensearch.read_compatibility_matrix()
         current_matrix = upgrade.COMPATIBILITY_MATRIX
         if disk_matrix != current_matrix:
             # deeply fuse dictionaries
             for key, value in current_matrix.items():
-                if key in disk_matrix:
-                    disk_matrix[key] = list(set(disk_matrix[key]) | set(value))  # union of lists
-                else:
-                    disk_matrix[key] = value
+                disk_matrix[key] = disk_matrix.setdefault(key, value) | set(value)  # union of sets
             self.opensearch.write_compatibility_matrix(disk_matrix)
             logger.debug("Reconciled compatibility matrix file")
 
