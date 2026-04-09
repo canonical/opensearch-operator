@@ -57,7 +57,7 @@ To upgrade your OpenSearch cluster, follow these steps:
 4. Upgrade: Only one app unit will be upgraded once started.
   In case of failure, roll back with `juju refresh`.
 5. Resume upgrade: The upgrade can be resumed if the upgrade of the first unit is successful.
-  All units in an app will be executed sequentially from the highest to lowest unit number.
+  All units in an app will be upgraded sequentially from the highest to lowest unit number.
 6. (optional) Scale back: Remove no longer necessary units created in step 2 (if any).
 7. Post-upgrade check: Ensure all units are in the proper state and the cluster is healthy.
 
@@ -350,7 +350,6 @@ The response should look similar to the following example:
 (how-to-minor-rollback)=
 ## Perform a minor rollback
 
-
 ```{caution}
 OpenSearch does not support downgrading.
 For more information, please refer to the upstream
@@ -360,7 +359,7 @@ For more information, please refer to the upstream
 While rollbacking a charm revision that does not change the underlying OpenSearch version is a safe operation, it is important to note that rollbacking in Charmed OpenSearch is a best-effort process to restore the cluster to a previous revision. If the OpenSearch workload version is different, it does not guarantee that the cluster will be rolled back to a previous version. 
 
 After a `juju refresh`, if there are any version incompatibilities in charm revisions,
-its dependencies, or any other unexpected failure in the upgrade process,
+their dependencies, or any other unexpected failure in the upgrade process,
 the process will be halted and enter a failure state.
 
 Even if the underlying OpenSearch cluster continues to work, it's important to roll back the charm to
@@ -372,7 +371,7 @@ To execute a rollback we take the same procedure as the upgrade, the difference 
 the charm revision to upgrade to. As an example follow up
 [the minor upgrades guide](how-to-minor-upgrade).
 
-It is important to run the `pre-upgrade-checks` action to ensure the cluster is in a healthy state
+It is important to run the `pre-upgrade-check` action to ensure the cluster is in a healthy state
 before the rollback. This action will check the cluster health and the status of the upgrade.
 
 ```shell
@@ -464,8 +463,6 @@ Notice that the OpenSearch charm is now at revision **144**.
 #### Rollback a charm revision with a different workload version
 
 If you roll back to a charm revision with a different workload version, the process will roll back the charm code and then make a best-effort attempt to roll back the workload, since OpenSearch does not support downgrades.
-
-
 
 ##### If the rollback between the versions is possible
 
