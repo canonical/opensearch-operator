@@ -465,7 +465,6 @@ Notice that the OpenSearch charm is now at revision **144**.
 
 If you roll back to a charm revision with a different workload version, the process will roll back the charm code and then make a best-effort attempt to roll back the workload, since OpenSearch does not support downgrades.
 
-This is a dangerous operation that may lead to an unhealthy OpenSearch cluster. It is recommended to instead perform a backup and restore of the cluster to a new deployment with the desired OpenSearch version.
 
 
 ##### If the rollback between the versions is possible
