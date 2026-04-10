@@ -40,6 +40,7 @@ The following guides cover key processes and common tasks for managing and using
 
 * [Perform a minor upgrade](how-to-minor-upgrade)
 * [Perform a minor rollback](how-to-minor-rollback)
+* [Recovering from a rollback](how-to-recover-rollback)
 
 ## Monitoring (COS)
 

@@ -57,13 +57,9 @@ To upgrade your OpenSearch cluster, follow these steps:
 4. Upgrade: Only one app unit will be upgraded once started.
   In case of failure, roll back with `juju refresh`.
 5. Resume upgrade: The upgrade can be resumed if the upgrade of the first unit is successful.
-  All units in an app will be executed sequentially from the highest to lowest unit number.
-6. (optional) Consider [rolling back](how-to-minor-rollback)
-  in case of disaster.
-  Please [inform and include us](https://app.element.io/#/room/#charmhub-data-platform:ubuntu.com)
-  in your case scenario troubleshooting to trace the source of the issue and prevent it in the future.
-7. (optional) Scale back: Remove no longer necessary units created in step 2 (if any).
-8. Post-upgrade check: Ensure all units are in the proper state and the cluster is healthy.
+  All units in an app will be upgraded sequentially from the highest to lowest unit number.
+6. (optional) Scale back: Remove no longer necessary units created in step 2 (if any).
+7. Post-upgrade check: Ensure all units are in the proper state and the cluster is healthy.
 
 #### Collect all necessary pre-upgrade information
 
@@ -105,8 +101,7 @@ If the deployment is of a local charm, save a copy of the current `.charm` file.
 Optionally, it is recommended to scale the application up by one unit before upgrading.
 
 The new unit will be the first one to be updated, and it will assert that the upgrade is possible.
-In case of failure, having the extra unit will ease the rollback procedure,
-without disrupting service see more in [Minor rollback how-to](how-to-minor-rollback).
+In the event of a failure, an extra unit simplifies manual recovery without disrupting service.
 
 ```shell
 juju add-unit opensearch
@@ -285,7 +280,7 @@ The revision number should reflect the new revision of the application.
 
 ### Rollback (optional)
 
-In case of a failed upgrade, you can roll back to the previous revision.
+In case of a failed upgrade, you might potentially be able to rollback to the previous revision.
 To do so, follow the [Perform a minor rollback](how-to-minor-rollback) section below.
 
 ### Scale-back (optional)
@@ -356,17 +351,16 @@ The response should look similar to the following example:
 (how-to-minor-rollback)=
 ## Perform a minor rollback
 
-This guide describes how to roll back a minor version of OpenSearch.
-This is useful when an upgrade fails and you need to roll back to the previous version.
-
-```{note}
-OpenSearch does not support downgrading to a previous major version.
+```{caution}
+OpenSearch does not support downgrading.
 For more information, please refer to the upstream
 [OpenSearch documentation about rolling upgrades](https://docs.opensearch.org/latest/migrate-or-upgrade/rolling-upgrade/#preparing-to-upgrade).
 ```
 
+While rollbacking a charm revision that does not change the underlying OpenSearch version is a safe operation, it is important to note that rollbacking in Charmed OpenSearch is a best-effort process to restore the cluster to a previous revision. If the OpenSearch workload version is different, it does not guarantee that the cluster will be rolled back to a previous version. 
+
 After a `juju refresh`, if there are any version incompatibilities in charm revisions,
-its dependencies, or any other unexpected failure in the upgrade process,
+their dependencies, or any other unexpected failure in the upgrade process,
 the process will be halted and enter a failure state.
 
 Even if the underlying OpenSearch cluster continues to work, it's important to roll back the charm to
@@ -376,9 +370,9 @@ a previous revision so that an update can be attempted after further inspection 
 
 To execute a rollback we take the same procedure as the upgrade, the difference being
 the charm revision to upgrade to. As an example follow up
-the [Perform a minor upgrade](how-to-minor-upgrade) section above.
+[the minor upgrades guide](how-to-minor-upgrade).
 
-It is important to run the `pre-upgrade-checks` action to ensure the cluster is in a healthy state
+It is important to run the `pre-upgrade-check` action to ensure the cluster is in a healthy state
 before the rollback. This action will check the cluster health and the status of the upgrade.
 
 ```shell
@@ -421,6 +415,12 @@ Notice that the OpenSearch charm is at revision **145**.
 It may cause an unpredictable OpenSearch state. 
 ```
 
+```{caution}
+**Caution**:  Rollbacks in Charmed OpenSearch are a best-effort process. It is recommended to perform a backup and restore to a new deployment with the desired OpenSearch version instead of performing a rollback. Rollbacks carry the potential of *data loss* and *downtime*.
+```
+
+#### Rollback a charm revision with the same workload version
+
 You can initiate the rollback by running the `refresh` command with the revision of
 the charm you want to rollback to. For example, to rollback to revision **144**, run:
 
@@ -461,6 +461,60 @@ Machine  State    Address         Inst id        Base          AZ  Message
 
 Notice that the OpenSearch charm is now at revision **144**.
 
+#### Rollback a charm revision with a different workload version
+
+If you roll back to a charm revision with a different workload version, the process will roll back the charm code and then make a best-effort attempt to roll back the workload, since OpenSearch does not support downgrades.
+
+##### If the rollback between the versions is possible
+
+In this case, both the charm code and the workload will be rolled back to the previous version. However, because rollback is a risky operation, rolling back the workload requires manual intervention. The charm will enter a blocked state and display a message instructing you to run the `force-refresh-start` action with `check-compatibility=false` to continue the best-effort workload rollback.
+
+```shell
+Model    Controller  Cloud/Region         Version  SLA          Timestamp
+testing  lxd         localhost/localhost  3.6.14   unsupported  08:36:09Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         blocked      3  opensearch                            2  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+self-signed-certificates           active       1  self-signed-certificates  1/stable  586  no
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0                 active    idle   1        10.149.40.7     9200/tcp  OpenSearch 2.18.0 running; Snap rev 66; Charmed operator 1+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-...
+opensearch/1                 active    idle   2        10.149.40.93    9200/tcp  OpenSearch 2.18.0 running; Snap rev 66; Charmed operator 1+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-...
+opensearch/2*                blocked   idle   3        10.149.40.126   9200/tcp  Rollback incompatible. Run 'juju run <unit> force-refresh-start' with `check-compatibility` set to false to override ...
+self-signed-certificates/0*  active    idle   0        10.149.40.252
+
+Machine  State    Address        Inst id        Base          AZ   Message
+0        started  10.149.40.252  juju-f44a9a-0  ubuntu@24.04  xof  Running
+1        started  10.149.40.7    juju-f44a9a-1  ubuntu@24.04  xof  Running
+2        started  10.149.40.93   juju-f44a9a-2  ubuntu@24.04  xof  Running
+3        started  10.149.40.126  juju-f44a9a-3  ubuntu@24.04  xof  Running
+```
+
+##### If the rollback between the versions is not possible
+
+In this case, the charm code will be rolled back, but the OpenSearch workload will remain on the newer version. The charm will enter a blocked state and display a message instructing you to either refresh to a charm revision with the same workload version or perform a backup and restore to a new deployment.
+
+```shell
+Model    Controller  Cloud/Region         Version  SLA          Timestamp
+testing  lxd         localhost/localhost  3.6.14   unsupported  08:03:52Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         blocked      3  opensearch                           17  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+self-signed-certificates           active       1  self-signed-certificates  1/stable  586  no
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/6*                active    idle   7        10.149.40.239   9200/tcp  OpenSearch 2.17.0 running; Snap rev 58; Charmed operator 1+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-...
+opensearch/7                 active    idle   8        10.149.40.64    9200/tcp  OpenSearch 2.17.0 running; Snap rev 58; Charmed operator 1+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-...
+opensearch/8                 blocked   idle   9        10.149.40.31    9200/tcp  Rollback unsupported. Refresh to a newer revision or consult the recovery documentation
+self-signed-certificates/0*  active    idle   0        10.149.40.55
+
+Machine  State    Address        Inst id        Base          AZ   Message
+0        started  10.149.40.55   juju-0bfd52-0  ubuntu@24.04  xof  Running
+7        started  10.149.40.239  juju-0bfd52-7  ubuntu@24.04  xof  Running
+8        started  10.149.40.64   juju-0bfd52-8  ubuntu@24.04  xof  Running
+9        started  10.149.40.31   juju-0bfd52-9  ubuntu@24.04  xof  Running
+```
+
 ### Check the cluster's health
 
 Once the charm is rolled back, it is important to check the cluster's health to ensure it is healthy.
@@ -493,4 +547,229 @@ The response should look similar to the following example:
   "task_max_waiting_in_queue_millis" : 0,
   "active_shards_percent_as_number" : 100.0
 }
+```
+
+(how-to-recover-rollback)=
+## Recovering from a rollback
+
+OpenSearch does not support downgrades.
+Running `juju refresh` to a previous revision may cause OpenSearch to fail to start.
+In that case, manual recovery is required.
+Follow the steps in this section to restore the cluster to a healthy state.
+
+For more information, please refer to the upstream
+[OpenSearch documentation about rolling upgrades](https://docs.opensearch.org/latest/migrate-or-upgrade/rolling-upgrade/#preparing-to-upgrade).
+
+### Check Juju status
+
+First, check Juju model status:
+
+```shell
+juju status
+```
+
+The rolled back unit may appear stuck displaying the status `Waiting for OpenSearch to start...`:
+
+```text
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         active      3  opensearch                2/stable       168  no
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch/0*                active    idle       0        10.45.114.156   9200/tcp
+opensearch/1                 active    idle       1        10.45.114.208   9200/tcp
+opensearch/2                 waiting   executing  2        10.45.114.147   9200/tcp  Waiting for OpenSearch to start...
+self-signed-certificates/0*  active    idle       3        10.45.114.124
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.45.114.156  juju-1fafd0-0  ubuntu@22.04      Running
+1        started  10.45.114.208  juju-1fafd0-1  ubuntu@22.04      Running
+2        started  10.45.114.147  juju-1fafd0-2  ubuntu@22.04      Running
+3        started  10.45.114.124  juju-1fafd0-3  ubuntu@22.04      Running
+```
+
+Note the blocked unit; in this example, it is `opensearch/2`.
+This unit will not recover automatically, and additional steps are required to replace it.
+
+### Check cluster health
+
+Retrieve the cluster health:
+
+```shell
+curl -X GET "10.45.114.156:9200/_cluster/health?pretty"
+```
+
+If the cluster health is red, one or more primary shards cannot be allocated.
+Allocation explanations will identify any indices that exist only on the rolled back unit
+which has left the cluster.
+As the departed unit will not rejoin, these indices cannot be recovered and must be removed.
+
+Identify the problematic index from the output of:
+
+```shell
+curl -X GET "10.45.114.156:9200/_cluster/allocation/explain?pretty"
+```
+
+For example, in the following output, `index1` cannot be recovered as its current state is
+`unassigned` with the reason `NODE_LEFT`:
+
+```json
+{
+  "index": "index1",
+  "shard": 0,
+  "primary": true,
+  "current_state": "unassigned",
+  "unassigned_info": {
+    "reason": "NODE_LEFT",
+    "at": "2025-11-27T08:40:43.653Z",
+    "details": "node_left [NKDiDmZ7TOShHAW32rcleg]",
+    "last_allocation_status": "no_valid_shard_copy"
+  },
+  "can_allocate": "no_valid_shard_copy",
+  "allocate_explanation": "cannot allocate because a previous copy of the primary shard existed but can no longer be found on the nodes in the cluster",
+  "node_allocation_decisions": [
+    {
+      "node_id": "WxxsBtxITtab58q078TdEg",
+      "node_name": "opensearch-1.4c1",
+      "transport_address": "10.45.114.208:9300",
+      "node_attributes": {
+        "app_id": "39b6cdac-c195-466d-8537-e4a1f41fafd0/opensearch",
+        "shard_indexing_pressure_enabled": "true"
+      },
+      "node_decision": "no",
+      "store": {
+        "found": false
+      }
+    },
+    {
+      "node_id": "XnZt4LqwSTu79M7neGxkoQ",
+      "node_name": "opensearch-0.4c1",
+      "transport_address": "10.45.114.156:9300",
+      "node_attributes": {
+        "shard_indexing_pressure_enabled": "true",
+        "app_id": "39b6cdac-c195-466d-8537-e4a1f41fafd0/opensearch"
+      },
+      "node_decision": "no",
+      "store": {
+        "found": false
+      }
+    }
+  ]
+}
+```
+
+Delete the problematic index identified in the previous step:
+
+```{warning}
+If you do not have a snapshot containing this index, the data will be lost!
+```
+
+```shell
+curl -X DELETE "10.45.114.156:9200/index1"
+```
+
+After deleting any orphaned indices, verify that the cluster returns to green or yellow health:
+
+```shell
+curl -X GET "10.45.114.156:9200/_cluster/health?pretty"
+```
+
+### Set allocation settings
+
+During the upgrade process, the routing allocation setting may be restricted to `primaries`.
+Restore normal allocation by enabling all routing:
+
+```shell
+curl -X PUT "10.45.114.156:9200/_cluster/settings" -H 'Content-Type: application/json' -d'
+{
+  "persistent": {
+    "cluster.routing.allocation.enable": "all"
+  }
+}
+'
+```
+
+### Add a new unit
+
+While optional, it is highly advisable to add a replacement unit to restore the application to its original scale:
+
+```shell
+juju add-unit opensearch -n 1
+```
+
+### Remove rolled back unit
+
+Remove the rolled back unit:
+
+```shell
+juju remove-unit opensearch/2
+```
+
+Where `opensearch/2` is the name of the unit that was rolled back and blocked earlier.
+
+### Remove lock
+
+If the replacement unit appears stuck displaying the status message
+`Requesting lock on operation: start`, check if the departed unit still hold the lock:
+
+```text
+GET /.charm_node_lock/_doc/0
+```
+
+Example response:
+
+```json
+{
+  "_index": ".charm_node_lock",
+  "_id": "0",
+  "_version": 3,
+  "_seq_no": 28,
+  "_primary_term": 1,
+  "found": true,
+  "_source": {
+    "unit-name": "opensearch-2.4c1"
+  }
+}
+```
+
+If the departed unit holds the lock, delete the lock document:
+
+```shell
+curl -X DELETE "10.45.114.156:9200/.charm_node_lock/_doc/0?refresh=true"
+```
+
+Wait for the replacement unit to start and join the cluster.
+
+```text
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+opensearch                         active      3  opensearch                2/stable       168  no
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0*                active    idle   0        10.45.114.156   9200/tcp
+opensearch/1                 active    idle   1        10.45.114.208   9200/tcp
+opensearch/3                 active    idle   4        10.45.114.228   9200/tcp
+self-signed-certificates/0*  active    idle   3        10.45.114.124
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.45.114.156  juju-1fafd0-0  ubuntu@22.04      Running
+1        started  10.45.114.208  juju-1fafd0-1  ubuntu@22.04      Running
+3        started  10.45.114.124  juju-1fafd0-3  ubuntu@22.04      Running
+4        started  10.45.114.228  juju-1fafd0-4  ubuntu@22.04      Running
+```
+
+### Verify new unit has joined the cluster
+
+List the nodes in the current cluster:
+
+```shell
+curl -X GET "10.45.114.156:9200/_cat/nodes"
+```
+
+Confirm that the new node is present in the output, which will look similar to the following:
+
+```text
+10.45.114.228 35 86  6 0.43 0.69 0.95 dim cluster_manager,data,ingest,ml - opensearch-3.4c1
+10.45.114.156 32 86 11 0.43 0.69 0.95 dim cluster_manager,data,ingest,ml * opensearch-0.4c1
+10.45.114.208 45 86 11 0.43 0.69 0.95 dim cluster_manager,data,ingest,ml - opensearch-1.4c1
 ```
