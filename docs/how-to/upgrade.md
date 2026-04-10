@@ -101,6 +101,7 @@ If the deployment is of a local charm, save a copy of the current `.charm` file.
 Optionally, it is recommended to scale the application up by one unit before upgrading.
 
 The new unit will be the first one to be updated, and it will assert that the upgrade is possible.
+In the event of a failure, an extra unit simplifies manual recovery without disrupting service.
 
 ```shell
 juju add-unit opensearch
@@ -690,7 +691,7 @@ curl -X PUT "10.45.114.156:9200/_cluster/settings" -H 'Content-Type: application
 
 ### Add a new unit
 
-Add a replacement unit to restore the original scale of the application:
+While optional, it is highly advisable to add a replacement unit to restore the application to its original scale:
 
 ```shell
 juju add-unit opensearch -n 1
