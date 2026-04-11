@@ -1,0 +1,103 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  03:17:10Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+grafana-agent                      blocked      3  grafana-agent             1/stable  605  no       Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch                         active       3  opensearch                            0  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0*                active    idle   1        10.24.129.135   9200/tcp  
+  grafana-agent/3            blocked   idle            10.24.129.135             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/1                 active    idle   2        10.24.129.23    9200/tcp  
+  grafana-agent/2            blocked   idle            10.24.129.23              Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+opensearch/2                 active    idle   3        10.24.129.158   9200/tcp  
+  grafana-agent/0*           blocked   idle            10.24.129.158             Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+self-signed-certificates/0*  active    idle   0        10.24.129.182             
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.24.129.182  juju-b050c1-0  ubuntu@24.04  github-runner  Running
+1        started  10.24.129.135  juju-b050c1-1  ubuntu@24.04  github-runner  Running
+2        started  10.24.129.23   juju-b050c1-2  ubuntu@24.04  github-runner  Running
+3        started  10.24.129.158  juju-b050c1-3  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 02:56:37 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:56:37 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:56:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:56:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:56:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:56:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:56:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:56:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-grafana-agent-2: 03:01:38 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/2: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-0: 03:01:38 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/0: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+unit-grafana-agent-3: 03:01:38 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/grafana-agent-605" for grafana-agent/3: failed to download charm "ch:amd64/grafana-agent-605" from API server: download request with archiveSha256 length 0 not valid
+machine-4: 03:06:57 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 03:06:57 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-dashboards-0: 03:07:29 ERROR unit.opensearch-dashboards/0.juju-log Request GET to http://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x746b40a95f40>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:07:30 ERROR unit.opensearch-dashboards/0.juju-log Request GET to http://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x70a1334a8fb0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:07:31 ERROR unit.opensearch-dashboards/0.juju-log Request GET to http://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x758780ca46e0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:07:33 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5d53500>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:07:36 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd6f90>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:07:41 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd6ae0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:07:46 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd4bf0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:07:51 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd56a0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:07:56 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5d52600>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:08:01 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd4fb0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:08:06 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd4cb0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:08:11 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd6930>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:08:16 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd5eb0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:08:21 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd6510>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:08:26 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd77d0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:08:31 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd6480>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:08:36 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd6ae0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:08:41 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd6840>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:08:46 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd43e0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:08:51 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd51c0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:08:56 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd7cb0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:09:01 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd59d0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:09:06 ERROR unit.opensearch-dashboards/0.juju-log Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7561a5dd42f0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:09:08 ERROR unit.opensearch-dashboards/0.juju-log opensearch-client:10: Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x72e660dc7830>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:09:11 ERROR unit.opensearch-dashboards/0.juju-log opensearch-client:10: Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x714ead0a2b40>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:09:12 ERROR unit.opensearch-dashboards/0.juju-log opensearch-client:10: Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7879a76a0230>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-dashboards-0: 03:09:14 ERROR unit.opensearch-dashboards/0.juju-log opensearch-client:10: Request GET to https://10.24.129.201:5601/api/status with payload: None failed. 
+HTTPSConnectionPool(host='10.24.129.201', port=5601): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7d556111aa20>: Failed to establish a new connection: [Errno 111] Connection refused'))
+unit-opensearch-2: 03:13:51 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 03:14:08 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-grafana-agent-0: 03:14:17 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-grafana-agent-3: 03:14:17 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-0: 03:14:28 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-opensearch-1: 03:14:36 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-grafana-agent-2: 03:14:42 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
