@@ -196,8 +196,18 @@ class _UpgradeOpenSearch(_StartOpenSearch):
     `_StartOpenSearch` will be emitted.
     """
 
-    def __init__(self, handle, *, ignore_lock=False):
+    def __init__(self, handle, *, ignore_lock=False, override_version: bool = False):
         super().__init__(handle, ignore_lock=ignore_lock)
+        self.override_version = override_version
+
+    def snapshot(self) -> Dict[str, Any]:
+        snap = super().snapshot()
+        snap.update({"override_version": self.override_version})
+        return snap
+
+    def restore(self, snapshot: Dict[str, Any]):
+        super().restore(snapshot)
+        self.override_version = snapshot.get("override_version", False)
 
 
 class OpenSearchBaseCharm(CharmBase, abc.ABC):
@@ -1336,7 +1346,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                     "PUT",
                     "/_cluster/settings",
                     # Reset to default value
-                    payload={"persistent": {"cluster.routing.allocation.enable": "all"}},
+                    payload={
+                        "persistent": {
+                            "cluster.routing.allocation.enable": "all",
+                            "action.auto_create_index": True,
+                        }
+                    },
                 )
             except OpenSearchHttpError:
                 logger.exception("Failed to re-enable allocation after upgrade")
@@ -1532,7 +1547,12 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
             self.opensearch.request(
                 "PUT",
                 "/_cluster/settings",
-                payload={"persistent": {"cluster.routing.allocation.enable": "primaries"}},
+                payload={
+                    "persistent": {
+                        "cluster.routing.allocation.enable": "primaries",
+                        "action.auto_create_index": False,
+                    }
+                },
             )
         except OpenSearchHttpError:
             logger.exception("Failed to disable shard allocation before upgrade")
@@ -1556,6 +1576,13 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
         logger.debug("Stopped OpenSearch before upgrade")
 
         self._upgrade.upgrade_unit(snap=self.opensearch)
+
+        if event.override_version:
+            logger.debug("Overriding OpenSearch version")
+            try:
+                self.opensearch.override_version()
+            except OpenSearchCmdError as e:
+                logger.error(f"Failed to override OpenSearch version: {e}")
 
         logger.debug("Starting OpenSearch after upgrade")
         self._start_opensearch_event.emit(ignore_lock=event.ignore_lock, after_upgrade=True)
@@ -2054,6 +2081,19 @@ class OpenSearchBaseCharm(CharmBase, abc.ABC):
                 for app in cluster_fleet_apps
             )
         )
+
+    def reconcile_compatibility_matrix(self) -> None:
+        """Reconcile compatibility matrix file."""
+        disk_matrix = self.opensearch.read_compatibility_matrix()
+        current_matrix = upgrade.COMPATIBILITY_MATRIX
+        if disk_matrix != current_matrix:
+            # deeply fuse dictionaries
+            for key, value in current_matrix.items():
+                disk_matrix[key] = disk_matrix.setdefault(key, value) | set(value)  # union of sets
+            self.opensearch.write_compatibility_matrix(disk_matrix)
+            logger.debug("Reconciled compatibility matrix file")
+
+        return disk_matrix
 
     @property
     def unit_ip(self) -> str:

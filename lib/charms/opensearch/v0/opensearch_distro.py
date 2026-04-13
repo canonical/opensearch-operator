@@ -88,6 +88,7 @@ class Paths:
         self.certs = f"{conf}/certificates"  # must be under config
         self.certs_relative = "certificates"
         self.seed_hosts = f"{conf}/unicast_hosts.txt"
+        self.compatibility_matrix = f"{data}/compatibility_matrix.json"
 
 
 class OpenSearchDistribution(ABC):
@@ -593,3 +594,28 @@ class OpenSearchDistribution(ABC):
         if missing_requirements:
             logger.error("Missing system requirements: %s", missing_requirements)
         return missing_requirements
+
+    def read_compatibility_matrix(self) -> dict[str, set[str]]:
+        """Read compatibility matrix from file."""
+        path = pathlib.Path(self.paths.compatibility_matrix)
+        if not path.exists():
+            return {}
+
+        try:
+            return {key: set(value) for key, value in json.loads(path.read_text()).items()}
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to read compatibility matrix: {e}")
+            return {}
+
+    def write_compatibility_matrix(self, matrix: dict[str, set[str]]) -> None:
+        """Write compatibility matrix to file."""
+        try:
+            pathlib.Path(self.paths.compatibility_matrix).write_text(
+                json.dumps({key: list(value) for key, value in matrix.items()}, indent=4)
+            )
+        except Exception as e:
+            logger.error(f"Failed to write compatibility matrix: {e}")
+
+    def override_version(self) -> None:
+        """Override the version on disk to allow rollback to proceed."""
+        self._run_cmd(f"{self.paths.bin}/opensearch-node", "override-version", "y")

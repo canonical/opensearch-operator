@@ -21,6 +21,7 @@ from opensearch import OpenSearchSnap
 logger = logging.getLogger(__name__)
 
 FORCE_ACTION_NAME = "force-upgrade"
+ROLLBACK_OVERRIDE_VERSION_ACTION_NAME = "force-refresh-start"
 _SNAP_REVISION = str(constants_charm.OPENSEARCH_SNAP_REVISION)
 
 
@@ -167,7 +168,10 @@ class Upgrade(upgrade.Upgrade):
                                 "/_cluster/settings",
                                 # Reset to default value
                                 payload={
-                                    "persistent": {"cluster.routing.allocation.enable": "all"}
+                                    "persistent": {
+                                        "cluster.routing.allocation.enable": "all",
+                                        "action.auto_create_index": True,
+                                    }
                                 },
                                 alt_hosts=self._charm.alt_hosts,
                             )
