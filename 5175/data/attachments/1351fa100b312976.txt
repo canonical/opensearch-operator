@@ -1,0 +1,127 @@
+[32mINFO    [0m integration.relations.test_oauth:test_oauth.py:340 Integrating opensearch-data with OAuth - this will result in blocked status
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  03:02:51Z
+
+SAAS          Status  Store  URL
+certificates  active  local  admin/testing-uk8s.certificates
+oauth         active  local  admin/testing-uk8s.oauth
+
+App                  Version  Status  Scale  Charm            Channel        Rev  Exposed  Message
+data-integrator               active      1  data-integrator  latest/stable  362  no       
+opensearch-data               active      3  opensearch                        3  no       
+opensearch-failover           active      1  opensearch                        2  no       
+opensearch-main               active      1  opensearch                        1  no       
+
+Unit                    Workload  Agent      Machine  Public address  Ports     Message
+data-integrator/0*      active    idle       0        10.83.107.185             
+opensearch-data/0       active    executing  6        10.83.107.158   9200/tcp  
+opensearch-data/1       active    executing  7        10.83.107.48    9200/tcp  
+opensearch-data/2*      active    executing  8        10.83.107.87    9200/tcp  
+opensearch-failover/0*  active    idle       5        10.83.107.129   9200/tcp  
+opensearch-main/0*      active    idle       4        10.83.107.168   9200/tcp  
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.83.107.185  juju-bf9f83-0  ubuntu@24.04  github-runner  Running
+4        started  10.83.107.168  juju-bf9f83-4  ubuntu@24.04  github-runner  Running
+5        started  10.83.107.129  juju-bf9f83-5  ubuntu@24.04  github-runner  Running
+6        started  10.83.107.158  juju-bf9f83-6  ubuntu@24.04  github-runner  Running
+7        started  10.83.107.48   juju-bf9f83-7  ubuntu@24.04  github-runner  Running
+8        started  10.83.107.87   juju-bf9f83-8  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+03:02:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-data - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-data-0.db3  -- (10.83.107.158) -- [executing (since: 03:02:51)] active: 
+		opensearch-data-1.db3  -- (10.83.107.48) -- [executing (since: 03:02:51)] active: 
+		opensearch-data-2.db3* -- (10.83.107.87) -- [executing (since: 03:02:51)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+03:03:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 03:03:03 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.relations.test_oauth:test_oauth.py:351 Verifying access is not possible
+[32mINFO    [0m integration.relations.test_oauth:test_oauth.py:358 Access with OAuth Token failed as expected
+[32mINFO    [0m integration.relations.test_oauth:test_oauth.py:360 Remove relation with opensearch-data
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  03:03:04Z
+
+SAAS          Status  Store  URL
+certificates  active  local  admin/testing-uk8s.certificates
+oauth         active  local  admin/testing-uk8s.oauth
+
+App                  Version  Status   Scale  Charm            Channel        Rev  Exposed  Message
+data-integrator               active       1  data-integrator  latest/stable  362  no       
+opensearch-data               blocked      3  opensearch                        3  no       OAuth relation must be created with Main-cluster-orchestrator
+opensearch-failover           active       1  opensearch                        2  no       
+opensearch-main               active       1  opensearch                        1  no       
+
+Unit                    Workload  Agent      Machine  Public address  Ports     Message
+data-integrator/0*      active    idle       0        10.83.107.185             
+opensearch-data/0       active    executing  6        10.83.107.158   9200/tcp  
+opensearch-data/1       active    executing  7        10.83.107.48    9200/tcp  
+opensearch-data/2*      active    executing  8        10.83.107.87    9200/tcp  
+opensearch-failover/0*  active    idle       5        10.83.107.129   9200/tcp  
+opensearch-main/0*      active    idle       4        10.83.107.168   9200/tcp  
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.83.107.185  juju-bf9f83-0  ubuntu@24.04  github-runner  Running
+4        started  10.83.107.168  juju-bf9f83-4  ubuntu@24.04  github-runner  Running
+5        started  10.83.107.129  juju-bf9f83-5  ubuntu@24.04  github-runner  Running
+6        started  10.83.107.158  juju-bf9f83-6  ubuntu@24.04  github-runner  Running
+7        started  10.83.107.48   juju-bf9f83-7  ubuntu@24.04  github-runner  Running
+8        started  10.83.107.87   juju-bf9f83-8  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+03:03:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch-data - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: OAuth relation must be created with Main-cluster-orchestrator
+		opensearch-data-0.db3  -- (10.83.107.158) -- [executing (since: 03:03:04)] active: 
+		opensearch-data-1.db3  -- (10.83.107.48) -- [executing (since: 03:03:04)] active: 
+		opensearch-data-2.db3* -- (10.83.107.87) -- [executing (since: 03:03:04)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+03:03:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-data - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-data-0.db3  -- (10.83.107.158) -- [idle (since: 03:03:06)] active: 
+		opensearch-data-1.db3  -- (10.83.107.48) -- [idle (since: 03:03:06)] active: 
+		opensearch-data-2.db3* -- (10.83.107.87) -- [idle (since: 03:03:06)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+03:03:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch-data - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-data-0.db3  -- (10.83.107.158) -- [idle (since: 03:03:06)] active: 
+		opensearch-data-1.db3  -- (10.83.107.48) -- [idle (since: 03:03:06)] active: 
+		opensearch-data-2.db3* -- (10.83.107.87) -- [idle (since: 03:03:06)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+03:03:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 03:03:39 -- Waiting for model: complete.

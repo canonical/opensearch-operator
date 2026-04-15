@@ -1,0 +1,383 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'opensearch': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'active', 'since': '15 Apr 2026 03:11:52Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 's3-credentials': [{'related-application': 's3-integrator', 'interface': 's3', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/0': {'workload-status': {'current': 'active', 'since': '15 Apr 2026 03:21:40Z'}, 'juju-status': {'current': 'idle', 'since': '15 Apr 2026 03:21:50Z', 'version': '3.6.21'}, 'leader': True, 'machine': '2', 'open-ports': ['9200/tcp'], 'public-address': '10.219.138.148'}, 'opensearch/1': {'workload-status': {'current': 'active', 'since': '15 Apr 2026 03:12:13Z'}, 'juju-status': {'current': 'idle', 'since': '15 Apr 2026 03:21:59Z', 'version': '3.6.21'}, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.219.138.171'}, 'opensearch/2': {'workload-status': {'current': 'active', 'since': '15 Apr 2026 03:11:52Z'}, 'juju-status': {'current': 'idle', 'since': '15 Apr 2026 03:21:45Z', 'version': '3.6.21'}, 'machine': '4', 'open-ports': ['9200/tcp'], 'public-address': '10.219.138.48'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'smtp': 'alpha', 'upgrade-version-a': 'alpha'}}, 's3-integrator': {'charm': 's3-integrator', 'base': {'name': 'ubuntu', 'channel': '22.04'}, 'charm-origin': 'charmhub', 'charm-name': 's3-integrator', 'charm-rev': 330, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '15 Apr 2026 03:13:44Z'}, 'relations': {'s3-credentials': [{'related-application': 'opensearch', 'interface': 's3', 'scope': 'global'}], 's3-integrator-peers': [{'related-application': 's3-integrator', 'interface': 's3-integrator-peers', 'scope': 'global'}]}, 'units': {'s3-integrator/0': {'workload-status': {'current': 'active', 'since': '15 Apr 2026 03:13:44Z'}, 'juju-status': {'current': 'idle', 'since': '15 Apr 2026 03:20:09Z', 'version': '3.6.21'}, 'leader': True, 'machine': '0', 'public-address': '10.219.138.62'}}, 'endpoint-bindings': {'': 'alpha', 's3-credentials': 'alpha', 's3-integrator-peers': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 586, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '15 Apr 2026 03:07:59Z'}, 'relations': {'certificates': [{'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '15 Apr 2026 03:07:59Z'}, 'juju-status': {'current': 'idle', 'since': '15 Apr 2026 03:10:54Z', 'version': '3.6.21'}, 'leader': True, 'machine': '1', 'public-address': '10.219.138.40'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m root:test_backups.py:853 Destroying the application
+[32mINFO    [0m root:test_backups.py:860 Deploying a new cluster
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/self-signed-certificates-586
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/s3-integrator-330
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/opensearch-1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [allocating] waiting: waiting for machine
+  opensearch/3 [allocating] waiting: waiting for machine
+  opensearch/4 [allocating] waiting: waiting for machine
+  opensearch/5 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [allocating] waiting: agent initialising
+  opensearch/3 [allocating] waiting: waiting for machine
+  opensearch/4 [allocating] waiting: waiting for machine
+  opensearch/5 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [executing] waiting: agent initialising
+  opensearch/5 [executing] maintenance: Installing OpenSearch...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [executing] maintenance: Installing OpenSearch...
+  opensearch/5 [executing] maintenance: Installing OpenSearch...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [executing] maintenance: Installing OpenSearch...
+  opensearch/5 [executing] maintenance: Installing OpenSearch...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [executing] maintenance: Installing OpenSearch...
+  opensearch/4 [executing] maintenance: Installing OpenSearch...
+  opensearch/5 [executing] maintenance: Installing OpenSearch...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] waiting: Waiting for OpenSearch to start...
+  opensearch/4 [executing] waiting: Requesting lock on operation: start
+  opensearch/5 [executing] waiting: Requesting lock on operation: start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] active: 
+  opensearch/4 [executing] waiting: Requesting lock on operation: start
+  opensearch/5 [executing] waiting: Requesting lock on operation: start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/1 [idle] active: 
+  opensearch/3 [executing] active: 
+  opensearch/4 [idle] active: 
+  opensearch/5 [executing] waiting: Waiting for OpenSearch to start...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [idle] active: 
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [idle] active: 
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  opensearch/3 [idle] active: 
+  opensearch/4 [idle] active: 
+  opensearch/5 [idle] active: 
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:889 Syncing credentials for aws
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/1 [executing] blocked: Missing parameters: ['access-key', 'secret-key']
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  03:31:56Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      3  opensearch                            1  no       
+s3-integrator                      active      1  s3-integrator             1/stable  330  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/3*                active    idle   7        10.219.138.3    9200/tcp  
+opensearch/4                 active    idle   8        10.219.138.199  9200/tcp  
+opensearch/5                 active    idle   9        10.219.138.57   9200/tcp  
+s3-integrator/1*             active    idle   6        10.219.138.252            
+self-signed-certificates/1*  active    idle   5        10.219.138.186            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+5        started  10.219.138.186  juju-478afd-5  ubuntu@24.04  github-runner  Running
+6        started  10.219.138.252  juju-478afd-6  ubuntu@22.04  github-runner  Running
+7        started  10.219.138.3    juju-478afd-7  ubuntu@24.04  github-runner  Running
+8        started  10.219.138.199  juju-478afd-8  ubuntu@24.04  github-runner  Running
+9        started  10.219.138.57   juju-478afd-9  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+03:31:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.d58* -- (10.219.138.3) -- [idle (since: 03:31:50)] active: 
+		opensearch-4.d58  -- (10.219.138.199) -- [idle (since: 03:31:50)] active: 
+		opensearch-5.d58  -- (10.219.138.57) -- [idle (since: 03:31:50)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+03:32:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.d58* -- (10.219.138.3) -- [idle (since: 03:32:02)] active: 
+		opensearch-4.d58  -- (10.219.138.199) -- [idle (since: 03:32:01)] active: 
+		opensearch-5.d58  -- (10.219.138.57) -- [idle (since: 03:32:01)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+03:32:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.d58* -- (10.219.138.3) -- [idle (since: 03:32:02)] active: 
+		opensearch-4.d58  -- (10.219.138.199) -- [idle (since: 03:32:01)] active: 
+		opensearch-5.d58  -- (10.219.138.57) -- [idle (since: 03:32:01)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+03:32:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.d58* -- (10.219.138.3) -- [idle (since: 03:32:02)] active: 
+		opensearch-4.d58  -- (10.219.138.199) -- [idle (since: 03:32:01)] active: 
+		opensearch-5.d58  -- (10.219.138.57) -- [idle (since: 03:32:01)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+03:32:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.d58* -- (10.219.138.3) -- [idle (since: 03:32:02)] active: 
+		opensearch-4.d58  -- (10.219.138.199) -- [idle (since: 03:32:01)] active: 
+		opensearch-5.d58  -- (10.219.138.57) -- [idle (since: 03:32:01)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+03:32:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.d58* -- (10.219.138.3) -- [idle (since: 03:32:02)] active: 
+		opensearch-4.d58  -- (10.219.138.199) -- [idle (since: 03:32:01)] active: 
+		opensearch-5.d58  -- (10.219.138.57) -- [idle (since: 03:32:01)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+03:33:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.d58* -- (10.219.138.3) -- [idle (since: 03:32:02)] active: 
+		opensearch-4.d58  -- (10.219.138.199) -- [idle (since: 03:32:01)] active: 
+		opensearch-5.d58  -- (10.219.138.57) -- [idle (since: 03:32:01)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+03:33:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-3.d58* -- (10.219.138.3) -- [idle (since: 03:32:02)] active: 
+		opensearch-4.d58  -- (10.219.138.199) -- [idle (since: 03:32:01)] active: 
+		opensearch-5.d58  -- (10.219.138.57) -- [idle (since: 03:32:01)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+03:33:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 03:33:26 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.219.138.3:9200/_recovery?human
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.219.138.3:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.219.138.3:9200/series_index/_count
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.219.138.3:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.219.138.3:9200/series_index/_count
+[32mINFO    [0m integration.ha.helpers:helpers.py:534 Index series_index has 311 documents, starting there
+[32mINFO    [0m integration.ha.helpers:helpers.py:248 Continuous writes result: namespace(max_stored_id=446, count=447, last_expected_id=446)
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.219.138.3:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.219.138.3:9200/_recovery?human
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.219.138.3:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.219.138.3:9200/series_index/_count
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.219.138.3:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.219.138.3:9200/series_index/_count
+[32mINFO    [0m integration.ha.helpers:helpers.py:534 Index series_index has 204 documents, starting there
+[32mINFO    [0m integration.ha.helpers:helpers.py:248 Continuous writes result: namespace(max_stored_id=340, count=341, last_expected_id=340)
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.219.138.3:9200/series_index/_search_shards
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:925 Final stage: backup+restore with active writes
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.219.138.3:9200/_recovery?human
+[32mINFO    [0m integration.ha.helpers:helpers.py:248 Continuous writes result: namespace(max_stored_id=151, count=152, last_expected_id=151)
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.219.138.3:9200/series_index/_search_shards
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.219.138.3:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.219.138.3:9200/series_index/_count
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.219.138.3:9200/_recovery?human
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: POST -- https://10.219.138.3:9200/series_index/_refresh
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.219.138.3:9200/series_index/_count
+[32mINFO    [0m integration.ha.helpers:helpers.py:594 Testing restore for series_index - original count pre-restore: 152, and now, new count: 117
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  03:38:16Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      3  opensearch                            1  no       
+s3-integrator                      active      1  s3-integrator             1/stable  330  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/3*                active    idle   7        10.219.138.3    9200/tcp  
+opensearch/4                 active    idle   8        10.219.138.199  9200/tcp  
+opensearch/5                 active    idle   9        10.219.138.57   9200/tcp  
+s3-integrator/1*             active    idle   6        10.219.138.252            
+self-signed-certificates/1*  active    idle   5        10.219.138.186            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+5        started  10.219.138.186  juju-478afd-5  ubuntu@24.04  github-runner  Running
+6        started  10.219.138.252  juju-478afd-6  ubuntu@22.04  github-runner  Running
+7        started  10.219.138.3    juju-478afd-7  ubuntu@24.04  github-runner  Running
+8        started  10.219.138.199  juju-478afd-8  ubuntu@24.04  github-runner  Running
+9        started  10.219.138.57   juju-478afd-9  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-1: 03:07:55 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 03:07:55 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 03:08:07 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 03:08:07 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 03:08:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 03:08:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 03:08:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 03:08:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 03:09:03 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 03:09:03 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 03:22:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:04 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:04 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:04 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:04 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:04 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:04 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:04 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:04 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:04 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:04 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:04 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:05 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:05 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:05 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:05 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:05 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:05 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:05 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:05 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:05 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:05 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:05 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:05 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 03:22:05 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+unit-opensearch-2: 03:22:17 ERROR unit.opensearch/2.juju-log Failed to delete voting exclusion: opensearch-2.d58.
+unit-opensearch-2: 03:22:17 ERROR unit.opensearch/2.juju-log Failed to delete shard allocation exclusion: opensearch-2.d58.
+unit-opensearch-0: 03:22:29 ERROR unit.opensearch/0.juju-log s3-credentials:6: Repository cleanup for ObjectStorageType.S3 failed after 3 attempts: HTTP error self.response_code=None
+self.response_text='Host 10.219.138.148:9200 and alternative_hosts: [] not reachable.'
+machine-3: 03:22:33 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-3: 03:22:33 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-3: 03:22:33 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-3: 03:22:33 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-3: 03:22:33 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-3: 03:22:33 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-3: 03:22:33 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-3: 03:22:33 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-3: 03:22:33 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+unit-opensearch-0: 03:23:11 ERROR unit.opensearch/0.juju-log upgrade-version-a:1: Repository cleanup for ObjectStorageType.S3 failed after 3 attempts: HTTP error self.response_code=None
+self.response_text='Host 10.219.138.148:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 03:23:45 ERROR unit.opensearch/0.juju-log node-lock-fallback:3: Repository cleanup for ObjectStorageType.S3 failed after 3 attempts: HTTP error self.response_code=None
+self.response_text='Host 10.219.138.148:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 03:24:11 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Repository cleanup for ObjectStorageType.S3 failed after 3 attempts: HTTP error self.response_code=None
+self.response_text='Host 10.219.138.148:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 03:24:36 ERROR unit.opensearch/0.juju-log node-lock-fallback:3: Repository cleanup for ObjectStorageType.S3 failed after 3 attempts: HTTP error self.response_code=None
+self.response_text='Host 10.219.138.148:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 03:24:51 ERROR unit.opensearch/0.juju-log opensearch-peers:2: Repository cleanup for ObjectStorageType.S3 failed after 3 attempts: HTTP error self.response_code=None
+self.response_text='Host 10.219.138.148:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 03:25:07 ERROR unit.opensearch/0.juju-log upgrade-version-a:1: Repository cleanup for ObjectStorageType.S3 failed after 3 attempts: HTTP error self.response_code=None
+self.response_text='Host 10.219.138.148:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 03:25:23 ERROR unit.opensearch/0.juju-log Repository cleanup for ObjectStorageType.S3 failed after 3 attempts: HTTP error self.response_code=None
+self.response_text='Host 10.219.138.148:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 03:25:38 ERROR unit.opensearch/0.juju-log Repository cleanup for ObjectStorageType.S3 failed after 3 attempts: HTTP error self.response_code=None
+self.response_text='Host 10.219.138.148:9200 and alternative_hosts: [] not reachable.'
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 03:25:39 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:26:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 03:26:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 03:26:37 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 03:26:37 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-9: 03:26:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-9: 03:26:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 03:26:45 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 03:26:45 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 03:27:25 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 03:27:25 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:190 Cleaning backups from cloud buckets
+[33mWARNING [0m integration.ha.test_backups:test_backups.py:216 Failed to clean up backups: SSL validation failed for https://10.151.33.245:445/testbucket?prefix=opensearch%2Fcaafa501-30d3-4207-92f7-eb1e1ae5c93f%2F&encoding-type=url [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1000)
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:511 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.28.0 Python/3.12.3 (Linux-6.14.0-37-generic-x86_64-with-glibc2.39)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': '9263277f-387c-11f1-9db8-00163ed95ec8'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:554 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': '52d6e313-601e-0028-7e89-ccd37a000000'
+    'x-ms-client-request-id': '9263277f-387c-11f1-9db8-00163ed95ec8'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Wed, 15 Apr 2026 03:38:31 GMT'

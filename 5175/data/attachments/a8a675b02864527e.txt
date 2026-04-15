@@ -1,0 +1,67 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:51:16Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+gcs-integrator                     active      1  gcs-integrator            1/edge    233  no       
+opensearch                         active      3  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+gcs-integrator/0*            active    idle   0        10.185.122.229            
+opensearch/0*                active    idle   2        10.185.122.207  9200/tcp  
+opensearch/1                 active    idle   3        10.185.122.186  9200/tcp  
+opensearch/2                 active    idle   4        10.185.122.36   9200/tcp  
+self-signed-certificates/0*  active    idle   1        10.185.122.39             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.185.122.229  juju-0085c9-0  ubuntu@24.04  github-runner  Running
+1        started  10.185.122.39   juju-0085c9-1  ubuntu@24.04  github-runner  Running
+2        started  10.185.122.207  juju-0085c9-2  ubuntu@24.04  github-runner  Running
+3        started  10.185.122.186  juju-0085c9-3  ubuntu@24.04  github-runner  Running
+4        started  10.185.122.36   juju-0085c9-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 02:37:52 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:37:52 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:37:56 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:37:56 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:38:01 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:38:01 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:38:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:38:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:38:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:38:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-gcs-integrator-0: 02:42:26 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:42:27 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:42:28 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:42:29 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:42:30 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-opensearch-0: 02:50:58 ERROR unit.opensearch/0.juju-log Backup 2026-04-15t02:49:43z could not be fetched. Error: 
+HTTP error self.response_code=500
+self.response_body={'error': {'root_cause': [{'type': 'storage_exception', 'reason': 'storage_exception: storage.googleapis.com'}], 'type': 'snapshot_exception', 'reason': '[gcs-repository:2026-04-15t02:49:43z/WAGCO2VLQfSkMYB5llDSKg] Snapshot could not be read', 'caused_by': {'type': 'storage_exception', 'reason': 'storage_exception: storage.googleapis.com', 'caused_by': {'type': 'i_o_exception', 'reason': 'storage.googleapis.com'}}}, 'status': 500}
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:190 Cleaning backups from cloud buckets
+[33mWARNING [0m integration.ha.test_backups:test_backups.py:216 Failed to clean up backups: SSL validation failed for https://10.151.33.249:445/testbucket?prefix=opensearch%2F5576dd77-8493-4159-bae1-ee7567ec27cc%2F&encoding-type=url [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1000)
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:511 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.28.0 Python/3.12.3 (Linux-6.14.0-37-generic-x86_64-with-glibc2.39)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': '007e4013-3876-11f1-9b46-00163e64a681'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:554 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'cf48c9d5-801e-00d4-3a82-cc0283000000'
+    'x-ms-client-request-id': '007e4013-3876-11f1-9b46-00163e64a681'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Wed, 15 Apr 2026 02:51:28 GMT'
