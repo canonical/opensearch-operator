@@ -1,0 +1,1291 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'opensearch': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'active', 'since': '29 Apr 2026 02:27:25Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/0': {'workload-status': {'current': 'active', 'since': '29 Apr 2026 02:20:40Z'}, 'juju-status': {'current': 'idle', 'since': '29 Apr 2026 02:29:49Z', 'version': '3.6.21'}, 'leader': True, 'machine': '1', 'open-ports': ['9200/tcp'], 'public-address': '10.233.145.28'}, 'opensearch/1': {'workload-status': {'current': 'active', 'since': '29 Apr 2026 02:27:39Z'}, 'juju-status': {'current': 'idle', 'since': '29 Apr 2026 02:29:52Z', 'version': '3.6.21'}, 'machine': '2', 'open-ports': ['9200/tcp'], 'public-address': '10.233.145.205'}, 'opensearch/2': {'workload-status': {'current': 'active', 'since': '29 Apr 2026 02:27:38Z'}, 'juju-status': {'current': 'idle', 'since': '29 Apr 2026 02:27:58Z', 'version': '3.6.21'}, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.233.145.132'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'smtp': 'alpha', 'upgrade-version-a': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 586, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '29 Apr 2026 02:18:58Z'}, 'relations': {'certificates': [{'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '29 Apr 2026 02:18:58Z'}, 'juju-status': {'current': 'idle', 'since': '29 Apr 2026 02:23:58Z', 'version': '3.6.21'}, 'leader': True, 'machine': '0', 'public-address': '10.233.145.211'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:29:57Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active    3/4  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent       Machine  Public address  Ports     Message
+opensearch/0*                active    idle        1        10.233.145.28   9200/tcp  
+opensearch/1                 active    idle        2        10.233.145.205  9200/tcp  
+opensearch/2                 active    idle        3        10.233.145.132  9200/tcp  
+opensearch/3                 waiting   allocating  4                                  waiting for machine
+self-signed-certificates/0*  active    idle        0        10.233.145.211            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.233.145.211  juju-ac87da-0  ubuntu@24.04  github-runner  Running
+1        started  10.233.145.28   juju-ac87da-1  ubuntu@24.04  github-runner  Running
+2        started  10.233.145.205  juju-ac87da-2  ubuntu@24.04  github-runner  Running
+3        started  10.233.145.132  juju-ac87da-3  ubuntu@24.04  github-runner  Running
+4        pending                  pending        ubuntu@24.04                 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:29:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 4 -- current: 3
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:30:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:29:49)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:29:52)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:29:55)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [allocating (since: 02:29:57)] waiting: waiting for machine
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:31:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:29:49)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:29:52)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:29:55)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [executing (since: 02:31:15)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:31:34 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:29:49)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:29:52)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:29:55)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [executing (since: 02:31:15)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:31:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:29:49)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:29:52)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:29:55)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [executing (since: 02:31:15)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:31:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:29:49)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:29:52)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:29:55)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [executing (since: 02:31:15)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:32:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:29:49)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:29:52)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:29:55)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [executing (since: 02:31:15)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:32:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:29:49)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:29:52)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:29:55)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [executing (since: 02:31:15)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:32:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:29:49)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:29:52)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:29:55)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [executing (since: 02:31:15)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:32:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:29:49)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:29:52)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:29:55)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [executing (since: 02:31:15)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:32:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [executing (since: 02:32:51)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [executing (since: 02:32:51)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [executing (since: 02:32:51)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [executing (since: 02:32:51)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:33:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:33:01)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:33:00)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:33:01)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [executing (since: 02:32:58)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:33:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:33:01)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:33:00)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:33:01)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [executing (since: 02:32:58)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:33:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [executing (since: 02:33:23)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [executing (since: 02:33:24)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [executing (since: 02:33:24)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [executing (since: 02:33:25)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:33:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:33:27)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:33:26)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:33:26)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [executing (since: 02:33:35)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:33:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:33:27)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:33:26)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:33:26)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [executing (since: 02:33:47)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:33:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:33:27)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:33:26)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:33:26)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:33:49)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:34:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:33:27)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:33:26)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:33:26)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:33:49)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:34:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:33:27)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:33:26)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:33:26)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:33:49)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:34:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:33:27)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:33:26)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:33:26)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:33:49)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:34:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:33:27)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:33:26)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:33:26)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:33:49)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:34:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:33:27)] active: 
+		opensearch-1.caf  -- (10.233.145.205) -- [idle (since: 02:33:26)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:33:26)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:33:49)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:35:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:35:05 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.ha.helpers_data:helpers_data.py:29 Creating: index_0 -- number_of_shards: 2 -- number_of_replicas: 3
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: PUT -- https://10.233.145.28:9200/index_0
+[32mINFO    [0m integration.ha.helpers_data:helpers_data.py:29 Creating: index_1 -- number_of_shards: 3 -- number_of_replicas: 2
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: PUT -- https://10.233.145.28:9200/index_1
+[32mINFO    [0m integration.ha.helpers_data:helpers_data.py:29 Creating: index_2 -- number_of_shards: 2 -- number_of_replicas: 3
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: PUT -- https://10.233.145.28:9200/index_2
+[32mINFO    [0m integration.ha.helpers_data:helpers_data.py:29 Creating: index_3 -- number_of_shards: 3 -- number_of_replicas: 2
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: PUT -- https://10.233.145.28:9200/index_3
+[32mINFO    [0m integration.ha.helpers_data:helpers_data.py:29 Creating: index_4 -- number_of_shards: 2 -- number_of_replicas: 3
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: PUT -- https://10.233.145.28:9200/index_4
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: PUT -- https://10.233.145.28:9200/_bulk
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.233.145.28:9200/_cluster/health?wait_for_status=green&timeout=1m
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.233.145.28:9200/_cat/allocation
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:35:37Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      4  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+opensearch/0*                active    executing  1        10.233.145.28   9200/tcp  
+opensearch/1                 active    executing  2        10.233.145.205  9200/tcp  
+opensearch/2                 active    executing  3        10.233.145.132  9200/tcp  
+opensearch/3                 active    executing  4        10.233.145.63   9200/tcp  
+self-signed-certificates/0*  active    executing  0        10.233.145.211            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.233.145.211  juju-ac87da-0  ubuntu@24.04  github-runner  Running
+1        started  10.233.145.28   juju-ac87da-1  ubuntu@24.04  github-runner  Running
+2        started  10.233.145.205  juju-ac87da-2  ubuntu@24.04  github-runner  Running
+3        started  10.233.145.132  juju-ac87da-3  ubuntu@24.04  github-runner  Running
+4        started  10.233.145.63   juju-ac87da-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:35:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:35:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:35:59 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:36:10 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:36:21 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:36:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:36:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:36:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:37:05 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:37:16 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:37:27 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:37:38 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:37:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:38:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:38:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:38:23 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:38:34 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:38:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:38:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 3 -- current: 4
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:39:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:35:43)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:35:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:39:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:35:43)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:35:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:39:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:35:43)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:35:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:39:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:35:43)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:35:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:39:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:35:43)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:35:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:40:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:35:43)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:35:43)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:40:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:40:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:40:35 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:40:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:40:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:41:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:41:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:41:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:41:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:41:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:42:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:42:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:42:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:42:38 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:42:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:43:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:35:44)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:43:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [executing (since: 02:43:02)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:43:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:43:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:43:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:43:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:44:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:44:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:40:05)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:44:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:44:21)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:44:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:44:21)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:44:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:44:21)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:45:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:44:21)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:45:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:44:21)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:45:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:40:05)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:44:21)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:45:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:45:37 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.233.145.28:9200/_cat/allocation
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.233.145.28:9200/_cluster/health
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:45:43Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         blocked    3/4  opensearch                            0  no       1 or more 'replica' shards are not assigned, please scale your application up.
+self-signed-certificates           active       1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent       Machine  Public address  Ports     Message
+opensearch/0*                active    idle        1        10.233.145.28   9200/tcp  
+opensearch/2                 active    idle        3        10.233.145.132  9200/tcp  
+opensearch/3                 active    idle        4        10.233.145.63   9200/tcp  
+opensearch/4                 waiting   allocating  5                                  waiting for machine
+self-signed-certificates/0*  active    idle        0        10.233.145.211            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.233.145.211  juju-ac87da-0  ubuntu@24.04  github-runner  Running
+1        started  10.233.145.28   juju-ac87da-1  ubuntu@24.04  github-runner  Running
+3        started  10.233.145.132  juju-ac87da-3  ubuntu@24.04  github-runner  Running
+4        started  10.233.145.63   juju-ac87da-4  ubuntu@24.04  github-runner  Running
+5        pending                  pending        ubuntu@24.04                 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:45:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 opensearch -- expected units: 4 -- current: 3
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:45:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:45:42)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [allocating (since: 02:45:43)] waiting: waiting for machine
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:47:10 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:45:42)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:46:54)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:47:21 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:45:42)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:46:54)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:47:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:45:42)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:46:54)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:47:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:45:42)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:46:54)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:47:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:43:15)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:45:42)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:46:54)] maintenance: Installing OpenSearch...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:48:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [executing (since: 02:48:06)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:45:42)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:06)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:48:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [executing (since: 02:48:17)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:45:42)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] maintenance: Waiting for TLS to be fully configured...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:48:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:45:42)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:48:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:45:42)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:48:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:45:42)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:49:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:45:42)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:49:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [executing (since: 02:49:13)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:49:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:49:17)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:49:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:49:17)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:49:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:49:17)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:49:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:49:17)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:50:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:49:17)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:50:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:49:17)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:50:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:49:17)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:50:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:49:17)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:50:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:45:46)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:49:17)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:51:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [executing (since: 02:51:06)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:49:17)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:51:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:51:07)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:49:17)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Requesting lock on operation: start
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:51:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch blocked -- message: 1 or more 'replica' shards are not assigned, please scale your application up.
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:51:07)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:49:17)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:51:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:48:20)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:51:07)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:49:17)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:48:17)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:51:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:51:49)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:51:48)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:51:48)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:51:51)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:52:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:51:49)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:51:48)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:51:48)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:52:00)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:52:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:51:49)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:51:48)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:51:48)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [executing (since: 02:52:13)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:52:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:51:49)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:51:48)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:51:48)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [idle (since: 02:52:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:52:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:51:49)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:51:48)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:51:48)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [idle (since: 02:52:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:52:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:51:49)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:51:48)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:51:48)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [idle (since: 02:52:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:52:59 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:51:49)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:51:48)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:51:48)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [idle (since: 02:52:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:53:10 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:51:49)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:51:48)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:51:48)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [idle (since: 02:52:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:53:21 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.caf* -- (10.233.145.28) -- [idle (since: 02:51:49)] active: 
+		opensearch-2.caf  -- (10.233.145.132) -- [idle (since: 02:51:48)] active: 
+		opensearch-3.caf  -- (10.233.145.63) -- [idle (since: 02:51:48)] active: 
+		opensearch-4.caf  -- (10.233.145.88) -- [idle (since: 02:52:15)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:53:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:53:33 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.233.145.28:9200/_cat/allocation
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.233.145.28:9200/_cluster/health
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: DELETE -- https://10.233.145.28:9200/index_0
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: DELETE -- https://10.233.145.28:9200/index_1
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: DELETE -- https://10.233.145.28:9200/index_2
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: DELETE -- https://10.233.145.28:9200/index_3
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: DELETE -- https://10.233.145.28:9200/index_4
+[32mINFO    [0m integration.ha.helpers:helpers.py:248 Continuous writes result: namespace(max_stored_id=1519, count=1520, last_expected_id=1519)
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.233.145.28:9200/series_index/_search_shards
+[32mINFO    [0m integration.ha.conftest:conftest.py:55 
+
+
+
+The writes have been cleared.
