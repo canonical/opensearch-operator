@@ -1,9 +1,41 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 import os
+import yaml
+from pathlib import Path
 
 import pytest
 
+TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
+TLS_STABLE_CHANNEL = "1/stable"
+
+
+CONFIG = str(yaml.safe_load(Path("./config.yaml").read_text()))
+ACTIONS = str(
+    yaml.safe_load(Path("./actions.yaml").read_text())
+)
+METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
+
+
+APP_NAME = METADATA["name"]
+
+SERIES = "jammy"
+UNIT_IDS = [0, 1, 2]
+IDLE_PERIOD = 75
+
+
+CONFIG_OPTS = {"profile": "testing"}
+
+MODEL_CONFIG = {
+    "logging-config": "<root>=INFO;unit=DEBUG",
+    "update-status-hook-interval": "5m",
+    "cloudinit-userdata": """postruncmd:
+        - [ 'sysctl', '-w', 'vm.max_map_count=262144' ]
+        - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
+        - [ 'sysctl', '-w', 'vm.swappiness=0' ]
+        - [ 'sysctl', '-w', 'net.ipv4.tcp_retries2=5' ]
+    """,
+}
 
 @pytest.fixture
 def ubuntu_base():
