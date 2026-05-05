@@ -1,19 +1,17 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 import os
-import yaml
 from pathlib import Path
 
 import pytest
+import yaml
 
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 TLS_STABLE_CHANNEL = "1/stable"
 
 
 CONFIG = str(yaml.safe_load(Path("./config.yaml").read_text()))
-ACTIONS = str(
-    yaml.safe_load(Path("./actions.yaml").read_text())
-)
+ACTIONS = str(yaml.safe_load(Path("./actions.yaml").read_text()))
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 
 
@@ -36,6 +34,7 @@ MODEL_CONFIG = {
         - [ 'sysctl', '-w', 'net.ipv4.tcp_retries2=5' ]
     """,
 }
+
 
 @pytest.fixture
 def ubuntu_base():

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+import asyncio
 import json
 import logging
 import random
 import socket
 import subprocess
 import tempfile
-import asyncio
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Dict, List, Optional, Union
@@ -16,7 +16,6 @@ import requests
 import yaml
 from opensearchpy import OpenSearch
 from pytest_operator.plugin import OpsTest
-from .continuous_writes import ContinuousWrites
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -24,6 +23,7 @@ from tenacity import (
     wait_random,
 )
 
+from .continuous_writes import ContinuousWrites
 from .helpers_deployments import get_application_units
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
@@ -118,6 +118,7 @@ async def get_shards_by_index(ops_test: OpsTest, unit_ip: str, index_name: str) 
 
     return result
 
+
 async def assert_continuous_writes_increasing(
     c_writes: ContinuousWrites,
 ) -> None:
@@ -167,13 +168,6 @@ async def assert_continuous_writes_consistency(
     assert result.count == count_from_shards
 
 
-
-
-
-
-
-
-
 @retry(wait=wait_fixed(wait=15), stop=stop_after_attempt(15))
 async def run_action(
     ops_test: OpsTest,
@@ -214,6 +208,7 @@ async def run_action(
 
     return SimpleNamespace(status=action.status or "completed", response=action.results)
 
+
 async def get_secrets(
     ops_test: OpsTest, unit_id: Optional[int] = None, username: str = "admin", app: str = APP_NAME
 ) -> Dict[str, str]:
@@ -228,7 +223,6 @@ async def get_secrets(
     ).response
 
 
-
 def get_application_unit_ids(ops_test: OpsTest, app: str = APP_NAME) -> List[int]:
     """List the unit IDs of an application.
 
@@ -240,6 +234,7 @@ def get_application_unit_ids(ops_test: OpsTest, app: str = APP_NAME) -> List[int
         list of current unit ids of the application
     """
     return [int(unit.name.split("/")[1]) for unit in ops_test.model.applications[app].units]
+
 
 async def get_application_unit_ips(ops_test: OpsTest, app: str = APP_NAME) -> List[str]:
     """List the unit IPs of an application.
@@ -271,7 +266,6 @@ async def get_application_unit_ids_ips(ops_test: OpsTest, app: str = APP_NAME) -
     return result
 
 
-
 async def get_leader_unit_ip(ops_test: OpsTest, app: str = APP_NAME) -> str:
     """Helper function that retrieves the leader unit."""
     for unit in await get_application_units(ops_test, app):
@@ -288,6 +282,7 @@ async def get_leader_unit_id(ops_test: OpsTest, app: str = APP_NAME) -> int:
             break
 
     return int(leader_unit.name.split("/")[1])
+
 
 async def http_request(
     ops_test: OpsTest,
@@ -412,6 +407,7 @@ def opensearch_client(
         ca_certs=cert_path,  # cert path on disk
     )
 
+
 def get_file_contents(ops_test: OpsTest, unit: str, filename: str) -> str:
     output = subprocess.check_output(
         ["bash", "-c", f"JUJU_MODEL={ops_test.model.name} juju ssh {unit} sudo cat {filename}"]
@@ -423,4 +419,3 @@ def get_conf_as_dict(ops_test: OpsTest, unit: str, filename: str) -> dict[str, s
     """Convert a yml config file to a dict."""
     config = get_file_contents(ops_test, unit, filename)
     return yaml.safe_load(str(config.decode("utf-8")).replace("ll", ""))
-

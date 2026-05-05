@@ -5,9 +5,8 @@
 
 """Charmed Machine Operator for OpenSearch."""
 
-from ops.main import main
-
 from opensearch_single_kernel.charms.vm import OpenSearchVMCharm
+from ops.main import main
 
 if __name__ == "__main__":
     main(OpenSearchVMCharm)

@@ -9,16 +9,21 @@ import subprocess
 
 import pytest
 import yaml
-from pytest_operator.plugin import OpsTest
-
 from opensearch_single_kernel.common.constants import (
     OPENSEARCH_SNAP_REVISION,
     OPENSEARCH_SYSTEM_USERS,
 )
 from opensearch_single_kernel.common.statuses import TlsStatuses
-from .continuous_writes import ContinuousWrites
+from pytest_operator.plugin import OpsTest
 
-from .conftest import APP_NAME, CONFIG_OPTS, MODEL_CONFIG, TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
+from .conftest import (
+    APP_NAME,
+    CONFIG_OPTS,
+    MODEL_CONFIG,
+    TLS_CERTIFICATES_APP_NAME,
+    TLS_STABLE_CHANNEL,
+)
+from .continuous_writes import ContinuousWrites
 from .helpers import (
     assert_continuous_writes_consistency,
     assert_continuous_writes_increasing,
@@ -31,7 +36,6 @@ from .helpers import (
     run_action,
 )
 from .helpers_deployments import wait_until
-
 
 logger = logging.getLogger(__name__)
 
