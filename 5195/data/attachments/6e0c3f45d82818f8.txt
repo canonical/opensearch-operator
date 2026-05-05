@@ -1,0 +1,828 @@
+[32mINFO    [0m integration.ha.helpers:helpers.py:70 Apps inside app_name: {'opensearch': {'charm': 'local:noble/opensearch-0', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'local', 'charm-name': 'opensearch', 'charm-rev': 0, 'exposed': False, 'application-status': {'current': 'active', 'since': '05 May 2026 02:02:29Z'}, 'relations': {'certificates': [{'related-application': 'self-signed-certificates', 'interface': 'tls-certificates', 'scope': 'global'}], 'node-lock-fallback': [{'related-application': 'opensearch', 'interface': 'node_lock_fallback', 'scope': 'global'}], 'opensearch-peers': [{'related-application': 'opensearch', 'interface': 'opensearch_peers', 'scope': 'global'}], 'upgrade-version-a': [{'related-application': 'opensearch', 'interface': 'upgrade', 'scope': 'global'}]}, 'units': {'opensearch/0': {'workload-status': {'current': 'active', 'since': '05 May 2026 02:02:29Z'}, 'juju-status': {'current': 'idle', 'since': '05 May 2026 02:03:46Z', 'version': '3.6.21'}, 'leader': True, 'machine': '1', 'open-ports': ['9200/tcp'], 'public-address': '10.213.197.121'}, 'opensearch/1': {'workload-status': {'current': 'active', 'since': '05 May 2026 02:03:25Z'}, 'juju-status': {'current': 'idle', 'since': '05 May 2026 02:03:45Z', 'version': '3.6.21'}, 'machine': '2', 'open-ports': ['9200/tcp'], 'public-address': '10.213.197.24'}, 'opensearch/2': {'workload-status': {'current': 'active', 'since': '05 May 2026 02:03:05Z'}, 'juju-status': {'current': 'idle', 'since': '05 May 2026 02:03:46Z', 'version': '3.6.21'}, 'machine': '3', 'open-ports': ['9200/tcp'], 'public-address': '10.213.197.77'}}, 'endpoint-bindings': {'': 'alpha', 'azure-credentials': 'alpha', 'certificates': 'alpha', 'cos-agent': 'alpha', 'gcs-credentials': 'alpha', 'jwt-configuration': 'alpha', 'node-lock-fallback': 'alpha', 'oauth': 'alpha', 'opensearch-client': 'alpha', 'opensearch-peers': 'alpha', 'peer-cluster': 'alpha', 'peer-cluster-orchestrator': 'alpha', 's3-credentials': 'alpha', 'smtp': 'alpha', 'upgrade-version-a': 'alpha'}}, 'self-signed-certificates': {'charm': 'self-signed-certificates', 'base': {'name': 'ubuntu', 'channel': '24.04'}, 'charm-origin': 'charmhub', 'charm-name': 'self-signed-certificates', 'charm-rev': 586, 'charm-channel': '1/stable', 'exposed': False, 'application-status': {'current': 'active', 'since': '05 May 2026 01:59:13Z'}, 'relations': {'certificates': [{'related-application': 'opensearch', 'interface': 'tls-certificates', 'scope': 'global'}]}, 'units': {'self-signed-certificates/0': {'workload-status': {'current': 'active', 'since': '05 May 2026 01:59:13Z'}, 'juju-status': {'current': 'idle', 'since': '05 May 2026 02:02:07Z', 'version': '3.6.21'}, 'leader': True, 'machine': '0', 'public-address': '10.213.197.60'}}, 'endpoint-bindings': {'': 'alpha', 'certificates': 'alpha', 'send-ca-cert': 'alpha', 'tracing': 'alpha'}}}
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/azure-storage-integrator-270
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:05:10Z
+
+App                       Version  Status   Scale  Charm                     Channel      Rev  Exposed  Message
+azure-storage-integrator           waiting    0/1  azure-storage-integrator  latest/edge  270  no       waiting for machine
+opensearch                         active       3  opensearch                               0  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable     586  no       
+
+Unit                         Workload  Agent       Machine  Public address  Ports     Message
+azure-storage-integrator/0   waiting   allocating  4                                  waiting for machine
+opensearch/0*                active    idle        1        10.213.197.121  9200/tcp  
+opensearch/1                 active    idle        2        10.213.197.24   9200/tcp  
+opensearch/2                 active    idle        3        10.213.197.77   9200/tcp  
+self-signed-certificates/0*  active    idle        0        10.213.197.60             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.213.197.60   juju-bf4088-0  ubuntu@24.04  github-runner  Running
+1        started  10.213.197.121  juju-bf4088-1  ubuntu@24.04  github-runner  Running
+2        started  10.213.197.24   juju-bf4088-2  ubuntu@24.04  github-runner  Running
+3        started  10.213.197.77   juju-bf4088-3  ubuntu@24.04  github-runner  Running
+4        pending                  pending        ubuntu@22.04                 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:05:10 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 azure-storage-integrator -- expected units: 1 -- current: 0
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:05:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:298 azure-storage-integrator -- expected units: 1 -- current: 0
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:05:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: azure-storage-integrator - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: azure waiting -- message: waiting for machine
+		azure-storage-integrator-0.43e  -- (10.213.197.252) -- [allocating (since: 02:05:10)] waiting: waiting for machine
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:07:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:07:46 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:360 opensearch and azure-storage-integrator are not integrated yet
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:1095 Integrated opensearch:azure-credentials <-> azure-storage-integrator:azure-credentials.
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:300 Adding Juju secret for secret-key config option for azure-storage-integrator
+[32mINFO    [0m integration.ha.helpers:helpers.py:607 Data keys to insert: dict_keys(['secret-key'])
+[32mINFO    [0m integration.ha.helpers:helpers.py:613 Add secret return code=0 stdout=secret:jaimi51g5s6demoteqhg
+ stderr=
+[32mINFO    [0m integration.ha.helpers:helpers.py:620 Secret uri: secret:jaimi51g5s6demoteqhg
+[32mINFO    [0m integration.ha.helpers:helpers.py:626 Grant secret return code=0 stdout= stderr=
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:310 Juju secret for secret-key config option for azure-storage-integrator added. Secret URI: secret:jaimi51g5s6demoteqhg
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:322 Setting up configuration for azure-storage-integrator charm...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  azure-storage-integrator/0 [executing] blocked: Missing parameters: ['container', 'storage-account', 'credentials']
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:08:09Z
+
+App                       Version  Status   Scale  Charm                     Channel      Rev  Exposed  Message
+azure-storage-integrator           active       1  azure-storage-integrator  latest/edge  270  no       
+opensearch                         blocked      3  opensearch                               0  no       Backup configuration error: bad credentials, permissions, invalid CA, or unsupported configuration.
+self-signed-certificates           active       1  self-signed-certificates  1/stable     586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+azure-storage-integrator/0*  active    idle   4        10.213.197.252            
+opensearch/0*                active    idle   1        10.213.197.121  9200/tcp  
+opensearch/1                 active    idle   2        10.213.197.24   9200/tcp  
+opensearch/2                 active    idle   3        10.213.197.77   9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.213.197.60             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.213.197.60   juju-bf4088-0  ubuntu@24.04  github-runner  Running
+1        started  10.213.197.121  juju-bf4088-1  ubuntu@24.04  github-runner  Running
+2        started  10.213.197.24   juju-bf4088-2  ubuntu@24.04  github-runner  Running
+3        started  10.213.197.77   juju-bf4088-3  ubuntu@24.04  github-runner  Running
+4        started  10.213.197.252  juju-bf4088-4  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:08:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:08:10 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:1452 Opensearch 1 app is blocked because of Azure bad credentials.
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.213.197.121:9200/_snapshot/azure-repository/_all
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:300 Adding Juju secret for secret-key config option for azure-storage-integrator
+[32mINFO    [0m integration.ha.helpers:helpers.py:607 Data keys to insert: dict_keys(['secret-key'])
+[32mINFO    [0m integration.ha.helpers:helpers.py:613 Add secret return code=0 stdout=secret:pgjqqrmrbv66edu59khg
+ stderr=
+[32mINFO    [0m integration.ha.helpers:helpers.py:620 Secret uri: secret:pgjqqrmrbv66edu59khg
+[32mINFO    [0m integration.ha.helpers:helpers.py:626 Grant secret return code=0 stdout= stderr=
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:310 Juju secret for secret-key config option for azure-storage-integrator added. Secret URI: secret:pgjqqrmrbv66edu59khg
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:322 Setting up configuration for azure-storage-integrator charm...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  azure-storage-integrator/0 [idle] active: 
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:08:30Z
+
+App                       Version  Status  Scale  Charm                     Channel      Rev  Exposed  Message
+azure-storage-integrator           active      1  azure-storage-integrator  latest/edge  270  no       
+opensearch                         active      3  opensearch                               0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable     586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+azure-storage-integrator/0*  active    idle   4        10.213.197.252            
+opensearch/0*                active    idle   1        10.213.197.121  9200/tcp  
+opensearch/1                 active    idle   2        10.213.197.24   9200/tcp  
+opensearch/2                 active    idle   3        10.213.197.77   9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.213.197.60             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.213.197.60   juju-bf4088-0  ubuntu@24.04  github-runner  Running
+1        started  10.213.197.121  juju-bf4088-1  ubuntu@24.04  github-runner  Running
+2        started  10.213.197.24   juju-bf4088-2  ubuntu@24.04  github-runner  Running
+3        started  10.213.197.77   juju-bf4088-3  ubuntu@24.04  github-runner  Running
+4        started  10.213.197.252  juju-bf4088-4  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:08:30 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.cbf* -- (10.213.197.121) -- [idle (since: 02:08:23)] active: 
+		opensearch-1.cbf  -- (10.213.197.24) -- [idle (since: 02:08:23)] active: 
+		opensearch-2.cbf  -- (10.213.197.77) -- [idle (since: 02:08:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:08:41 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.cbf* -- (10.213.197.121) -- [idle (since: 02:08:23)] active: 
+		opensearch-1.cbf  -- (10.213.197.24) -- [idle (since: 02:08:23)] active: 
+		opensearch-2.cbf  -- (10.213.197.77) -- [idle (since: 02:08:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:08:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.cbf* -- (10.213.197.121) -- [idle (since: 02:08:23)] active: 
+		opensearch-1.cbf  -- (10.213.197.24) -- [idle (since: 02:08:23)] active: 
+		opensearch-2.cbf  -- (10.213.197.77) -- [idle (since: 02:08:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:09:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.cbf* -- (10.213.197.121) -- [idle (since: 02:08:23)] active: 
+		opensearch-1.cbf  -- (10.213.197.24) -- [idle (since: 02:08:23)] active: 
+		opensearch-2.cbf  -- (10.213.197.77) -- [idle (since: 02:08:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:09:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.cbf* -- (10.213.197.121) -- [idle (since: 02:08:23)] active: 
+		opensearch-1.cbf  -- (10.213.197.24) -- [idle (since: 02:08:23)] active: 
+		opensearch-2.cbf  -- (10.213.197.77) -- [idle (since: 02:08:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:09:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch active -- message: None
+		opensearch-0.cbf* -- (10.213.197.121) -- [idle (since: 02:08:23)] active: 
+		opensearch-1.cbf  -- (10.213.197.24) -- [idle (since: 02:08:23)] active: 
+		opensearch-2.cbf  -- (10.213.197.77) -- [idle (since: 02:08:23)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:09:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:09:38 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:1476 Opensearch all apps and units become active after providing valid Azure credentials.
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.213.197.121:9200/_snapshot/azure-repository
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:09:41Z
+
+App                       Version  Status  Scale  Charm                     Channel      Rev  Exposed  Message
+azure-storage-integrator           active      1  azure-storage-integrator  latest/edge  270  no       
+opensearch                         active      3  opensearch                               0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable     586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+azure-storage-integrator/0*  active    idle   4        10.213.197.252            
+opensearch/0*                active    idle   1        10.213.197.121  9200/tcp  
+opensearch/1                 active    idle   2        10.213.197.24   9200/tcp  
+opensearch/2                 active    idle   3        10.213.197.77   9200/tcp  
+self-signed-certificates/0*  active    idle   0        10.213.197.60             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.213.197.60   juju-bf4088-0  ubuntu@24.04  github-runner  Running
+1        started  10.213.197.121  juju-bf4088-1  ubuntu@24.04  github-runner  Running
+2        started  10.213.197.24   juju-bf4088-2  ubuntu@24.04  github-runner  Running
+3        started  10.213.197.77   juju-bf4088-3  ubuntu@24.04  github-runner  Running
+4        started  10.213.197.252  juju-bf4088-4  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 01:59:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:59:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:59:20 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:59:20 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:59:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:59:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:59:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:59:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:07:11 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:07:11 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 02:07:49 ERROR unit.opensearch/1.juju-log azure-credentials:4: This operation (update_relation_data()) can only be performed by the leader unit
+unit-opensearch-2: 02:07:49 ERROR unit.opensearch/2.juju-log azure-credentials:4: This operation (update_relation_data()) can only be performed by the leader unit
+unit-opensearch-1: 02:07:51 ERROR unit.opensearch/1.juju-log azure-credentials:4: Azure Storage credential validation failed: Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:29979197-401e-003f-6d33-dc7a71000000
+Time:2026-05-05T02:07:51.5911122Z
+ErrorCode:AuthenticationFailed
+authenticationerrordetail:The MAC signature found in the HTTP request 'irwyAWSJmvPZY55t34Ce0kpkdfWDdNngMI7/sEy/Zpo=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:384218f0-4827-11f1-9856-00163e0e29f9
+x-ms-date:Tue, 05 May 2026 02:07:50 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.
+Content: <?xml version="1.0" encoding="utf-8"?><Error><Code>AuthenticationFailed</Code><Message>Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:29979197-401e-003f-6d33-dc7a71000000
+Time:2026-05-05T02:07:51.5911122Z</Message><AuthenticationErrorDetail>The MAC signature found in the HTTP request 'irwyAWSJmvPZY55t34Ce0kpkdfWDdNngMI7/sEy/Zpo=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:384218f0-4827-11f1-9856-00163e0e29f9
+x-ms-date:Tue, 05 May 2026 02:07:50 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.</AuthenticationErrorDetail></Error>
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/helper_security.py", line 917, in verify_azure_credentials
+    container_client.get_container_properties()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.12/site-packages/azure/core/tracing/decorator.py", line 119, in wrapper_use_tracer
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.12/site-packages/azure/storage/blob/_container_client.py", line 548, in get_container_properties
+    process_storage_error(error)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.12/site-packages/azure/storage/blob/_shared/response_handlers.py", line 195, in process_storage_error
+    exec("raise error from None")  # pylint: disable=exec-used # nosec
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 1, in <module>
+azure.core.exceptions.ClientAuthenticationError: Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:29979197-401e-003f-6d33-dc7a71000000
+Time:2026-05-05T02:07:51.5911122Z
+ErrorCode:AuthenticationFailed
+authenticationerrordetail:The MAC signature found in the HTTP request 'irwyAWSJmvPZY55t34Ce0kpkdfWDdNngMI7/sEy/Zpo=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:384218f0-4827-11f1-9856-00163e0e29f9
+x-ms-date:Tue, 05 May 2026 02:07:50 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.
+Content: <?xml version="1.0" encoding="utf-8"?><Error><Code>AuthenticationFailed</Code><Message>Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:29979197-401e-003f-6d33-dc7a71000000
+Time:2026-05-05T02:07:51.5911122Z</Message><AuthenticationErrorDetail>The MAC signature found in the HTTP request 'irwyAWSJmvPZY55t34Ce0kpkdfWDdNngMI7/sEy/Zpo=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:384218f0-4827-11f1-9856-00163e0e29f9
+x-ms-date:Tue, 05 May 2026 02:07:50 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.</AuthenticationErrorDetail></Error>
+unit-opensearch-2: 02:07:51 ERROR unit.opensearch/2.juju-log azure-credentials:4: Azure Storage credential validation failed: Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:f56633fb-701e-0034-3433-dc811a000000
+Time:2026-05-05T02:07:51.5909217Z
+ErrorCode:AuthenticationFailed
+authenticationerrordetail:The MAC signature found in the HTTP request '6gSiOGrQbDDhhl7XQKH66WmPub3Bq/CA3r7jltk5JPM=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:3842a91c-4827-11f1-8190-00163e43f521
+x-ms-date:Tue, 05 May 2026 02:07:51 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.
+Content: <?xml version="1.0" encoding="utf-8"?><Error><Code>AuthenticationFailed</Code><Message>Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:f56633fb-701e-0034-3433-dc811a000000
+Time:2026-05-05T02:07:51.5909217Z</Message><AuthenticationErrorDetail>The MAC signature found in the HTTP request '6gSiOGrQbDDhhl7XQKH66WmPub3Bq/CA3r7jltk5JPM=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:3842a91c-4827-11f1-8190-00163e43f521
+x-ms-date:Tue, 05 May 2026 02:07:51 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.</AuthenticationErrorDetail></Error>
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-2/charm/lib/charms/opensearch/v0/helper_security.py", line 917, in verify_azure_credentials
+    container_client.get_container_properties()
+  File "/var/lib/juju/agents/unit-opensearch-2/charm/venv/lib/python3.12/site-packages/azure/core/tracing/decorator.py", line 119, in wrapper_use_tracer
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-2/charm/venv/lib/python3.12/site-packages/azure/storage/blob/_container_client.py", line 548, in get_container_properties
+    process_storage_error(error)
+  File "/var/lib/juju/agents/unit-opensearch-2/charm/venv/lib/python3.12/site-packages/azure/storage/blob/_shared/response_handlers.py", line 195, in process_storage_error
+    exec("raise error from None")  # pylint: disable=exec-used # nosec
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 1, in <module>
+azure.core.exceptions.ClientAuthenticationError: Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:f56633fb-701e-0034-3433-dc811a000000
+Time:2026-05-05T02:07:51.5909217Z
+ErrorCode:AuthenticationFailed
+authenticationerrordetail:The MAC signature found in the HTTP request '6gSiOGrQbDDhhl7XQKH66WmPub3Bq/CA3r7jltk5JPM=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:3842a91c-4827-11f1-8190-00163e43f521
+x-ms-date:Tue, 05 May 2026 02:07:51 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.
+Content: <?xml version="1.0" encoding="utf-8"?><Error><Code>AuthenticationFailed</Code><Message>Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:f56633fb-701e-0034-3433-dc811a000000
+Time:2026-05-05T02:07:51.5909217Z</Message><AuthenticationErrorDetail>The MAC signature found in the HTTP request '6gSiOGrQbDDhhl7XQKH66WmPub3Bq/CA3r7jltk5JPM=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:3842a91c-4827-11f1-8190-00163e43f521
+x-ms-date:Tue, 05 May 2026 02:07:51 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.</AuthenticationErrorDetail></Error>
+unit-opensearch-0: 02:07:51 ERROR unit.opensearch/0.juju-log azure-credentials:4: Azure Storage credential validation failed: Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:f6db7785-101e-009b-2633-dc73d7000000
+Time:2026-05-05T02:07:51.8156915Z
+ErrorCode:AuthenticationFailed
+authenticationerrordetail:The MAC signature found in the HTTP request 'HVVJp4qHhassMEcBB+4X1Bj3FqupQjMMyXZFPF/95aM=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:38713222-4827-11f1-8d17-00163efa90ef
+x-ms-date:Tue, 05 May 2026 02:07:51 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.
+Content: <?xml version="1.0" encoding="utf-8"?><Error><Code>AuthenticationFailed</Code><Message>Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:f6db7785-101e-009b-2633-dc73d7000000
+Time:2026-05-05T02:07:51.8156915Z</Message><AuthenticationErrorDetail>The MAC signature found in the HTTP request 'HVVJp4qHhassMEcBB+4X1Bj3FqupQjMMyXZFPF/95aM=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:38713222-4827-11f1-8d17-00163efa90ef
+x-ms-date:Tue, 05 May 2026 02:07:51 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.</AuthenticationErrorDetail></Error>
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-0/charm/lib/charms/opensearch/v0/helper_security.py", line 917, in verify_azure_credentials
+    container_client.get_container_properties()
+  File "/var/lib/juju/agents/unit-opensearch-0/charm/venv/lib/python3.12/site-packages/azure/core/tracing/decorator.py", line 119, in wrapper_use_tracer
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-0/charm/venv/lib/python3.12/site-packages/azure/storage/blob/_container_client.py", line 548, in get_container_properties
+    process_storage_error(error)
+  File "/var/lib/juju/agents/unit-opensearch-0/charm/venv/lib/python3.12/site-packages/azure/storage/blob/_shared/response_handlers.py", line 195, in process_storage_error
+    exec("raise error from None")  # pylint: disable=exec-used # nosec
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 1, in <module>
+azure.core.exceptions.ClientAuthenticationError: Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:f6db7785-101e-009b-2633-dc73d7000000
+Time:2026-05-05T02:07:51.8156915Z
+ErrorCode:AuthenticationFailed
+authenticationerrordetail:The MAC signature found in the HTTP request 'HVVJp4qHhassMEcBB+4X1Bj3FqupQjMMyXZFPF/95aM=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:38713222-4827-11f1-8d17-00163efa90ef
+x-ms-date:Tue, 05 May 2026 02:07:51 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.
+Content: <?xml version="1.0" encoding="utf-8"?><Error><Code>AuthenticationFailed</Code><Message>Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:f6db7785-101e-009b-2633-dc73d7000000
+Time:2026-05-05T02:07:51.8156915Z</Message><AuthenticationErrorDetail>The MAC signature found in the HTTP request 'HVVJp4qHhassMEcBB+4X1Bj3FqupQjMMyXZFPF/95aM=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:38713222-4827-11f1-8d17-00163efa90ef
+x-ms-date:Tue, 05 May 2026 02:07:51 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.</AuthenticationErrorDetail></Error>
+unit-opensearch-2: 02:07:52 ERROR unit.opensearch/2.juju-log azure-credentials:4: Azure Storage credential validation failed: Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:bee3d0f9-801e-000f-2a33-dcc4be000000
+Time:2026-05-05T02:07:52.9200592Z
+ErrorCode:AuthenticationFailed
+authenticationerrordetail:The MAC signature found in the HTTP request 'mTRuXqpXSmyf4+3iGY+pCNhNTZHWjWs7F+PBfnbyrEY=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:391a8906-4827-11f1-8b3d-00163e43f521
+x-ms-date:Tue, 05 May 2026 02:07:52 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.
+Content: <?xml version="1.0" encoding="utf-8"?><Error><Code>AuthenticationFailed</Code><Message>Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:bee3d0f9-801e-000f-2a33-dcc4be000000
+Time:2026-05-05T02:07:52.9200592Z</Message><AuthenticationErrorDetail>The MAC signature found in the HTTP request 'mTRuXqpXSmyf4+3iGY+pCNhNTZHWjWs7F+PBfnbyrEY=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:391a8906-4827-11f1-8b3d-00163e43f521
+x-ms-date:Tue, 05 May 2026 02:07:52 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.</AuthenticationErrorDetail></Error>
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-2/charm/lib/charms/opensearch/v0/helper_security.py", line 917, in verify_azure_credentials
+    container_client.get_container_properties()
+  File "/var/lib/juju/agents/unit-opensearch-2/charm/venv/lib/python3.12/site-packages/azure/core/tracing/decorator.py", line 119, in wrapper_use_tracer
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-2/charm/venv/lib/python3.12/site-packages/azure/storage/blob/_container_client.py", line 548, in get_container_properties
+    process_storage_error(error)
+  File "/var/lib/juju/agents/unit-opensearch-2/charm/venv/lib/python3.12/site-packages/azure/storage/blob/_shared/response_handlers.py", line 195, in process_storage_error
+    exec("raise error from None")  # pylint: disable=exec-used # nosec
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 1, in <module>
+azure.core.exceptions.ClientAuthenticationError: Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:bee3d0f9-801e-000f-2a33-dcc4be000000
+Time:2026-05-05T02:07:52.9200592Z
+ErrorCode:AuthenticationFailed
+authenticationerrordetail:The MAC signature found in the HTTP request 'mTRuXqpXSmyf4+3iGY+pCNhNTZHWjWs7F+PBfnbyrEY=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:391a8906-4827-11f1-8b3d-00163e43f521
+x-ms-date:Tue, 05 May 2026 02:07:52 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.
+Content: <?xml version="1.0" encoding="utf-8"?><Error><Code>AuthenticationFailed</Code><Message>Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:bee3d0f9-801e-000f-2a33-dcc4be000000
+Time:2026-05-05T02:07:52.9200592Z</Message><AuthenticationErrorDetail>The MAC signature found in the HTTP request 'mTRuXqpXSmyf4+3iGY+pCNhNTZHWjWs7F+PBfnbyrEY=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:391a8906-4827-11f1-8b3d-00163e43f521
+x-ms-date:Tue, 05 May 2026 02:07:52 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.</AuthenticationErrorDetail></Error>
+unit-opensearch-1: 02:07:52 ERROR unit.opensearch/1.juju-log azure-credentials:4: Azure Storage credential validation failed: Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:1126f15d-601e-00ae-2933-dc1fc3000000
+Time:2026-05-05T02:07:52.9602917Z
+ErrorCode:AuthenticationFailed
+authenticationerrordetail:The MAC signature found in the HTTP request 'tZG7QbaaxynYBsAsdMD7bPYrQNT0JNJcLIfICdyXTlQ=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:39206789-4827-11f1-a532-00163e0e29f9
+x-ms-date:Tue, 05 May 2026 02:07:52 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.
+Content: <?xml version="1.0" encoding="utf-8"?><Error><Code>AuthenticationFailed</Code><Message>Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:1126f15d-601e-00ae-2933-dc1fc3000000
+Time:2026-05-05T02:07:52.9602917Z</Message><AuthenticationErrorDetail>The MAC signature found in the HTTP request 'tZG7QbaaxynYBsAsdMD7bPYrQNT0JNJcLIfICdyXTlQ=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:39206789-4827-11f1-a532-00163e0e29f9
+x-ms-date:Tue, 05 May 2026 02:07:52 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.</AuthenticationErrorDetail></Error>
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/lib/charms/opensearch/v0/helper_security.py", line 917, in verify_azure_credentials
+    container_client.get_container_properties()
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.12/site-packages/azure/core/tracing/decorator.py", line 119, in wrapper_use_tracer
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.12/site-packages/azure/storage/blob/_container_client.py", line 548, in get_container_properties
+    process_storage_error(error)
+  File "/var/lib/juju/agents/unit-opensearch-1/charm/venv/lib/python3.12/site-packages/azure/storage/blob/_shared/response_handlers.py", line 195, in process_storage_error
+    exec("raise error from None")  # pylint: disable=exec-used # nosec
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 1, in <module>
+azure.core.exceptions.ClientAuthenticationError: Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:1126f15d-601e-00ae-2933-dc1fc3000000
+Time:2026-05-05T02:07:52.9602917Z
+ErrorCode:AuthenticationFailed
+authenticationerrordetail:The MAC signature found in the HTTP request 'tZG7QbaaxynYBsAsdMD7bPYrQNT0JNJcLIfICdyXTlQ=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:39206789-4827-11f1-a532-00163e0e29f9
+x-ms-date:Tue, 05 May 2026 02:07:52 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.
+Content: <?xml version="1.0" encoding="utf-8"?><Error><Code>AuthenticationFailed</Code><Message>Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:1126f15d-601e-00ae-2933-dc1fc3000000
+Time:2026-05-05T02:07:52.9602917Z</Message><AuthenticationErrorDetail>The MAC signature found in the HTTP request 'tZG7QbaaxynYBsAsdMD7bPYrQNT0JNJcLIfICdyXTlQ=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:39206789-4827-11f1-a532-00163e0e29f9
+x-ms-date:Tue, 05 May 2026 02:07:52 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.</AuthenticationErrorDetail></Error>
+unit-opensearch-0: 02:07:52 ERROR unit.opensearch/0.juju-log azure-credentials:4: Azure Storage credential validation failed: Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:982cf4c1-801e-0099-7433-dccd6f000000
+Time:2026-05-05T02:07:53.2228029Z
+ErrorCode:AuthenticationFailed
+authenticationerrordetail:The MAC signature found in the HTTP request 'bDbRiQIiwQxwi41M4eNWAhYXBO08RG9ChiZXi86TxVY=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:39479c68-4827-11f1-927a-00163efa90ef
+x-ms-date:Tue, 05 May 2026 02:07:52 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.
+Content: <?xml version="1.0" encoding="utf-8"?><Error><Code>AuthenticationFailed</Code><Message>Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:982cf4c1-801e-0099-7433-dccd6f000000
+Time:2026-05-05T02:07:53.2228029Z</Message><AuthenticationErrorDetail>The MAC signature found in the HTTP request 'bDbRiQIiwQxwi41M4eNWAhYXBO08RG9ChiZXi86TxVY=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:39479c68-4827-11f1-927a-00163efa90ef
+x-ms-date:Tue, 05 May 2026 02:07:52 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.</AuthenticationErrorDetail></Error>
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-opensearch-0/charm/lib/charms/opensearch/v0/helper_security.py", line 917, in verify_azure_credentials
+    container_client.get_container_properties()
+  File "/var/lib/juju/agents/unit-opensearch-0/charm/venv/lib/python3.12/site-packages/azure/core/tracing/decorator.py", line 119, in wrapper_use_tracer
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-opensearch-0/charm/venv/lib/python3.12/site-packages/azure/storage/blob/_container_client.py", line 548, in get_container_properties
+    process_storage_error(error)
+  File "/var/lib/juju/agents/unit-opensearch-0/charm/venv/lib/python3.12/site-packages/azure/storage/blob/_shared/response_handlers.py", line 195, in process_storage_error
+    exec("raise error from None")  # pylint: disable=exec-used # nosec
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 1, in <module>
+azure.core.exceptions.ClientAuthenticationError: Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:982cf4c1-801e-0099-7433-dccd6f000000
+Time:2026-05-05T02:07:53.2228029Z
+ErrorCode:AuthenticationFailed
+authenticationerrordetail:The MAC signature found in the HTTP request 'bDbRiQIiwQxwi41M4eNWAhYXBO08RG9ChiZXi86TxVY=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:39479c68-4827-11f1-927a-00163efa90ef
+x-ms-date:Tue, 05 May 2026 02:07:52 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.
+Content: <?xml version="1.0" encoding="utf-8"?><Error><Code>AuthenticationFailed</Code><Message>Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.
+RequestId:982cf4c1-801e-0099-7433-dccd6f000000
+Time:2026-05-05T02:07:53.2228029Z</Message><AuthenticationErrorDetail>The MAC signature found in the HTTP request 'bDbRiQIiwQxwi41M4eNWAhYXBO08RG9ChiZXi86TxVY=' is not the same as any computed signature. Server used following string to sign: 'GET
+
+
+
+
+
+
+
+
+
+
+
+x-ms-client-request-id:39479c68-4827-11f1-927a-00163efa90ef
+x-ms-date:Tue, 05 May 2026 02:07:52 GMT
+x-ms-version:2026-02-06
+/opensearchtest/data-charms-testing
+restype:container'.</AuthenticationErrorDetail></Error>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
+[32mINFO    [0m integration.ha.test_backups:test_backups.py:190 Cleaning backups from cloud buckets
+[33mWARNING [0m integration.ha.test_backups:test_backups.py:216 Failed to clean up backups: SSL validation failed for https://10.151.33.206:445/testbucket?prefix=opensearch%2F544c2444-9ed9-45d3-a753-b3cd94fb0e52%2F&encoding-type=url [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1000)
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:511 Request URL: 'https://opensearchtest.blob.core.windows.net/data-charms-testing?restype=REDACTED&comp=REDACTED&prefix=REDACTED'
+Request method: 'GET'
+Request headers:
+    'x-ms-version': 'REDACTED'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.28.0 Python/3.12.3 (Linux-6.14.0-37-generic-x86_64-with-glibc2.39)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': '811fcb4d-4827-11f1-9129-00163e541963'
+    'Authorization': 'REDACTED'
+No body was attached to the request
+[32mINFO    [0m azure.core.pipeline.policies.http_logging_policy:_universal.py:554 Response status: 200
+Response headers:
+    'Transfer-Encoding': 'chunked'
+    'Content-Type': 'application/xml'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': 'e6c0a613-001e-0087-6534-dc21b7000000'
+    'x-ms-client-request-id': '811fcb4d-4827-11f1-9129-00163e541963'
+    'x-ms-version': 'REDACTED'
+    'Date': 'Tue, 05 May 2026 02:09:54 GMT'

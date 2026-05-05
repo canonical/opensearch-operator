@@ -1,0 +1,2372 @@
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:196 pre-upgrade-check: namespace(status='completed', response={'result': 'Charm is ready for upgrade', 'return-code': 0})
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:200 Refreshing 'opensearch' local charm
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:15:39Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           active      2  opensearch                2/edge    206  no       
+main                               active      3  opensearch                2/edge    206  no       
+opensearch                         active      3  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+failover/0                   active    idle   0        10.81.144.240   9200/tcp  
+failover/1*                  active    idle   1        10.81.144.19    9200/tcp  
+main/0                       active    idle   3        10.81.144.125   9200/tcp  
+main/1*                      active    idle   4        10.81.144.6     9200/tcp  
+main/2                       active    idle   5        10.81.144.20    9200/tcp  
+opensearch/0                 active    idle   6        10.81.144.46    9200/tcp  
+opensearch/1                 active    idle   7        10.81.144.12    9200/tcp  
+opensearch/2*                active    idle   8        10.81.144.141   9200/tcp  
+self-signed-certificates/0*  active    idle   2        10.81.144.113             
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.81.144.240  juju-14eeb7-0  ubuntu@24.04  github-runner  Running
+1        started  10.81.144.19   juju-14eeb7-1  ubuntu@24.04  github-runner  Running
+2        started  10.81.144.113  juju-14eeb7-2  ubuntu@24.04  github-runner  Running
+3        started  10.81.144.125  juju-14eeb7-3  ubuntu@24.04  github-runner  Running
+4        started  10.81.144.6    juju-14eeb7-4  ubuntu@24.04  github-runner  Running
+5        started  10.81.144.20   juju-14eeb7-5  ubuntu@24.04  github-runner  Running
+6        started  10.81.144.46   juju-14eeb7-6  ubuntu@24.04  github-runner  Running
+7        started  10.81.144.12   juju-14eeb7-7  ubuntu@24.04  github-runner  Running
+8        started  10.81.144.141  juju-14eeb7-8  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:15:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:15:11)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:14:28)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:15:26)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:15:50 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch active -- message: None
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:15:11)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:14:28)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:15:26)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:16:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:16:01)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [executing (since: 02:16:01)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:16:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:16:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:16:35 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:16:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:16:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:17:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:17:19 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:17:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:17:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:17:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:18:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:18:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:18:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:18:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:18:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:18:59 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:19:10 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:19:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:19:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:19:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:19:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:20:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:20:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:16:02)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:16:02)] active: 
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:15:57)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:20:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:20:25)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		opensearch-1.1ab  -- (10.81.144.12) -- [executing (since: 02:20:27)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:20:26)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:20:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:20:31)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:20:33)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:20:26)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:20:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: opensearch - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: opensearch blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:20:31)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:20:33)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:20:26)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:21:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:21:03 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:217 resume-upgrade: namespace(status='completed', response={'result': 'Upgrade resumed.', 'return-code': 0})
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:21:05Z
+
+App                       Version  Status       Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           active           2  opensearch                2/edge    206  no       
+main                               active           3  opensearch                2/edge    206  no       
+opensearch                         maintenance      3  opensearch                            0  no       Upgrading.
+self-signed-certificates           active           1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+failover/0                   active    idle       0        10.81.144.240   9200/tcp  
+failover/1*                  active    idle       1        10.81.144.19    9200/tcp  
+main/0                       active    idle       3        10.81.144.125   9200/tcp  
+main/1*                      active    idle       4        10.81.144.6     9200/tcp  
+main/2                       active    idle       5        10.81.144.20    9200/tcp  
+opensearch/0                 active    executing  6        10.81.144.46    9200/tcp  OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+opensearch/1                 active    executing  7        10.81.144.12    9200/tcp  OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+opensearch/2*                active    executing  8        10.81.144.141   9200/tcp  OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+self-signed-certificates/0*  active    idle       2        10.81.144.113             
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.81.144.240  juju-14eeb7-0  ubuntu@24.04  github-runner  Running
+1        started  10.81.144.19   juju-14eeb7-1  ubuntu@24.04  github-runner  Running
+2        started  10.81.144.113  juju-14eeb7-2  ubuntu@24.04  github-runner  Running
+3        started  10.81.144.125  juju-14eeb7-3  ubuntu@24.04  github-runner  Running
+4        started  10.81.144.6    juju-14eeb7-4  ubuntu@24.04  github-runner  Running
+5        started  10.81.144.20   juju-14eeb7-5  ubuntu@24.04  github-runner  Running
+6        started  10.81.144.46   juju-14eeb7-6  ubuntu@24.04  github-runner  Running
+7        started  10.81.144.12   juju-14eeb7-7  ubuntu@24.04  github-runner  Running
+8        started  10.81.144.141  juju-14eeb7-8  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:21:05 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:21:05)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		opensearch-1.1ab  -- (10.81.144.12) -- [executing (since: 02:21:04)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:21:05)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:21:16 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:21:05)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		opensearch-1.1ab  -- (10.81.144.12) -- [executing (since: 02:21:04)] waiting: The OpenSearch service stopped.
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:21:05)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:21:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:21:05)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		opensearch-1.1ab  -- (10.81.144.12) -- [executing (since: 02:21:04)] waiting: The OpenSearch service stopped.
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:21:05)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:21:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:21:05)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		opensearch-1.1ab  -- (10.81.144.12) -- [executing (since: 02:21:04)] waiting: The OpenSearch service stopped.
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:21:05)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:21:50 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:21:05)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		opensearch-1.1ab  -- (10.81.144.12) -- [executing (since: 02:21:04)] waiting: The OpenSearch service stopped.
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:21:05)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:22:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:21:05)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		opensearch-1.1ab  -- (10.81.144.12) -- [executing (since: 02:21:04)] waiting: The OpenSearch service stopped.
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:21:05)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:22:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [idle (since: 02:21:05)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		opensearch-1.1ab  -- (10.81.144.12) -- [executing (since: 02:21:04)] waiting: Waiting for OpenSearch to start...
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:21:05)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:22:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service is stopping.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:22:22)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:22:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:22:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:22:59 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:23:10 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:23:21 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:23:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:23:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:23:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:24:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:24:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:24:29 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:24:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:24:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:25:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:25:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:25:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:25:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:25:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:26:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:26:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: The OpenSearch service stopped.
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:26:23 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: Waiting for OpenSearch to start...
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:26:34 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:22:21)] waiting: Waiting for OpenSearch to start...
+		opensearch-1.1ab  -- (10.81.144.12) -- [idle (since: 02:22:24)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [idle (since: 02:22:27)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:26:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: opensearch - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: opensearch maintenance -- message: Upgrading.
+		opensearch-0.1ab  -- (10.81.144.46) -- [executing (since: 02:26:42)] active: 
+		opensearch-1.1ab  -- (10.81.144.12) -- [executing (since: 02:26:45)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		opensearch-2.1ab* -- (10.81.144.141) -- [executing (since: 02:26:42)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:26:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:26:58 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:228 Upgrade of 'opensearch' completed
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:125 Ensuring units in 'opensearch' running version 2.19.4
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:132 All units in 'opensearch' running version 2.19.4
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:196 pre-upgrade-check: namespace(status='completed', response={'result': 'Charm is ready for upgrade', 'return-code': 0})
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:200 Refreshing 'failover' local charm
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:27:24Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           active      2  opensearch                            1  no       
+main                               active      3  opensearch                2/edge    206  no       
+opensearch                         active      3  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+failover/0                   active    idle   0        10.81.144.240   9200/tcp  
+failover/1*                  active    idle   1        10.81.144.19    9200/tcp  
+main/0                       active    idle   3        10.81.144.125   9200/tcp  
+main/1*                      active    idle   4        10.81.144.6     9200/tcp  
+main/2                       active    idle   5        10.81.144.20    9200/tcp  
+opensearch/0                 active    idle   6        10.81.144.46    9200/tcp  
+opensearch/1                 active    idle   7        10.81.144.12    9200/tcp  
+opensearch/2*                active    idle   8        10.81.144.141   9200/tcp  
+self-signed-certificates/0*  active    idle   2        10.81.144.113             
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.81.144.240  juju-14eeb7-0  ubuntu@24.04  github-runner  Running
+1        started  10.81.144.19   juju-14eeb7-1  ubuntu@24.04  github-runner  Running
+2        started  10.81.144.113  juju-14eeb7-2  ubuntu@24.04  github-runner  Running
+3        started  10.81.144.125  juju-14eeb7-3  ubuntu@24.04  github-runner  Running
+4        started  10.81.144.6    juju-14eeb7-4  ubuntu@24.04  github-runner  Running
+5        started  10.81.144.20   juju-14eeb7-5  ubuntu@24.04  github-runner  Running
+6        started  10.81.144.46   juju-14eeb7-6  ubuntu@24.04  github-runner  Running
+7        started  10.81.144.12   juju-14eeb7-7  ubuntu@24.04  github-runner  Running
+8        started  10.81.144.141  juju-14eeb7-8  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:27:24 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: failover - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: failover active -- message: None
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:13:49)] active: 
+		failover-1.594* -- (10.81.144.19) -- [idle (since: 02:27:12)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:27:35 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: failover - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: failover active -- message: None
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:13:49)] active: 
+		failover-1.594* -- (10.81.144.19) -- [idle (since: 02:27:12)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:27:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service is stopping.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:27:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:28:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:28:19 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:28:30 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:28:41 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:28:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:29:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:29:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:29:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:29:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:29:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:29:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:30:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:30:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:30:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:30:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:30:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:31:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:31:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:31:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:31:38 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:31:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:32:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:32:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:32:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:32:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:32:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:32:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:33:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:33:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:33:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:33:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:33:50 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:34:01 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:34:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:34:23 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:34:34 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:34:45 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:34:56 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:35:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:35:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:35:30 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:35:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:35:52 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:36:03 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:36:14 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:36:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:36:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:36:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:36:58 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:37:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:37:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:37:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:37:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:37:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:38:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:38:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:38:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:27:42)] active: 
+		failover-1.594* -- (10.81.144.19) -- [executing (since: 02:27:37)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:38:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [executing (since: 02:38:36)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		failover-1.594* -- (10.81.144.19) -- [idle (since: 02:38:36)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:38:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:38:41)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		failover-1.594* -- (10.81.144.19) -- [idle (since: 02:38:36)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:39:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:38:41)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		failover-1.594* -- (10.81.144.19) -- [idle (since: 02:38:36)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:39:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:39:02)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		failover-1.594* -- (10.81.144.19) -- [idle (since: 02:39:06)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:39:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:39:02)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		failover-1.594* -- (10.81.144.19) -- [idle (since: 02:39:06)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:39:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: failover - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: failover blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		failover-0.594  -- (10.81.144.240) -- [idle (since: 02:39:02)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		failover-1.594* -- (10.81.144.19) -- [idle (since: 02:39:06)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:39:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:39:45 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:217 resume-upgrade: namespace(status='completed', response={'result': 'Upgrade resumed.', 'return-code': 0})
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:39:48Z
+
+App                       Version  Status       Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           maintenance      2  opensearch                            1  no       Upgrading.
+main                               active           3  opensearch                2/edge    206  no       
+opensearch                         active           3  opensearch                            0  no       
+self-signed-certificates           active           1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+failover/0                   active    executing  0        10.81.144.240   9200/tcp  OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+failover/1*                  active    executing  1        10.81.144.19    9200/tcp  OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+main/0                       active    idle       3        10.81.144.125   9200/tcp  
+main/1*                      active    idle       4        10.81.144.6     9200/tcp  
+main/2                       active    idle       5        10.81.144.20    9200/tcp  
+opensearch/0                 active    idle       6        10.81.144.46    9200/tcp  
+opensearch/1                 active    idle       7        10.81.144.12    9200/tcp  
+opensearch/2*                active    idle       8        10.81.144.141   9200/tcp  
+self-signed-certificates/0*  active    idle       2        10.81.144.113             
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.81.144.240  juju-14eeb7-0  ubuntu@24.04  github-runner  Running
+1        started  10.81.144.19   juju-14eeb7-1  ubuntu@24.04  github-runner  Running
+2        started  10.81.144.113  juju-14eeb7-2  ubuntu@24.04  github-runner  Running
+3        started  10.81.144.125  juju-14eeb7-3  ubuntu@24.04  github-runner  Running
+4        started  10.81.144.6    juju-14eeb7-4  ubuntu@24.04  github-runner  Running
+5        started  10.81.144.20   juju-14eeb7-5  ubuntu@24.04  github-runner  Running
+6        started  10.81.144.46   juju-14eeb7-6  ubuntu@24.04  github-runner  Running
+7        started  10.81.144.12   juju-14eeb7-7  ubuntu@24.04  github-runner  Running
+8        started  10.81.144.141  juju-14eeb7-8  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:39:48 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: failover - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: failover maintenance -- message: Upgrading.
+		failover-0.594  -- (10.81.144.240) -- [executing (since: 02:39:46)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		failover-1.594* -- (10.81.144.19) -- [idle (since: 02:39:48)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:39:59 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: failover - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: failover maintenance -- message: Upgrading.
+		failover-0.594  -- (10.81.144.240) -- [executing (since: 02:39:46)] waiting: The OpenSearch service stopped.
+		failover-1.594* -- (10.81.144.19) -- [idle (since: 02:39:48)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:40:10 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: failover - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: failover maintenance -- message: Upgrading.
+		failover-0.594  -- (10.81.144.240) -- [executing (since: 02:39:46)] waiting: The OpenSearch service stopped.
+		failover-1.594* -- (10.81.144.19) -- [idle (since: 02:39:48)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:40:21 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: failover - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: failover maintenance -- message: Upgrading.
+		failover-0.594  -- (10.81.144.240) -- [executing (since: 02:39:46)] waiting: The OpenSearch service stopped.
+		failover-1.594* -- (10.81.144.19) -- [idle (since: 02:39:48)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:40:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: failover - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: failover maintenance -- message: Upgrading.
+		failover-0.594  -- (10.81.144.240) -- [executing (since: 02:39:46)] waiting: The OpenSearch service stopped.
+		failover-1.594* -- (10.81.144.19) -- [idle (since: 02:39:48)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:40:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: failover - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: failover maintenance -- message: Upgrading.
+		failover-0.594  -- (10.81.144.240) -- [executing (since: 02:39:46)] waiting: The OpenSearch service stopped.
+		failover-1.594* -- (10.81.144.19) -- [idle (since: 02:39:48)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:40:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: failover - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: failover maintenance -- message: Upgrading.
+		failover-0.594  -- (10.81.144.240) -- [executing (since: 02:39:46)] waiting: The OpenSearch service stopped.
+		failover-1.594* -- (10.81.144.19) -- [idle (since: 02:39:48)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:41:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: failover - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: failover maintenance -- message: Upgrading.
+		failover-0.594  -- (10.81.144.240) -- [executing (since: 02:39:46)] waiting: Waiting for OpenSearch to start...
+		failover-1.594* -- (10.81.144.19) -- [idle (since: 02:39:48)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:41:18 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:41:19 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:228 Upgrade of 'failover' completed
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:125 Ensuring units in 'failover' running version 2.19.4
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:132 All units in 'failover' running version 2.19.4
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:196 pre-upgrade-check: namespace(status='completed', response={'result': 'Charm is ready for upgrade', 'return-code': 0})
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:200 Refreshing 'main' local charm
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:41:46Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           active      2  opensearch                            1  no       
+main                               active      3  opensearch                            2  no       
+opensearch                         active      3  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+failover/0                   active    idle       0        10.81.144.240   9200/tcp  
+failover/1*                  active    idle       1        10.81.144.19    9200/tcp  
+main/0                       active    idle       3        10.81.144.125   9200/tcp  
+main/1*                      active    idle       4        10.81.144.6     9200/tcp  
+main/2                       active    idle       5        10.81.144.20    9200/tcp  
+opensearch/0                 active    executing  6        10.81.144.46    9200/tcp  
+opensearch/1                 active    executing  7        10.81.144.12    9200/tcp  
+opensearch/2*                active    executing  8        10.81.144.141   9200/tcp  
+self-signed-certificates/0*  active    idle       2        10.81.144.113             
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.81.144.240  juju-14eeb7-0  ubuntu@24.04  github-runner  Running
+1        started  10.81.144.19   juju-14eeb7-1  ubuntu@24.04  github-runner  Running
+2        started  10.81.144.113  juju-14eeb7-2  ubuntu@24.04  github-runner  Running
+3        started  10.81.144.125  juju-14eeb7-3  ubuntu@24.04  github-runner  Running
+4        started  10.81.144.6    juju-14eeb7-4  ubuntu@24.04  github-runner  Running
+5        started  10.81.144.20   juju-14eeb7-5  ubuntu@24.04  github-runner  Running
+6        started  10.81.144.46   juju-14eeb7-6  ubuntu@24.04  github-runner  Running
+7        started  10.81.144.12   juju-14eeb7-7  ubuntu@24.04  github-runner  Running
+8        started  10.81.144.141  juju-14eeb7-8  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:41:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main active -- message: None
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:12:27)] active: 
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:41:32)] active: 
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:12:27)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:41:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main active -- message: None
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:12:27)] active: 
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:41:32)] active: 
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:12:27)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:42:08 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main active -- message: None
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:42:08)] active: 
+		main-1.271* -- (10.81.144.6) -- [executing (since: 02:42:08)] active: 
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:08)] active: 
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:42:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service is stopping.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:42:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:42:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:42:53 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:43:04 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:43:15 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:43:26 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:43:37 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:43:49 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:44:00 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:44:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:44:22 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:44:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:44:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:44:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:45:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:45:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:45:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:45:39 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:45:50 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:46:01 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: The OpenSearch service stopped.
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:46:12 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:46:23 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:42:15)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:42:13)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:42:13)] waiting: Waiting for OpenSearch to start...
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:46:34 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:46:35)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [executing (since: 02:46:34)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [executing (since: 02:46:34)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:46:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:46:38)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:46:40)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:46:37)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:46:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:46:38)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:46:40)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:46:37)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:47:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:47:08)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [executing (since: 02:47:05)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:47:08)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:47:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:47:08)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:47:12)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:47:08)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:47:31 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:324 	App: main - Units - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:325 
+	app: main blocked -- message: Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:47:08)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:47:12)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:47:08)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:47:42 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:47:44 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:217 resume-upgrade: namespace(status='completed', response={'result': 'Upgrade resumed.', 'return-code': 0})
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:406 
+
+
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:407 Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:52:11Z
+
+App                       Version  Status       Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           active           2  opensearch                            1  no       
+main                               maintenance      3  opensearch                            2  no       Upgrading.
+opensearch                         active           3  opensearch                            0  no       
+self-signed-certificates           active           1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports     Message
+failover/0                   active    idle       0        10.81.144.240   9200/tcp  
+failover/1*                  active    idle       1        10.81.144.19    9200/tcp  
+main/0                       active    idle       3        10.81.144.125   9200/tcp  OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+main/1*                      active    executing  4        10.81.144.6     9200/tcp  OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+main/2                       active    idle       5        10.81.144.20    9200/tcp  OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+opensearch/0                 active    executing  6        10.81.144.46    9200/tcp  
+opensearch/1                 active    executing  7        10.81.144.12    9200/tcp  
+opensearch/2*                active    idle       8        10.81.144.141   9200/tcp  
+self-signed-certificates/0*  active    idle       2        10.81.144.113             
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.81.144.240  juju-14eeb7-0  ubuntu@24.04  github-runner  Running
+1        started  10.81.144.19   juju-14eeb7-1  ubuntu@24.04  github-runner  Running
+2        started  10.81.144.113  juju-14eeb7-2  ubuntu@24.04  github-runner  Running
+3        started  10.81.144.125  juju-14eeb7-3  ubuntu@24.04  github-runner  Running
+4        started  10.81.144.6    juju-14eeb7-4  ubuntu@24.04  github-runner  Running
+5        started  10.81.144.20   juju-14eeb7-5  ubuntu@24.04  github-runner  Running
+6        started  10.81.144.46   juju-14eeb7-6  ubuntu@24.04  github-runner  Running
+7        started  10.81.144.12   juju-14eeb7-7  ubuntu@24.04  github-runner  Running
+8        started  10.81.144.141  juju-14eeb7-8  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:52:11 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [idle (since: 02:47:08)] active: OpenSearch 2.17.0 running; Snap rev 65 (outdated); Charmed operator 1+b55ac3966f-dirty
+		main-1.271* -- (10.81.144.6) -- [executing (since: 02:52:10)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:47:08)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:52:23 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service is stopping.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:52:34 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:52:46 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:52:57 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:53:09 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:53:20 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:53:32 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:53:43 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:53:54 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:54:06 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:54:17 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:54:28 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:54:40 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:54:51 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:55:02 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:55:13 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:55:25 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:55:36 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:55:47 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:55:59 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:56:10 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:56:21 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:56:33 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: The OpenSearch service stopped.
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:56:44 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] waiting: Waiting for OpenSearch to start...
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:56:55 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:308 	App: main - conditions unmet.
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:309 
+	app: main maintenance -- message: Upgrading.
+		main-0.271  -- (10.81.144.125) -- [executing (since: 02:52:16)] active: 
+		main-1.271* -- (10.81.144.6) -- [idle (since: 02:52:11)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+		main-2.271  -- (10.81.144.20) -- [idle (since: 02:52:17)] active: OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966f-dirty
+
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:414 
+
+
+02:57:07 -- Waiting for model...
+[32mINFO    [0m integration.helpers_deployments:helpers_deployments.py:425 02:57:08 -- Waiting for model: complete.
+
+
+
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:228 Upgrade of 'main' completed
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:125 Ensuring units in 'main' running version 2.19.4
+[32mINFO    [0m integration.upgrades.helpers:helpers.py:132 All units in 'main' running version 2.19.4
+[32mINFO    [0m integration.ha.helpers:helpers.py:248 Continuous writes result: namespace(max_stored_id=2627, count=2628, last_expected_id=2627)
+[32mINFO    [0m integration.helpers:helpers.py:370 Calling: GET -- https://10.81.144.141:9200/series_index/_search_shards
+[32mINFO    [0m integration.upgrades.conftest:conftest.py:29 
+
+
+
+The writes have been cleared.
+
+
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:58:21Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           active      2  opensearch                            1  no       
+main                               active      3  opensearch                            2  no       
+opensearch                         active      3  opensearch                            0  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+failover/0                   active    idle   0        10.81.144.240   9200/tcp  
+failover/1*                  active    idle   1        10.81.144.19    9200/tcp  
+main/0                       active    idle   3        10.81.144.125   9200/tcp  
+main/1*                      active    idle   4        10.81.144.6     9200/tcp  
+main/2                       active    idle   5        10.81.144.20    9200/tcp  
+opensearch/0                 active    idle   6        10.81.144.46    9200/tcp  
+opensearch/1                 active    idle   7        10.81.144.12    9200/tcp  
+opensearch/2*                active    idle   8        10.81.144.141   9200/tcp  
+self-signed-certificates/0*  active    idle   2        10.81.144.113             
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.81.144.240  juju-14eeb7-0  ubuntu@24.04  github-runner  Running
+1        started  10.81.144.19   juju-14eeb7-1  ubuntu@24.04  github-runner  Running
+2        started  10.81.144.113  juju-14eeb7-2  ubuntu@24.04  github-runner  Running
+3        started  10.81.144.125  juju-14eeb7-3  ubuntu@24.04  github-runner  Running
+4        started  10.81.144.6    juju-14eeb7-4  ubuntu@24.04  github-runner  Running
+5        started  10.81.144.20   juju-14eeb7-5  ubuntu@24.04  github-runner  Running
+6        started  10.81.144.46   juju-14eeb7-6  ubuntu@24.04  github-runner  Running
+7        started  10.81.144.12   juju-14eeb7-7  ubuntu@24.04  github-runner  Running
+8        started  10.81.144.141  juju-14eeb7-8  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
