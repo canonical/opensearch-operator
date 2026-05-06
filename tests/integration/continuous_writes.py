@@ -25,12 +25,12 @@ from tenacity import (
 )
 
 from .helpers import (
-    get_application_unit_ips,
-    get_secrets,
-    opensearch_client,
     get_application_unit_ids_ips,
+    get_application_unit_ips,
     get_leader_unit_ip,
+    get_secrets,
     get_shards_by_index,
+    opensearch_client,
 )
 
 logging.getLogger("opensearch").setLevel(logging.ERROR)

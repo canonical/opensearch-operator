@@ -117,7 +117,6 @@ async def get_shards_by_index(ops_test: OpsTest, unit_ip: str, index_name: str) 
     return result
 
 
-
 @retry(wait=wait_fixed(wait=15), stop=stop_after_attempt(15))
 async def run_action(
     ops_test: OpsTest,

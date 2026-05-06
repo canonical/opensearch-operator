@@ -26,7 +26,7 @@ from .conftest import (
 from .continuous_writes import (
     ContinuousWrites,
     assert_continuous_writes_consistency,
-    assert_continuous_writes_increasing
+    assert_continuous_writes_increasing,
 )
 from .helpers import (
     get_application_unit_ids,
