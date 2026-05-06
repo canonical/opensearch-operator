@@ -23,10 +23,12 @@ from .conftest import (
     TLS_CERTIFICATES_APP_NAME,
     TLS_STABLE_CHANNEL,
 )
-from .continuous_writes import ContinuousWrites
-from .helpers import (
+from .continuous_writes import (
+    ContinuousWrites,
     assert_continuous_writes_consistency,
-    assert_continuous_writes_increasing,
+    assert_continuous_writes_increasing
+)
+from .helpers import (
     get_application_unit_ids,
     get_conf_as_dict,
     get_leader_unit_id,
