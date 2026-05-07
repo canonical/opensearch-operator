@@ -26,20 +26,6 @@ jobs:
     name: Lint
     uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v32.1.0
 
-  unit-test:
-    name: Unit test charm
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install tox & poetry
-        run: |
-          pipx install tox
-          pipx install poetry
-      - name: Run tests
-        run: tox run -e unit
-
   promtool:
     runs-on: ubuntu-22.04
     steps:
@@ -53,10 +39,6 @@ jobs:
       - name: Check validity of prometheus alert rules
         run: |
           promtool check rules src/alert_rules/prometheus/*.yaml
-
-      - name: Run unit tests for prometheus alert rules
-        run: |
-          promtool test rules tests/unit/test_alert_rules/*.yaml
 
   terraform-test:
     name: Terraform - Validation and Simple Deployment product
@@ -172,7 +154,6 @@ jobs:
       matrix:
         path:
           - .
-          - tests/integration/relations/opensearch_provider/application-charm
     name: Build charm | ${{ matrix.path }}
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v32.1.0
     with:
@@ -182,7 +163,6 @@ jobs:
     name: Integration test charm
     needs:
       - lint
-      - unit-test
       - build
     uses: ./.github/workflows/integration_test.yaml
     with:

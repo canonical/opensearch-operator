@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+
 import asyncio
 import json
 import logging
+import re
 import subprocess
 from datetime import datetime, timedelta
 from hashlib import md5
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
+from data_platform_helpers.advanced_statuses import StatusObject
 from dateutil.parser import parse
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
@@ -201,45 +204,66 @@ async def get_application_subordinate_units(
     return await asyncio.gather(*units) if units else []
 
 
+def _check_status(status: Status, check: StatusObject) -> bool:
+    """Check if charm status is the same as from the advanced status lib checked status.
+
+    Interpolated statuses are handled through regex.
+
+    Args:
+        status: charm status.
+        check: original status from advanced status lib.
+
+    Returns:
+        whether charm status corresponding to the checked status.
+    """
+    if status.value != check.status.lower():
+        return False
+
+    regex_pattern = (
+        re.sub(
+            r"\{.*?\}",
+            r"(?s:.*?)",
+            check.message,
+        )
+        + r"(?s:.*?)"
+    )
+    status_message = status.message or ""
+
+    return (
+        status_message == check.message
+        or status_message.startswith(check.message)
+        or status_message.startswith(f"{check.message:.40}")
+        or re.fullmatch(regex_pattern, status_message) is not None
+    )
+
+
 def _is_every_condition_on_app_met(
     ops_test: OpsTest,
     app: str,
-    units: Optional[List[Unit]],
-    apps_statuses: Optional[List[str]],
-    apps_full_statuses: Optional[Dict[str, Dict[str, List[str]]]],
+    units: list[Unit] | None,
+    app_statuses: list[StatusObject] | None,
 ) -> bool:
     """Evaluate if all the conditions of an application are met."""
     if units:
-        app_status = units[0].app_status
+        current_status = units[0].app_status
     else:
-        app_status = get_raw_application(ops_test, app)["application-status"]
-        app_status = Status(
-            value=app_status["current"],
-            since=app_status["since"],
-            message=app_status.get("message"),
+        current_status = get_raw_application(ops_test, app)["application-status"]
+        current_status = Status(
+            value=current_status["current"],
+            since=current_status["since"],
+            message=current_status.get("message"),
         )
 
-    if apps_statuses:
-        if app_status.value not in apps_statuses:
-            return False
-    else:
-        any_match = False
-        for status_val, messages in apps_full_statuses[app].items():
-            any_match = any_match or (
-                app_status.value == status_val and app_status.message in (messages or ["", None])
-            )
-        if not any_match:
-            return False
+    if app_statuses:
+        return any(_check_status(current_status, status) for status in app_statuses)
 
-    return True
+    return current_status.value == "active"
 
 
 def _is_every_condition_on_units_met(
     model: str,
-    app: str,
-    units: List[Unit],
-    units_statuses: Optional[List[str]],
-    units_full_statuses: Optional[Dict[str, Dict[str, Dict[str, List[str]]]]],
+    units: list[Unit],
+    unit_statuses: list[StatusObject] | None,
     idle_period: int,
 ) -> bool:
     """Evaluate if all the conditions of a unit are met."""
@@ -251,18 +275,13 @@ def _is_every_condition_on_units_met(
             logger.error(f"Error in: {unit.name}")
             _dump_juju_logs(model, unit.name)
 
-        if units_statuses:
-            if unit.workload_status.value not in units_statuses:
-                return False
-        else:
-            any_match = False
-            for status_val, messages in units_full_statuses[app]["units"].items():
-                any_match = any_match or (
-                    unit.workload_status.value == status_val
-                    and unit.workload_status.message in (messages or ["", None])
-                )
-            if not any_match:
-                return False
+        if unit_statuses and not any(
+            _check_status(unit.workload_status, status) for status in unit_statuses
+        ):
+            return False
+
+        if not unit_statuses and unit.workload_status.value != "active":
+            return False
 
         if unit.agent_status.since + timedelta(seconds=idle_period) > datetime.now():
             return False
@@ -274,10 +293,8 @@ async def _is_every_condition_met(
     ops_test: OpsTest,
     apps: List[str],
     wait_for_exact_units: Dict[str, int],
-    apps_statuses: Optional[List[str]] = None,
-    apps_full_statuses: Optional[Dict[str, Dict[str, List[str]]]] = None,
-    units_statuses: Optional[List[str]] = None,
-    units_full_statuses: Optional[Dict[str, Dict[str, Dict[str, List[str]]]]] = None,
+    apps_statuses: dict[str, list[StatusObject]] | None,
+    units_statuses: dict[str, list[StatusObject]] | None,
     idle_period: int = 30,
 ) -> bool:
     """Evaluate if all the deployment status conditions are met."""
@@ -298,28 +315,21 @@ async def _is_every_condition_met(
             logger.info(f"{app} -- expected units: {expected_units} -- current: {len(units)}")
             return False
 
-        if (apps_statuses or apps_full_statuses) and not _is_every_condition_on_app_met(
+        if not _is_every_condition_on_app_met(
             ops_test=ops_test,
             app=app,
             units=(units if expected_units > -1 else None),
-            apps_statuses=apps_statuses,
-            apps_full_statuses=apps_full_statuses,
+            app_statuses=apps_statuses.get(app) if apps_statuses else None,
         ):
             logger.info(f"\tApp: {app} - conditions unmet.")
             logger.info(_progress_line(units))
             return False
 
-        if (
-            expected_units > -1
-            and (units_statuses or units_full_statuses)
-            and not _is_every_condition_on_units_met(
-                model=ops_test.model.info.name,
-                app=app,
-                units=units,
-                units_statuses=units_statuses,
-                units_full_statuses=units_full_statuses,
-                idle_period=idle_period,
-            )
+        if expected_units > -1 and not _is_every_condition_on_units_met(
+            model=ops_test.model.info.name,
+            units=units,
+            unit_statuses=units_statuses.get(app) if units_statuses else None,
+            idle_period=idle_period,
         ):
             logger.info(f"\tApp: {app} - Units - conditions unmet.")
             logger.info(_progress_line(units))
@@ -328,44 +338,12 @@ async def _is_every_condition_met(
     return True
 
 
-async def wait_until_condition_on_units(
-    ops_test, app: str, condition, timeout: int = 1200
-) -> None:
-    """Block and wait until a condition is met on the units in `app` or timeout."""
-    try:
-        logger.info("\n\n\n")
-        logger.info(
-            subprocess.check_output(
-                f"juju status --model {ops_test.model.info.name}", shell=True
-            ).decode("utf-8")
-        )
-        for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(10)):
-            with attempt:
-                logger.info("Waiting for condition...")
-                units = await get_application_units(ops_test, app)
-                if condition(units):
-                    logger.info(f"{now()} -- Waiting for condition: complete.\n\n\n")
-                    return
-                raise Exception
-    except RetryError:
-        logger.error("wait_until_condition_on_units -- Timed out!\n\n\n")
-        logger.info(
-            subprocess.check_output(
-                f"juju status --model {ops_test.model.info.name}", shell=True
-            ).decode("utf-8")
-        )
-        _dump_juju_logs(model=ops_test.model.info.name, lines=3000)
-        raise
-
-
 async def wait_until(  # noqa: C901
     ops_test: OpsTest,
-    apps: List[str],
-    apps_statuses: Optional[List[str]] = None,
-    apps_full_statuses: Optional[Dict[str, Dict[str, List[str]]]] = None,
-    units_statuses: Optional[List[str]] = None,
-    units_full_statuses: Optional[Dict[str, Dict[str, Dict[str, List[str]]]]] = None,
-    wait_for_exact_units: Optional[Union[int, Dict[str, int]]] = -1,
+    apps: list[str],
+    apps_statuses: dict[str, list[StatusObject]] | None = None,
+    units_statuses: dict[str, list[StatusObject]] | None = None,
+    wait_for_exact_units: int | dict[str, int] | None = -1,
     idle_period: int = 30,
     timeout: int = 1200,
 ) -> None:
@@ -374,14 +352,14 @@ async def wait_until(  # noqa: C901
     Args:
         ops_test: The ops test framework instance
         apps: A list of applications whose statuses to test against
-        apps_statuses: List of acceptable application statuses to wait for, for all apps.
-            ["blocked", "active", ...]
-        apps_full_statuses: List of acceptable unit statuses to wait for, for all apps with more
-            granularity: {"app1": {"blocked": ["msg1", "msg2"], "active": []}, "app2": ...}
-        units_statuses: List of acceptable statuses to wait for, for all units of all apps.
-            ["blocked", "active", ...]
-        units_full_statuses: List of acceptable statuses to wait for, for all apps with more
-            granularity: {"app1": "units": {"blocked": ["msg1", "msg2"], "active": []}}, "app2"...}
+        apps_statuses: List of acceptable statuses to wait for by each specified app.
+            The final computed status (e.g. that one shown in juju status) is only checked.
+            All unspecified apps automatically checked for active status.
+            Example: {APP_NAME: [GeneralStatuses.JWT_RELATION_INVALID.value]}
+        units_statuses: List of acceptable statuses to wait for all units by each specified app.
+            The final computed status (e.g. that one shown in juju status) is only checked.
+            All unspecified apps automatically checked for active status of all units.
+            Example: {APP_NAME: [ProfileStatuses.MISSING_PROFILE_REQUIREMENTS.value]}
         wait_for_exact_units: The desired number of units to wait for, can be >= to -1
             if set as int, this value is expected for all apps but if more granularity is needed to
             be set, pass a dictionary such as: {"app1": 2, "app2": 1, ...}, if set to -1, the check
@@ -391,9 +369,6 @@ async def wait_until(  # noqa: C901
     """
     if not apps:
         raise ValueError("apps must be specified.")
-    if not (apps_statuses or apps_full_statuses or units_statuses or units_full_statuses):
-        apps_statuses = ["active"]
-        units_statuses = ["active"]
     if isinstance(wait_for_exact_units, int):
         wait_for_exact_units = {app: wait_for_exact_units for app in apps}
     elif not wait_for_exact_units:
@@ -417,9 +392,7 @@ async def wait_until(  # noqa: C901
                     apps=apps,
                     wait_for_exact_units=wait_for_exact_units,
                     apps_statuses=apps_statuses,
-                    apps_full_statuses=apps_full_statuses,
                     units_statuses=units_statuses,
-                    units_full_statuses=units_full_statuses,
                     idle_period=idle_period,
                 ):
                     logger.info(f"{now()} -- Waiting for model: complete.\n\n\n")

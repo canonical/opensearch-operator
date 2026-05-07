@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2024 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 import asyncio
@@ -9,22 +9,26 @@ import subprocess
 
 import pytest
 import yaml
-from charms.opensearch.v0.constants_charm import (
+from opensearch_single_kernel.common.constants import (
     OPENSEARCH_SNAP_REVISION,
-    OpenSearchSystemUsers,
-    TLSRelationMissing,
+    OPENSEARCH_SYSTEM_USERS,
 )
+from opensearch_single_kernel.common.statuses import TlsStatuses
 from pytest_operator.plugin import OpsTest
 
-from .ha.continuous_writes import ContinuousWrites
-from .ha.helpers import (
+from .conftest import (
+    APP_NAME,
+    CONFIG_OPTS,
+    MODEL_CONFIG,
+    TLS_CERTIFICATES_APP_NAME,
+    TLS_STABLE_CHANNEL,
+)
+from .continuous_writes import (
+    ContinuousWrites,
     assert_continuous_writes_consistency,
     assert_continuous_writes_increasing,
 )
 from .helpers import (
-    APP_NAME,
-    CONFIG_OPTS,
-    MODEL_CONFIG,
     get_application_unit_ids,
     get_conf_as_dict,
     get_leader_unit_id,
@@ -34,10 +38,8 @@ from .helpers import (
     run_action,
 )
 from .helpers_deployments import wait_until
-from .tls.test_tls import TLS_CERTIFICATES_APP_NAME, TLS_STABLE_CHANNEL
 
 logger = logging.getLogger(__name__)
-
 
 DEFAULT_NUM_UNITS = 2
 
@@ -63,8 +65,6 @@ async def test_deploy_and_remove_single_unit(charm, series, ops_test: OpsTest) -
     await wait_until(
         ops_test,
         apps=[APP_NAME],
-        apps_statuses=["active"],
-        units_statuses=["active"],
         wait_for_exact_units=1,
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 1
@@ -100,7 +100,9 @@ async def test_build_and_deploy(charm, series, ops_test: OpsTest) -> None:
         ops_test,
         apps=[APP_NAME],
         wait_for_exact_units=DEFAULT_NUM_UNITS,
-        apps_full_statuses={APP_NAME: {"blocked": [TLSRelationMissing]}},
+        # Added this since we should wait for both statuses
+        apps_statuses={APP_NAME: [TlsStatuses.TLS_RELATION_MISSING.value]},
+        units_statuses={APP_NAME: [TlsStatuses.TLS_RELATION_MISSING.value]},
     )
     assert len(ops_test.model.applications[APP_NAME].units) == DEFAULT_NUM_UNITS
 
@@ -124,8 +126,6 @@ async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
     await wait_until(
         ops_test,
         apps=[APP_NAME],
-        apps_statuses=["active"],
-        units_statuses=["active"],
         wait_for_exact_units=DEFAULT_NUM_UNITS,
     )
 
@@ -315,7 +315,8 @@ async def test_check_workload_version(ops_test: OpsTest) -> None:
     logger.info(f"Installed snap: {installed_info}")
 
     workload_version = None
-    with open("./workload_version") as f:
+    workload_version_path = "./workload_version"
+    with open(workload_version_path) as f:
         workload_version = f.read().rstrip("\n")
     assert installed_info[0] == workload_version
 
@@ -332,7 +333,7 @@ async def test_all_units_have_all_local_users(ops_test: OpsTest) -> None:
     # Check on all units if they have the same
     for unit in ops_test.model.applications[APP_NAME].units:
         unit_conf = get_conf_as_dict(ops_test, unit.name, filename)
-        for user in OpenSearchSystemUsers:
+        for user in OPENSEARCH_SYSTEM_USERS:
             assert leader_conf[user]["hash"] == unit_conf[user]["hash"]
 
 
