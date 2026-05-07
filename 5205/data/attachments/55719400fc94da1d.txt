@@ -1,0 +1,55 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:17:53Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+failover                           blocked      2  opensearch                2/edge    206  no       Cannot start. Waiting for peer cluster relation...
+main                               active       3  opensearch                2/edge    206  no       
+opensearch                         blocked      3  opensearch                2/edge    206  no       Cannot start. Waiting for peer cluster relation...
+self-signed-certificates           active       1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports     Message
+failover/0*                  active       idle       3        10.240.100.78             
+failover/1                   maintenance  executing  4        10.240.100.48             (install) Installing OpenSearch...
+main/0                       active       idle       6        10.240.100.187  9200/tcp  
+main/1                       active       idle       7        10.240.100.249  9200/tcp  
+main/2*                      active       idle       8        10.240.100.240  9200/tcp  
+opensearch/0*                active       idle       0        10.240.100.11             
+opensearch/1                 active       idle       1        10.240.100.49             
+opensearch/2                 active       idle       2        10.240.100.230            
+self-signed-certificates/0*  active       idle       5        10.240.100.129            
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.240.100.11   juju-cdef2e-0  ubuntu@24.04  github-runner  Running
+1        started  10.240.100.49   juju-cdef2e-1  ubuntu@24.04  github-runner  Running
+2        started  10.240.100.230  juju-cdef2e-2  ubuntu@24.04  github-runner  Running
+3        started  10.240.100.78   juju-cdef2e-3  ubuntu@24.04  github-runner  Running
+4        started  10.240.100.48   juju-cdef2e-4  ubuntu@24.04  github-runner  Running
+5        started  10.240.100.129  juju-cdef2e-5  ubuntu@24.04  github-runner  Running
+6        started  10.240.100.187  juju-cdef2e-6  ubuntu@24.04  github-runner  Running
+7        started  10.240.100.249  juju-cdef2e-7  ubuntu@24.04  github-runner  Running
+8        started  10.240.100.240  juju-cdef2e-8  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 01:48:36 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:48:36 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:48:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:48:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 01:48:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 01:48:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:48:42 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:48:42 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:48:45 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:48:45 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:48:48 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:48:48 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:48:52 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:48:52 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 01:48:55 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 01:48:55 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:48:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:48:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
