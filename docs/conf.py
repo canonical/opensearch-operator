@@ -70,7 +70,7 @@ copyright = "%s CC-BY-SA, %s" % (datetime.date.today().year, author)
 # NOTE: The Open Graph Protocol (OGP) enhances page display in a social graph
 #       and is used by social media platforms; see https://ogp.me/
 
-ogp_site_url = f"https://canonical.com/data/opensearch/docs/{version}/"
+ogp_site_url = os.environ.get("READTHEDOCS_CANONICAL_URL", "/")
 
 
 # Preview name of the documentation website
@@ -177,7 +177,7 @@ slug = 'data/opensearch/docs'
 
 # Base URL of RTD hosted project
 
-html_baseurl = f"https://canonical.com/data/opensearch/docs/{version}/"
+html_baseurl = os.environ.get("READTHEDOCS_CANONICAL_URL", "/")
 
 # URL scheme. Add language and version scheme elements.
 # When configured with RTD variables, check for RTD environment so manual runs succeed:
