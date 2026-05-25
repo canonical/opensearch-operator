@@ -70,7 +70,7 @@ copyright = "%s CC-BY-SA, %s" % (datetime.date.today().year, author)
 # NOTE: The Open Graph Protocol (OGP) enhances page display in a social graph
 #       and is used by social media platforms; see https://ogp.me/
 
-ogp_site_url = "https://canonical-charmed-spark.readthedocs-hosted.com/"
+ogp_site_url = f"https://canonical.com/data/opensearch/docs/{version}/"
 
 
 # Preview name of the documentation website
@@ -169,7 +169,7 @@ html_context = {
 # TODO: If your documentation is hosted on https://docs.ubuntu.com/,
 #       uncomment and update as needed.
 
-# slug = 'charmed-opensearch'
+slug = 'data/opensearch/docs'
 
 #######################
 # Sitemap configuration: https://sphinx-sitemap.readthedocs.io/
@@ -177,7 +177,7 @@ html_context = {
 
 # Base URL of RTD hosted project
 
-html_baseurl = 'https://canonical-starter-pack.readthedocs-hosted.com/'
+html_baseurl = f"https://canonical.com/data/opensearch/docs/{version}/"
 
 # URL scheme. Add language and version scheme elements.
 # When configured with RTD variables, check for RTD environment so manual runs succeed:
@@ -314,6 +314,7 @@ html_css_files = [
 
 html_js_files = [
     "bundle.js",
+    "overwritelinks.js",
 ]
 
 # Specifies a reST snippet to be appended to each .rst file
