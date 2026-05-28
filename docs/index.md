@@ -20,6 +20,8 @@ replication, password rotation, monitoring, and application integration.
 
 ## In this documentation
 
+Charmed OpenSearch documentation has the following topics:
+
 ### Get started
 
 Set up your environment, understand the requirements, and deploy your first Charmed OpenSearch cluster.
