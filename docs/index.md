@@ -28,7 +28,7 @@ Set up your environment, understand the requirements, and deploy your first Char
 
 | | |
 |---|---|
-| **Getting started** | [Requirements](reference-system-requirements) • [Tutorial: Introduction](tutorial-index) • [Step 1: Environment setup](tutorial-1-set-up-the-environment)   |
+| **Getting started** | [Requirements](reference-system-requirements) • [Tutorial: Introduction](tutorial-index) • [Step 1: Environment setup](tutorial-1-set-up-the-environment) |
 | **Deployment** | [Deploy with LXD](how-to-deploy-lxd) • [Large deployment](how-to-deploy-large) |
 
 ### Operate and maintain
