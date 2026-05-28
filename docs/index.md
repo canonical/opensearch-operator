@@ -20,7 +20,7 @@ replication, password rotation, monitoring, and application integration.
 
 ## In this documentation
 
-Charmed OpenSearch documentation has the following topics:
+Charmed OpenSearch documentation has the following topics.
 
 ### Get started
 
