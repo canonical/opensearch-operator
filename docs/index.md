@@ -24,29 +24,13 @@ Charmed OpenSearch documentation has the following topics.
 
 ### Get started
 
-Set up your environment, understand the requirements, and deploy your first Charmed OpenSearch cluster.
-
 | | |
 |---|---|
 | **Getting started** | [Requirements](reference-system-requirements) • [Tutorial: Introduction](tutorial-index) • [Step 1: Environment setup](tutorial-1-set-up-the-environment) |
 | **Deployment** | [Deploy with LXD](how-to-deploy-lxd) • [Large deployment](how-to-deploy-large) |
-
-### Operate and maintain
-
-Manage day-to-day cluster operations, keep it up to date, and ensure resilience through scaling, backups, and upgrades.
-
-| | |
-|---|---|
 | **Cluster management** | [Horizontal scaling](how-to-scale-horizontally) • [Applications integration](how-to-integrate-with-an-application) • [Version upgrades](how-to-minor-upgrade) • [Version rollback](how-to-minor-rollback) |
 | **Monitoring & performance** | [Monitoring](how-to-monitoring) • [SMTP notifications](how-to-guides-add-smtp-credentials) • [Performance optimization](how-to-optimize-cluster-performance) • [Load testing](how-to-perform-load-testing) • [OpenSearch Dashboards](dashboard-index) |
 | **Backups** | [Create a backup](how-to-create-a-backup) • [Azure configuration](how-to-back-up-configure-azure-storage) • [S3 configuration](how-to-back-up-configure-s3) • [Restore from a local backup](how-to-restore-a-local-backup) • [Migrate a cluster](how-to-migrate-a-cluster) • [Recover from attached storage](how-to-persistent-storage) |
-
-### Secure and extend
-
-Protect your cluster with encryption and authentication, and integrate additional tools.
-
-| | |
-|---|---|
 | **Security** | [Overview](explanation-security-index) • [Enable encryption](how-to-enable-tls-encryption) • [Rotate certificates](how-to-rotate-tls-ca-certificates) • [OAuth](how-to-access-using-oauth) • [JWT Auth](how-to-guides-enable-jwt-authentication) • [Cryptography](explanation-security-cryptography) |
 | **Internals** | [Alert rules](alert-rules) • [Monitoring overview](explanation-monitoring) • [Software testing](explanation-software-testing) • [Release notes](reference-release-notes-index) |
 
