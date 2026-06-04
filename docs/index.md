@@ -7,49 +7,41 @@ myst:
 (index)=
 # Charmed OpenSearch documentation
 
-Charmed OpenSearch is an open-source software operator that packages the
-[OpenSearch](http://opensearch.org/) search and data analytics suite with simplified deployment,
-operation, and management via the Juju CLI. It can be deployed on physical and virtual machines,
-as well as other cloud and cloud-like environments, including AWS, Azure, OpenStack and VMWare.
+Charmed OpenSearch is an open-source operator, packaged as a
+[Juju charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/),
+that simplifies the deployment, scaling, and management of
+[OpenSearch](http://opensearch.org/) clusters on physical hardware, VMs,
+and cloud environments including AWS, Azure, OpenStack, and VMware.
 
-Charmed OpenSearch has multiple operator features such as automated deployment, TLS encryption,
-user management, horizontal scaling, replication, password rotation, and easy integration
-with other applications.
-
-This charm is for anyone looking for a complete data analytics suite.
-You could be a team of system administrators maintaining large data infrastructures,
-a software developer who wants to connect their application with a powerful search engine,
-or even someone curious to learn more about Charmed OpenSearch through our guided tutorial.
-
-To see the Charmed OpenSearch features and releases, visit our
-[GitHub Releases page](https://github.com/canonical/opensearch-operator/releases).
-
-<!--
-The Charmed OpenSearch (VM Operator) release aligns with the [OpenSearch upstream major version naming](https://opensearch.org/docs/latest/version-history/). OpenSearch releases major versions such as 1.0, 2.0, and so on.
-
-A charm version combines both the application major version and / (slash) the channel, e.g. `2/stable`, `2/candidate`, `2/edge`. 
-The channels are ordered from the most stable to the least stable, candidate, and edge. More risky channels like edge are always implicitly available. 
-So, if the candidate is listed, you can pull the candidate and edge. When stable is listed, all three are available.
-
-The upper portion of this page describes the Operating System (OS) where the charm can run, e.g. 2/stable is compatible and should run on a machine with Ubuntu 22.04 OS.
--->
+The charm automates OpenSearch operations from
+[Day 0 to Day 2](https://codilime.com/blog/day-0-day-1-day-2-the-software-lifecycle-in-the-cloud-age/)
+with capabilities such as TLS encryption, user management, horizontal scaling,
+replication, password rotation, monitoring, and application integration.
 
 ## In this documentation
 
+Charmed OpenSearch documentation has the following topics.
+
+### Get started
+
 | | |
-|--|--|
-| **Tutorial** | [Introduction](tutorial-index) • [Step 1: Environment setup](tutorial-1-set-up-the-environment) |
-| **Deployment** | [Deploy with LXD](how-to-deploy-lxd) • [Large deployment](how-to-deploy-large) • [Requirements](reference-system-requirements) |
-| **Operations** | [Horizontal scaling](how-to-scale-horizontally) • [Performance optimization](how-to-optimize-cluster-performance) • [Applications integration](how-to-integrate-with-an-application) • [Version upgrades](how-to-minor-upgrade) • [Version rollback](how-to-minor-rollback) • [Monitoring](how-to-monitoring) • [Load testing](how-to-perform-load-testing) • [Software testing](explanation-software-testing) • [Charmed OpenSearch Dashboards](https://canonical-charmed-opensearch-dashboards.readthedocs-hosted.com)|
+|---|---|
+| **Getting started** | [Requirements](reference-system-requirements) • [Tutorial: Introduction](tutorial-index) • [Step 1: Environment setup](tutorial-1-set-up-the-environment) |
+| **Deployment** | [Deploy with LXD](how-to-deploy-lxd) • [Large deployment](how-to-deploy-large) |
+| **Cluster management** | [Horizontal scaling](how-to-scale-horizontally) • [Applications integration](how-to-integrate-with-an-application) • [Version upgrades](how-to-minor-upgrade) • [Version rollback](how-to-minor-rollback) |
+| **Monitoring & performance** | [Monitoring](how-to-monitoring) • [SMTP notifications](how-to-guides-add-smtp-credentials) • [Performance optimization](how-to-optimize-cluster-performance) • [Load testing](how-to-perform-load-testing) • [OpenSearch Dashboards](dashboard-index) |
 | **Backups** | [Create a backup](how-to-create-a-backup) • [Azure configuration](how-to-back-up-configure-azure-storage) • [S3 configuration](how-to-back-up-configure-s3) • [Restore from a local backup](how-to-restore-a-local-backup) • [Migrate a cluster](how-to-migrate-a-cluster) • [Recover from attached storage](how-to-persistent-storage) |
 | **Security** | [Overview](explanation-security-index) • [Enable encryption](how-to-enable-tls-encryption) • [Rotate certificates](how-to-rotate-tls-ca-certificates) • [OAuth](how-to-access-using-oauth) • [JWT Auth](how-to-guides-enable-jwt-authentication) • [Cryptography](explanation-security-cryptography) |
+| **Internals** | [Alert rules](alert-rules) • [Monitoring overview](explanation-monitoring) • [Software testing](explanation-software-testing) • [Release notes](reference-release-notes-index) |
 
 ## How the documentation is organized
 
-[Tutorial](tutorial-index): For new users needing to learn how to use Charmed OpenSearch <br>
-[How-to guides](how-to-index): For users needing step-by-step instructions to achieve a practical goal <br>
-[Reference](reference-index): For precise, theoretical, factual information to be used while working with the charm <br>
-[Explanation](explanation-index): For deeper understanding of key Charmed OpenSearch concepts <br>
+This documentation uses the [Diátaxis documentation structure](https://diataxis.fr/):
+
+- The [Tutorial](tutorial-index) walks you through deploying your first Charmed OpenSearch cluster from scratch, step by step.
+- [How-to guides](how-to-index) help you solve specific operational tasks such as enabling TLS, scaling, or integrating with other applications.
+- [Reference](reference-index) lets you look up system requirements, release notes, and configuration options.
+- [Explanation](explanation-index) helps you understand the design decisions behind security, monitoring, and software testing.
 
 ## Project & community
 
@@ -57,9 +49,10 @@ Charmed OpenSearch is an official distribution of OpenSearch.
 It’s an open-source project that welcomes community contributions, suggestions,
 fixes and constructive feedback:
 
-- Raise an issue or feature request in the [Github repository](https://github.com/canonical/opensearch-operator/issues).
+- Raise an issue or feature request in the [GitHub repository](https://github.com/canonical/opensearch-operator/issues).
 - Meet the community and chat with us in our [Matrix channel](https://matrix.to/#/#charmhub-data-platform:ubuntu.com) or [leave a comment](https://discourse.charmhub.io/t/charmed-opensearch-documentation/9729).
 - See the Charmed OpenSearch [contribution guidelines](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md) on GitHub and read the Ubuntu Community's [Code of Conduct](https://ubuntu.com/community/code-of-conduct).
+- Explore [Canonical's open-source data platform](https://canonical.com/data).
 
 ## License & trademark
 
@@ -72,9 +65,6 @@ They install and operate OpenSearch, which is also licensed under the
 OpenSearch is a registered trademark of Amazon Web Services.
 Other trademarks are property of their respective owners. Charmed OpenSearch is not sponsored,
 endorsed, or affiliated with Amazon Web Services.
-
-This documentation follows the
-[Diataxis framework](https://canonical.com/blog/diataxis-a-new-foundation-for-canonical-documentation).
 
 ```{toctree}
 :titlesonly:
