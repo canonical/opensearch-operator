@@ -1,5 +1,5 @@
  // Replace oldDomain with newDomain
- const oldDomain = 'canonical-charmed-opensearch.readthedocs-hosted.com/2';
+ const oldDomain = 'canonical-charmed-opensearch.readthedocs-hosted.com';
  const newDomain = 'canonical.com/data/opensearch/docs';
 
  // Use a MutationObserver to wait for the RTD flyout element to appear in the DOM
