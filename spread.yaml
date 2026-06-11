@@ -117,11 +117,9 @@ backends:
       multipass launch --cpus "${SPREAD_VM_CPUS:-8}" --disk "${SPREAD_VM_DISK:-50G}" \
         --memory "${SPREAD_VM_MEM:-16G}" --name "$instance_name" 24.04
 
-      # Pre-install snaps needed by the tutorial.
+      # Enable root SSH for Spread. Tutorial steps install the required snaps.
       multipass exec "$instance_name" -- sudo sh -c "
         set -e
-        snap install lxd --channel=latest/stable
-        snap install juju --channel=3.5/stable --classic
         echo root:\${SPREAD_PASSWORD} | chpasswd
         printf 'PasswordAuthentication yes\nPermitRootLogin yes\n' \
           > /etc/ssh/sshd_config.d/10-spread.conf
@@ -147,6 +145,8 @@ suites:
     summary: Tutorial end-to-end test
     systems:
       - ubuntu-24.04-64
+    variants:
+      - ubuntu24
     prepare: |
       export HOME=/root
       mkdir -p /root/.local/share/juju

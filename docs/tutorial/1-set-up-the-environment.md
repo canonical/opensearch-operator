@@ -26,18 +26,13 @@ The simplest way to get started with Charmed OpenSearch is to set up a local LXD
 
 Verify if your Ubuntu system already has LXD installed with the command `which lxd`. If there is no output, then install LXD with
 
-```bash
+```shell
 sudo snap install lxd
 ```
 
 After installation, `lxd init` is run to perform post-installation tasks. For this tutorial, the default parameters are preferred and the network bridge should be set to have no IPv6 addresses since Juju does not support IPv6 addresses with LXD:
 
-<!-- test:run
-lxd init --auto 2>/dev/null || true
-lxc network set lxdbr0 ipv6.address none 2>/dev/null || true
--->
-
-```bash
+```shell
 lxd init --auto
 lxc network set lxdbr0 ipv6.address none
 ```
@@ -57,8 +52,8 @@ LXD or Kubernetes. We will be using it to deploy and manage Charmed OpenSearch.
 
 As with LXD, Juju is installed using a snap package:
 
-```bash
-sudo snap install juju --channel 3.5/stable --classic
+```shell
+sudo snap install juju --channel 3/stable --classic
 ```
 
 Juju already has a built-in knowledge of LXD and how it works, so there is no additional setup
