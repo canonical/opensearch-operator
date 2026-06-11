@@ -44,6 +44,11 @@ OUTPUTS := $(foreach pair,$(SCRIPTS),$(word 1,$(subst :, ,$(pair))))
 rel = $(patsubst $(ROOT)/%,%,$(1))
 
 # ---------------------------------------------------------------------------
+# thisrel — convert an absolute path to a THIS_DIR-relative path
+# ---------------------------------------------------------------------------
+thisrel = $(patsubst $(THIS_DIR)%,%,$(1))
+
+# ---------------------------------------------------------------------------
 # Target: all  (default)
 # ---------------------------------------------------------------------------
 .PHONY: all
@@ -54,7 +59,7 @@ all: $(OUTPUTS)
 # ---------------------------------------------------------------------------
 define make_rule
 $(word 1,$(subst :, ,$(1))): $(word 2,$(subst :, ,$(1))) $(EXTRACT)
-	cd $(ROOT) && $(PYTHON) $(call rel,$(EXTRACT)) $(call rel,$(word 2,$(subst :, ,$(1)))) $(call rel,$(word 1,$(subst :, ,$(1))))
+	cd $(THIS_DIR) && $(PYTHON) extract_commands.py $(word 2,$(subst :, ,$(1))) $(call thisrel,$(word 1,$(subst :, ,$(1))))
 endef
 $(foreach pair,$(SCRIPTS),$(eval $(call make_rule,$(pair))))
 
@@ -63,34 +68,34 @@ $(foreach pair,$(SCRIPTS),$(eval $(call make_rule,$(pair))))
 # ---------------------------------------------------------------------------
 .PHONY: extract
 extract:
-	cd $(ROOT) && $(PYTHON) $(call rel,$(EXTRACT)) docs/tutorial/ tests/tutorial/
+	cd $(THIS_DIR) && $(PYTHON) extract_commands.py $(ROOT)/docs/tutorial/ ./
 
 # ---------------------------------------------------------------------------
 # Spread configuration
 # ---------------------------------------------------------------------------
 SPREAD     ?= spread
-SPREAD_JOB ?= multipass:ubuntu-24.04-64:tests/tutorial/
+SPREAD_JOB ?= multipass:ubuntu-24.04-64:./
 
 # ---------------------------------------------------------------------------
 # Target: test  (abort on first failure)
 # ---------------------------------------------------------------------------
 .PHONY: test
 test: extract
-	$(SPREAD) -abend -vv $(SPREAD_JOB)
+	cd $(THIS_DIR) && $(SPREAD) -abend -vv $(SPREAD_JOB)
 
 # ---------------------------------------------------------------------------
 # Target: test-continue  (run all stages even if some fail)
 # ---------------------------------------------------------------------------
 .PHONY: test-continue
 test-continue: extract
-	$(SPREAD) -vv $(SPREAD_JOB)
+	cd $(THIS_DIR) && $(SPREAD) -vv $(SPREAD_JOB)
 
 # ---------------------------------------------------------------------------
 # Target: test-debug  (abort + interactive shell on failure)
 # ---------------------------------------------------------------------------
 .PHONY: test-debug
 test-debug: extract
-	$(SPREAD) -abend -vv -debug $(SPREAD_JOB)
+	cd $(THIS_DIR) && $(SPREAD) -abend -vv -debug $(SPREAD_JOB)
 
 # ---------------------------------------------------------------------------
 # Target: help
