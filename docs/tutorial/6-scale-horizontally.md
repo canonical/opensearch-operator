@@ -151,7 +151,11 @@ Before we scale down the nodes we no longer need, list all the units with `juju 
 Here you will see four units / nodes: `opensearch/0`, `opensearch/1`, `opensearch/2`, `opensearch/3`.
 To remove the unit `opensearch/3` run:
 
-```shell
+<!-- test:run
+juju remove-unit opensearch/3 --no-prompt
+-->
+
+```bash
 juju remove-unit opensearch/3
 ```
 
