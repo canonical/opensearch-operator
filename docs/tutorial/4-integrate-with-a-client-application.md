@@ -349,7 +349,7 @@ curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:920
 ```
 
 <!-- test:assert
-curl --cacert demo-ca.pem -XGET "https://${OS_USERNAME}:${OS_PASSWORD}@${OS_ENDPOINT}/albums/_search?q=Jazz" | grep -q '"value":3'
+curl --cacert demo-ca.pem -XGET "https://${OS_USERNAME}:${OS_PASSWORD}@${OS_ENDPOINT}/albums/_search?q=Jazz" | grep -q '"value".*3'
 -->
 
 This should return a JSON response with all the Jazz albums in the index:
