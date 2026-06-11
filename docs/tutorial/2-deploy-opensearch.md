@@ -26,6 +26,17 @@ juju deploy opensearch -n 3
 
 <!-- test:await-idle --timeout 1200 --allow-blocked opensearch -->
 
+<!-- test:assert
+juju status --format=json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+units = data['applications']['opensearch']['units']
+assert len(units) == 3, f'Expected 3 units, got {len(units)}'
+for u in units.values():
+    assert u['workload-status']['current'] == 'blocked', f'Expected blocked, got {u[\"workload-status\"][\"current\"]}'
+"
+-->
+
 ```{note}
 The `-n` flag is optional and specifies the number of units to deploy.
 In this case, we are deploying three units of Charmed OpenSearch.

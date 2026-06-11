@@ -64,6 +64,15 @@ juju add-unit opensearch -n 1
 
 <!-- test:await-idle --timeout 1200 -->
 
+<!-- test:assert
+juju status --format=json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+units = data['applications']['opensearch']['units']
+assert len(units) == 4, f'Expected 4 units after scale-up, got {len(units)}'
+"
+-->
+
 Where `-n 1` specifies the number of units to add.
 In this case, we are adding one unit to the OpenSearch application.
 You can add more units by changing the number after `-n`.
@@ -160,6 +169,15 @@ juju remove-unit opensearch/3
 ```
 
 <!-- test:await-idle --timeout 600 -->
+
+<!-- test:assert
+juju status --format=json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+units = data['applications']['opensearch']['units']
+assert len(units) == 3, f'Expected 3 units after scale-down, got {len(units)}'
+"
+-->
 
 You'll know that the node was successfully removed when `juju status --watch 1s` reports:
 

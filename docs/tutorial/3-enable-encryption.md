@@ -84,6 +84,17 @@ juju integrate self-signed-certificates opensearch
 
 <!-- test:await-idle --timeout 1200 -->
 
+<!-- test:assert
+juju status --format=json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+units = data['applications']['opensearch']['units']
+assert len(units) == 3, f'Expected 3 units, got {len(units)}'
+for u in units.values():
+    assert u['workload-status']['current'] == 'active', f'Expected active, got {u[\"workload-status\"][\"current\"]}'
+"
+-->
+
 The OpenSearch service will start. This might take some time.
 Once done, you can see the new integrations with `juju status --relations`.
 
