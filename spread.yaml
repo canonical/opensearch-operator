@@ -120,7 +120,7 @@ backends:
       # Enable root SSH for Spread. Tutorial steps install the required snaps.
       multipass exec "$instance_name" -- sudo sh -c "
         set -e
-        echo root:\${SPREAD_PASSWORD} | chpasswd
+        echo root:${SPREAD_PASSWORD} | chpasswd
         printf 'PasswordAuthentication yes\nPermitRootLogin yes\n' \
           > /etc/ssh/sshd_config.d/10-spread.conf
         systemctl restart ssh
