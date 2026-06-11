@@ -4,6 +4,11 @@ myst:
     description: "Enable TLS encryption in Charmed OpenSearch by integrating with the Self Signed Certificates charm for secure data transmission."
 ---
 
+<!-- test:spread
+priority: 500
+kill-timeout: 60m
+-->
+
 (tutorial-3-enable-encryption)=
 # 3. Enable encryption
 
@@ -40,9 +45,11 @@ Before enabling TLS on Charmed OpenSearch we must first deploy the `self-signed-
 juju deploy self-signed-certificates --config ca-common-name="Tutorial CA"
 ```
 
+<!-- test:await-idle --timeout 600 --allow-blocked opensearch -->
+
 Wait until `self-signed-certificates` is active. Use `juju status --watch 1s` to monitor the progress.
 
-```shell
+```text
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:39:22Z
 
@@ -75,10 +82,12 @@ To integrate `self-signed-certificates` with `opensearch`, run the following com
 juju integrate self-signed-certificates opensearch
 ```
 
+<!-- test:await-idle --timeout 1200 -->
+
 The OpenSearch service will start. This might take some time.
 Once done, you can see the new integrations with `juju status --relations`.
 
-```shell
+```text
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:41:22Z
 

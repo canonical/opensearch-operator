@@ -4,6 +4,11 @@ myst:
     description: "Remove your Charmed OpenSearch deployment and clean up Juju resources to free up system resources after completing the tutorial."
 ---
 
+<!-- test:spread
+priority: 100
+kill-timeout: 30m
+-->
+
 (tutorial-7-clean-up-the-environment)=
 # 7. Clean up the environment
 

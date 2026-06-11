@@ -4,6 +4,11 @@ myst:
     description: "Deploy a three-unit Charmed OpenSearch cluster with Juju using performance profiles for optimal resource usage."
 ---
 
+<!-- test:spread
+priority: 600
+kill-timeout: 60m
+-->
+
 (tutorial-2-deploy-opensearch)=
 # 2. Deploy OpenSearch
 
@@ -19,6 +24,8 @@ To deploy Charmed OpenSearch, run the following command:
 juju deploy opensearch -n 3
 ```
 
+<!-- test:await-idle --timeout 1200 --allow-blocked opensearch -->
+
 ```{note}
 The `-n` flag is optional and specifies the number of units to deploy.
 In this case, we are deploying three units of Charmed OpenSearch.
@@ -31,7 +38,7 @@ This process can take several minutes depending on your machine.
 
 You can track the progress by running:
 
-```shell
+```bash
 juju status --watch 1s
 ```
 
@@ -44,7 +51,7 @@ The output of this command updates once every other second.
 
 When the application is ready, `juju status` will show something similar to the sample output below:
 
-```shell
+```text
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:36:56Z
 
@@ -70,7 +77,7 @@ for the HTTP and Transport layers. We will do this in the next step.
 
 If you see the following status message:
 
-```shell
+```text
 vm.swappiness should be 0 - net.ipv4.tcp_retries2 should be 5
 ```
 

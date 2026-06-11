@@ -107,9 +107,49 @@ backends:
       - self-hosted-linux-amd64-noble-xlarge:
           username: ubuntu
 
+  multipass:
+    type: adhoc
+    allocate: |
+      instance_name="opensearch-tutorial-vm"
+      multipass delete --purge "$instance_name" 2>/dev/null || true
+
+      # VM resources — override with env vars if needed.
+      multipass launch --cpus "${SPREAD_VM_CPUS:-8}" --disk "${SPREAD_VM_DISK:-50G}" \
+        --memory "${SPREAD_VM_MEM:-16G}" --name "$instance_name" 24.04
+
+      # Pre-install snaps needed by the tutorial.
+      multipass exec "$instance_name" -- sudo sh -c "
+        set -e
+        snap install lxd --channel=latest/stable
+        snap install juju --channel=3.5/stable --classic
+        echo root:\${SPREAD_PASSWORD} | chpasswd
+        printf 'PasswordAuthentication yes\nPermitRootLogin yes\n' \
+          > /etc/ssh/sshd_config.d/10-spread.conf
+        systemctl restart ssh
+      "
+
+      ip=$(multipass info --format csv "$instance_name" | tail -1 | cut -d, -f3)
+      ADDRESS "$ip"
+
+    discard: |
+      instance_name="opensearch-tutorial-vm"
+      multipass delete --purge "$instance_name"
+
+    systems:
+      - ubuntu-24.04-64:
+          workers: 1
+
 suites:
   tests/spread/:
     summary: General test suite
+
+  tests/tutorial/:
+    summary: Tutorial end-to-end test
+    systems:
+      - ubuntu-24.04-64
+    prepare: |
+      export HOME=/root
+      mkdir -p /root/.local/share/juju
 
 path: /root/spread_project
 

@@ -4,6 +4,11 @@ myst:
     description: "Connect client applications to Charmed OpenSearch using the Data Integrator charm to manage users, credentials, and access permissions."
 ---
 
+<!-- test:spread
+priority: 400
+kill-timeout: 60m
+-->
+
 (tutorial-4-integrate-with-a-client-application)=
 # 4. Integrate with a client application
 
@@ -31,15 +36,17 @@ Deploy Data Integrator as follows:
 juju deploy data-integrator --channel=stable --config index-name=test-index --config extra-user-roles=admin
 ```
 
+<!-- test:await-idle --timeout 600 --allow-blocked data-integrator -->
+
 The expected output:
 
-```shell
+```text
 Deployed "data-integrator" from charm-hub charm "data-integrator", revision 79 in channel latest/stable on ubuntu@22.04/stable
 ```
 
 Wait for `juju status --watch 1s` to show:
 
-```shell
+```text
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:43:22Z
 
@@ -85,6 +92,8 @@ Integrate the two applications with:
 juju integrate data-integrator opensearch
 ```
 
+<!-- test:await-idle --timeout 600 -->
+
 Wait for `juju status --relations --watch 1s` to show that the `data-integrator` application is now active:
 
 ```bash
@@ -125,9 +134,20 @@ This relation created the user, password, and CA certificate for the `data-integ
 
 To retrieve information such as the username, password, and database. Run the following command:
 
-```shell
+```bash
 juju run data-integrator/leader get-credentials
 ```
+
+<!-- test:set-variables
+command: juju run data-integrator/leader get-credentials
+OS_PASSWORD: password
+OS_USERNAME: username
+-->
+
+<!-- test:run
+OS_ENDPOINT=$(echo "$_CMD_OUTPUT" | grep 'endpoints:' | awk '{print $2}' | cut -d, -f1)
+echo "$_CMD_OUTPUT" | sed -n '/tls-ca:/,/username:/{ /tls-ca:/d; /username:/d; p }' | sed 's/^    //' > demo-ca.pem
+-->
 
 This should output something like:
 
@@ -167,9 +187,13 @@ Get the IP of an OpenSearch node from the output of `juju status`
 (any of the nodes should work fine), and store the CA certificate in a local file
 (e.g. `demo-ca.pem`). Then, run the following command to connect to the OpenSearch cluster:
 
-```shell
+```bash
 curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/
 ```
+
+<!-- test:assert
+curl --cacert demo-ca.pem -XGET "https://${OS_USERNAME}:${OS_PASSWORD}@${OS_ENDPOINT}/" | grep -q "cluster_name"
+-->
 
 Sending a `GET` request to this `/` endpoint should return some basic information about your
 OpenSearch deployment, which should look something like this:
@@ -207,12 +231,19 @@ and the user credentials (username/password pair) to authenticate communications
 
 To index some data, run the following command:
 
-```shell
+```bash
 curl --cacert demo-ca.pem \
   -XPOST https://username:password@opensearch_node_ip:9200/albums/_doc/1?refresh=true \
   -d '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}' \
   -H 'Content-Type: application/json' -H 'Accept: application/json'
 ```
+
+<!-- test:run
+curl --cacert demo-ca.pem \
+  -XPOST "https://${OS_USERNAME}:${OS_PASSWORD}@${OS_ENDPOINT}/albums/_doc/1?refresh=true" \
+  -d '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}' \
+  -H 'Content-Type: application/json' -H 'Accept: application/json'
+-->
 
 This command uses the same certificate and user credentials to send a `POST` request
 to the same node as before, but it sends a specific JSON payload to a specific document address.
@@ -235,9 +266,13 @@ Note from the response that our request was successful and the document was inde
 
 Use the following command to retrieve the previous document:
 
-```shell
+```bash
 curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/albums/_doc/1
 ```
+
+<!-- test:assert
+curl --cacert demo-ca.pem -XGET "https://${OS_USERNAME}:${OS_PASSWORD}@${OS_ENDPOINT}/albums/_doc/1" | grep -q '"found":true'
+-->
 
 This call should output something like the following:
 
@@ -274,9 +309,22 @@ ensuring that you keep the newline at the end of the file:
 
 Then, to send this data to the bulk endpoint, run the following command:
 
-```shell
+```bash
 curl --cacert demo-ca.pem -XPOST https://username:password@opensearch_node_ip:9200/_bulk --data-binary @bulk-albums.json  -H 'Content-Type: application/json'
 ```
+
+<!-- test:run
+cat > bulk-albums.json << 'EOF'
+{ "index" : { "_index": "albums", "_id" : "2" } }
+{"artist": "Herbie Hancock", "genre": ["Jazz"],  "title": "Head Hunters"}
+{ "index" : { "_index": "albums", "_id" : "3" } }
+{"artist": "Lydian Collective", "genre": ["Jazz"],  "title": "Adventure"}
+{ "index" : { "_index": "albums", "_id" : "4" } }
+{"artist": "Rush", "genre": ["Prog"],  "title": "Moving Pictures"}
+
+EOF
+curl --cacert demo-ca.pem -XPOST "https://${OS_USERNAME}:${OS_PASSWORD}@${OS_ENDPOINT}/_bulk" --data-binary @bulk-albums.json -H 'Content-Type: application/json'
+-->
 
 This should return a JSON response with the results of the bulk indexing operation:
 
@@ -296,9 +344,13 @@ The `items` field contains the results of each operation in the bulk request.
 To view the previously indexed documents, we can run a search query for the `Jazz` keyword
 in our `albums` index, using the following command:
 
-```shell
+```bash
 curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/albums/_search?q=Jazz
 ```
+
+<!-- test:assert
+curl --cacert demo-ca.pem -XGET "https://${OS_USERNAME}:${OS_PASSWORD}@${OS_ENDPOINT}/albums/_search?q=Jazz" | grep -q '"value":3'
+-->
 
 This should return a JSON response with all the Jazz albums in the index:
 
@@ -364,6 +416,8 @@ Run the following to remove the relation:
 juju remove-relation opensearch data-integrator
 ```
 
+<!-- test:await-idle --timeout 600 --allow-blocked data-integrator -->
+
 if you run `juju status --relations` you will see that the relation has been removed and that the
 `data-integrator` application is now in a `blocked` state.
 
@@ -400,13 +454,13 @@ self-signed-certificates:certificates  opensearch:certificates                tl
 
 Now try again to connect in the same way as the previous section
 
-```shell
+```bash
 curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/
 ```
 
 This should output something like the following error:
 
-```shell
+```text
 Unauthorized
 ```
 
@@ -418,9 +472,11 @@ juju integrate data-integrator opensearch
 juju run data-integrator/leader get-credentials
 ```
 
+<!-- test:await-idle --timeout 600 -->
+
 You can now connect to the database with this new username and password:
 
-```shell
+```bash
 curl --cacert demo-ca.pem -XGET https://new_username:new_password@opensearch_node_ip:9200/albums/_search?q=Jazz
 ```
 

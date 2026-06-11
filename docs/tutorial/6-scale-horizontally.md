@@ -4,6 +4,11 @@ myst:
     description: "Scale your Charmed OpenSearch cluster horizontally by adding or removing Juju units to handle growing data and traffic demands."
 ---
 
+<!-- test:spread
+priority: 200
+kill-timeout: 60m
+-->
+
 (tutorial-6-scale-horizontally)=
 # 6. Scale horizontally
 
@@ -17,7 +22,7 @@ juju status
 
 The output should look similar to the following:
 
-```shell
+```text
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  13:57:38Z
 
@@ -57,6 +62,8 @@ You can add two additional nodes to your deployed OpenSearch application with th
 juju add-unit opensearch -n 1
 ```
 
+<!-- test:await-idle --timeout 1200 -->
+
 Where `-n 1` specifies the number of units to add.
 In this case, we are adding one unit to the OpenSearch application.
 You can add more units by changing the number after `-n`.
@@ -65,7 +72,7 @@ You can now watch the new units join the cluster with: `juju status --watch 1s`.
 It usually takes a few minutes for the new nodes to be added to the cluster formation.
 You’ll know that all three nodes are ready when `juju status --watch 1s` reports:
 
-```shell
+```text
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  14:02:18Z
 
@@ -96,13 +103,13 @@ and that your replica shards are all assigned.
 But if you want to verify that your data is correctly replicated,
 you can also query the shards with the following command:
 
-```shell
+```bash
 curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/_cat/shards
 ```
 
 Which should result in the following output:
 
-```shell
+```text
 test-index                       0 r STARTED  0    208b 10.95.38.94  opensearch-0.0f3
 test-index                       0 p STARTED  0    208b 10.95.38.139 opensearch-1.0f3
 .plugins-ml-config               0 r STARTED  1   3.9kb 10.95.38.94  opensearch-0.0f3
@@ -148,9 +155,11 @@ To remove the unit `opensearch/3` run:
 juju remove-unit opensearch/3
 ```
 
-You’ll know that the node was successfully removed when `juju status --watch 1s` reports:
+<!-- test:await-idle --timeout 600 -->
 
-```shell
+You'll know that the node was successfully removed when `juju status --watch 1s` reports:
+
+```text
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  14:05:58Z
 
