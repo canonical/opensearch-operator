@@ -53,12 +53,12 @@ LXD or Kubernetes. We will be using it to deploy and manage Charmed OpenSearch.
 As with LXD, Juju is installed using a snap package:
 
 ```shell
-sudo snap install juju --channel 3/stable --classic
+sudo snap install juju --channel 3/stable
 ```
 
 Juju already has a built-in knowledge of LXD and how it works, so there is no additional setup
-or configuration needed, however,  because Juju 3.x is a
-[strictly confined snap](https://snapcraft.io/docs/classic-confinement), and is not allowed
+or configuration needed, however, because Juju 3.x is a
+[strictly confined snap](https://snapcraft.io/docs/strict-confinement), and is not allowed
 to create a `~/.local/share` directory, we need to create it manually.
 
 ```shell
@@ -76,7 +76,7 @@ The output will look as follows:
 ```text
 Clouds available on the client:
 Cloud      Regions  Default    Type  Credentials  Source    Description
-localhost  1        localhost  lxd   1            built-in  LXD Container Hypervisor
+localhost  1        localhost  lxd   0            built-in  LXD Container Hypervisor
 ```
 
 A controller will be used to deploy and control Charmed OpenSearch.
@@ -117,7 +117,7 @@ the command line. You should see the following:
 
 ```text
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  11:26:13Z
+tutorial  opensearch-demo  localhost/localhost  3.6.23   unsupported  11:26:13Z
 ```
 
 ## Set kernel parameters

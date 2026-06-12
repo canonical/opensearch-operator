@@ -41,33 +41,33 @@ juju deploy data-integrator --channel=stable --config index-name=test-index --co
 The expected output:
 
 ```text
-Deployed "data-integrator" from charm-hub charm "data-integrator", revision 79 in channel latest/stable on ubuntu@22.04/stable
+Deployed "data-integrator" from charm-hub charm "data-integrator", revision 362 in channel latest/stable on ubuntu@24.04/stable
 ```
 
 Wait for `juju status --watch 1s` to show:
 
 ```text
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:43:22Z
+tutorial  opensearch-demo  localhost/localhost  3.6.23   unsupported  12:43:22Z
 
 App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
-data-integrator                    blocked      1  data-integrator           latest/stable     79  no       Please relate the data-integrator with the desired product
-opensearch                         active       3  opensearch                2/stable         168  no
-self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
+data-integrator                    blocked      1  data-integrator           latest/stable  362  no       Please relate the data-integrator with the desired product
+opensearch                         active       3  opensearch                2/stable       344  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable       586  no       
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
 data-integrator/0*           blocked   idle   4        10.95.38.22               Please relate the data-integrator with the desired product
-opensearch/0*                active    idle   0        10.95.38.94     9200/tcp
-opensearch/1                 active    idle   1        10.95.38.139    9200/tcp
-opensearch/2                 active    idle   2        10.95.38.212    9200/tcp
-self-signed-certificates/0*  active    idle   3        10.95.38.54
+opensearch/0                 active    idle   0        10.95.38.94     9200/tcp  
+opensearch/1                 active    idle   1        10.95.38.139    9200/tcp  
+opensearch/2*                active    idle   2        10.95.38.212    9200/tcp  
+self-signed-certificates/0*  active    idle   3        10.95.38.54              
 
 Machine  State    Address       Inst id        Base          AZ  Message
-0        started  10.95.38.94   juju-be3883-0  ubuntu@22.04      Running
-1        started  10.95.38.139  juju-be3883-1  ubuntu@22.04      Running
-2        started  10.95.38.212  juju-be3883-2  ubuntu@22.04      Running
-3        started  10.95.38.54   juju-be3883-3  ubuntu@22.04      Running
-4        started  10.95.38.22   juju-be3883-4  ubuntu@22.04      Running
+0        started  10.95.38.94   juju-be3883-0  ubuntu@24.04      Running
+1        started  10.95.38.139  juju-be3883-1  ubuntu@24.04      Running
+2        started  10.95.38.212  juju-be3883-2  ubuntu@24.04      Running
+3        started  10.95.38.54   juju-be3883-3  ubuntu@24.04      Running
+4        started  10.95.38.22   juju-be3883-4  ubuntu@24.04      Running
 
 Integration provider                   Requirer                               Interface              Type     Message
 data-integrator:data-integrator-peers  data-integrator:data-integrator-peers  data-integrator-peers  peer
@@ -98,26 +98,26 @@ Wait for `juju status --relations --watch 1s` to show that the `data-integrator`
 
 ```bash
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:44:43Z
+tutorial  opensearch-demo  localhost/localhost  3.6.23   unsupported  12:44:43Z
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-data-integrator                    active      1  data-integrator           latest/stable     79  no
-opensearch                         active      3  opensearch                2/stable         168  no
-self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
+data-integrator                    active      1  data-integrator           latest/stable  362  no       
+opensearch                         active      3  opensearch                2/stable       344  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable       586  no       
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
-data-integrator/0*           active    idle   4        10.95.38.22
-opensearch/0*                active    idle   0        10.95.38.94     9200/tcp
-opensearch/1                 active    idle   1        10.95.38.139    9200/tcp
-opensearch/2                 active    idle   2        10.95.38.212    9200/tcp
-self-signed-certificates/0*  active    idle   3        10.95.38.54
+data-integrator/0*           active    idle   4        10.95.38.22              
+opensearch/0                 active    idle   0        10.95.38.94     9200/tcp  
+opensearch/1                 active    idle   1        10.95.38.139    9200/tcp  
+opensearch/2*                active    idle   2        10.95.38.212    9200/tcp  
+self-signed-certificates/0*  active    idle   3        10.95.38.54              
 
 Machine  State    Address       Inst id        Base          AZ  Message
-0        started  10.95.38.94   juju-be3883-0  ubuntu@22.04      Running
-1        started  10.95.38.139  juju-be3883-1  ubuntu@22.04      Running
-2        started  10.95.38.212  juju-be3883-2  ubuntu@22.04      Running
-3        started  10.95.38.54   juju-be3883-3  ubuntu@22.04      Running
-4        started  10.95.38.22   juju-be3883-4  ubuntu@22.04      Running
+0        started  10.95.38.94   juju-be3883-0  ubuntu@24.04      Running
+1        started  10.95.38.139  juju-be3883-1  ubuntu@24.04      Running
+2        started  10.95.38.212  juju-be3883-2  ubuntu@24.04      Running
+3        started  10.95.38.54   juju-be3883-3  ubuntu@24.04      Running
+4        started  10.95.38.22   juju-be3883-4  ubuntu@24.04      Running
 
 Integration provider                   Requirer                               Interface              Type     Message
 data-integrator:data-integrator-peers  data-integrator:data-integrator-peers  data-integrator-peers  peer
@@ -423,26 +423,26 @@ if you run `juju status --relations` you will see that the relation has been rem
 
 ```bash
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  13:48:08Z
+tutorial  opensearch-demo  localhost/localhost  3.6.23   unsupported  13:48:08Z
 
 App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
-data-integrator                    blocked      1  data-integrator           latest/stable     79  no       Please relate the data-integrator with the desired product
-opensearch                         active       3  opensearch                2/stable         168  no
-self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
+data-integrator                    blocked      1  data-integrator           latest/stable  362  no       Please relate the data-integrator with the desired product
+opensearch                         active       3  opensearch                2/stable       344  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable       586  no       
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
 data-integrator/0*           blocked   idle   4        10.95.38.22               Please relate the data-integrator with the desired product
-opensearch/0*                active    idle   0        10.95.38.94     9200/tcp
-opensearch/1                 active    idle   1        10.95.38.139    9200/tcp
-opensearch/2                 active    idle   2        10.95.38.212    9200/tcp
-self-signed-certificates/0*  active    idle   3        10.95.38.54
+opensearch/0                 active    idle   0        10.95.38.94     9200/tcp  
+opensearch/1                 active    idle   1        10.95.38.139    9200/tcp  
+opensearch/2*                active    idle   2        10.95.38.212    9200/tcp  
+self-signed-certificates/0*  active    idle   3        10.95.38.54              
 
 Machine  State    Address       Inst id        Base          AZ  Message
-0        started  10.95.38.94   juju-be3883-0  ubuntu@22.04      Running
-1        started  10.95.38.139  juju-be3883-1  ubuntu@22.04      Running
-2        started  10.95.38.212  juju-be3883-2  ubuntu@22.04      Running
-3        started  10.95.38.54   juju-be3883-3  ubuntu@22.04      Running
-4        started  10.95.38.22   juju-be3883-4  ubuntu@22.04      Running
+0        started  10.95.38.94   juju-be3883-0  ubuntu@24.04      Running
+1        started  10.95.38.139  juju-be3883-1  ubuntu@24.04      Running
+2        started  10.95.38.212  juju-be3883-2  ubuntu@24.04      Running
+3        started  10.95.38.54   juju-be3883-3  ubuntu@24.04      Running
+4        started  10.95.38.22   juju-be3883-4  ubuntu@24.04      Running
 
 Integration provider                   Requirer                               Interface              Type     Message
 data-integrator:data-integrator-peers  data-integrator:data-integrator-peers  data-integrator-peers  peer
