@@ -57,7 +57,7 @@ juju run opensearch/leader set-password
 ```
 
 <!-- test:assert
-juju run opensearch/leader set-password 2>&1 | grep -q 'admin-password'
+juju run opensearch/leader get-password 2>&1 | grep -q 'password'
 -->
 
 ```{note}
