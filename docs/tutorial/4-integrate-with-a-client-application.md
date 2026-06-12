@@ -185,10 +185,13 @@ Before connecting to OpenSearch, it is mandatory that you
 You can access the OpenSearch REST API in any way you prefer. In this tutorial, we will use `curl`.
 Get the IP of an OpenSearch node from the output of `juju status`
 (any of the nodes should work fine), and store the CA certificate in a local file
-(e.g. `demo-ca.pem`). Then, run the following command to connect to the OpenSearch cluster:
+(e.g. `demo-ca.pem`).
+
+Then, replacing `<username>`, `<password>`, and `<opensearch_node_ip>` with the values from
+the `get-credentials` output above, run the following command to connect to the OpenSearch cluster:
 
 ```bash
-curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/
+curl --cacert demo-ca.pem -XGET https://<username>:<password>@<opensearch_node_ip>:9200/
 ```
 
 <!-- test:assert
@@ -233,7 +236,7 @@ To index some data, run the following command:
 
 ```bash
 curl --cacert demo-ca.pem \
-  -XPOST https://username:password@opensearch_node_ip:9200/albums/_doc/1?refresh=true \
+  -XPOST https://<username>:<password>@<opensearch_node_ip>:9200/albums/_doc/1?refresh=true \
   -d '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}' \
   -H 'Content-Type: application/json' -H 'Accept: application/json'
 ```
@@ -267,7 +270,7 @@ Note from the response that our request was successful and the document was inde
 Use the following command to retrieve the previous document:
 
 ```bash
-curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/albums/_doc/1
+curl --cacert demo-ca.pem -XGET https://<username>:<password>@<opensearch_node_ip>:9200/albums/_doc/1
 ```
 
 <!-- test:assert
@@ -310,7 +313,7 @@ ensuring that you keep the newline at the end of the file:
 Then, to send this data to the bulk endpoint, run the following command:
 
 ```bash
-curl --cacert demo-ca.pem -XPOST https://username:password@opensearch_node_ip:9200/_bulk --data-binary @bulk-albums.json  -H 'Content-Type: application/json'
+curl --cacert demo-ca.pem -XPOST https://<username>:<password>@<opensearch_node_ip>:9200/_bulk --data-binary @bulk-albums.json  -H 'Content-Type: application/json'
 ```
 
 <!-- test:run
@@ -345,7 +348,7 @@ To view the previously indexed documents, we can run a search query for the `Jaz
 in our `albums` index, using the following command:
 
 ```bash
-curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/albums/_search?q=Jazz
+curl --cacert demo-ca.pem -XGET https://<username>:<password>@<opensearch_node_ip>:9200/albums/_search?q=Jazz
 ```
 
 <!-- test:assert
@@ -455,7 +458,7 @@ self-signed-certificates:certificates  opensearch:certificates                tl
 Now try again to connect in the same way as the previous section
 
 ```bash
-curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/
+curl --cacert demo-ca.pem -XGET https://<username>:<password>@<opensearch_node_ip>:9200/
 ```
 
 This should output something like the following error:

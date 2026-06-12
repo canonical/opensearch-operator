@@ -73,6 +73,8 @@ assert len(units) == 4, f'Expected 4 units after scale-up, got {len(units)}'
 "
 -->
 
+<!-- test:wait --seconds 60 -->
+
 Where `-n 1` specifies the number of units to add.
 In this case, we are adding one unit to the OpenSearch application.
 You can add more units by changing the number after `-n`.

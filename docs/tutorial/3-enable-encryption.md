@@ -42,7 +42,7 @@ for an overview of the TLS certificates charms available.
 Before enabling TLS on Charmed OpenSearch we must first deploy the `self-signed-certificates` charm:
 
 ```shell
-juju deploy self-signed-certificates --config ca-common-name="Tutorial CA"
+juju deploy self-signed-certificates --channel 1/stable --config ca-common-name="Tutorial CA"
 ```
 
 <!-- test:await-idle --timeout 600 --allow-blocked opensearch -->

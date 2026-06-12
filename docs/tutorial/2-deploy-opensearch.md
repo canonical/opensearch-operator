@@ -14,7 +14,7 @@ kill-timeout: 60m
 
 > [Charmed OpenSearch Tutorial](tutorial-index) >  2. Deploy OpenSearch
 
-Charmed OpenSearch supports performance profile.
+Charmed OpenSearch supports performance profiles.
 It is recommended in a single host deployment with LXD to use the `testing` profile,
 which will only consume 1G RAM per container.
 
