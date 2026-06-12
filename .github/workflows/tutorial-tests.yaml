@@ -1,0 +1,53 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: Tutorial tests
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  schedule:
+    - cron: '0 3 1 * *'  # 1st of every month at 03:00 UTC
+
+jobs:
+  tutorial-test:
+    name: Tutorial end-to-end
+    runs-on: [self-hosted, linux, AMD64, X64, xlarge, noble]
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Check KVM availability
+        run: |
+          if [[ ! -e /dev/kvm ]]; then
+            echo "::error::KVM is not available on this runner. Multipass requires KVM for VM creation."
+            exit 1
+          fi
+
+      - name: Install Multipass
+        run: |
+          if ! command -v multipass &>/dev/null; then
+            sudo snap install multipass
+          fi
+
+      - name: Install Go and Spread
+        run: |
+          if ! command -v go &>/dev/null; then
+            sudo snap install go --classic
+          fi
+          go install github.com/canonical/spread/cmd/spread@latest
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+
+      - name: Install tox
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pipx
+          pipx install tox
+
+      - name: Run tutorial tests
+        run: tox -e tutorial
+
+      - name: Cleanup Multipass VM
+        if: always()
+        run: |
+          multipass delete --purge opensearch-tutorial-vm 2>/dev/null || true
