@@ -453,17 +453,17 @@ def extract_heading(source: str) -> str:
     return ""
 
 
-def build_task_yaml(script_path: str, heading: str, meta: dict[str, str]) -> str:
+def build_task_yaml(heading: str, meta: dict[str, str]) -> str:
     """Generate a Spread task.yaml file."""
     priority = meta.get("priority", "0")
     kill_timeout = meta.get("kill-timeout", "30m")
-    summary = heading or script_path
+    summary = heading or "task"
     return (
         f'summary: "{summary}"\n'
         f"priority: {priority}\n"
         f"kill-timeout: {kill_timeout}\n"
         f"execute: |\n"
-        f'  bash "$SPREAD_PATH/{script_path}"\n'
+        f'  bash "$SPREAD_PATH/$SPREAD_TASK.sh"\n'
     )
 
 
@@ -490,7 +490,7 @@ def _process_pair(input_path: Path, output_path: Path) -> None:
         task_dir = output_path.with_suffix("")  # environment.sh → environment/
         task_yaml = task_dir / "task.yaml"
         task_yaml.parent.mkdir(parents=True, exist_ok=True)
-        task_content = build_task_yaml(str(output_path), heading, meta)
+        task_content = build_task_yaml(heading, meta)
         task_yaml.write_text(task_content, encoding="utf-8")
         print(f"Written task.yaml → {task_yaml}")
 
