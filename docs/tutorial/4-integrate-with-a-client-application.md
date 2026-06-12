@@ -472,10 +472,15 @@ and run the same action on `data-integrator` to get the new credentials:
 
 ```shell
 juju integrate data-integrator opensearch
-juju run data-integrator/leader get-credentials
 ```
 
 <!-- test:await-idle --timeout 600 -->
+
+Once the relation is active, retrieve the new credentials:
+
+```shell
+juju run data-integrator/leader get-credentials
+```
 
 You can now connect to the database with this new username and password:
 
