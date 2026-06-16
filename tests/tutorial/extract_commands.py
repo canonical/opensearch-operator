@@ -40,9 +40,7 @@ SKIP_MARKER = "<!-- test:skip -->"
 _SLEEP_PATTERN = re.compile(r"<!--\s*test:wait\s+--seconds\s+(\d+)\s*-->")
 _AWAIT_IDLE_PATTERN = re.compile(r"<!--\s*test:await-idle(.*?)-->")
 _RETRY_PATTERN = re.compile(r"<!--\s*test:retry\s+(.*?)-->")
-_RUN_WITH_TIMEOUT_PATTERN = re.compile(
-    r"<!--\s*test:run-with-timeout\s+--seconds\s+(\d+)\s*-->"
-)
+_RUN_WITH_TIMEOUT_PATTERN = re.compile(r"<!--\s*test:run-with-timeout\s+--seconds\s+(\d+)\s*-->")
 _SET_VARIABLES_START = re.compile(r"<!--\s*test:set-variables\s*$")
 _RUN_HIDDEN_START = re.compile(r"<!--\s*test:run\s*$")
 _ASSERT_START = re.compile(r"<!--\s*test:assert\s*$")
@@ -110,9 +108,7 @@ def _build_await_idle_command(args_str: str) -> str:
             timeout = int(tokens[i + 1])
             i += 2
         elif tokens[i] == "--allow-blocked" and i + 1 < len(tokens):
-            allow_blocked = [
-                a.strip() for a in tokens[i + 1].split(",") if a.strip()
-            ]
+            allow_blocked = [a.strip() for a in tokens[i + 1].split(",") if a.strip()]
             i += 2
         else:
             i += 1
@@ -160,8 +156,7 @@ def _parse_set_variables_block(
     substitutions: list[tuple[str, str]] = []
     for var_name, field_name in mappings:
         snippet_lines.append(
-            f"{var_name}=$(echo \"$_CMD_OUTPUT\" | grep '{field_name}:'"
-            f" | awk '{{print $2}}')"
+            f"{var_name}=$(echo \"$_CMD_OUTPUT\" | grep '{field_name}:'" f" | awk '{{print $2}}')"
         )
         substitutions.append((f"<{field_name}>", f"${{{var_name}}}"))
 
@@ -540,9 +535,7 @@ def main() -> None:
         source = input_path.read_text(encoding="utf-8")
         blocks = extract_shell_blocks(source)
         if not blocks:
-            print(
-                f"Warning: no shell blocks found in {input_path}", file=sys.stderr
-            )
+            print(f"Warning: no shell blocks found in {input_path}", file=sys.stderr)
         print(build_script(input_path, blocks), end="")
         return
 
