@@ -96,7 +96,6 @@ juju integrate data-integrator opensearch
 
 Wait for `juju status --relations --watch 1s` to show that the `data-integrator` application is now active:
 
-```bash
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.6.23   unsupported  12:44:43Z
 
@@ -424,7 +423,6 @@ juju remove-relation opensearch data-integrator
 if you run `juju status --relations` you will see that the relation has been removed and that the
 `data-integrator` application is now in a `blocked` state.
 
-```bash
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
 tutorial  opensearch-demo  localhost/localhost  3.6.23   unsupported  13:48:08Z
 
