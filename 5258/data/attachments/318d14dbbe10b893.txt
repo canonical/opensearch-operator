@@ -1,0 +1,79 @@
+[32mINFO    [0m integration.helpers:helpers.py:272 Calling: PUT -- https://10.113.94.243:9200/_plugins/_security/api/internalusers/my_user
+[32mINFO    [0m integration.helpers:helpers.py:272 Calling: GET -- https://10.113.94.243:9200/_plugins/_security/api/internalusers/my_user
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.24   unsupported  02:55:26Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      2  opensearch                            1  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/1*                active    idle   2        10.113.94.243   9200/tcp  
+opensearch/2                 active    idle   3        10.113.94.247   9200/tcp  
+self-signed-certificates/1*  active    idle   4        10.113.94.159             
+
+Machine  State    Address        Inst id        Base          AZ             Message
+2        started  10.113.94.243  juju-c18436-2  ubuntu@24.04  github-runner  Running
+3        started  10.113.94.247  juju-c18436-3  ubuntu@24.04  github-runner  Running
+4        started  10.113.94.159  juju-c18436-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+machine-0: 02:31:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:31:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:31:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:31:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 02:33:32 ERROR unit.opensearch/0.juju-log Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-0: 02:33:36 ERROR unit.opensearch/0.juju-log Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-0: 02:33:38 ERROR unit.opensearch/0.juju-log certificates:4: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-0: 02:33:39 ERROR unit.opensearch/0.juju-log certificates:4: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-0: 02:33:43 ERROR unit.opensearch/0.juju-log Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+machine-0: 02:39:34 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 02:40:55 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:40:55 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:40:55 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:40:55 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 02:43:30 ERROR unit.opensearch/1.juju-log Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:43:34 ERROR unit.opensearch/1.juju-log Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:43:36 ERROR unit.opensearch/1.juju-log opensearch-peers:7: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:43:39 ERROR unit.opensearch/1.juju-log node-lock-fallback:8: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:43:41 ERROR unit.opensearch/1.juju-log status-peers:6: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:43:43 ERROR unit.opensearch/1.juju-log opensearch-peers:7: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:43:45 ERROR unit.opensearch/1.juju-log upgrade-version-a:5: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:43:47 ERROR unit.opensearch/1.juju-log opensearch-peers:7: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:43:47 ERROR unit.opensearch/1.juju-log opensearch-peers:7: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.113.94.243:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:43:49 ERROR unit.opensearch/1.juju-log upgrade-version-a:5: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-2: 02:43:49 ERROR unit.opensearch/2.juju-log opensearch-peers:7: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.113.94.247:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:43:52 ERROR unit.opensearch/1.juju-log upgrade-version-a:5: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:43:54 ERROR unit.opensearch/1.juju-log node-lock-fallback:8: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:43:56 ERROR unit.opensearch/1.juju-log status-peers:6: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:43:59 ERROR unit.opensearch/1.juju-log Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:44:02 ERROR unit.opensearch/1.juju-log status-peers:6: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:44:04 ERROR unit.opensearch/1.juju-log status-peers:6: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:44:43 ERROR unit.opensearch/1.juju-log Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:44:48 ERROR unit.opensearch/1.juju-log certificates:9: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:44:52 ERROR unit.opensearch/1.juju-log opensearch-peers:7: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:44:54 ERROR unit.opensearch/1.juju-log status-peers:6: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:44:56 ERROR unit.opensearch/1.juju-log opensearch-peers:7: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:44:57 ERROR unit.opensearch/1.juju-log opensearch-peers:7: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.113.94.243:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:44:57 ERROR unit.opensearch/2.juju-log opensearch-peers:7: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.113.94.247:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:44:59 ERROR unit.opensearch/1.juju-log status-peers:6: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:45:02 ERROR unit.opensearch/1.juju-log Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:45:05 ERROR unit.opensearch/1.juju-log status-peers:6: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+machine-4: 02:45:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:45:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 02:45:43 ERROR unit.opensearch/1.juju-log certificates:9: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:45:45 ERROR unit.opensearch/1.juju-log certificates:9: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:45:48 ERROR unit.opensearch/1.juju-log certificates:9: Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:45:52 ERROR unit.opensearch/1.juju-log Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-1: 02:45:55 ERROR unit.opensearch/1.juju-log Failed to update relations roles mapping: Cannot update relations roles mapping as node is not active.
+unit-opensearch-2: 02:46:12 ERROR unit.opensearch/2.juju-log opensearch-peers:7: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.113.94.247:9200 and alternative_hosts: [] not reachable.'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
