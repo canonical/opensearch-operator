@@ -7,60 +7,57 @@ myst:
 (how-to-index)=
 # How-to guides
 
-The following guides cover key processes and common tasks for managing and using Charmed OpenSearch on machines.
+These guides help you accomplish specific tasks with Charmed OpenSearch on machines.
 
-## Deployment and setup
+## Deployment
 
 * [Deploy on LXD](how-to-deploy-lxd)
 * [Launch a large deployment](how-to-deploy-large)
 
-## TLS encryption
+## Security
 
-* [Enable TLS encryption](how-to-enable-tls-encryption)
-* [Rotate TLS/CA certificates](how-to-rotate-tls-ca-certificates)
+* [Manage TLS encryption](how-to-enable-tls-encryption)
+* [Access OpenSearch using OAuth](how-to-access-using-oauth)
+* [Enable JWT authentication](how-to-guides-enable-jwt-authentication)
 
-## Usage and maintenance
+## Operations
 
-* [Scale horizontally](how-to-scale-horizontally)
+* [Scale down safely](how-to-scale-horizontally)
 * [Integrate with an application](how-to-integrate-with-an-application)
-* [Perform load testing](how-to-perform-load-testing)
-* [Optimize Cluster Performance with Profiles](how-to-optimize-cluster-performance)
 * [Manage persistent storage](how-to-persistent-storage)
-* [Access using OAuth](how-to-access-using-oauth)
+* [Optimize cluster performance](how-to-optimize-cluster-performance)
+* [Enable email notifications](how-to-guides-add-smtp-credentials)
 
 ## Backup and restore
 
-* [Configure Azure Storage](how-to-back-up-configure-azure-storage)
-* [Configure S3](how-to-back-up-configure-s3)
-* [Create a backup](how-to-create-a-backup)
-* [Restore a local backup](how-to-restore-a-local-backup)
-* [Migrate a cluster](how-to-migrate-a-cluster)
+* [Configure S3 storage](how-to-back-up-configure-s3)
+* [Configure Azure storage](how-to-back-up-configure-azure-storage)
+* [Create and restore backups](how-to-create-a-backup)
 
-## Minor upgrades
+## Upgrades
 
-* [Perform a minor upgrade](how-to-minor-upgrade)
-* [Perform a minor rollback](how-to-minor-rollback)
-* [Recovering from a rollback](how-to-recover-rollback)
+* [Upgrade, rollback, and recover](how-to-minor-upgrade)
 
-## Monitoring (COS)
+## Monitoring
 
-* [Monitoring (COS)](how-to-monitoring)
+* [Enable monitoring (COS)](how-to-monitoring)
+* [Perform load testing](how-to-perform-load-testing)
 
 ```{toctree}
 :titlesonly:
 :hidden:
 
 Deploy <deploy/index>
-TLS encryption <tls-encryption>
-Integrate with an application <integrate-with-an-application>
-Scale horizontally <scale-horizontally>
-Back up and restore <back-up-and-restore/index>
-Manage persistent storage <persistent-storage>
-Upgrade <upgrade>
-Enable monitoring <monitoring>
-Enable email notifications <add-smtp-credentials>
+Manage TLS encryption <tls-encryption>
 Access using OAuth <access-using-oauth>
 Enable JWT authentication <enable-jwt-authentication>
+Scale down safely <scale-horizontally>
+Integrate with an application <integrate-with-an-application>
+Manage persistent storage <persistent-storage>
 Optimize cluster performance <optimize-cluster-performance>
+Enable email notifications <add-smtp-credentials>
+Back up and restore <back-up-and-restore/index>
+Upgrade <upgrade>
+Enable monitoring <monitoring>
 Perform load testing <perform-load-testing>
 ```

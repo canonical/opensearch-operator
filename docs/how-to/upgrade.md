@@ -5,10 +5,10 @@ myst:
 ---
 
 (how-to-guides-upgrade-index)=
-# How to upgrade revision
+# How to upgrade, rollback, and recover
 
-This guide shows how to perform a minor upgrade of a Charmed OpenSearch deployment and, if needed,
-how to roll back to the previous revision.
+This guide shows how to perform a minor revision upgrade of a Charmed OpenSearch deployment,
+roll back if needed, and recover from a failed rollback.
 
 (how-to-minor-upgrade)=
 ## Perform a minor upgrade
@@ -321,7 +321,7 @@ Check the cluster is healthy. OpenSearch's upstream documentation
 [suggests the following check](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/):
 
 ```shell
-GET "/_cluster/health?pretty"
+curl --cacert cert.pem -k -XGET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
 ```
 
 The response should look similar to the following example:
@@ -432,7 +432,7 @@ When deploying from a local charm file, you must have the previous revision's `.
 Then, run:
 
 ```shell
-juju refresh opensearch --path=<path_to_charm_file>
+juju refresh opensearch --path=<path-to-charm-file>
 ```
 
 After the refresh command, the Juju controller revision for the application will be
@@ -522,7 +522,7 @@ OpenSearch's upstream documentation
 [suggests the following check](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/):
 
 ```shell
-GET "/_cluster/health?pretty"
+curl --cacert cert.pem -k -XGET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
 ```
 
 The response should look similar to the following example:

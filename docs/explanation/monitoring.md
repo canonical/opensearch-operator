@@ -46,3 +46,23 @@ To ensure you are referencing the latest default alert rules, check the source f
 All the logs from the OpenSearch payload are available in the Grafana GUI at `Home > Explore`
 
 To get OpenSearch logs, go to the `Label filters` field and set to `juju_application = opensearch`, select one operation, e.g. `Line contains` and run the query.
+
+## Grafana dashboard
+
+The **Charmed OpenSearch** Grafana dashboard provides an at-a-glance view of cluster health,
+node resource utilization, and indexing throughput. The dashboard includes panels for CPU,
+memory, disk I/O, JVM heap, shard counts, and document indexing rates.
+
+You can filter the displayed data using the selectors at the top of the dashboard:
+
+* **Application name** — the Juju application (e.g. `opensearch` or `opensearch-main`)
+* **Unit** — an individual Juju unit within the application
+* **Model** — the Juju model the cluster is deployed in
+* **Cluster** — the OpenSearch cluster name (useful when multiple clusters share a COS instance)
+* **Node roles** — filter by OpenSearch node role (e.g. `cluster_manager`, `data`)
+
+![Charmed OpenSearch Grafana dashboard — overview panel](../how-to/img/dash1.png)
+
+![Charmed OpenSearch Grafana dashboard — node detail panel](../how-to/img/dash2.png)
+
+![COS integration topology showing OpenSearch, Grafana Agent, and COS components](../how-to/img/cos-1.png)

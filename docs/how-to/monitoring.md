@@ -5,76 +5,49 @@ myst:
 ---
 
 (how-to-monitoring)=
-# Enable monitoring
+# How to enable monitoring (COS)
 
-This guide shows how to enable monitoring using Canonical Observability Stack (COS).
+This guide shows how to integrate Charmed OpenSearch with the
+Canonical Observability Stack (COS) for metrics, dashboards, alerts, and logs.
 
-The OpenSearch charm uses COS to connect to Grafana and Prometheus to use monitoring,
-alert rules, and log features.
+For background on monitoring features, see the [Monitoring explanation](explanation-monitoring).
 
-```{note}
-For exploring and visualizing your indexed data, deploy
-[Charmed OpenSearch Dashboards](https://canonical-charmed-opensearch-dashboards.readthedocs-hosted.com/).
-While COS monitors infrastructure health, OpenSearch Dashboards provides tools for data exploration
-and custom visualizations.
-```
+## Prerequisites
 
-For explanation of monitoring features, see the [Monitoring](explanation-monitoring)
-explanation page.
-
-Prerequisites:
-
-* A deployed [Charmed OpenSearch operator](tutorial-2-deploy-opensearch)
+* A deployed [Charmed OpenSearch cluster](tutorial-2-deploy-opensearch)
 * A deployed [`cos-lite` bundle in a Kubernetes environment](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s)
 
-## Offer interfaces via the COS controller
+## Offer COS interfaces
 
-First, switch to the COS K8s environment and offer COS interfaces to be cross-model
-integrated with the Charmed OpenSearch model.
-
-To switch to the Kubernetes controller for the COS model:
+Switch to the COS K8s controller and offer the required interfaces:
 
 ```shell
-juju switch <k8s_cos_controller>:<cos_model_name>
-```
-
-To offer the COS interfaces:
-
-```shell
+juju switch <k8s-controller>:<cos-model>
 juju offer grafana:grafana-dashboard
 juju offer loki:logging
 juju offer prometheus:receive-remote-write
 ```
 
-## Consume offers via the OpenSearch model
+## Consume offers from the OpenSearch model
 
-Next, switch to the Charmed OpenSearch model, find offers, and consume them.
-
-We are currently on the Kubernetes controller for the COS model.
-To switch to the OpenSearch model:
+Switch to the OpenSearch model and consume the COS offers:
 
 ```shell
-juju switch <db_controller>:<opensearch_model_name>
+juju switch <opensearch-controller>:<opensearch-model>
+juju consume <k8s-controller>:admin/cos.grafana
+juju consume <k8s-controller>:admin/cos.loki
+juju consume <k8s-controller>:admin/cos.prometheus
 ```
 
-To consume offers to be reachable in the current model:
+## Deploy and integrate Grafana Agent
 
-```shell
-juju consume <k8s_cos_controller>:admin/cos.grafana
-juju consume <k8s_cos_controller>:admin/cos.loki
-juju consume <k8s_cos_controller>:admin/cos.prometheus
-```
-
-## Deploy and integrate Grafana
-
-First, deploy [grafana-agent](https://charmhub.io/grafana-agent):
+Deploy `grafana-agent` in the OpenSearch model:
 
 ```shell
 juju deploy grafana-agent
 ```
 
-Then, integrate (previously known as "[relate](https://documentation.ubuntu.com/juju/3.6/reference/relation/)")
-it with Charmed OpenSearch:
+Integrate it with the consumed COS offers:
 
 ```shell
 juju integrate grafana-agent grafana
@@ -82,7 +55,7 @@ juju integrate grafana-agent loki
 juju integrate grafana-agent prometheus
 ```
 
-Finally, integrate `grafana-agent` with consumed COS offers:
+Integrate it with OpenSearch:
 
 ```shell
 juju integrate grafana-agent opensearch:grafana-dashboard
@@ -90,65 +63,35 @@ juju integrate grafana-agent opensearch:logging
 juju integrate grafana-agent opensearch:cos-agent
 ```
 
-After this is complete, Grafana will show the new dashboard `Charmed OpenSearch`
-and will allow access to Charmed OpenSearch logs on Loki.
+After integration, Grafana will display the **Charmed OpenSearch** dashboard
+and Loki will receive OpenSearch logs.
 
-### Extend to Large Deployments
+### Large deployments
 
-Large deployments run across multiple Juju applications.
-Connect all the units of each application to grafana-agent, as explained above,
-and the dashboard will be able to summarize the entire cluster.
+For multi-application clusters, integrate `grafana-agent` with each OpenSearch application.
+The dashboard aggregates data from all connected units.
 
-### Connect Multiple Clusters
+### Multiple clusters
 
-It is possible to have the same COS and dashboard for multiple deployments.
-The dashboard provides selectors to filter which cluster to watch at the time.
+Multiple deployments can share the same COS instance.
+The dashboard provides selectors to filter by cluster.
 
-## Connect to the Grafana web interface
+## Access the Grafana web interface
 
-To connect to the Grafana web interface, follow the
-[Browse dashboards](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s#heading--browse-dashboards)
-section of the MicroK8s "Getting started" guide:
+Retrieve the Grafana admin password:
 
 ```shell
-juju run grafana/leader get-admin-password --model <k8s_cos_controller>:<cos_model_name>
+juju run grafana/leader get-admin-password --model <k8s-controller>:<cos-model>
 ```
 
-### Dashboard details
+For detailed instructions, see
+[Browse dashboards](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s#heading--browse-dashboards)
+in the COS tutorial.
 
-After accessing Grafana web interface, select the “Charmed OpenSearch” dashboard.
+In Grafana, select the **Charmed OpenSearch** dashboard. You can filter by
+application name, unit, model, cluster, and node roles.
 
-The dashboard filters for Juju-specific elements, e.g. application name, unit, model;
-and also OpenSearch’s cluster and roles.
-The cluster dropdown lets you choose which cluster’s statistics to display.
-You can also filter the view by selecting specific node roles, including nodes that span different models or applications.
-
-![Charmed-Opensearch Dashboard 1|690x342](img/dash1.png)
-
-![Charmed-Opensearch Dashboard 2|690x324](img/dash2.png)
-
-![Charmed-Opensearch Dashboard 3|690x336](img/cos-1.png)
-
-## OpenSearch Dashboards for data visualization and exploration
-
-While COS and Grafana provide excellent infrastructure monitoring, metrics, and alerting capabilities focused on the health of your OpenSearch cluster, OpenSearch Dashboards is designed for exploring and visualizing the actual data stored in your indices.
-
-**OpenSearch Dashboards provides:**
-
-* **Interactive data exploration** - Query and filter your indexed data with an intuitive interface
-* **Custom visualizations** - Create charts, graphs, maps, and other visual representations of your data
-* **Dashboard builder** - Combine multiple visualizations into comprehensive, interactive dashboards
-* **Index management** - View, create, and manage your indices and index patterns
-* **{spellexception}`Dev` Tools** - Run queries and explore your data using the integrated console
-* **Advanced features** - Access OpenSearch-specific capabilities like anomaly detection, alerting, and more
-
-**Grafana vs. OpenSearch Dashboards:**
-
-* **Grafana** (via COS) - Best for monitoring cluster health, performance metrics, resource usage, and operational alerts
-* **OpenSearch Dashboards** - Best for exploring your business/application data, creating custom analytics, and building user-facing dashboards
-
-For most production deployments, you'll want both: COS/Grafana for operational monitoring and OpenSearch Dashboards for data analytics and visualization.
-
-To get started with OpenSearch Dashboards, see the [Charmed OpenSearch Dashboards documentation](https://canonical-charmed-opensearch-dashboards.readthedocs-hosted.com/).
-
-
+```{note}
+For exploring and visualising your indexed data (as opposed to cluster health metrics),
+deploy [Charmed OpenSearch Dashboards](https://canonical-charmed-opensearch-dashboards.readthedocs-hosted.com/).
+```

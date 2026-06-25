@@ -7,12 +7,12 @@ myst:
 (how-to-guides-deploy-index)=
 # How to deploy
 
-For guidance on how to set up environment and deploy OpenSearch with Juju charms,
-see the [Tutorial](tutorial-index) and the following guides:
+These guides cover deploying Charmed OpenSearch in different environments.
+For a step-by-step introduction, see the [Tutorial](tutorial-index).
 
 ```{toctree}
 :titlesonly:
 
 Deploy on LXD <deploy-on-lxd>
-Large deployment <launch-a-large-deployment>
+Launch a large deployment <launch-a-large-deployment>
 ```

@@ -7,71 +7,67 @@ myst:
 (how-to-back-up-configure-s3)=
 # How to configure S3 storage 
 
-```{note}
-All commands are written for `juju v.3.1.7 +`.
-```
-
-This guide will teach you how to deploy and configure the
-[S3 Integrator charm](https://charmhub.io/s3-integrator) for
-[AWS S3](https://aws.amazon.com/s3/), send the configurations to the Charmed OpenSearch application,
-and update it. The same procedure can be extended to use Ceph RadosGW.
+This guide shows how to configure the
+[S3 Integrator charm](https://charmhub.io/s3-integrator) for OpenSearch backups,
+using either AWS S3 or Ceph RadosGW.
 
 ## Configure S3 for AWS
 
-First, deploy and run the [`s3-integrator`](https://charmhub.io/s3-integrator) charm:
+Deploy the `s3-integrator` charm and provide credentials:
 
 ```shell
 juju deploy s3-integrator
 juju run s3-integrator/leader sync-s3-credentials \
-    access-key=<access-key-here> secret-key=<secret-key-here>
+    access-key=<access-key> secret-key=<secret-key>
 ```
 
-```{note}
-See all other configuration parameters in the
-[Configuration section](https://charmhub.io/s3-integrator/configuration)
-of the s3-integrator documentation.
-```
-
-```{note}
-The Amazon S3 endpoint must be specified as `s3.<region>.amazonaws.com`
-within the first 24 hours of creating the bucket.
-For older buckets, the endpoint `s3.amazonaws.com` can be used.
-See [this AWS forum post](https://repost.aws/knowledge-center/s3-http-307-response)
-for more information.
-```
-
-## Configure S3 for Ceph RadosGW
-
-First, deploy and run the [`s3-integrator`](https://charmhub.io/s3-integrator) charm:
-
-```shell
-juju deploy s3-integrator
-
-juju run s3-integrator/leader \
-    sync-s3-credentials \
-    access-key=<access-key-here> \
-    secret-key=<secret-key-here>
-```
-
-```{note}
-Ceph can be configured with a custom `region` name, or set as `default` if none was chosen.
-See the Ceph docs for more information about
-[RadosGW configuration](https://docs.ceph.com/en/latest/man/8/radosgw-admin/).
-```
-
-Then, use `juju config` to add your configuration parameters. For example:
+Configure the bucket and endpoint:
 
 ```shell
 juju config s3-integrator \
-    endpoint="https://<CEPH_RADOSGW_URL>" \
-    bucket="<bucket_name>" \
-    path="<path_to_instance>" \
-    region="<region>"
+    bucket=<bucket-name> \
+    region=<region> \
+    endpoint=s3.<region>.amazonaws.com
+```
+
+```{note}
+The endpoint must be specified as `s3.<region>.amazonaws.com` within the first 24 hours
+of creating the bucket. For older buckets, `s3.amazonaws.com` can be used.
+See [this AWS knowledge centre article](https://repost.aws/knowledge-center/s3-http-307-response).
+```
+
+See the [s3-integrator configuration reference](https://charmhub.io/s3-integrator/configuration)
+for all available options.
+
+## Configure S3 for Ceph RadosGW
+
+Deploy the `s3-integrator` charm and provide credentials:
+
+```shell
+juju deploy s3-integrator
+juju run s3-integrator/leader sync-s3-credentials \
+    access-key=<access-key> secret-key=<secret-key>
+```
+
+Configure the endpoint and bucket:
+
+```shell
+juju config s3-integrator \
+    endpoint="https://<radosgw-url>" \
+    bucket=<bucket-name> \
+    path=<path> \
+    region=<region>
+```
+
+```{note}
+Set `region` to `default` if no custom region was configured in Ceph.
+See the [RadosGW documentation](https://docs.ceph.com/en/latest/man/8/radosgw-admin/)
+for details.
 ```
 
 ## Integrate with Charmed OpenSearch
 
-To pass these configurations to Charmed OpenSearch, integrate the two applications:
+Connect the s3-integrator to OpenSearch:
 
 ```shell
 juju integrate s3-integrator opensearch
