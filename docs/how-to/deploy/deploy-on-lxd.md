@@ -1,7 +1,7 @@
 ---
 myst:
   html_meta:
-    description: "Deploy Charmed OpenSearch on LXD containers with Juju, including prerequisites, sysctl configuration, and bootstrap steps."
+    description: "Deploy Charmed OpenSearch on LXD containers with Juju, including prerequisites, kernel parameter configuration, and deployment steps."
 ---
 
 <!-- vale off -->
@@ -24,7 +24,7 @@ For additional guidance, see the [Environment setup](tutorial-1-set-up-the-envir
 
 ## Prepare the environment
 
-Configure the environment to ensure Charmed OpenSearch works well on LXD:
+Configure the environment so that Charmed OpenSearch runs correctly on LXD:
 
 * Disable IPv6 on LXD
 * Configure kernel parameters
@@ -50,7 +50,7 @@ and propagated to every new LXD container:
 * `vm.max_map_count = 262144`
 * `net.ipv4.tcp_retries2 = 5`
 
-To see current kernel parameter values before making changes:
+To see the current kernel parameter values before making changes:
 
 ```shell
 sudo sysctl -a | grep -E 'swappiness|max_map_count|tcp_retries2'
@@ -66,7 +66,7 @@ net.ipv4.tcp_retries2 = 5
 EOF
 ```
 
-Then, apply the settings on the host machine:
+Then, apply the settings:
 
 ```shell
 sudo sysctl -p /etc/sysctl.d/opensearch.conf
@@ -89,13 +89,13 @@ cloudinit-userdata: |
 EOF
 ```
 
-To apply as the **default** for **all new Juju models**:
+To apply this as the **default** for **all new Juju models**:
 
 ```shell
 juju model-defaults --file=./cloudinit-userdata.yaml
 ```
 
-To apply as the **default** for a **specific existing model**:
+To apply this as the **default** for a **specific existing model**:
 
 ```shell
 juju model-config --file=./cloudinit-userdata.yaml --model <model-name>
@@ -109,7 +109,7 @@ To deploy a single unit of Charmed OpenSearch for testing:
 juju deploy opensearch
 ```
 
-By default, the charm uses the `testing` profile, optimized for lightweight development and testing workloads.
+By default, the charm uses the `testing` profile, which is optimized for development and testing with lightweight workloads.
 
 To deploy a multi-unit application with the `production` profile:
 
@@ -117,7 +117,7 @@ To deploy a multi-unit application with the `production` profile:
 juju deploy opensearch -n 3 --config profile=production
 ```
 
-See [How to optimize cluster performance with profiles](how-to-optimize-cluster-performance).
+See [How to optimize cluster performance with profiles](how-to-optimize-cluster-performance) for details on the available profiles.
 
 Check the deployment status:
 
@@ -125,5 +125,5 @@ Check the deployment status:
 juju status
 ```
 
-As a result, you should see the `opensearch` application in a blocked state with the message `Missing TLS relation with this cluster`.
-Charmed OpenSearch requires TLS encryption. Continue with [How to manage TLS encryption](how-to-enable-tls-encryption) to complete the setup.
+You should see the `opensearch` application in a blocked state with the message `Missing TLS relation with this cluster`.
+Charmed OpenSearch requires TLS encryption. To complete the setup, continue with [How to manage TLS encryption](how-to-enable-tls-encryption).
