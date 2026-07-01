@@ -10,20 +10,28 @@ myst:
 # How to deploy on LXD
 
 This guide shows how to deploy Charmed OpenSearch on
-[LXD](https://ubuntu.com/server/docs/lxd-containers), Canonical’s lightweight container hypervisor.
-
-For a comprehensive step-by-step walkthrough, refer to the [Tutorial](tutorial-index).
+[LXD](https://ubuntu.com/server/docs/lxd-containers), Canonical's lightweight container hypervisor.
 
 ## Prerequisites
 
-* **Juju 3.5.3+** — installed but not yet bootstrapped.
-  See [How to install Juju](https://documentation.ubuntu.com/juju/3.6/howto/manage-juju/#install-juju).
-* **LXD 6.1+** — installed and initialised.
-  See [First steps with LXD](https://documentation.ubuntu.com/lxd/latest/tutorial/first_steps/#install-lxd-using-snap).
-* Hardware and software prerequisites as described in the
-  [system requirements](reference-system-requirements).
+To deploy Charmed OpenSearch on LXD using Juju we will need the following prerequisites:
 
-## Disable IPv6 on LXD
+* LXD 6.1+
+* Juju 3.5.3+
+* Hardware requirements are met as described in the [system requirements](reference-system-requirements).
+
+For additonal guidance, see the [Environment setup](tutorial-1-set-up-the-environment) stage of our tutorial or respective documentation for [LXD]((https://documentation.ubuntu.com/lxd/latest/tutorial/first_steps/#install-lxd-using-snap)) and [Juju](https://documentation.ubuntu.com/juju/3.6/howto/manage-juju/#install-juju).
+
+## Prepare the environment
+
+Configure the environment to ensure Charmed OpenSearch works well on LXD:
+
+* Disable IPv6 on LXD
+* Configure kernel parameters
+  * On a host machine
+  * For new containers
+
+### Disable IPv6 on LXD
 
 Juju does not support IPv6 with LXD. After initialising LXD, disable IPv6 on the default bridge:
 
@@ -33,23 +41,22 @@ lxc network set lxdbr0 ipv6.address none
 
 See [The LXD cloud and Juju](https://canonical.com/juju/docs/juju-cli/3.6/reference/cloud/list-of-supported-clouds/lxd/#constraints) for more information.
 
-## Configure sysctl
+### Configure kernel parameters on host
 
-OpenSearch requires specific kernel parameters. These must be set on the host
-and propagated to every new LXD container.
+OpenSearch requires specific kernel parameters to be set on the host
+and propagated to every new LXD container:
 
-````{note}
-The following instructions modify kernel parameters. To record original values
-before making changes:
+* `vm.swappiness = 0`
+* `vm.max_map_count = 262144`
+* `net.ipv4.tcp_retries2 = 5`
+
+To see the current kernel parameters value before making changes:
 
 ```shell
 sudo sysctl -a | grep -E 'swappiness|max_map_count|tcp_retries2'
 ```
-````
 
-### On the host machine
-
-Create a sysctl configuration file:
+On the host machine, create a sysctl configuration file:
 
 ```shell
 sudo tee /etc/sysctl.d/opensearch.conf <<EOF
@@ -59,19 +66,13 @@ net.ipv4.tcp_retries2 = 5
 EOF
 ```
 
-Apply the settings:
+Then, apply the settings on the host machine:
 
 ```shell
 sudo sysctl -p /etc/sysctl.d/opensearch.conf
 ```
 
-### Bootstrap the Juju controller
-
-```shell
-juju bootstrap localhost
-```
-
-### For new containers
+#### Configure kernel parameters for new containers
 
 Configure `cloud-init` so that each new container inherits the required sysctl settings.
 
@@ -89,13 +90,13 @@ cloudinit-userdata: |
 EOF
 ```
 
-To apply as the **default for all new models**:
+To apply as the **default** for **all new Juju models**:
 
 ```shell
 juju model-defaults --file=./cloudinit-userdata.yaml
 ```
 
-To apply **for a specific model only**:
+To apply as the **default** for a **specific existing model**:
 
 ```shell
 juju model-config --file=./cloudinit-userdata.yaml --model <model-name>
@@ -103,19 +104,27 @@ juju model-config --file=./cloudinit-userdata.yaml --model <model-name>
 
 ## Deploy OpenSearch
 
-Create a Juju model:
+To deploy a single unit of Charmed OpenSearch for testing:
 
 ```shell
-juju add-model <model-name>
+juju deploy opensearch
 ```
 
-For a single-host LXD deployment, the `testing` profile is recommended (1 GB RAM per container):
+By default, the charm is deployed with the `testing` profile optinised for lightweight, development and testing workloads.
+
+To deploy a multi-unit application with the `production` profile:
 
 ```shell
-juju deploy opensearch --config profile=testing
+juju deploy opensearch -n 3 --config profile=production
 ```
 
-```{note}
-Charmed OpenSearch requires TLS to function.
-After deploying, proceed to [manage TLS encryption](how-to-enable-tls-encryption).
+See more about [performance profiles configuration](how-to-optimize-cluster-performance).
+
+Check deployment status:
+
+```shell
+juju status
 ```
+
+As the result, you should see an opensearch app in a blocked state with the message `Missing TLS relation with this cluster`.
+Charmed OpenSearch requires TLS encryption to function properly. See the [manage TLS encryption](how-to-enable-tls-encryption) guide to proceed with its setup.
