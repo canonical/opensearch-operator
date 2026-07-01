@@ -50,7 +50,9 @@ each configured with specific node roles.
 
 ```{caution}
 The examples below use the `testing` profile (1 GB RAM per node) for a single-host LXD environment.
-For production, use `production` (50% of RAM, up to 32 GB) or `staging` (25% of RAM, up to 32 GB).
+For production, use the `production` profile (50% of RAM, up to 32 GB).
+See [How to optimize cluster performance with profiles](how-to-optimize-cluster-performance)
+for details on the available profiles.
 ```
 
 ```{important}
