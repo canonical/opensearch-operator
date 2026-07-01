@@ -14,13 +14,13 @@ This guide shows how to deploy Charmed OpenSearch on
 
 ## Prerequisites
 
-To deploy Charmed OpenSearch on LXD using Juju we will need the following prerequisites:
+To deploy Charmed OpenSearch on LXD using Juju, you need:
 
 * LXD 6.1+
 * Juju 3.5.3+
-* Hardware requirements are met as described in the [system requirements](reference-system-requirements).
+* Hardware that meets the [system requirements](reference-system-requirements)
 
-For additonal guidance, see the [Environment setup](tutorial-1-set-up-the-environment) stage of our tutorial or respective documentation for [LXD]((https://documentation.ubuntu.com/lxd/latest/tutorial/first_steps/#install-lxd-using-snap)) and [Juju](https://documentation.ubuntu.com/juju/3.6/howto/manage-juju/#install-juju).
+For additional guidance, see the [Environment setup](tutorial-1-set-up-the-environment) stage of our tutorial or the documentation for [LXD](https://canonical.com/lxd/docs/latest/tutorial/first_steps/#install-lxd-using-snap) and [Juju](https://canonical.com/juju/docs/juju-cli/3.6/howto/manage-juju/#install-juju) respectively.
 
 ## Prepare the environment
 
@@ -28,12 +28,12 @@ Configure the environment to ensure Charmed OpenSearch works well on LXD:
 
 * Disable IPv6 on LXD
 * Configure kernel parameters
-  * On a host machine
+  * On the host
   * For new containers
 
 ### Disable IPv6 on LXD
 
-Juju does not support IPv6 with LXD. After initialising LXD, disable IPv6 on the default bridge:
+Juju does not support IPv6 with LXD. After initializing LXD, disable IPv6 on the default bridge:
 
 ```shell
 lxc network set lxdbr0 ipv6.address none
@@ -41,7 +41,7 @@ lxc network set lxdbr0 ipv6.address none
 
 See [The LXD cloud and Juju](https://canonical.com/juju/docs/juju-cli/3.6/reference/cloud/list-of-supported-clouds/lxd/#constraints) for more information.
 
-### Configure kernel parameters on host
+### Configure kernel parameters on the host
 
 OpenSearch requires specific kernel parameters to be set on the host
 and propagated to every new LXD container:
@@ -50,7 +50,7 @@ and propagated to every new LXD container:
 * `vm.max_map_count = 262144`
 * `net.ipv4.tcp_retries2 = 5`
 
-To see the current kernel parameters value before making changes:
+To see current kernel parameter values before making changes:
 
 ```shell
 sudo sysctl -a | grep -E 'swappiness|max_map_count|tcp_retries2'
@@ -76,7 +76,7 @@ sudo sysctl -p /etc/sysctl.d/opensearch.conf
 
 Configure `cloud-init` so that each new container inherits the required sysctl settings.
 
-Create a user data file:
+Create a cloud-init user-data file:
 
 ```shell
 cat <<EOF > cloudinit-userdata.yaml
@@ -85,7 +85,6 @@ cloudinit-userdata: |
     - [ 'echo', 'vm.max_map_count=262144', '>>', '/etc/sysctl.conf' ]
     - [ 'echo', 'vm.swappiness=0', '>>', '/etc/sysctl.conf' ]
     - [ 'echo', 'net.ipv4.tcp_retries2=5', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'fs.file-max=1048576', '>>', '/etc/sysctl.conf' ]
     - [ 'sysctl', '-p' ]
 EOF
 ```
@@ -110,7 +109,7 @@ To deploy a single unit of Charmed OpenSearch for testing:
 juju deploy opensearch
 ```
 
-By default, the charm is deployed with the `testing` profile optinised for lightweight, development and testing workloads.
+By default, the charm uses the `testing` profile, optimized for lightweight development and testing workloads.
 
 To deploy a multi-unit application with the `production` profile:
 
@@ -118,13 +117,13 @@ To deploy a multi-unit application with the `production` profile:
 juju deploy opensearch -n 3 --config profile=production
 ```
 
-See more about [performance profiles configuration](how-to-optimize-cluster-performance).
+See [How to optimize cluster performance with profiles](how-to-optimize-cluster-performance).
 
-Check deployment status:
+Check the deployment status:
 
 ```shell
 juju status
 ```
 
-As the result, you should see an opensearch app in a blocked state with the message `Missing TLS relation with this cluster`.
-Charmed OpenSearch requires TLS encryption to function properly. See the [manage TLS encryption](how-to-enable-tls-encryption) guide to proceed with its setup.
+As a result, you should see the `opensearch` application in a blocked state with the message `Missing TLS relation with this cluster`.
+Charmed OpenSearch requires TLS encryption. Continue with [How to manage TLS encryption](how-to-enable-tls-encryption) to complete the setup.
