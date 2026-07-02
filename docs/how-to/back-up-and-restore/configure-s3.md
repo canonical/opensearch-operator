@@ -5,7 +5,7 @@ myst:
 ---
 
 (how-to-back-up-configure-s3)=
-# How to configure S3 storage 
+# How to configure S3 storage
 
 This guide shows how to configure the
 [S3 Integrator charm](https://charmhub.io/s3-integrator) for OpenSearch backups,
@@ -72,3 +72,13 @@ Connect the s3-integrator to OpenSearch:
 ```shell
 juju integrate s3-integrator opensearch
 ```
+
+## Expected result
+
+`juju status --relations` shows the `s3-integrator` application `active` and an `s3-credentials` relation
+between `s3-integrator` and `opensearch`. The OpenSearch application remains `active`.
+
+## Next steps
+
+* [Create and restore backups](how-to-create-a-backup) — create a backup using the configured S3 storage.
+* [Configure Azure storage](how-to-back-up-configure-azure-storage) — alternative storage backend.

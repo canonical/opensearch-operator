@@ -173,3 +173,14 @@ curl -k -H "Authorization: Bearer ${OAUTH_ACCESS_TOKEN}" \
 ```
 
 You should now receive a `200 OK` response with a list of indices.
+
+## Expected result
+
+After role mapping is configured, requests to OpenSearch with a valid OAuth bearer token
+return `200 OK` instead of `403 security_exception`. The `_cat/indices` endpoint returns
+the list of indices the mapped user has access to.
+
+## Next steps
+
+* [Enable JWT authentication](how-to-guides-enable-jwt-authentication) — an alternative token-based authentication method.
+* [Integrate with an application](how-to-integrate-with-an-application) — connect client applications using the `data-integrator` charm.

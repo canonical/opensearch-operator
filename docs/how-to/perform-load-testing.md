@@ -113,7 +113,7 @@ juju consume admin/cos.loki-logging
 juju consume admin/cos.prometheus-receive-remote-write
 
 juju deploy grafana-agent
-juju integrate opensearch grafana-agent
+juju integrate grafana-agent opensearch:cos-agent
 juju integrate grafana-agent grafana-dashboards
 juju integrate grafana-agent loki-logging
 juju integrate grafana-agent prometheus-receive-remote-write
@@ -148,3 +148,13 @@ opensearch-benchmark execute-test \
 
 See the [opensearch-benchmark documentation](https://opensearch.org/docs/latest/benchmark/)
 for additional workloads and options.
+
+## Expected result
+
+The benchmark completes and prints a summary report with throughput, latency, and error metrics.
+If COS is integrated, the Grafana **Charmed OpenSearch** dashboard shows the load spike during the test.
+
+## Next steps
+
+* [Optimize cluster performance with profiles](how-to-optimize-cluster-performance) — tune resource allocation based on benchmark results.
+* [Enable monitoring (COS)](how-to-monitoring) — set up ongoing observability.

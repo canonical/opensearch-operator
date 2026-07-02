@@ -73,6 +73,17 @@ juju run opensearch/leader restore backup-id=<backup-id>
 
 The `<backup-id>` must reference a backup created by the previous cluster.
 
+## Expected result
+
+After creating a backup, `list-backups` shows the new backup with an `available` status.
+After restoring, `juju status` shows the OpenSearch application `active` and the cluster health
+API returns `green`.
+
+## Next steps
+
+* [Upgrade, rollback, and recover](how-to-minor-upgrade) — upgrade the cluster after restoring.
+* [Manage persistent storage](how-to-persistent-storage) — reuse disks across clusters.
+
 ```{toctree}
 :titlesonly:
 :hidden:

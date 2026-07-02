@@ -154,3 +154,15 @@ Once all applications show `active`, the cluster is fully formed and operational
 The cluster will not come online if no `data` nodes are available.
 Ensure `data` nodes are deployed and ready before forming the cluster.
 ```
+
+## Expected result
+
+Once all applications show `active` in `juju status`, the multi-application OpenSearch cluster
+is fully formed and operational. The `main` application acts as the orchestrator, and all
+applications share the same `cluster_name`.
+
+## Next steps
+
+* [Manage TLS encryption](how-to-enable-tls-encryption) — configure and rotate TLS certificates.
+* [Enable monitoring (COS)](how-to-monitoring) — observe the cluster.
+* [Scale down safely](how-to-scale-horizontally) — adjust cluster size.

@@ -66,3 +66,13 @@ Both profiles require swap disabled and `vm.max_map_count >= 262144`.
 | JVM heap           | Fixed 1 GB                  | 50% of RAM (min 4 GB, max 31 GB)          |
 | Use case           | Development / testing       | Production workloads                      |
 
+## Expected result
+
+After applying a profile, `juju status` shows the OpenSearch application `active` with the
+chosen profile.
+
+## Next steps
+
+* [Deploy on LXD](how-to-deploy-lxd) — deploy a cluster with a specific profile.
+* [Scale down safely](how-to-scale-horizontally) — adjust cluster size after changing the profile.
+

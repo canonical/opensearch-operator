@@ -35,7 +35,7 @@ charmcraft fetch-lib charms.data_platform_libs.v0.data_interfaces
 In your `charm.py`:
 
 ```python
-from charms.data_platform.libs.interfaces.opensearch_client import OpenSearchRequires
+from charms.data_platform_libs.v0.data_interfaces import OpenSearchRequires
 
 class MyCharm(CharmBase):
     def __init__(self, *args):
@@ -48,13 +48,16 @@ class MyCharm(CharmBase):
         pass
 ```
 
-The `OpenSearchRequires` class accepts:
+The `OpenSearchRequires` constructor accepts:
 
 * `charm` — the charm instance
 * `relation_name` — must match the name in `metadata.yaml`
 * `index` — the index name to connect to
 * `extra_user_roles` (optional) — additional roles for the user
 * `additional_secret_fields` (optional) — extra secret fields to share
+
+See the [`OpenSearchRequires` class](https://github.com/canonical/data-platform-libs/blob/main/lib/charms/data_platform_libs/v0/data_interfaces.py)
+in the `data_interfaces` library source for the full list of optional parameters.
 
 ### Create the integration
 
@@ -123,3 +126,14 @@ To retrieve the current password:
 ```shell
 juju run opensearch/leader get-password
 ```
+
+## Expected result
+
+After integrating an application, `juju status --relations` shows the `opensearch` application and the
+integrated application both in `active` state, with an `opensearch_client` relation between them.
+The client application can connect using the credentials and endpoint returned by `get-password`.
+
+## Next steps
+
+* [Enable monitoring (COS)](how-to-monitoring) to observe the integrated workload.
+* [Manage TLS encryption](how-to-enable-tls-encryption) to secure client-to-node traffic.

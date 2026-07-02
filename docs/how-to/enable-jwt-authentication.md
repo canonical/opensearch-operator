@@ -29,7 +29,7 @@ The charm will be `blocked` until configured.
 Create a Juju secret with your signing key:
 
 ```shell
-juju add-secret jwt-key signing-key=<signing-key>
+juju add-secret jwt-key signing-key="<signing-key>"
 ```
 
 Note the secret URI, then grant access and configure:
@@ -91,3 +91,17 @@ Access the UI by appending the JWT as a URL parameter:
 ```text
 http://<dashboards-ip>:5601?jwt=<jwt>
 ```
+
+## Expected result
+
+After integrating the JWT integrator with OpenSearch, `juju status` shows both applications
+`active`. Requests to OpenSearch with a valid JWT bearer token return `200 OK`:
+
+```shell
+curl -k -H "Authorization: Bearer <jwt>" -XGET "https://<unit-ip>:9200/_cat/nodes"
+```
+
+## Next steps
+
+* [Access OpenSearch using OAuth](how-to-access-using-oauth) — an alternative token-based authentication method.
+* [Security explanation](explanation-security-index) — background on authentication and TLS.

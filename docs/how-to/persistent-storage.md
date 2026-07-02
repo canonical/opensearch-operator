@@ -147,3 +147,14 @@ using the [dangling indices API](https://opensearch.org/docs/latest/api-referenc
 The dangling indices API cannot guarantee that imported data represents the latest state
 of the data when the index was still part of the original cluster.
 ```
+
+## Expected result
+
+After reusing a disk within the same cluster, the new unit rejoins automatically with existing
+data. After `detach-cluster` or `unsafe-bootstrap`, the node joins the target cluster and
+`juju status` shows the unit `active/idle`.
+
+## Next steps
+
+* [Back up and restore](how-to-guides-back-up-and-restore-index) — create backups before reusing disks.
+* [Scale down safely](how-to-scale-horizontally) — safely remove units when reorganising storage.

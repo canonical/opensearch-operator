@@ -17,7 +17,24 @@ For a hands-on example, see [Tutorial: Scale horizontally](tutorial-6-scale-hori
 * In highly available deployments, **do not scale below 3 nodes**.
 ```
 
-## 1. Check cluster health
+## Scale up
+
+To add nodes to the cluster, run:
+
+```shell
+juju add-unit opensearch -n <number-of-units>
+```
+
+Monitor the new units joining the cluster:
+
+```shell
+watch juju status
+```
+
+New units automatically join the cluster and start receiving shard allocations.
+No additional configuration is required.
+
+## Scale down
 
 Before removing a node, verify the cluster is healthy.
 
@@ -35,11 +52,14 @@ Run `juju status` and confirm the application is `active` before proceeding.
 For more detail, query the
 [cluster health API](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-health/).
 
-First, retrieve the admin credentials:
+First, retrieve the admin credentials and the CA certificate:
 
 ```shell
 juju run opensearch/leader get-password
 ```
+
+The `get-password` action returns the admin password and the CA certificate chain.
+Save the CA certificate to a file (e.g. `cert.pem`) to use with `curl`.
 
 (scale-cluster-health-status)=
 ### Interpret cluster health
@@ -64,7 +84,7 @@ Investigate with:
 curl --cacert cert.pem -k -XGET "https://<unit-ip>:9200/_cluster/allocation/explain" -u admin:<password>
 ```
 
-Typical resolution: scale up to restore green health before scaling down.
+Typical resolution: scale up to restore green health before scaling down:
 
 ```shell
 juju add-unit opensearch -n 1
@@ -83,7 +103,7 @@ If health becomes `red` after removing a unit, the charm blocks further removal
 to give you the opportunity to scale back up.
 ```
 
-## 2. Remove one unit
+### Remove one unit
 
 Once health is confirmed green, remove **a single unit**:
 
@@ -102,10 +122,20 @@ The charm does not know in advance whether a removal will degrade cluster health
 Always verify health after each removal before proceeding.
 ```
 
-## 3. Verify and repeat
+### Verify and repeat
 
 After removal, the charm may reconfigure and restart another unit to rebalance node roles.
 Wait for the application to fully stabilise (`active/idle`), then
 [check cluster health](#scale-cluster-health-status) again.
 
-Repeat steps 2–3 for each additional unit you need to remove.
+Repeat the removal step for each additional unit you need to remove.
+
+## Expected result
+
+After scaling, `juju status` shows all remaining units `active/idle`, and the cluster health
+API returns `green`. For scale-up, new units appear and join the cluster automatically.
+
+## Next steps
+
+* [Optimize cluster performance with profiles](how-to-optimize-cluster-performance) — tune resource allocation for the new cluster size.
+* [Upgrade, rollback, and recover](how-to-minor-upgrade) — upgrade the cluster after scaling.

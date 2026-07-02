@@ -33,6 +33,7 @@ juju config smtp-integrator \
   smtp-sender=<sender-email> \
   recipients=<recipient-1>,<recipient-2>
 ```
+
 ## Integrate with OpenSearch
 
 ```shell
@@ -68,3 +69,14 @@ juju integrate smtp-integrator:smtp opensearch-main
 
 If integrated with the wrong application, the charm shows a `blocked` status.
 Remove the invalid relation and integrate with the correct application.
+
+## Expected result
+
+`juju status --relations` shows the `smtp-integrator` and `opensearch` applications `active`, with an
+`smtp` relation between them. OpenSearch notification channels can now send email via the
+configured SMTP server.
+
+## Next steps
+
+* [Enable monitoring (COS)](how-to-monitoring) — set up alerting and observability for the cluster.
+* [Access OpenSearch using OAuth](how-to-access-using-oauth) — configure authentication for client access.

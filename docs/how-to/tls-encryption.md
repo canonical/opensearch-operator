@@ -168,3 +168,14 @@ Verify the rotation:
 ```shell
 openssl s_client -showcerts -connect <unit-ip>:<port> < /dev/null | grep issuer
 ```
+
+## Expected result
+
+After enabling TLS, `juju status` shows the OpenSearch application `active` (no longer
+`blocked` with a "Missing TLS relation" message). After key updates or certificate/CA rotation,
+`openssl s_client ... | grep issuer` shows the new issuer.
+
+## Next steps
+
+* [Enable monitoring (COS)](how-to-monitoring) — observe the cluster with TLS in place.
+* [Security explanation](explanation-security-index) — background on TLS and authentication.

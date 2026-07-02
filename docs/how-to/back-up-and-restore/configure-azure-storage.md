@@ -40,3 +40,13 @@ Connect the integrator to OpenSearch:
 ```shell
 juju integrate azure-storage-integrator opensearch
 ```
+
+## Expected result
+
+`juju status --relations` shows the `azure-storage-integrator` application `active` and a relation between
+`azure-storage-integrator` and `opensearch`. The OpenSearch application remains `active`.
+
+## Next steps
+
+* [Create and restore backups](how-to-create-a-backup) — create a backup using the configured Azure storage.
+* [Configure S3 storage](how-to-back-up-configure-s3) — alternative storage backend.
