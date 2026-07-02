@@ -57,7 +57,8 @@ the cluster to match the new profile requirements.
 
 ## Profile comparison
 
-Both profiles require swap disabled and `vm.max_map_count >= 262144`.
+For a detailed explanation of what profiles are and why they exist, see
+[Performance profiles](explanation-performance-profiles).
 
 | Setting            | `testing`                   | `production`                              |
 | :----------------- | :-------------------------- | :---------------------------------------- |

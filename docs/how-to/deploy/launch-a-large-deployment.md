@@ -10,22 +10,14 @@ myst:
 This guide shows how to deploy a multi-application OpenSearch cluster using Juju,
 with dedicated node roles for scalability and fault tolerance.
 
-## Node roles overview
+For background on node roles, data tiers, and the main orchestrator pattern, see
+[Node roles and cluster topology](explanation-node-roles).
 
-In a large deployment, nodes are assigned
-[roles](https://opensearch.org/docs/latest/tuning-your-cluster/) at the Juju application level
-(all units in an application share the same roles). The two essential roles are:
+## Node roles
 
-- `cluster_manager` — handles cluster-wide operations (index creation, shard management, rebalancing). One node is elected master among all `cluster_manager`-eligible nodes.
-- `data` — stores indexed data and performs search/indexing operations.
-
-Data nodes can optionally be classified into tiers for
-[index lifecycle management](https://opensearch.org/docs/latest/im-plugin/ism/index/):
-`data.hot`, `data.warm`, `data.cold`.
-
-### Set roles
-
-If no roles are configured, the charm auto-assigns: `data`, `ingest`, `ml`, `cluster_manager`.
+Roles are assigned at the Juju application level (all units in an application share
+the same roles). If no roles are configured, the charm auto-assigns:
+`data`, `ingest`, `ml`, `cluster_manager`.
 
 To set roles at deploy time:
 
@@ -46,7 +38,9 @@ Removal of the `cluster_manager` or `data` roles is not supported.
 ## Deploy the cluster applications
 
 A large deployment consists of multiple Juju applications integrated together,
-each configured with specific node roles.
+each configured with specific node roles. See
+[Node roles and cluster topology](explanation-node-roles) for an explanation of the
+main orchestrator, failover, and data-node pattern.
 
 ```{caution}
 The examples below use the `testing` profile (1 GB RAM per node) for a single-host LXD environment.
@@ -63,6 +57,9 @@ for details on the available profiles.
 2. Set `init_hold=true` on every application **except** the main orchestrator.
    This prevents non-orchestrator applications from starting before integration.
 ```
+
+See [Node roles and cluster topology](explanation-node-roles) for details on why
+these rules are required.
 
 ### 1. Deploy the main orchestrator
 

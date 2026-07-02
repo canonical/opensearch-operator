@@ -65,6 +65,8 @@ Save the CA certificate to a file (e.g. `cert.pem`) to use with `curl`.
 ### Interpret cluster health
 
 The cluster health API returns `green`, `yellow`, or `red`.
+For a detailed explanation of what each state means and how it maps to Juju status,
+see [Cluster health and scaling](explanation-cluster-health).
 
 **`green`** — Scaling down is likely safe.
 

@@ -32,7 +32,7 @@ Charmed OpenSearch documentation has the following topics.
 | **Monitoring & performance** | [Monitoring](how-to-monitoring) • [SMTP notifications](how-to-guides-add-smtp-credentials) • [Performance optimization](how-to-optimize-cluster-performance) • [Load testing](how-to-perform-load-testing) • [OpenSearch Dashboards](dashboard-index) |
 | **Backups** | [Create a backup](how-to-create-a-backup) • [Azure configuration](how-to-back-up-configure-azure-storage) • [S3 configuration](how-to-back-up-configure-s3) • [Restore from a local backup](how-to-restore-a-local-backup) • [Migrate a cluster](how-to-migrate-a-cluster) • [Recover from attached storage](how-to-persistent-storage) |
 | **Security** | [Overview](explanation-security-index) • [Enable encryption](how-to-enable-tls-encryption) • [Rotate certificates](how-to-rotate-tls-ca-certificates) • [OAuth](how-to-access-using-oauth) • [JWT Auth](how-to-guides-enable-jwt-authentication) • [Cryptography](explanation-security-cryptography) |
-| **Internals** | [Alert rules](alert-rules) • [Monitoring overview](explanation-monitoring) • [Software testing](explanation-software-testing) • [Release notes](reference-release-notes-index) |
+| **Internals** | [Node roles](explanation-node-roles) • [Cluster health](explanation-cluster-health) • [Performance profiles](explanation-performance-profiles) • [Persistent storage](explanation-persistent-storage) • [TLS certificates](explanation-tls-certificates) • [Alert rules](ref-alert-rules) • [Monitoring overview](explanation-monitoring) • [Software testing](explanation-software-testing) • [Release notes](reference-release-notes-index) |
 
 ## How the documentation is organized
 

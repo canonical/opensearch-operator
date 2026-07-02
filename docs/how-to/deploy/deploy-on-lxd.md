@@ -50,6 +50,9 @@ and propagated to every new LXD container:
 * `vm.max_map_count = 262144`
 * `net.ipv4.tcp_retries2 = 5`
 
+See [System requirements](reference-system-requirements) for the full list of required
+kernel parameters and their purpose.
+
 To see the current kernel parameter values before making changes:
 
 ```shell

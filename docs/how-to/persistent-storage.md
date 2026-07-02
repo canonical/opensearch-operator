@@ -8,6 +8,9 @@ myst:
 # How to manage persistent storage
 
 This guide shows how to reuse disks that contain data from a previous OpenSearch cluster.
+For an explanation of the risks of disk reuse, dangling indices, and metadata cleanup,
+see [Persistent storage and disk recovery](explanation-persistent-storage).
+
 There are three scenarios:
 
 * **Same cluster** — a detached volume is reattached to a new unit in the same cluster.

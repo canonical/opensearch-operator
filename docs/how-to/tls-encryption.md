@@ -64,6 +64,9 @@ Charmed OpenSearch uses three certificate categories:
 * `unit-transport` — internal node-to-node communication
 * `unit-http` — external client-to-node communication
 
+For an explanation of why these three categories exist and how rotation works,
+see [TLS certificates](explanation-tls-certificates).
+
 ### Auto-generate new keys
 
 ```shell

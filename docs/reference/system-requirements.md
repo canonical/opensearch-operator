@@ -45,3 +45,22 @@ See also: [How to perform load testing](how-to-perform-load-testing).
 * Certain network ports must be open for internal communication:
   See the OpenSearch documentation for
   [Network requirements](https://opensearch.org/docs/2.6/install-and-configure/install-opensearch/index/#network-requirements).
+
+## Kernel parameters
+
+OpenSearch requires specific kernel parameters to be set on the host machine and propagated
+to every container or VM where OpenSearch runs. These settings are enforced by both the
+`testing` and `production` profiles.
+
+See [Performance profiles](explanation-performance-profiles) for details on how profiles
+use these parameters.
+
+| Parameter | Required value | Purpose |
+| :--- | :--- | :--- |
+| `vm.swappiness` | `0` | Disables swap to prevent OpenSearch from being swapped to disk, which causes severe performance degradation. |
+| `vm.max_map_count` | `262144` | Required by OpenSearch for mmap-based file access to index segments. |
+| `net.ipv4.tcp_retries2` | `5` | Prevents long network timeouts from blocking cluster operations. |
+| `fs.file-max` | `1048576` | Ensures sufficient file descriptors for large deployments with many shards and indices. |
+
+For instructions on how to apply these settings on the host and propagate them to
+containers, see [How to deploy on LXD](how-to-deploy-lxd).
