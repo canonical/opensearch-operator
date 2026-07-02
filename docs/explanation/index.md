@@ -37,10 +37,10 @@ Overview of our approach to testing Charmed OpenSearch is summarized in the
 :titlesonly:
 :hidden:
 
-node-roles
+Node roles <node-roles>
 cluster-health
 performance-profiles
-persistent-storage
+Persistent storage <persistent-storage>
 Security <security/index>
 monitoring
 Software testing <software-testing>
