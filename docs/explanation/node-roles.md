@@ -19,14 +19,14 @@ OpenSearch supports the following built-in roles, all of which can be used in Ch
 
 | Role | Description |
 | :--- | :--- |
-| `cluster_manager` | Handles cluster-wide operations: creating and deleting indices, managing shard allocation, and rebalancing data. One node is elected **master** among all `cluster_manager`-eligible nodes. |
+| `cluster_manager` | Handles cluster-wide operations: creating and deleting indices, managing shard allocation, and rebalancing data. One node is elected **cluster manager** among all `cluster_manager`-eligible nodes. |
 | `data` | Stores indexed data and performs search and indexing operations. Data nodes hold the shards that contain the indexed documents. |
 | `data.hot` | A data tier for time-series data that receives the most recent, most frequently queried data. |
 | `data.warm` | A data tier for data that is queried less frequently but still needs to be searchable. |
 | `data.cold` | A data tier for infrequently accessed data, stored on less expensive hardware. |
 | `ingest` | Pre-processes documents before they are indexed (pipelines, transformations). |
 | `coordinating` | Routes requests to the appropriate data nodes and aggregates results. Does not hold data. |
-| `voting_only` | Participates in master election but is never eligible to become the master node itself. |
+| `voting_only` | Participates in cluster manager election but is never eligible to become the cluster manager node itself. |
 | `ml` | Runs machine learning tasks such as model training and inference. |
 
 Data nodes can optionally be classified into **tiers** (`data.hot`, `data.warm`, `data.cold`)
