@@ -30,7 +30,7 @@ juju config smtp-integrator \
   port=587 \
   user=<smtp-username> \
   password=<smtp-password> \
-  smtp-sender=<sender-email> \
+  smtp_sender=<sender-email> \
   recipients=<recipient-1>,<recipient-2>
 ```
 
