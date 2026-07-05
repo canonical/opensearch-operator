@@ -39,7 +39,10 @@ juju grant-secret jwt-key jwt-integrator
 juju config jwt-integrator signing-key=<secret-uri>
 ```
 
-Configure additional options for your JWT provider:
+The `roles-key` option is **required** — the charm remains `blocked` until it is set.
+It specifies the JWT claim key from which OpenSearch extracts the user's roles.
+Set it together with any additional options for your JWT provider
+(e.g. `subject-key`, `jwt-url-parameter`):
 
 ```shell
 juju config jwt-integrator roles-key=<roles-key> subject-key=<subject-key> jwt-url-parameter=<parameter>
