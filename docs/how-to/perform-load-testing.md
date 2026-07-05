@@ -139,7 +139,7 @@ Build the host list and execute:
 ```shell
 export OPENSEARCH_HOSTS="$(juju status --format=json | jq -r '.applications.opensearch.units[] | ."public-address"' | sed 's/.*/https:\/\/&:9200/' | paste -s -d, -)"
 
-opensearch-benchmark execute-test \
+opensearch-benchmark run \
     --target-hosts $OPENSEARCH_HOSTS \
     --pipeline benchmark-only \
     --workload nyc_taxis \
