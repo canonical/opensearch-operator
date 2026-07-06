@@ -35,12 +35,22 @@ juju status --watch 5s
 
 ## Deploy the Identity Platform on MicroK8s
 
+The Identity Platform runs on Kubernetes. The steps below use MicroK8s, but any
+Juju-supported K8s cluster will work.
+
 ### Prepare MicroK8s
 
 ```shell
 sudo snap install microk8s --classic
 sudo microk8s enable hostpath-storage dns
-sudo microk8s enable metallb:10.0.0.2-10.0.0.3
+sudo microk8s enable metallb:10.0.0.2-10.0.0.5
+```
+
+```{note}
+The MetalLB address range must provide at least two IP addresses
+(one for `traefik-public` and one for `traefik-admin`).
+If you are also running COS Lite or other LoadBalancer services on the
+same MicroK8s instance, increase the range accordingly.
 ```
 
 Add MicroK8s to your Juju controller:
@@ -63,6 +73,9 @@ Wait until all units become active. The `kratos-external-idp-integrator` will re
 
 ## Create cross-model integrations
 
+The Identity Platform and OpenSearch run in separate models (and potentially on
+different clouds). Use Juju cross-model offers to connect them.
+
 ### Offer certificates and OAuth from the Identity Platform model
 
 ```shell
@@ -82,6 +95,9 @@ juju integrate opensearch admin/oauth.hydra
 ```
 
 ## Create an OAuth client and obtain a token
+
+With the Identity Platform running, create an OAuth client in Hydra and use it
+to request an access token.
 
 ### Create a client in Hydra
 
