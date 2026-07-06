@@ -81,8 +81,7 @@ juju add-model opensearch aws \
 juju model-config cloudinit-userdata="postruncmd:
         - [ 'sysctl', '-w', 'vm.max_map_count=262144' ]
         - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
-        - [ 'sysctl', '-w', 'vm.swappiness=0' ]
-        - [ 'sysctl', '-w', 'net.ipv4.tcp_retries2=5' ]"
+        - [ 'sysctl', '-w', 'vm.swappiness=0' ]"
 
 juju add-space -m opensearch internal-space $VPC_PRIVATE_CIDR
 ```

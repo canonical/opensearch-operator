@@ -60,8 +60,10 @@ Both profiles enforce the same system-level prerequisites:
 
 - **Swap must be disabled** — OpenSearch performs best when it is not swapped to disk.
 - `vm.max_map_count >= 262144` — required by OpenSearch for mmap-based file access.
-- `net.ipv4.tcp_retries2 = 5` — prevents long network timeouts from blocking cluster operations.
 - `fs.file-max = 1048576` — ensures sufficient file descriptors for large deployments.
+
+The `net.ipv4.tcp_retries2` parameter is set automatically by the charm and does not
+need to be configured manually.
 
 For instructions on how to apply these settings, see
 [How to deploy on LXD](how-to-deploy-lxd). For the full list of required kernel parameters,

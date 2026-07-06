@@ -59,8 +59,10 @@ use these parameters.
 | :--- | :--- | :--- |
 | `vm.swappiness` | `0` | Disables swap to prevent OpenSearch from being swapped to disk, which causes severe performance degradation. |
 | `vm.max_map_count` | `262144` | Required by OpenSearch for mmap-based file access to index segments. |
-| `net.ipv4.tcp_retries2` | `5` | Prevents long network timeouts from blocking cluster operations. |
 | `fs.file-max` | `1048576` | Ensures sufficient file descriptors for large deployments with many shards and indices. |
+
+The `net.ipv4.tcp_retries2` parameter is set automatically by the charm and does not
+need to be configured manually.
 
 For instructions on how to apply these settings on the host and propagate them to
 containers, see [How to deploy on LXD](how-to-deploy-lxd).

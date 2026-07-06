@@ -48,7 +48,9 @@ and propagated to every new LXD container:
 
 * `vm.swappiness = 0`
 * `vm.max_map_count = 262144`
-* `net.ipv4.tcp_retries2 = 5`
+
+The `net.ipv4.tcp_retries2` parameter is set automatically by the charm and
+does not need to be configured manually.
 
 See [System requirements](reference-system-requirements) for the full list of required
 kernel parameters and their purpose.
@@ -56,7 +58,7 @@ kernel parameters and their purpose.
 To see the current kernel parameter values before making changes:
 
 ```shell
-sudo sysctl -a | grep -E 'swappiness|max_map_count|tcp_retries2'
+sudo sysctl -a | grep -E 'swappiness|max_map_count'
 ```
 
 On the host machine, create a sysctl configuration file:
@@ -65,7 +67,6 @@ On the host machine, create a sysctl configuration file:
 sudo tee /etc/sysctl.d/opensearch.conf <<EOF
 vm.swappiness = 0
 vm.max_map_count = 262144
-net.ipv4.tcp_retries2 = 5
 EOF
 ```
 
@@ -87,7 +88,6 @@ cloudinit-userdata: |
   postruncmd:
     - [ 'echo', 'vm.max_map_count=262144', '>>', '/etc/sysctl.conf' ]
     - [ 'echo', 'vm.swappiness=0', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'net.ipv4.tcp_retries2=5', '>>', '/etc/sysctl.conf' ]
     - [ 'sysctl', '-p' ]
 EOF
 ```

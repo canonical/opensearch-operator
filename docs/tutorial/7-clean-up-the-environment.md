@@ -113,7 +113,6 @@ To reset them, you can either :
 sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
 vm.max_map_count=262144
 vm.swappiness=60
-net.ipv4.tcp_retries2=15
 fs.file-max=1048576
 EOT
 
