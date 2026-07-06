@@ -98,6 +98,8 @@ juju remove-relation data-integrator opensearch
 
 ## Rotate passwords
 
+Both client and admin passwords can be rotated.
+
 ### Rotate a client password
 
 Remove and re-add the relation to generate a new user with a new password:
