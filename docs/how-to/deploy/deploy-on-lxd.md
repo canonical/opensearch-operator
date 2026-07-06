@@ -17,7 +17,7 @@ This guide shows how to deploy Charmed OpenSearch on
 To deploy Charmed OpenSearch on LXD using Juju, you need:
 
 * LXD 6.1+
-* Juju 3.5.3+
+* Juju 3.6 (latest LTS)
 * Hardware that meets the [system requirements](reference-system-requirements)
 
 For additional guidance, see the [Environment setup](tutorial-1-set-up-the-environment) stage of our tutorial or the documentation for [LXD](https://canonical.com/lxd/docs/latest/tutorial/first_steps/#install-lxd-using-snap) and [Juju](https://canonical.com/juju/docs/juju-cli/3.6/howto/manage-juju/#install-juju) respectively.

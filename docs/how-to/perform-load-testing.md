@@ -14,7 +14,7 @@ The example uses AWS, but the approach applies to any
 
 ## Prerequisites
 
-* Juju 3.0+
+* Juju 3.6 (latest LTS)
 * [`jq`](https://jqlang.github.io/jq/)
 * A VPC on AWS (or equivalent in your cloud)
 * AWS `ACCESS_KEY` and `SECRET_KEY`

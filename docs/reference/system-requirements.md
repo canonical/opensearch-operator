@@ -18,7 +18,7 @@ This page outlines the minimum requirements to deploy Charmed OpenSearch success
 ## Software
 
 * Ubuntu 22.04 LTS (Jammy) or later
-* Juju `v.3.5.3+`
+* Juju `3.6` (latest LTS) — recommended; `3.5.3+` minimum required
   * Older minor versions of Juju 3 may be compatible, but are not officially supported.
 * LXD `6.1+`
 
