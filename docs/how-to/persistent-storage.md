@@ -23,7 +23,10 @@ There are three scenarios:
   a new cluster UUID is assigned and the node can start.
 
 ```{note}
-These steps apply only to disks under Juju management.
+These steps apply only to **persistent** disks under Juju management
+(e.g. deployed using a persistent storage pool such as LXD ZFS or Btrfs).
+Non-persistent storage (such as the default `rootfs` pool) is destroyed
+when its unit is removed and cannot be reused.
 Bringing external disks or volumes into Juju is not currently supported.
 ```
 
