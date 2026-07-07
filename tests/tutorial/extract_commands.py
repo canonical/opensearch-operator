@@ -462,12 +462,22 @@ def build_task_yaml(heading: str, meta: dict[str, str]) -> str:
     )
 
 
-def _process_pair(input_path: Path, output_path: Path) -> None:
-    """Extract shell blocks from *input_path* and write the script."""
+def _process_pair(
+    input_path: Path,
+    output_path: Path,
+    *,
+    source: str,
+    meta: dict[str, str],
+) -> None:
+    """Extract shell blocks from *input_path* and write the script.
+
+    *source* is the already-read file content and *meta* is the already-extracted
+    spread metadata. Both are passed in so the caller controls how many times
+    the file is read and parsed.
+    """
     if not input_path.exists():
         sys.exit(f"Error: {input_path} does not exist")
 
-    source = input_path.read_text(encoding="utf-8")
     blocks = extract_shell_blocks(source)
 
     if not blocks:
@@ -478,16 +488,14 @@ def _process_pair(input_path: Path, output_path: Path) -> None:
     output_path.write_text(script, encoding="utf-8")
     print(f"Written {len(blocks)} block(s) → {output_path}")
 
-    # Generate task.yaml alongside the .sh file if spread metadata exists.
-    meta = extract_spread_meta(source)
+    # Generate task.yaml alongside the .sh file using the passed-in meta.
     heading = extract_heading(source)
-    if meta:
-        task_dir = output_path.with_suffix("")  # environment.sh → environment/
-        task_yaml = task_dir / "task.yaml"
-        task_yaml.parent.mkdir(parents=True, exist_ok=True)
-        task_content = build_task_yaml(heading, meta)
-        task_yaml.write_text(task_content, encoding="utf-8")
-        print(f"Written task.yaml → {task_yaml}")
+    task_dir = output_path.with_suffix("")  # environment.sh → environment/
+    task_yaml = task_dir / "task.yaml"
+    task_yaml.parent.mkdir(parents=True, exist_ok=True)
+    task_content = build_task_yaml(heading, meta)
+    task_yaml.write_text(task_content, encoding="utf-8")
+    print(f"Written task.yaml → {task_yaml}")
 
 
 def _discover_and_process(input_dir: Path, output_dir: Path) -> None:
@@ -504,10 +512,11 @@ def _discover_and_process(input_dir: Path, output_dir: Path) -> None:
     processed = 0
     for md_file in md_files:
         source = md_file.read_text(encoding="utf-8")
-        if not extract_spread_meta(source):
+        meta = extract_spread_meta(source)
+        if not meta:
             continue
         output_path = output_dir / f"{md_file.stem}.sh"
-        _process_pair(md_file, output_path)
+        _process_pair(md_file, output_path, source=source, meta=meta)
         processed += 1
 
     if not processed:
@@ -544,7 +553,17 @@ def main() -> None:
         sys.exit("Error: arguments must be pairs of <input.md> <output.sh>")
 
     for i in range(0, len(args), 2):
-        _process_pair(Path(args[i]), Path(args[i + 1]))
+        input_path = Path(args[i])
+        if not input_path.exists():
+            sys.exit(f"Error: {input_path} does not exist")
+        source = input_path.read_text(encoding="utf-8")
+        meta = extract_spread_meta(source)
+        if not meta:
+            sys.exit(
+                f"Error: {input_path} has no spread metadata; "
+                "a <!-- test:spread ... --> block is required."
+            )
+        _process_pair(input_path, Path(args[i + 1]), source=source, meta=meta)
 
 
 if __name__ == "__main__":
