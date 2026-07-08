@@ -141,8 +141,8 @@ is well prepared to start an upgrade procedure.
 ```{caution}
 Charmed OpenSearch supports performance profiles with different RAM consumption:
 
-* `production`: consumes 50% of the available RAM, up to 32 GB
-* `testing`: consumes ~1 GB of RAM
+* `production`: JVM heap set to 50% of the available RAM, capped at 31 GB
+* `testing`: JVM heap fixed at ~1 GB of RAM
 
 If the charm is running on a revision prior to `185`, the `testing` profile is the default.
 Ensure it is set before upgrading, then switch to a profile that suits your use case.
