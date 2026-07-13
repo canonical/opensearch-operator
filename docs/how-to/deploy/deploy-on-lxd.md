@@ -4,7 +4,9 @@ myst:
     description: "Deploy Charmed OpenSearch on LXD containers with Juju, including prerequisites, sysctl configuration, and bootstrap steps."
 ---
 
+<!-- vale off -->
 (how-to-deploy-lxd)=
+<!-- vale on -->
 # How to deploy on LXD
 
 This guide summarizes how to set up your machine and deploy Charmed OpenSearch on

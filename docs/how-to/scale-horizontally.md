@@ -82,7 +82,7 @@ A cluster health may return `green`, `yellow`, or `red`.
 
 #### `green`
 
- :green_circle: Scaling down might be safe to do. This is roughly equivalent to an `active` juju status.
+ :green_circle: Scaling down might be safe to do. This is roughly equivalent to an `active` Juju status.
 
 It is imperative to check whether the node targeted for removal does not hold a primary shard of an index with no replicas. You can see this by making the following request and seeing which primary shards are allocated to a given node:
 
@@ -94,7 +94,7 @@ It is generally not recommended to disable replication for indices, but if that'
 
 #### `yellow`
 
-:yellow_circle: Scaling down **might not be safe** to do. This is roughly equivalent to a `blocked` juju status.
+:yellow_circle: Scaling down **might not be safe** to do. This is roughly equivalent to a `blocked` Juju status.
 
 This means that some replica shards are `unassigned`. You can visualize that by using the cat API as shown below.
 
@@ -121,7 +121,7 @@ juju add-unit -n 1
 
 #### `red`  
 
-:red_circle: Scaling down **is definitely not safe** to do, as some primary shards are not assigned. This is roughly equivalent to a `blocked` juju status.
+:red_circle: Scaling down **is definitely not safe** to do, as some primary shards are not assigned. This is roughly equivalent to a `blocked` Juju status.
 
 The course of action to follow here is to add units to the cluster. To scale up by one unit, run the following command:
 
