@@ -41,7 +41,7 @@ run the following command after initializing LXD:
 lxc network set lxdbr0 ipv6.address none
 ```
 
-See [The LXD cloud and Juju](https://documentation.ubuntu.com/juju/3.6/reference/cloud/list-of-supported-clouds/the-lxd-cloud-and-juju/#supported-constraints) for more information.
+See [The LXD cloud and Juju](https://canonical.com/juju/docs/juju-cli/3.6/reference/cloud/list-of-supported-clouds/lxd/#constraints) for more information.
 
 ## Sysctl configuration
 
