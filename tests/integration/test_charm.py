@@ -18,7 +18,7 @@ from opensearch_single_kernel.common.constants import (
 )
 from opensearch_single_kernel.common.statuses import GeneralStatuses, TlsStatuses
 from tests.helpers import Substrate
-from tests.integration.continuous_writes import (
+from .continuous_writes import (
     ContinuousWrites,
     assert_continuous_writes_consistency,
     assert_continuous_writes_increasing,

@@ -34,29 +34,27 @@ jobs:
           import pathlib
           import os
           import subprocess
-
           spread_jobs = (
               subprocess.run(
-                  [pathlib.Path.home() / "go/bin/spread", "-list", "github-ci"],
-                  capture_output=True,
-                  check=True,
-                  text=True,
+                [pathlib.Path.home() / "go/bin/spread", "-list", "github-ci"],
+                capture_output=True,
+                check=True,
+                text=True,
               )
               .stdout.strip()
               .split("\n")
           )
           jobs = []
           for job in spread_jobs:
-              # Example `job`: "github-ci:ubuntu-24.04:tests/spread/test_charm.py:juju36"
+              # Example `job`: "github-ci:ubuntu-24.04:tests/spread/opensearch/k8s/test_charm.py:ubuntu22"
               _, runner, task, variant = job.split(":")
               # Example: "test_charm.py"
               task = task.removeprefix("tests/spread/")
-              # For IS-hosted runners
-              if "arm64" in runner:
+              if runner.endswith("-arm"):
                   architecture = "arm64"
               else:
                   architecture = "amd64"
-              # Example: "test_charm.py:juju36 | amd64"
+              # Example: "test_charm.py | amd64"
               name = f"{task}:{variant} | {architecture}"
               # ":" character not valid in GitHub Actions artifact
               name_in_artifact = f"{task.replace('/', '-')}-{variant}-{architecture}"
