@@ -15,14 +15,16 @@ on:
 jobs:
   markdown-lint:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
     steps:
     - uses: actions/checkout@v5
       with:
         fetch-depth: 0
+        persist-credentials: false
     - name: Create venv
       working-directory: "docs"
       run: make install
     - name: Lint markdown
       working-directory: "docs"
-      run: make lint-md
-      
+      run: make lint-md 

@@ -1,4 +1,4 @@
-# Copyright 2024 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 name: Tests
 
@@ -24,13 +24,15 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v32.1.0
+    uses: canonical/data-platform-workflows/.github/workflows/lint_workflows.yaml@v50.0.0
 
   promtool:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       # prometheus snap includes promtool
       - name: Install prometheus snap
@@ -44,13 +46,14 @@ jobs:
     name: Terraform - Validation and Simple Deployment product
     # TODO remove this when terraform units=0 bug is fixed
     continue-on-error: true
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: (Github hosted) Mount /mnt to have more storage 
         run: |
@@ -130,24 +133,6 @@ jobs:
             sleep 5
           done
 
-  lib-check:
-    name: Check libraries
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Check libs
-        uses: canonical/charming-actions/check-libraries@2.7.0
-        continue-on-error: true
-        with:
-          credentials: ${{ secrets.CHARMHUB_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          use-labels: false
-          fail-build: ${{ github.event_name == 'pull_request' }}
-
   build:
     strategy:
       fail-fast: false
@@ -155,7 +140,7 @@ jobs:
         path:
           - .
     name: Build charm | ${{ matrix.path }}
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v32.1.0
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v50.0.0
     with:
       path-to-charm-directory: ${{ matrix.path }}
 

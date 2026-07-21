@@ -1,0 +1,135 @@
+create-dummy-docs:
+  description: Create dummy documents in the dummy OpenSearch indexes.
+  params:
+    count:
+      type: integer
+      description: Number of dummy documents to create.
+      default: 5
+    host:
+      type: string
+      description: Optional OpenSearch host override for this action.
+    username:
+      type: string
+      description: Optional username override for this action.
+    password:
+      type: string
+      description: Optional password override for this action.
+    ca-cert:
+      type: string
+      description: Optional base64-encoded PEM CA certificate override for this action.
+bulk-insert:
+  description: Run an OpenSearch bulk insert with generated documents and return a compact summary.
+  params:
+    index-names:
+      type: string
+      description: JSON list of OpenSearch indexes to receive the generated documents.
+    docs-count:
+      type: integer
+      description: Number of documents to generate for each index.
+      default: 100
+    blob-size:
+      type: integer
+      description: Number of repeated bytes to include in each generated document blob.
+      default: 100
+    route:
+      type: string
+      description: OpenSearch bulk route to request.
+      default: /_bulk
+    host:
+      type: string
+      description: Optional OpenSearch host override for this action.
+    username:
+      type: string
+      description: Optional username override for this action.
+    password:
+      type: string
+      description: Optional password override for this action.
+    ca-cert:
+      type: string
+      description: Optional base64-encoded PEM CA certificate override for this action.
+    verify:
+      type: boolean
+      description: Whether to verify the OpenSearch TLS certificate.
+      default: true
+    timeout:
+      type: integer
+      description: Optional request timeout in seconds.
+      default: 30
+  required:
+    - index-names
+generate-bulk-training-data:
+  description: Generate deterministic NDJSON documents for KNN training.
+  params:
+    index-name:
+      type: string
+      description: Name of the OpenSearch index to use in bulk operation metadata.
+    vector-name:
+      type: string
+      description: Name of the vector field to include in each generated document.
+    docs-count:
+      type: integer
+      description: Number of training documents to generate.
+      default: 100
+    dimensions:
+      type: integer
+      description: Number of dimensions in each generated vector.
+      default: 4
+    has-result:
+      type: boolean
+      description: Whether to add a deterministic price result field to each document.
+      default: false
+    host:
+      type: string
+      description: Optional OpenSearch host override for this action.
+    username:
+      type: string
+      description: Optional username override for this action.
+    password:
+      type: string
+      description: Optional password override for this action.
+    ca-cert:
+      type: string
+      description: Optional base64-encoded PEM CA certificate override for this action.
+  required:
+    - index-name
+    - vector-name
+request:
+  description: Run a generic OpenSearch request.
+  params:
+    method:
+      type: string
+      description: HTTP method to run, such as GET, PUT, POST, PATCH, or DELETE.
+    route:
+      type: string
+      description: HTTPS URL or OpenSearch path to request.
+    body:
+      type: string
+      description: JSON request body.
+      default: ""
+    host:
+      type: string
+      description: Optional OpenSearch host override for this request.
+    username:
+      type: string
+      description: Optional username override for this request.
+    password:
+      type: string
+      description: Optional password override for this request.
+    ca-cert:
+      type: string
+      description: Optional base64-encoded PEM CA certificate override for this request.
+    headers:
+      type: string
+      description: Optional JSON object of HTTP headers for this request.
+      default: ""
+    verify:
+      type: boolean
+      description: Whether to verify the OpenSearch TLS certificate.
+      default: true
+    timeout:
+      type: integer
+      description: Optional request timeout in seconds.
+      default: 30
+  required:
+    - method
+    - route

@@ -8,10 +8,14 @@ on:
 jobs:
   build:
     runs-on: [self-hosted, linux, amd64, tiobe, jammy]
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout the project
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y python3-venv

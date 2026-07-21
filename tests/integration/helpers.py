@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2024 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 import json
 import logging
@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Any
 
 import requests
 import yaml
@@ -336,6 +336,40 @@ async def debug_failed_unit(ops_test: OpsTest, app: str, endpoint: str) -> None:
 
         logger.debug("\n\n------------------\n\n")
 
+async def deploy_opensearch(  # noqa: C901
+    ops_test: OpsTest,
+    charm: str,
+    substrate: str,
+    application_name: str,
+    num_units: int,
+    *,
+    series: Optional[str] = None,
+    config: Optional[Dict[str, Any]] = None,
+    constraints: Optional[str] = None,
+    resources: Optional[Dict[str, str]] = None,
+    storage: Optional[Dict[str, Any]] = None,
+) -> None:
+    """Deploy the OpenSearch charm."""
+    deploy_kwargs = {
+        "application_name": application_name,
+        "num_units": num_units,
+    }
+    # Juju does not use `series` for K8s applications.
+    if series and substrate != "k8s":
+        deploy_kwargs["series"] = series
+    if config:
+        deploy_kwargs["config"] = config
+    if constraints:
+        deploy_kwargs["constraints"] = constraints
+    if resources:
+        deploy_kwargs["resources"] = resources
+    if storage:
+        deploy_kwargs["storage"] = storage
+    if substrate == "k8s":
+        # This is needed for upgrades
+        deploy_kwargs["trust"] = True
+
+    await ops_test.model.deploy(charm, **deploy_kwargs)
 
 def opensearch_client(
     hosts: List[str], user_name: str, password: str, cert_path: str

@@ -14,9 +14,13 @@ jobs:
     name: Collect integration test spread jobs
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Set up environment
         run: |
           sudo snap install go --classic
@@ -91,6 +95,8 @@ jobs:
       - collect-integration-tests
     runs-on: ${{ matrix.job.runner }}
     timeout-minutes: 217 # Sum of steps `timeout-minutes` + 5
+    permissions:
+      contents: read
     steps:
       - name: Disk usage
         timeout-minutes: 1
@@ -98,6 +104,8 @@ jobs:
       - name: Checkout
         timeout-minutes: 3
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Set up environment
         timeout-minutes: 5
         run: sudo snap install charmcraft --classic
@@ -125,13 +133,6 @@ jobs:
         # https://github.com/canonical/charmcraft/issues/2130 fixed
         run: ~/go/bin/spread -vv -artifacts=artifacts '${{ matrix.job.spread_job }}'
         env:
-          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
-          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
-          AZURE_STORAGE_ACCOUNT: ${{ secrets.AZURE_STORAGE_ACCOUNT }}
-          AZURE_SECRET_KEY: ${{ secrets.AZURE_SECRET_KEY }}
-          GCP_ACCESS_KEY: ${{ secrets.GCP_ACCESS_KEY }}
-          GCP_SECRET_KEY: ${{ secrets.GCP_SECRET_KEY }}
-          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
       - name: Upload Allure results
         timeout-minutes: 3
         # Only upload results from one spread system & one spread variant
@@ -170,7 +171,7 @@ jobs:
       - name: jhack tail
         timeout-minutes: 3
         if: ${{ !contains(matrix.job.spread_job, 'juju29') && (success() || (failure() && steps.spread.outcome == 'failure')) }}
-        run: sudo jhack tail --printer raw --replay --no-watch | tee ~/logs/jhack-tail.txt
+        run: script -q -c "sudo env jhack tail --printer raw --replay --no-watch" /dev/null | tee "$HOME/logs/jhack-tail.txt" || true
       - name: Upload logs
         timeout-minutes: 5
         if: ${{ !contains(matrix.job.spread_job, 'juju29') && (success() || (failure() && steps.spread.outcome == 'failure')) }}
@@ -192,6 +193,8 @@ jobs:
       - integration-test
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: write # Needed for Allure Report
     steps:
       - name: Download Allure
         # Following instructions from https://allurereport.org/docs/install-for-linux/#install-from-a-deb-package
@@ -216,6 +219,7 @@ jobs:
         with:
           ref: gh-pages-beta
           path: repo/
+          persist-credentials: false
       - name: Download default test results
         # Default test results in case the integration tests time out or runner set up fails
         # (So that Allure report will show "unknown"/"failed" test result, instead of omitting the test)
@@ -307,6 +311,8 @@ jobs:
               file.write(DATA)
       - name: Update GitHub pages branch
         working-directory: repo/
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         # TODO future improvement: commit message
         run: |
           mkdir '${{ github.run_number }}'
@@ -318,4 +324,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Allure report ${{ github.run_number }}"
           # Uses token set in checkout step
-          git push origin gh-pages-beta
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages-beta

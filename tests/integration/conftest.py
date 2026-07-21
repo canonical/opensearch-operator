@@ -1,10 +1,14 @@
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 import os
 from pathlib import Path
 
 import pytest
 import yaml
+
+from tests.helpers import Substrate
+from pytest_operator.plugin import OpsTest
+
 
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 TLS_STABLE_CHANNEL = "1/stable"
@@ -23,6 +27,7 @@ IDLE_PERIOD = 75
 
 
 CONFIG_OPTS = {"profile": "testing"}
+CLIENT_CHARM = "client-charm"
 
 MODEL_CONFIG = {
     "logging-config": "<root>=INFO;unit=DEBUG",
@@ -34,6 +39,38 @@ MODEL_CONFIG = {
         - [ 'sysctl', '-w', 'net.ipv4.tcp_retries2=5' ]
     """,
 }
+@pytest.fixture
+def charm_resources(substrate: Substrate) -> dict[str, str]:
+    """Resources to pass to `juju deploy` for the OpenSearch charm.
+
+    Juju does not reliably auto-populate OCI image resources for locally packed charms in all
+    environments. For the K8s substrate, explicitly provide the `opensearch-image` resource so the
+    controller can fetch the image. The K8s workload image is published independently from the
+    charm base variants, so we always use the upstream image declared in metadata.
+    """
+    if substrate != "k8s":
+        return {}
+
+    upstream = (
+        (METADATA.get("resources") or {}).get("opensearch-image", {}).get("upstream-source")
+    )
+    if not upstream:
+        raise RuntimeError(
+            "K8s test charm metadata is missing resources.opensearch-image.upstream-source"
+        )
+
+    return {"opensearch-image": upstream}
+
+
+@pytest.fixture(autouse=True)
+async def deploy_client_charm(ops_test: OpsTest, substrate: Substrate):
+    """Deploy the client charm."""
+    if substrate == "k8s" and CLIENT_CHARM not in ops_test.model.applications:
+        await ops_test.model.deploy(
+            "./tests/charms/dummy-client-charm/dummy-client-charm_amd64.charm",
+            CLIENT_CHARM,
+        )
+        await ops_test.model.wait_for_idle(apps=[CLIENT_CHARM])
 
 
 @pytest.fixture

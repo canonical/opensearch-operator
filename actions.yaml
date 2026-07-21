@@ -1,4 +1,4 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 set-tls-private-key:
@@ -69,6 +69,12 @@ pre-upgrade-check:
 
 resume-upgrade:
   description: Upgrade remaining units (after you manually verified that upgraded units are healthy).
+  params: # For k8s
+    force:
+      type: boolean
+      default: false
+      description: a boolean indicating whether to force the upgrade to continue even if some upgraded units are not healthy.
+
 
 force-upgrade:
   description: |

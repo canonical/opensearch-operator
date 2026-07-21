@@ -1,0 +1,32 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+#
+# This file defines the configuration for concierge.
+# Concierge (https://github.com/jnsgruk/concierge) is a utility used to
+# provision charm development and testing machines.
+# This file is used automatically by spread.
+juju:
+  model-defaults:
+    logging-config: <root>=INFO; unit=DEBUG
+providers:
+  k8s:
+    enable: true
+    bootstrap: true
+    channel: 1.32-classic/stable
+    bootstrap-constraints:
+      root-disk: 5G
+    image-registry:
+      url: $DOCKERHUB_MIRROR
+    features:
+      load-balancer:
+        l2-mode: "true"
+        cidrs: "10.43.45.0/28"
+      local-storage: {}
+      network: {}
+
+host:
+  snaps:
+    jhack:
+      channel: latest/edge
+      connections:
+        - jhack:dot-local-share-juju snapd
