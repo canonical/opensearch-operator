@@ -5,10 +5,12 @@ name: opensearch
 display-name: OpenSearch
 
 description: |
-  Machine charm for OpenSearch
+  Charm for OpenSearch
 docs: https://discourse.charmhub.io/t/charmed-opensearch-documentation/19417
 summary: |
-  Machine charm for OpenSearch
+  Charm for OpenSearch
+
+charm-user: sudoer
 
 peers:
   opensearch-peers:
@@ -36,6 +38,10 @@ provides:
       from arbitrary locations, send alert rules, dashboards, etc.
     interface: cos_agent
     scope: container
+  metrics-endpoint: # k8s specific
+    interface: prometheus_scrape
+  grafana-dashboard: # k8s specific
+    interface: grafana_dashboard
 
 requires:
   certificates:
@@ -64,8 +70,31 @@ requires:
     optional: true
   smtp:
     interface: smtp
+  logging: # k8s specific
+    interface: loki_push_api
+
+containers:
+  opensearch:
+    uid: 584792
+    gid: 584792
+    resource: opensearch-image
+    mounts:
+      - storage: opensearch-data
+        location: /var/lib/opensearch
+      - storage: opensearch-logs
+        location: /var/log/opensearch
 
 storage:
   opensearch-data:
     type: filesystem
     location: /var/snap/opensearch/common # /mnt/opensearch/data
+  opensearch-logs:
+    type: filesystem
+    location: /var/snap/opensearch/common/var/log/opensearch
+    description: Storage for OpenSearch log files
+
+resources:
+  opensearch-image:
+    type: oci-image
+    description: OCI image for opensearch
+    upstream-source: ghcr.io/canonical/opensearch:2.19.5-24.04_edge@sha256:9736130a9dc2f7a042de5cbba51f3801ade23a4834bbde61450ca271fd772586
