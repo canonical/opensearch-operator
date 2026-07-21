@@ -58,6 +58,17 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Install lxd
+        run: |
+          sudo snap install lxd --channel=latest/stable
+          sudo adduser "$USER" 'lxd'
+          # `newgrp` does not work in GitHub Actions; use `sg` instead
+          sg 'lxd' -c "lxd waitready"
+          sg 'lxd' -c "lxd init --auto"
+          sg 'lxd' -c "lxc network set lxdbr0 ipv6.address none"
+          sudo iptables -F FORWARD
+          sudo iptables -P FORWARD ACCEPT
+
       - name: (Github hosted) Mount /mnt to have more storage 
         run: |
           sudo mkdir -p /mnt/lxd/storage-pools
