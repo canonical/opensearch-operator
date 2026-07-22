@@ -14,10 +14,13 @@ TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 TLS_STABLE_CHANNEL = "1/stable"
 
 
-CONFIG = str(yaml.safe_load(Path("./config.yaml").read_text()))
-ACTIONS = str(yaml.safe_load(Path("./actions.yaml").read_text()))
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
+CONFIG = yaml.safe_load(Path("./machines/config.yaml").read_text())
+ACTIONS = yaml.safe_load(Path("./machines/actions.yaml").read_text())
 
+METADATA = yaml.safe_load(Path("./machines/metadata.yaml").read_text())
+K8S_METADATA = yaml.safe_load(
+    Path("./kubernetes/metadata.yaml").read_text()
+)
 
 APP_NAME = METADATA["name"]
 
@@ -52,7 +55,7 @@ def charm_resources(substrate: Substrate) -> dict[str, str]:
         return {}
 
     upstream = (
-        (METADATA.get("resources") or {}).get("opensearch-image", {}).get("upstream-source")
+        (K8S_METADATA.get("resources") or {}).get("opensearch-image", {}).get("upstream-source")
     )
     if not upstream:
         raise RuntimeError(
