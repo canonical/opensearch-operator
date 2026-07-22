@@ -39,7 +39,7 @@ Integrate with the Canonical Observability Stack (COS) and the OpenSearch Dashbo
 to monitor operational performance and visualize stored data across all clusters.
 
 * [How to enable monitoring](how-to-monitoring)
-* [OpenSearch Dashboards: How to connect to OpenSearch](dashboard-how-to-connect-to-opensearch)
+* [OpenSearch Dashboards: How to connect to OpenSearch](dashboard-how-to-deploy-connect-scale)
 
 ### Backups
 
