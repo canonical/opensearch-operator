@@ -94,7 +94,7 @@ juju run grafana/leader get-admin-password --model <k8s-controller>:<cos-model>
 ```
 
 For detailed instructions, see
-[Browse dashboards](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s#heading--browse-dashboards)
+[Browse dashboards](https://documentation.ubuntu.com/observability/track-3.0/tutorial/cos-lite-microk8s-sandbox/#browse-dashboards)
 in the COS tutorial.
 
 In Grafana, select the **Charmed OpenSearch** dashboard. You can filter by
