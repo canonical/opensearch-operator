@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from _pytest.config.argparsing import Parser
 
-from tests.helpers import Substrate
+from .helpers import Substrate
 
 # Repo root directory
 _REPO_ROOT_DIR = Path(__file__).parent.parent.parent.resolve()
