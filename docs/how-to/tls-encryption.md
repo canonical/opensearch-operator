@@ -84,7 +84,7 @@ openssl genrsa -out unit-transport.pem 3072
 openssl genrsa -out app-admin.pem 3072
 ```
 
-Apply the private key for `app-admin` to the juju leader:
+Apply the private key for `app-admin` to the Juju leader:
 
 ```shell
 juju run opensearch/leader set-tls-private-key category=app-admin key="$(base64 -w0 app-admin.pem)"
