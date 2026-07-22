@@ -1,14 +1,17 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-name: opensearch
-display-name: OpenSearch
+name: opensearch-k8s
+display-name: OpenSearch K8s
 
 description: |
-  Charm for OpenSearch
-docs: https://discourse.charmhub.io/t/charmed-opensearch-documentation/19417
+  Kubernetes charm for OpenSearch
+docs: https://discourse.charmhub.io/t/charmed-opensearch-documentation/9729
 summary: |
-  Charm for OpenSearch
+  Kubernetes charm for OpenSearch
+
+assumes:
+  - k8s-api
 
 charm-user: sudoer
 
@@ -31,16 +34,9 @@ provides:
     optional: true
   opensearch-client:
     interface: opensearch_client
-  cos-agent: # vm specific
-    description: |
-      `cos-agent` is a dedicated relation for the grafana agent machine
-      charm. It will allow you to set up custom scrape jobs, fetch files
-      from arbitrary locations, send alert rules, dashboards, etc.
-    interface: cos_agent
-    scope: container
-  metrics-endpoint: # k8s specific
+  metrics-endpoint:
     interface: prometheus_scrape
-  grafana-dashboard: # k8s specific
+  grafana-dashboard:
     interface: grafana_dashboard
 
 requires:
@@ -70,8 +66,18 @@ requires:
     optional: true
   smtp:
     interface: smtp
-  logging: # k8s specific
+  logging:
     interface: loki_push_api
+
+storage:
+  opensearch-data:
+    type: filesystem
+    location: /var/lib/opensearch
+    description: Storage for OpenSearch data files
+  opensearch-logs:
+    type: filesystem
+    location: /var/log/opensearch
+    description: Storage for OpenSearch log files
 
 containers:
   opensearch:
@@ -83,15 +89,6 @@ containers:
         location: /var/lib/opensearch
       - storage: opensearch-logs
         location: /var/log/opensearch
-
-storage:
-  opensearch-data:
-    type: filesystem
-    location: /var/snap/opensearch/common # /mnt/opensearch/data
-  opensearch-logs:
-    type: filesystem
-    location: /var/snap/opensearch/common/var/log/opensearch
-    description: Storage for OpenSearch log files
 
 resources:
   opensearch-image:

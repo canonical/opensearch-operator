@@ -29,5 +29,7 @@ def substrate(request) -> Substrate:
 @pytest.fixture
 def opensearch_base_path(substrate) -> Path:
     """The base path for the files of the opensearch charms, according to the substrate."""
-    return _REPO_ROOT_DIR 
-
+    if substrate == "vm":
+        return _REPO_ROOT_DIR / "machines" 
+    else:
+        return _REPO_ROOT_DIR / "kubernetes"

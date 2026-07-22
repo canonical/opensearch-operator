@@ -1,0 +1,106 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+set-tls-private-key:
+  description: Set the private keys, which will be used for certificate signing requests (CSR). Run for each unit separately or on-leader only depending on the type.
+  params:
+    category:
+      type: string
+      enum:
+        - "app-admin"
+        - "unit-transport"
+        - "unit-http"
+      description: (Required) Type of private key to be set. "app-admin" must only be set on the leader.
+    key:
+      type: string
+      description: (Optional) The content of the private key. The content will be auto-generated if not set.
+    password:
+      type: string
+      description: (Optional) The passphrase of the private key. Will NOT be set if omitted.
+  required:
+    - category
+
+set-password:
+  description: Change the admin user's password, which is used by charm. It is for internal charm users and SHOULD NOT be used by applications.
+  params:
+    username:
+      type: string
+      description: The username, the default value 'admin'. Possible values - admin.
+      default: admin
+    password:
+      type: string
+      description: The password will be auto-generated if this option is not set.
+
+get-password:
+  description: Fetch the system user's password and CA chain, which is used by charm. It is for internal charm users and SHOULD NOT be used by applications.
+  params:
+    username:
+      type: string
+      description: The username, the default value 'admin'. Possible values - admin.
+      default: admin
+
+create-backup:
+  description: Create a database backup.
+    S3 credentials are retrieved from a relation with the S3 integrator charm.
+
+list-backups:
+  description: List available backup_ids in the S3 bucket and path provided by the S3 integrator charm.
+  params:
+    output:
+      type: string
+      default: "table"
+      description: |
+        Format which the data should be returned. Possible values: table, json.
+        The json format will bring more details, such as shard status, indices name, etc.
+
+restore:
+  description: Restore a database backup.
+    S3 credentials are retrieved from a relation with the S3 integrator charm.
+  params:
+    backup-id:
+      type: string
+      description: |
+        A backup-id to identify the backup to restore. Format: backup-id=<string>.
+  required:
+    - backup-id
+
+pre-upgrade-check:
+  description: Check if charm is ready to upgrade
+
+resume-upgrade:
+  description: Upgrade remaining units (after you manually verified that upgraded units are healthy).
+
+force-upgrade:
+  description: |
+    Potential of *data loss* and *downtime*
+
+    Force upgrade of this unit.
+
+    Use to
+    - force incompatible upgrade and/or
+
+status-detail:
+  description: Gets statuses of the charm
+  params:
+    recompute:
+      type: boolean
+      default: false
+      description: a boolean indicating whether a unit should recompute all statuses.   - continue upgrade if 1+ upgraded units have non-active status
+
+# TODO to be changed when implementing refresh V3
+force-refresh-start:
+  description: |
+    Potential of data loss and downtime
+
+    Force refresh of first unit
+
+    Must run with at least one of the parameters `=false`
+  params:
+    check-compatibility:
+      type: boolean
+      default: true
+      description: |
+        Potential of data loss and downtime
+
+        If `false`, force refresh if new version of OpenSearch and/or charm is not compatible with previous version
+  additionalProperties: false

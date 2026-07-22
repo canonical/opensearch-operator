@@ -7,7 +7,7 @@ import pytest
 from ops import testing
 from scenario.errors import UncaughtCharmError
 
-from charm import DummyClientCharmCharm
+from machines.src.charm import DummyClientCharmCharm
 from models import GenerateBulkTrainingDataActionParams, RequestActionParams
 
 CONSTRUCTED_CLIENT = None

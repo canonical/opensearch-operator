@@ -91,9 +91,11 @@ def series(ubuntu_base):
 
 
 @pytest.fixture
-def charm(ubuntu_base):
+def charm(ubuntu_base, opensearch_base_path, substrate) -> str:
     """Path to the charm file to use for testing."""
     # Return str instead of pathlib.Path since python-libjuju's model.deploy(), juju deploy, and
     # juju bundle files expect local charms to begin with `./` or `/` to distinguish them from
     # Charmhub charms.
-    return f"./opensearch_ubuntu@{ubuntu_base}-amd64.charm"
+    if substrate == "k8s":
+        return str(opensearch_base_path / f"opensearch-k8s_ubuntu@{ubuntu_base}-amd64.charm")
+    return str(opensearch_base_path / f"opensearch_ubuntu@{ubuntu_base}-amd64.charm")

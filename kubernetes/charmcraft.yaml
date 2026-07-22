@@ -51,11 +51,14 @@ parts:
     source: .
     after:
       - poetry-deps
-    poetry-export-extra-args: ['--only', 'main']
+    poetry-export-extra-args: ["--only", "main", "--without-hashes"]
     build-packages:
-      - libffi-dev  # Needed to build Python dependencies with Rust from source
-      - libssl-dev  # Needed to build Python dependencies with Rust from source
-      - pkg-config  # Needed to build Python dependencies with Rust from source
+      - git # Needed for dunamai (dynamic versioning)
+      - libffi-dev # Needed to build Python dependencies with Rust from source
+      - libssl-dev # Needed to build Python dependencies with Rust from source
+      - pkg-config # Needed to build Python dependencies with Rust from source
+    build-environment:
+      - PIP_CONSTRAINT: constraints.txt # Workaround setuptools 82
     override-build: |
       # Workaround for https://github.com/canonical/charmcraft/issues/2068
       # rustup used to install rustc and cargo, which are needed to build Python dependencies with Rust from source
@@ -74,8 +77,9 @@ parts:
       # rpds-py (Python package) >=0.19.0 requires rustc >=1.76, which is not available in the
       # Ubuntu 22.04 archive. Install rustc and cargo using rustup instead of the Ubuntu archive
       rustup set profile minimal
-      rustup default 1.94.0  # renovate: charmcraft-rust-latest
+      rustup default 1.94.1  # renovate: charmcraft-rust-latest
 
+      echo "setuptools-scm<10.0.0" > constraints.txt
       craftctl default
       # Include requirements.txt in *.charm artifact for easier debugging
       cp requirements.txt "$CRAFT_PART_INSTALL/requirements.txt"
@@ -83,16 +87,6 @@ parts:
   files:
     plugin: dump
     source: .
-    build-packages:
-      - git
-    override-build: |
-      # Workaround to add unique identifier (git hash) to charm version while specification
-      # DA053 - Charm versioning
-      # (https://docs.google.com/document/d/1Jv1jhWLl8ejK3iJn7Q3VbCIM9GIhp8926bgXpdtx-Sg/edit?pli=1)
-      # is pending review.
-      python3 -c 'import pathlib; import shutil; import subprocess; git_hash=subprocess.run(["git", "describe", "--always", "--dirty"], capture_output=True, check=True, encoding="utf-8").stdout; file = pathlib.Path("charm_version"); shutil.copy(file, pathlib.Path("charm_version.backup")); version = file.read_text().strip(); file.write_text(f"{version}+{git_hash}")'
-
-      craftctl default
     stage:
       - LICENSE
       - charm_version

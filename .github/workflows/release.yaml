@@ -1,6 +1,6 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
-name: Release to latest/edge
+name: Release to 2/edge
 
 on:
   push:
@@ -11,21 +11,47 @@ on:
       - 2/edge
 
 jobs:
+  tag:
+    name: Create charm refresh compatibility version git tag
+    uses: canonical/data-platform-workflows/.github/workflows/tag_charm_edge.yaml@v50.0.0
+    with:
+      track: '2'
+    permissions:
+      contents: write  # Needed to create git tag
+
   ci-tests:
     name: Tests
+    needs:
+      - tag
     uses: ./.github/workflows/ci.yaml
     permissions:
       contents: write  # Needed for Allure Report
 
-
-  release:
-    name: Release charm
+  release-machine:
+    name: Release machine charm
     needs:
+      - tag
       - ci-tests
-    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v50.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm_edge.yaml@v50.0.0
     with:
-      channel: 2/edge
+      track: ${{ needs.tag.outputs.track }}
       artifact-prefix: ${{ needs.ci-tests.outputs.artifact-prefix }}
+      path-to-charm-directory: machines
+    secrets:
+      charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
+    permissions:
+      contents: write  # Needed to create git tags
+
+  release-k8s:
+    name: Release Kubernetes charm
+    needs:
+      - tag
+      - ci-tests
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm_edge.yaml@v50.0.0
+    with:
+      track: ${{ needs.tag.outputs.track }}
+      artifact-prefix: ${{ needs.ci-tests.outputs.artifact-prefix }}
+      path-to-charm-directory: kubernetes
     secrets:
       charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
     permissions:

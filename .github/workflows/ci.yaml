@@ -43,7 +43,8 @@ jobs:
 
       - name: Check validity of prometheus alert rules
         run: |
-          promtool check rules src/alert_rules/prometheus/*.yaml
+          promtool check rules machines/src/alert_rules/prometheus/*.yaml
+          promtool check rules kubernetes/src/alert_rules/prometheus/*.yaml
 
   terraform-test:
     name: Terraform - Validation and Simple Deployment product
@@ -141,7 +142,8 @@ jobs:
       fail-fast: false
       matrix:
         path:
-          - .
+          - machines
+          - kubernetes
     name: Build charm | ${{ matrix.path }}
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v50.0.0
     with:
