@@ -13,10 +13,10 @@ TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 TLS_STABLE_CHANNEL = "1/stable"
 
 
-CONFIG = yaml.safe_load(Path("./machines/config.yaml").read_text())
-ACTIONS = yaml.safe_load(Path("./machines/actions.yaml").read_text())
+CONFIG = yaml.safe_load(Path("./machine/config.yaml").read_text())
+ACTIONS = yaml.safe_load(Path("./machine/actions.yaml").read_text())
 
-METADATA = yaml.safe_load(Path("./machines/metadata.yaml").read_text())
+METADATA = yaml.safe_load(Path("./machine/metadata.yaml").read_text())
 K8S_METADATA = yaml.safe_load(Path("./kubernetes/metadata.yaml").read_text())
 
 APP_NAME = METADATA["name"]

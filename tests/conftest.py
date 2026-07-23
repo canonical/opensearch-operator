@@ -32,6 +32,6 @@ def substrate(request) -> Substrate:
 def opensearch_base_path(substrate) -> Path:
     """The base path for the files of the opensearch charms, according to the substrate."""
     if substrate == "vm":
-        return _REPO_ROOT_DIR / "machines"
+        return _REPO_ROOT_DIR / "machine"
     else:
         return _REPO_ROOT_DIR / "kubernetes"

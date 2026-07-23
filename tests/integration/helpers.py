@@ -30,7 +30,7 @@ from tests.integration.conftest import CLIENT_CHARM
 
 from .helpers_deployments import get_application_units
 
-METADATA = yaml.safe_load(Path("./machines/metadata.yaml").read_text())
+METADATA = yaml.safe_load(Path("./machine/metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
 
 SERIES = "jammy"

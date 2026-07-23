@@ -355,7 +355,7 @@ async def test_check_workload_version(ops_test: OpsTest, substrate) -> None:
     if substrate == "k8s":
         workload_version_path = "./kubernetes/workload_version"
     elif substrate == "vm":
-        workload_version_path = "./machines/workload_version"
+        workload_version_path = "./machine/workload_version"
     workload_version = Path(workload_version_path).read_text().strip()
     assert installed_version == workload_version
 
