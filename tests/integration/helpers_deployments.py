@@ -136,14 +136,24 @@ async def _get_unit(
 
     app_id = f"{ops_test.model.uuid}/{app}"
     app_short_id = md5(app_id.encode()).hexdigest()[:3]
-    machine_id = -1 if subordinate else int(raw_unit["machine"])
+    # K8s units may not have "machine" or use a different structure; use -1 when missing.
+    machine_val = raw_unit.get("machine", -1)
+    machine_id = -1 if subordinate else (int(machine_val) if machine_val != -1 else -1)
+
+    ip = _get_unit_address(raw_unit) or ""
+
+    try:
+        hostname = await get_unit_hostname(ops_test, unit_id, app)
+    except Exception:
+        # On K8s use address as hostname for wait logic.
+        hostname = ip
 
     return Unit(
         id=unit_id,
         short_name=unit_name.replace("/", "-"),
         name=f"{unit_name.replace('/', '-')}.{app_short_id}",
-        ip=raw_unit["public-address"],
-        hostname=await get_unit_hostname(ops_test, unit_id, app),
+        ip=ip,
+        hostname=hostname,
         is_leader=raw_unit.get("leader", False),
         machine_id=machine_id,
         workload_status=Status(
@@ -162,16 +172,22 @@ async def _get_unit(
         ),
     )
 
+def _get_unit_address(raw_unit: dict[str, Any]) -> Optional[str]:
+    """Return unit address from raw status; K8s may use 'address' instead of 'public-address'."""
+    return raw_unit.get("public-address") or raw_unit.get("address")
+
 
 async def get_application_units(ops_test: OpsTest, app: str) -> List[Unit]:
     """Get fully detailed units of an application."""
     # Juju incorrectly reports the IP addresses after the network is restored this is reported as a
     # bug here: https://github.com/juju/python-libjuju/issues/738. Once this bug is resolved use of
     # `get_unit_ip` should be replaced with `.public_address`
+    if app not in ops_test.model.applications:
+        return []
     raw_app = get_raw_application(ops_test, app)
     units = []
-    for u_name, raw_unit in raw_app["units"].items():
-        if not raw_unit.get("public-address"):
+    for u_name, raw_unit in raw_app.get("units", {}).items():
+        if not _get_unit_address(raw_unit):
             # unit not ready yet...
             continue
         units.append(_get_unit(ops_test, app, raw_app, u_name, raw_unit))
@@ -196,13 +212,12 @@ async def get_application_subordinate_units(
         else:
             raise ValueError(f"Subordinate unit for {app} not found in {principal_app}")
 
-        if not raw_unit.get("public-address"):
+        if not _get_unit_address(raw_unit):
             # unit not ready yet...
             continue
 
         units.append(_get_unit(ops_test, app, raw_app, u_name, raw_unit, subordinate=True))
     return await asyncio.gather(*units) if units else []
-
 
 def _check_status(status: Status, check: StatusObject) -> bool:
     """Check if charm status is the same as from the advanced status lib checked status.
@@ -219,23 +234,15 @@ def _check_status(status: Status, check: StatusObject) -> bool:
     if status.value != check.status.lower():
         return False
 
-    regex_pattern = (
-        re.sub(
-            r"\{.*?\}",
-            r"(?s:.*?)",
-            check.message,
-        )
-        + r"(?s:.*?)"
-    )
-    status_message = status.message or ""
+    if not status.message and not check.message:
+        return True
 
-    return (
-        status_message == check.message
-        or status_message.startswith(check.message)
-        or status_message.startswith(f"{check.message:.40}")
-        or re.fullmatch(regex_pattern, status_message) is not None
+    return bool(status.message) and (
+        status.message == check.message
+        or status.message.startswith(check.message)
+        or status.message.startswith(f"{check.message:.40}")
+        or (check.short_message is not None and check.short_message in status.message)
     )
-
 
 def _is_every_condition_on_app_met(
     ops_test: OpsTest,
