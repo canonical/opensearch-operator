@@ -9,7 +9,7 @@ from _pytest.config.argparsing import Parser
 from .helpers import Substrate
 
 # Repo root directory
-_REPO_ROOT_DIR = Path(__file__).parent.parent.parent.resolve()
+_REPO_ROOT_DIR = Path(__file__).parent.parent.resolve()
 
 
 def pytest_addoption(parser: Parser):
