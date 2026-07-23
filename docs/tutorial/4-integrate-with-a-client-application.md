@@ -4,6 +4,11 @@ myst:
     description: "Connect client applications to Charmed OpenSearch using the Data Integrator charm to manage users, credentials, and access permissions."
 ---
 
+<!-- test:spread
+priority: 400
+kill-timeout: 60m
+-->
+
 (tutorial-4-integrate-with-a-client-application)=
 # 4. Integrate with a client application
 
@@ -31,36 +36,38 @@ Deploy Data Integrator as follows:
 juju deploy data-integrator --channel=stable --config index-name=test-index --config extra-user-roles=admin
 ```
 
+<!-- test:await-idle --timeout 600 --allow-blocked data-integrator -->
+
 The expected output:
 
-```shell
-Deployed "data-integrator" from charm-hub charm "data-integrator", revision 79 in channel latest/stable on ubuntu@22.04/stable
+```text
+Deployed "data-integrator" from charm-hub charm "data-integrator", revision 362 in channel latest/stable on ubuntu@24.04/stable
 ```
 
 Wait for `juju status --watch 1s` to show:
 
-```shell
+```text
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:43:22Z
+tutorial  opensearch-demo  localhost/localhost  3.6.23   unsupported  12:43:22Z
 
 App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
-data-integrator                    blocked      1  data-integrator           latest/stable     79  no       Please relate the data-integrator with the desired product
-opensearch                         active       3  opensearch                2/stable         168  no
-self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
+data-integrator                    blocked      1  data-integrator           latest/stable  362  no       Please relate the data-integrator with the desired product
+opensearch                         active       3  opensearch                2/stable       344  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable       586  no       
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
 data-integrator/0*           blocked   idle   4        10.95.38.22               Please relate the data-integrator with the desired product
-opensearch/0*                active    idle   0        10.95.38.94     9200/tcp
-opensearch/1                 active    idle   1        10.95.38.139    9200/tcp
-opensearch/2                 active    idle   2        10.95.38.212    9200/tcp
-self-signed-certificates/0*  active    idle   3        10.95.38.54
+opensearch/0                 active    idle   0        10.95.38.94     9200/tcp  
+opensearch/1                 active    idle   1        10.95.38.139    9200/tcp  
+opensearch/2*                active    idle   2        10.95.38.212    9200/tcp  
+self-signed-certificates/0*  active    idle   3        10.95.38.54              
 
 Machine  State    Address       Inst id        Base          AZ  Message
-0        started  10.95.38.94   juju-be3883-0  ubuntu@22.04      Running
-1        started  10.95.38.139  juju-be3883-1  ubuntu@22.04      Running
-2        started  10.95.38.212  juju-be3883-2  ubuntu@22.04      Running
-3        started  10.95.38.54   juju-be3883-3  ubuntu@22.04      Running
-4        started  10.95.38.22   juju-be3883-4  ubuntu@22.04      Running
+0        started  10.95.38.94   juju-be3883-0  ubuntu@24.04      Running
+1        started  10.95.38.139  juju-be3883-1  ubuntu@24.04      Running
+2        started  10.95.38.212  juju-be3883-2  ubuntu@24.04      Running
+3        started  10.95.38.54   juju-be3883-3  ubuntu@24.04      Running
+4        started  10.95.38.22   juju-be3883-4  ubuntu@24.04      Running
 
 Integration provider                   Requirer                               Interface              Type     Message
 data-integrator:data-integrator-peers  data-integrator:data-integrator-peers  data-integrator-peers  peer
@@ -85,30 +92,31 @@ Integrate the two applications with:
 juju integrate data-integrator opensearch
 ```
 
+<!-- test:await-idle --timeout 600 -->
+
 Wait for `juju status --relations --watch 1s` to show that the `data-integrator` application is now active:
 
-```bash
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  12:44:43Z
+tutorial  opensearch-demo  localhost/localhost  3.6.23   unsupported  12:44:43Z
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-data-integrator                    active      1  data-integrator           latest/stable     79  no
-opensearch                         active      3  opensearch                2/stable         168  no
-self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
+data-integrator                    active      1  data-integrator           latest/stable  362  no       
+opensearch                         active      3  opensearch                2/stable       344  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable       586  no       
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
-data-integrator/0*           active    idle   4        10.95.38.22
-opensearch/0*                active    idle   0        10.95.38.94     9200/tcp
-opensearch/1                 active    idle   1        10.95.38.139    9200/tcp
-opensearch/2                 active    idle   2        10.95.38.212    9200/tcp
-self-signed-certificates/0*  active    idle   3        10.95.38.54
+data-integrator/0*           active    idle   4        10.95.38.22              
+opensearch/0                 active    idle   0        10.95.38.94     9200/tcp  
+opensearch/1                 active    idle   1        10.95.38.139    9200/tcp  
+opensearch/2*                active    idle   2        10.95.38.212    9200/tcp  
+self-signed-certificates/0*  active    idle   3        10.95.38.54              
 
 Machine  State    Address       Inst id        Base          AZ  Message
-0        started  10.95.38.94   juju-be3883-0  ubuntu@22.04      Running
-1        started  10.95.38.139  juju-be3883-1  ubuntu@22.04      Running
-2        started  10.95.38.212  juju-be3883-2  ubuntu@22.04      Running
-3        started  10.95.38.54   juju-be3883-3  ubuntu@22.04      Running
-4        started  10.95.38.22   juju-be3883-4  ubuntu@22.04      Running
+0        started  10.95.38.94   juju-be3883-0  ubuntu@24.04      Running
+1        started  10.95.38.139  juju-be3883-1  ubuntu@24.04      Running
+2        started  10.95.38.212  juju-be3883-2  ubuntu@24.04      Running
+3        started  10.95.38.54   juju-be3883-3  ubuntu@24.04      Running
+4        started  10.95.38.22   juju-be3883-4  ubuntu@24.04      Running
 
 Integration provider                   Requirer                               Interface              Type     Message
 data-integrator:data-integrator-peers  data-integrator:data-integrator-peers  data-integrator-peers  peer
@@ -125,9 +133,20 @@ This relation created the user, password, and CA certificate for the `data-integ
 
 To retrieve information such as the username, password, and database. Run the following command:
 
-```shell
+```bash
 juju run data-integrator/leader get-credentials
 ```
+
+<!-- test:set-variables
+command: juju run data-integrator/leader get-credentials
+OS_PASSWORD: password
+OS_USERNAME: username
+-->
+
+<!-- test:run
+OS_ENDPOINT=$(echo "$_CMD_OUTPUT" | grep 'endpoints:' | awk '{print $2}' | cut -d, -f1)
+echo "$_CMD_OUTPUT" | sed -n '/tls-ca:/,/username:/{ /tls-ca:/d; /username:/d; p }' | sed 's/^    //' > demo-ca.pem
+-->
 
 This should output something like:
 
@@ -165,11 +184,18 @@ Before connecting to OpenSearch, it is mandatory that you
 You can access the OpenSearch REST API in any way you prefer. In this tutorial, we will use `curl`.
 Get the IP of an OpenSearch node from the output of `juju status`
 (any of the nodes should work fine), and store the CA certificate in a local file
-(e.g. `demo-ca.pem`). Then, run the following command to connect to the OpenSearch cluster:
+(e.g. `demo-ca.pem`).
 
-```shell
-curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/
+Then, replacing `<username>`, `<password>`, and `<opensearch_node_ip>` with the values from
+the `get-credentials` output above, run the following command to connect to the OpenSearch cluster:
+
+```bash
+curl --cacert demo-ca.pem -XGET https://<username>:<password>@<opensearch_node_ip>:9200/
 ```
+
+<!-- test:assert
+curl --cacert demo-ca.pem -XGET "https://${OS_USERNAME}:${OS_PASSWORD}@${OS_ENDPOINT}/" | grep -q "cluster_name"
+-->
 
 Sending a `GET` request to this `/` endpoint should return some basic information about your
 OpenSearch deployment, which should look something like this:
@@ -207,12 +233,19 @@ and the user credentials (username/password pair) to authenticate communications
 
 To index some data, run the following command:
 
-```shell
+```bash
 curl --cacert demo-ca.pem \
-  -XPOST https://username:password@opensearch_node_ip:9200/albums/_doc/1?refresh=true \
+  -XPOST https://<username>:<password>@<opensearch_node_ip>:9200/albums/_doc/1?refresh=true \
   -d '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}' \
   -H 'Content-Type: application/json' -H 'Accept: application/json'
 ```
+
+<!-- test:run
+curl --cacert demo-ca.pem \
+  -XPOST "https://${OS_USERNAME}:${OS_PASSWORD}@${OS_ENDPOINT}/albums/_doc/1?refresh=true" \
+  -d '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}' \
+  -H 'Content-Type: application/json' -H 'Accept: application/json'
+-->
 
 This command uses the same certificate and user credentials to send a `POST` request
 to the same node as before, but it sends a specific JSON payload to a specific document address.
@@ -235,9 +268,13 @@ Note from the response that our request was successful and the document was inde
 
 Use the following command to retrieve the previous document:
 
-```shell
-curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/albums/_doc/1
+```bash
+curl --cacert demo-ca.pem -XGET https://<username>:<password>@<opensearch_node_ip>:9200/albums/_doc/1
 ```
+
+<!-- test:assert
+curl --cacert demo-ca.pem -XGET "https://${OS_USERNAME}:${OS_PASSWORD}@${OS_ENDPOINT}/albums/_doc/1" | grep -q '"found":true'
+-->
 
 This call should output something like the following:
 
@@ -274,9 +311,22 @@ ensuring that you keep the newline at the end of the file:
 
 Then, to send this data to the bulk endpoint, run the following command:
 
-```shell
-curl --cacert demo-ca.pem -XPOST https://username:password@opensearch_node_ip:9200/_bulk --data-binary @bulk-albums.json  -H 'Content-Type: application/json'
+```bash
+curl --cacert demo-ca.pem -XPOST https://<username>:<password>@<opensearch_node_ip>:9200/_bulk --data-binary @bulk-albums.json  -H 'Content-Type: application/json'
 ```
+
+<!-- test:run
+cat > bulk-albums.json << 'EOF'
+{ "index" : { "_index": "albums", "_id" : "2" } }
+{"artist": "Herbie Hancock", "genre": ["Jazz"],  "title": "Head Hunters"}
+{ "index" : { "_index": "albums", "_id" : "3" } }
+{"artist": "Lydian Collective", "genre": ["Jazz"],  "title": "Adventure"}
+{ "index" : { "_index": "albums", "_id" : "4" } }
+{"artist": "Rush", "genre": ["Prog"],  "title": "Moving Pictures"}
+
+EOF
+curl --cacert demo-ca.pem -XPOST "https://${OS_USERNAME}:${OS_PASSWORD}@${OS_ENDPOINT}/_bulk" --data-binary @bulk-albums.json -H 'Content-Type: application/json'
+-->
 
 This should return a JSON response with the results of the bulk indexing operation:
 
@@ -296,9 +346,13 @@ The `items` field contains the results of each operation in the bulk request.
 To view the previously indexed documents, we can run a search query for the `Jazz` keyword
 in our `albums` index, using the following command:
 
-```shell
-curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/albums/_search?q=Jazz
+```bash
+curl --cacert demo-ca.pem -XGET https://<username>:<password>@<opensearch_node_ip>:9200/albums/_search?q=Jazz
 ```
+
+<!-- test:assert
+curl --cacert demo-ca.pem -XGET "https://${OS_USERNAME}:${OS_PASSWORD}@${OS_ENDPOINT}/albums/_search?q=Jazz" | grep -q '"value".*3'
+-->
 
 This should return a JSON response with all the Jazz albums in the index:
 
@@ -364,31 +418,32 @@ Run the following to remove the relation:
 juju remove-relation opensearch data-integrator
 ```
 
+<!-- test:await-idle --timeout 600 --allow-blocked data-integrator -->
+
 if you run `juju status --relations` you will see that the relation has been removed and that the
 `data-integrator` application is now in a `blocked` state.
 
-```bash
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  13:48:08Z
+tutorial  opensearch-demo  localhost/localhost  3.6.23   unsupported  13:48:08Z
 
 App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
-data-integrator                    blocked      1  data-integrator           latest/stable     79  no       Please relate the data-integrator with the desired product
-opensearch                         active       3  opensearch                2/stable         168  no
-self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
+data-integrator                    blocked      1  data-integrator           latest/stable  362  no       Please relate the data-integrator with the desired product
+opensearch                         active       3  opensearch                2/stable       344  no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable       586  no       
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
 data-integrator/0*           blocked   idle   4        10.95.38.22               Please relate the data-integrator with the desired product
-opensearch/0*                active    idle   0        10.95.38.94     9200/tcp
-opensearch/1                 active    idle   1        10.95.38.139    9200/tcp
-opensearch/2                 active    idle   2        10.95.38.212    9200/tcp
-self-signed-certificates/0*  active    idle   3        10.95.38.54
+opensearch/0                 active    idle   0        10.95.38.94     9200/tcp  
+opensearch/1                 active    idle   1        10.95.38.139    9200/tcp  
+opensearch/2*                active    idle   2        10.95.38.212    9200/tcp  
+self-signed-certificates/0*  active    idle   3        10.95.38.54              
 
 Machine  State    Address       Inst id        Base          AZ  Message
-0        started  10.95.38.94   juju-be3883-0  ubuntu@22.04      Running
-1        started  10.95.38.139  juju-be3883-1  ubuntu@22.04      Running
-2        started  10.95.38.212  juju-be3883-2  ubuntu@22.04      Running
-3        started  10.95.38.54   juju-be3883-3  ubuntu@22.04      Running
-4        started  10.95.38.22   juju-be3883-4  ubuntu@22.04      Running
+0        started  10.95.38.94   juju-be3883-0  ubuntu@24.04      Running
+1        started  10.95.38.139  juju-be3883-1  ubuntu@24.04      Running
+2        started  10.95.38.212  juju-be3883-2  ubuntu@24.04      Running
+3        started  10.95.38.54   juju-be3883-3  ubuntu@24.04      Running
+4        started  10.95.38.22   juju-be3883-4  ubuntu@24.04      Running
 
 Integration provider                   Requirer                               Interface              Type     Message
 data-integrator:data-integrator-peers  data-integrator:data-integrator-peers  data-integrator-peers  peer
@@ -400,13 +455,13 @@ self-signed-certificates:certificates  opensearch:certificates                tl
 
 Now try again to connect in the same way as the previous section
 
-```shell
-curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/
+```bash
+curl --cacert demo-ca.pem -XGET https://<username>:<password>@<opensearch_node_ip>:9200/
 ```
 
 This should output something like the following error:
 
-```shell
+```text
 Unauthorized
 ```
 
@@ -415,12 +470,19 @@ and run the same action on `data-integrator` to get the new credentials:
 
 ```shell
 juju integrate data-integrator opensearch
+```
+
+<!-- test:await-idle --timeout 600 -->
+
+Once the relation is active, retrieve the new credentials:
+
+```shell
 juju run data-integrator/leader get-credentials
 ```
 
 You can now connect to the database with this new username and password:
 
-```shell
+```bash
 curl --cacert demo-ca.pem -XGET https://new_username:new_password@opensearch_node_ip:9200/albums/_search?q=Jazz
 ```
 

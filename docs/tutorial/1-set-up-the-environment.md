@@ -4,6 +4,11 @@ myst:
     description: "Learn how to set up your development environment with LXD and Juju to deploy Charmed OpenSearch on Ubuntu."
 ---
 
+<!-- test:spread
+priority: 700
+kill-timeout: 60m
+-->
+
 (tutorial-1-set-up-the-environment)=
 # 1. Set up the environment
 
@@ -34,7 +39,7 @@ lxc network set lxdbr0 ipv6.address none
 
 You can list all LXD containers by executing the command `lxc list`. At this point in the tutorial, none should exist, so you'll only see this as output:
 
-```shell
+```text
 +------+-------+------+------+------+-----------+
 | NAME | STATE | IPV4 | IPV6 | TYPE | SNAPSHOTS |
 +------+-------+------+------+------+-----------+
@@ -48,12 +53,12 @@ LXD or Kubernetes. We will be using it to deploy and manage Charmed OpenSearch.
 As with LXD, Juju is installed using a snap package:
 
 ```shell
-sudo snap install juju --channel 3.5/stable --classic
+sudo snap install juju --channel 3/stable
 ```
 
 Juju already has a built-in knowledge of LXD and how it works, so there is no additional setup
-or configuration needed, however,  because Juju 3.x is a
-[strictly confined snap](https://snapcraft.io/docs/classic-confinement), and is not allowed
+or configuration needed, however, because Juju 3.x is a
+[strictly confined snap](https://snapcraft.io/docs/strict-confinement), and is not allowed
 to create a `~/.local/share` directory, we need to create it manually.
 
 ```shell
@@ -68,10 +73,10 @@ juju clouds
 
 The output will look as follows:
 
-```shell
+```text
 Clouds available on the client:
 Cloud      Regions  Default    Type  Credentials  Source    Description
-localhost  1        localhost  lxd   1            built-in  LXD Container Hypervisor
+localhost  1        localhost  lxd   0            built-in  LXD Container Hypervisor
 ```
 
 A controller will be used to deploy and control Charmed OpenSearch.
@@ -82,6 +87,8 @@ Run the following command to bootstrap a Juju controller named `opensearch-demo`
 juju bootstrap localhost opensearch-demo
 ```
 
+<!-- test:wait --seconds 30 -->
+
 This bootstrapping process can take several minutes depending on your system resources.
 
 The Juju controller exists within an LXD container. You can verify this by entering the command
@@ -89,7 +96,7 @@ The Juju controller exists within an LXD container. You can verify this by enter
 
 This will output the following:
 
-```shell
+```text
 +---------------+---------+-----------------------+------+-----------+-----------+
 |     NAME      |  STATE  |         IPV4          | IPV6 |   TYPE    | SNAPSHOTS |
 +---------------+---------+-----------------------+------+-----------+-----------+
@@ -108,9 +115,9 @@ juju add-model tutorial
 You can now view the model you created above by entering the command `juju status` into
 the command line. You should see the following:
 
-```shell
+```text
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
-tutorial  opensearch-demo  localhost/localhost  3.5.3    unsupported  11:26:13Z
+tutorial  opensearch-demo  localhost/localhost  3.6.23   unsupported  11:26:13Z
 ```
 
 ## Set kernel parameters
@@ -137,7 +144,7 @@ sudo sysctl -a | grep -E 'swappiness|max_map_count|tcp_retries2'
 
 This command should return something like the following:
 
-```shell
+```text
 net.ipv4.tcp_retries2 = 15
 vm.max_map_count = 262144
 vm.swappiness = 60
@@ -184,6 +191,10 @@ EOF
 
 juju model-config --file=./cloudinit-userdata.yaml
 ```
+
+<!-- test:assert
+juju models | grep -q 'tutorial'
+-->
 
 ```{note}
 **Next step:** [2. Deploy OpenSearch](tutorial-2-deploy-opensearch).

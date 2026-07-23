@@ -4,6 +4,11 @@ myst:
     description: "Learn how to retrieve and rotate admin passwords in Charmed OpenSearch for enhanced security and credential management."
 ---
 
+<!-- test:spread
+priority: 300
+kill-timeout: 30m
+-->
+
 (tutorial-5-manage-passwords)=
 # 5. Manage passwords
 
@@ -51,6 +56,10 @@ You can change the admin password to a new random and generated password by runn
 juju run opensearch/leader set-password 
 ```
 
+<!-- test:assert
+juju run opensearch/leader get-password 2>&1 | grep -q 'password'
+-->
+
 ```{note}
 This action can only be run from the leader unit.
 ```
@@ -76,7 +85,7 @@ of this tutorial.
 
 You can change the admin password to a specific password by entering:
 
-```shell
+```bash
 juju run opensearch/leader set-password password=<password>
 ```
 
@@ -107,7 +116,7 @@ There are three types of private keys available to be updated on this charm, and
 To change a private key to a random value, run the following command, setting `category`
 equal to your preferred type of private key:
 
-```shell
+```bash
 juju run opensearch/leader set-tls-private-key category=<category>
 ```
 
@@ -125,7 +134,7 @@ No certificate data is presented in the results of this action.
 
 To set the key to a specific value run the following command:
 
-```shell
+```bash
 juju run opensearch/leader set-tls-private-key category=<category> key=<key>
 ```
 
@@ -140,7 +149,7 @@ Waiting for task 16...
 
 If the key you intend to set has a passphrase, set it like so
 
-```shell
+```bash
 juju run opensearch/leader set-tls-private-key category=<category> password=<password> key=<key>
 ```
 
