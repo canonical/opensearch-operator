@@ -21,6 +21,17 @@ def pytest_addoption(parser: Parser):
         default="vm",
     )
 
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "skip_if_substrate(substrate): skip test for the given substrate"
+    )
+
+@pytest.fixture(autouse=True)
+def skip_for_substrate(request, substrate: Substrate):
+    if mark := request.node.get_closest_marker("skip_if_substrate"):
+        if mark.args[0] == substrate:
+            pytest.skip(f"This test does not run on {substrate}")
+
 
 @pytest.fixture(scope="session")
 def substrate(request) -> Substrate:
