@@ -35,8 +35,8 @@ from .helpers import (
 
 logging.getLogger("opensearch").setLevel(logging.ERROR)
 logging.getLogger("opensearchpy.helpers").setLevel(logging.ERROR)
-
-logger = logging.getLogger(__name__)
+# Explicitly silence the trace logger (which outputs the curl commands)
+logging.getLogger("opensearchpy.trace").setLevel(logging.ERROR)
 
 
 class ReplicationMode(Enum):
@@ -158,7 +158,12 @@ class ContinuousWrites:
             client.indices.create(
                 index=ContinuousWrites.INDEX_NAME,
                 body={
-                    "settings": {"index": {"number_of_shards": 2, "auto_expand_replicas": "1-all"}}
+                    "settings": {
+                        "index": {
+                            "number_of_shards": 2,
+                            "auto_expand_replicas": "1-all",
+                        }
+                    }
                 },
                 wait_for_active_shards="all",
             )
@@ -173,7 +178,12 @@ class ContinuousWrites:
             client.indices.create(
                 index=ContinuousWrites.INDEX_NAME,
                 body={
-                    "settings": {"index": {"number_of_shards": 1, "auto_expand_replicas": "0-all"}}
+                    "settings": {
+                        "index": {
+                            "number_of_shards": 1,
+                            "auto_expand_replicas": "0-all",
+                        }
+                    }
                 },
                 wait_for_active_shards="all",
             )
@@ -381,7 +391,7 @@ async def assert_continuous_writes_consistency(
     apps_units_ips = {app: await get_application_unit_ids_ips(ops_test, app) for app in apps}
 
     # investigate the data in each shard, primaries and their respective replicas
-    shards = await get_shards_by_index(ops_test, unit_ip, ContinuousWrites.INDEX_NAME)
+    shards = await get_shards_by_index(ops_test, unit_ip, ContinuousWrites.INDEX_NAME, app=apps[0])
     shards_by_id = {}
     for shard in shards:
         shards_by_id.setdefault(shard.num, []).append(shard)
