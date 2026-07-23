@@ -6,7 +6,7 @@
 
 ## Description
 
-The Charmed OpenSearch Operator deploys and operates the [OpenSearch](https://opensearch.org/) software on VMs and machine clusters.
+The Charmed OpenSearch Operator deploys and operates the [OpenSearch](https://opensearch.org/) software on both machine (VMs/LXD) and Kubernetes clusters.
 
 This operator provides an OpenSearch cluster, with:
 - TLS (for the HTTP and Transport layers)
@@ -16,9 +16,16 @@ This operator provides an OpenSearch cluster, with:
 - Safe horizontal scale-down/up
 - Large deployments
 
-The Operator in this repository is a Python project installing and managing OpenSearch installed from the [OpenSearch Snap](https://snapcraft.io/opensearch), providing lifecycle management and handling events (install, start, etc).
+This repository contains two charms, each in its own folder:
+
+- [`machine/`](machine) — the **machine charm** (`opensearch`), which installs and manages OpenSearch from the [OpenSearch Snap](https://snapcraft.io/opensearch) on VMs and machine clusters.
+- [`kubernetes/`](kubernetes) — the **Kubernetes charm** (`opensearch-k8s`), which deploys and manages OpenSearch as a container workload on Kubernetes.
+
+Both charms are Python projects that provide lifecycle management and handle events (install, start, etc).
 
 ## Usage
+
+### Machine charm (`opensearch`)
 
 Bootstrap a [lxd controller](https://juju.is/docs/olm/lxd#heading--create-a-controller) to juju and create a model:
 
@@ -52,16 +59,51 @@ sudo sysctl -p
 juju model-config --file=./cloudinit-userdata.yaml
 ```
 
-### Basic Usage
-To deploy a single unit of OpenSearch using its default configuration.
+To deploy a single unit of OpenSearch using its default configuration:
 
 ```shell
 juju deploy opensearch --channel=2/edge
 ```
 
+### Kubernetes charm (`opensearch-k8s`)
+
+Bootstrap a Kubernetes controller to juju and create a model:
+
+```shell
+juju add-model opensearch
+```
+
+OpenSearch benefits from certain kernel settings being applied on the underlying
+Kubernetes hosts (the nodes where the workload pods are scheduled). These are not
+required, but are recommended for production setups. Apply the following on each
+node:
+
+```
+sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
+vm.max_map_count=262144
+vm.swappiness=0
+fs.file-max=1048576
+EOT
+
+sudo sysctl -p
+```
+
+Note that `net.ipv4.tcp_retries2` is scoped to the pod's network namespace
+rather than the host, so it cannot be set on the node. To configure it, deploy
+the [data-platform-k8s-mutator](https://github.com/canonical/data-platform-k8s-mutator)
+charm alongside OpenSearch on the Kubernetes cluster, which sets this sysctl
+value on the workload pods. This is likewise not required, but recommended for
+production setups.
+
+To deploy a single unit of OpenSearch using its default configuration:
+
+```shell
+juju deploy opensearch-k8s --channel=2/edge
+```
+
 ## Relations / Integrations
 
-The relevant provided [relations](https://juju.is/docs/olm/relations) of Charmed OpenSearch are:
+The relevant provided [relations](https://juju.is/docs/olm/relations) of Charmed OpenSearch are shown below. The examples use the machine charm's application name (`opensearch`); substitute `opensearch-k8s` when using the Kubernetes charm.
 
 ### Client interface
 
