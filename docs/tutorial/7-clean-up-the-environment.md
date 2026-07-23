@@ -4,6 +4,11 @@ myst:
     description: "Remove your Charmed OpenSearch deployment and clean up Juju resources to free up system resources after completing the tutorial."
 ---
 
+<!-- test:spread
+priority: 100
+kill-timeout: 30m
+-->
+
 (tutorial-7-clean-up-the-environment)=
 # 7. Clean up the environment
 
@@ -28,24 +33,37 @@ When you remove Charmed OpenSearch as shown below, you will lose all the data in
 
 To remove Charmed OpenSearch and the model it is hosted on, run this command:
 
-```bash
+```shell
 juju destroy-model tutorial --destroy-storage --force --no-wait
 ```
+
+<!-- test:wait --seconds 10 -->
+
+<!-- test:assert
+juju models --format=json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+models = [m['short-name'] for m in data.get('models', [])]
+assert 'tutorial' not in models, f'Model tutorial still exists: {models}'
+"
+-->
 
 The next step is to remove the Juju controller.
 You can see all of the available controllers by entering `juju controllers`.
 
 To remove the controller created for this tutorial, enter:
 
-```bash
+```shell
 juju destroy-controller opensearch-demo
 ```
 
 Then, don't forget to delete the Juju model configuration file.
 
-```bash
+```shell
 rm cloudinit-userdata.yaml
 ```
+
+<!-- test:wait --seconds 10 -->
 
 ## Remove Juju
 
@@ -91,7 +109,7 @@ To reset them, you can either :
 * Reboot your computer
 * Set your original parameters with the following command :
 
-```bash
+```shell
 sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
 vm.max_map_count=262144
 vm.swappiness=60
@@ -101,6 +119,16 @@ EOT
 
 sudo sysctl -p
 ```
+
+<!-- test:wait --seconds 5 -->
+
+<!-- test:assert
+_output=$(sysctl vm.max_map_count vm.swappiness net.ipv4.tcp_retries2 fs.file-max)
+echo "$_output" | grep -q 'vm.max_map_count = 262144'  || { echo "FAIL: expected vm.max_map_count = 262144";  echo "$_output"; exit 1; }
+echo "$_output" | grep -q 'vm.swappiness = 60'         || { echo "FAIL: expected vm.swappiness = 60";         echo "$_output"; exit 1; }
+echo "$_output" | grep -q 'net.ipv4.tcp_retries2 = 15' || { echo "FAIL: expected net.ipv4.tcp_retries2 = 15"; echo "$_output"; exit 1; }
+echo "$_output" | grep -q 'fs.file-max = 1048576'      || { echo "FAIL: expected fs.file-max = 1048576";      echo "$_output"; exit 1; }
+-->
 
 ## What next?
 

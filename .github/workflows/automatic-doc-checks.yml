@@ -19,10 +19,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  documentation-checks:
-    uses: canonical/documentation-workflows/.github/workflows/documentation-checks.yaml@main
+  spellcheck:
+    name: Spell check
+    uses: canonical/documentation-workflows/.github/workflows/spelling-check.yaml@main
     with:
       working-directory: "docs"
       fetch-depth: 0
-    permissions:
-      contents: read
+
+  inclusive-language:
+    name: Inclusive language check
+    uses: canonical/documentation-workflows/.github/workflows/inclusive-language-check.yaml@main
+    with:
+      working-directory: "docs"
+      fetch-depth: 0
+
+  linkcheck:
+    name: Link check
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Required so that the dashboards submodule docs are available
+          # for toctree and myst cross-reference resolution
+          submodules: true
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Link Check
+        uses: canonical/documentation-workflows/linkcheck@main
+        with:
+          working-directory: "docs"

@@ -1,6 +1,6 @@
 import datetime
 import os
-import yaml
+import textwrap
 
 # Configuration for the Sphinx documentation builder.
 # All configuration specific to your project should be done in this file.
@@ -11,8 +11,8 @@ import yaml
 # A complete list of built-in Sphinx configuration values:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 #
-# Our starter pack uses the custom Canonical Sphinx extension
-# to keep all documentation based on it consistent and on brand:
+# The Sphinx Stack uses the Canonical Sphinx theme to keep all documentation consistent
+# and on brand:
 # https://github.com/canonical/canonical-sphinx
 
 
@@ -21,61 +21,31 @@ import yaml
 #######################
 
 # Project name
-#
-# TODO: Update with the official name of your project or product
 
 project = "Charmed OpenSearch"
+
+# Author name; used in the default copyright statement in the page footer
 author = "Canonical Ltd."
 
+# The year in the copyright statement
+copyright = f"{datetime.date.today().year}"
 
 # Sidebar documentation title; best kept reasonably short
 #
 # TODO: To include a version number, add it here (hardcoded or automated).
 #
-# TODO: To disable the title, set to an empty string.
+# TODO: To disable the title, set it to an empty string.
 
 html_title = project + " documentation"
 
-
-# Copyright string; shown at the bottom of the page
-#
-# Now, the starter pack uses CC-BY-SA as the license
-# and the current year as the copyright year.
-#
-# TODO: If your docs need another license, specify it instead of 'CC-BY-SA'.
-#
-# TODO: If your documentation is a part of the code repository of your project,
-#       it inherits the code license instead; specify it instead of 'CC-BY-SA'.
-#
-# NOTE: For static works, it is common to provide the first publication year.
-#       Another option is to provide both the first year of publication
-#       and the current year, especially for docs that frequently change,
-#       e.g. 2022–2023 (note the en-dash).
-#
-#       A way to check a repo's creation date is to get a classic GitHub token
-#       with 'repo' permissions; see https://github.com/settings/tokens
-#       Next, use 'curl' and 'jq' to extract the date from the API's output:
-#
-#       curl -H 'Authorization: token <TOKEN>' \
-#         -H 'Accept: application/vnd.github.v3.raw' \
-#         https://api.github.com/repos/canonical/<REPO> | jq '.created_at'
-
-copyright = "%s CC-BY-SA, %s" % (datetime.date.today().year, author)
-
 version_slug = f"{os.environ.get('READTHEDOCS_VERSION', 'local')}"
 
-
-
-
 # Documentation website URL
-#
-# TODO: Update with the official URL of your docs or leave empty if unsure.
 #
 # NOTE: The Open Graph Protocol (OGP) enhances page display in a social graph
 #       and is used by social media platforms; see https://ogp.me/
 
 ogp_site_url = f"https://canonical.com/data/opensearch/docs/{version_slug}/"
-
 
 # Preview name of the documentation website
 #
@@ -95,7 +65,7 @@ ogp_image = "https://assets.ubuntu.com/v1/cc828679-docs_illustration.svg"
 
 # TODO: To customise the favicon, uncomment and update as needed.
 
-# html_favicon = '.sphinx/_static/favicon.png'
+# html_favicon = "_static/favicon.png"
 
 
 # Dictionary of values to pass into the Sphinx context for all pages:
@@ -140,11 +110,9 @@ html_context = {
     # Docs branch in the repo; used in links for viewing the source files
     #
     # TODO: To customise the branch, uncomment and update as needed.
-    'repo_default_branch': 'main',
+    "repo_default_branch": "main",
     # Docs location in the repo; used in links for viewing the source files
     #
-
-
     # TODO: To customise the directory, uncomment and update as needed.
     "repo_folder": "/docs/",
     # TODO: To enable or disable the Previous / Next buttons at the bottom of pages
@@ -152,9 +120,15 @@ html_context = {
     # "sequential_nav": "both",
     # TODO: To enable listing contributors on individual pages, set to True
     "display_contributors": False,
-
-    # Required for feedback button    
-    'github_issues': 'enabled',
+    # Required for feedback button
+    "github_issues": "enabled",
+    # Passes the top-level 'author' value to the theme
+    "author": author,
+    # Documentation license information
+    "license": {
+        "name": "CC-BY-SA-3.0",
+        "url": "https://github.com/canonical/opensearch-operator/blob/main/LICENSE",
+    },
 }
 
 # TODO: To enable the edit button on pages, uncomment and change the link to a
@@ -173,7 +147,7 @@ html_context = {
 # TODO: If your documentation is hosted on https://docs.ubuntu.com/,
 #       uncomment and update as needed.
 
-slug = 'data/opensearch/docs'
+slug = "data/opensearch/docs"
 
 #######################
 # Sitemap configuration: https://sphinx-sitemap.readthedocs.io/
@@ -183,16 +157,9 @@ slug = 'data/opensearch/docs'
 
 html_baseurl = f"https://canonical.com/data/opensearch/docs/{version_slug}/"
 
-# URL scheme. Add language and version scheme elements.
-# When configured with RTD variables, check for RTD environment so manual runs succeed:
+# sphinx-sitemap uses html_baseurl to generate the full URL for each page:
 
 sitemap_url_scheme = "{link}"
-
-# if 'READTHEDOCS_VERSION' in os.environ:
-#     version = os.environ["READTHEDOCS_VERSION"]
-#     sitemap_url_scheme = '{version}{link}'
-# else:
-#     sitemap_url_scheme = 'MANUAL/{link}'
 
 # Include `lastmod` dates in the sitemap:
 
@@ -201,42 +168,56 @@ sitemap_show_lastmod = True
 # Exclude generated pages from the sitemap:
 
 sitemap_excludes = [
-    '404/',
-    'genindex/',
-    'search/',
+    "404/",
+    "genindex/",
+    "search/",
 ]
 
 # TODO: Add more pages to sitemap_excludes if needed. Wildcards are supported.
 #       For example, to exclude module pages generated by autodoc, add '_modules/*'.
 
-#######################
-# Template and asset locations
-#######################
+################################
+# Template and asset locations #
+################################
 
 html_static_path = [
-    ".sphinx/_static",
+    "_static",
 ]
 
 templates_path = [
-    ".sphinx/_templates",
+    "_templates",
 ]
 
 #############
 # Redirects #
 #############
 
-# To set up redirects: https://documatt.gitlab.io/sphinx-reredirects/usage.html
-# For example: 'explanation/old-name.html': '../how-to/prettify.html',
+# Add redirects to the 'redirects.txt' file
+# https://sphinxext-rediraffe.readthedocs.io/en/latest/
 
 # To set up redirects in the Read the Docs project dashboard:
 # https://docs.readthedocs.io/en/stable/guides/redirects.html
 
-# NOTE: If undefined, set to None, or empty,
-#       the sphinx_reredirects extension will be disabled.
-
-# redirects = {}
-
 rediraffe_redirects = "redirects.txt"
+
+# Strips '/index.html' from destination URLs when building with 'dirhtml'
+rediraffe_dir_only = True
+
+############################
+# sphinx-llm configuration #
+############################
+
+# This description is included in llms.txt to provide some initial context for
+# your product docs.
+llms_txt_description = textwrap.dedent("""\
+    This is the documentation for Charmed OpenSearch, an open-source operator
+    that simplifies the deployment, scaling, and management of OpenSearch
+    clusters on physical hardware, VMs, and cloud environments.
+    """)
+
+# The base URL for references built by sphinx-markdown-builder.
+if os.environ.get("READTHEDOCS"):
+    markdown_http_base = html_baseurl
 
 ###########################
 # Link checker exceptions #
@@ -252,7 +233,7 @@ linkcheck_ignore = [
     "https://launchpad.net/soss",
     "https://matrix.to/#/#charmhub-data-platform:ubuntu.com",
     "https://app.element.io/#/room/#charmhub-data-platform:ubuntu.com",
-    ]
+]
 
 
 # A regex list of URLs where anchors are ignored by 'make linkcheck'
@@ -279,28 +260,27 @@ linkcheck_retries = 3
 # Custom Sphinx extensions; see
 # https://www.sphinx-doc.org/en/master/usage/extensions/index.html
 
-# NOTE: The canonical_sphinx extension is required for the starter pack.
-#       It automatically enables the following extensions:
-#       - custom-rst-roles
-#       - myst_parser
-#       - notfound.extension
-#       - related-links
-#       - sphinx_copybutton
-#       - sphinx_design
-#       - sphinx_reredirects
-#       - sphinx_tabs.tabs
-#       - sphinxcontrib.jquery
-#       - sphinxext.opengraph
-#       - terminal-output
-#       - youtube-links
-
 extensions = [
     "canonical_sphinx",
+    "notfound.extension",
+    "sphinx_design",
+    "sphinx_rerediraffe",
+    "sphinx_tabs.tabs",
+    "sphinxcontrib.jquery",
+    "sphinxext.opengraph",
+    "sphinx_config_options",
+    "sphinx_contributor_listing",
+    "sphinx_filtered_toctree",
+    "sphinx_llm.txt",
+    "sphinx_related_links",
+    "sphinx_roles",
+    "sphinx_terminal",
+    "sphinx_ubuntu_images",
+    "sphinx_youtube_links",
     "sphinxcontrib.cairosvgconverter",
-    "sphinx_last_updated_by_git",
     "sphinx.ext.intersphinx",
     "sphinx_sitemap",
-    "sphinxext.rediraffe",
+    "sphinx_rerediraffe",
 ]
 
 # Excludes files or directories from processing
@@ -308,6 +288,8 @@ extensions = [
 exclude_patterns = [
     "doc-cheat-sheet*",
     "**/README*",
+    ".venv*",
+    "_dev",
 ]
 
 # Adds custom CSS files, located under 'html_static_path'
@@ -323,12 +305,14 @@ html_js_files = [
     "overwritelinks.js",
 ]
 
-# Specifies a reST snippet to be appended to each .rst file
-
-rst_epilog = """
-.. include:: /reuse/links.txt
-.. include:: /reuse/substitutions.txt
-"""
+# Appends extra markup to the end of every document written in reST
+# The reuse/ directory contains starter pack boilerplate that is not currently
+# used in the docs. Uncomment the includes below if you start using them.
+#
+# rst_epilog = """
+# .. include:: /reuse/links.txt
+# .. include:: /reuse/substitutions.txt
+# """
 
 # Feedback button at the top; enabled by default
 #
@@ -371,13 +355,17 @@ if "discourse_prefix" not in html_context and "discourse" in html_context:
     html_context["discourse_prefix"] = html_context["discourse"] + "/t/"
 
 # Workaround for substitutions.yaml
+# The reuse/ directory is kept but the substitutions are not currently used.
+# Uncomment the following lines if you start using substitutions.yaml:
+#
+# if os.path.exists('./reuse/substitutions.yaml'):
+#     with open('./reuse/substitutions.yaml', 'r') as fd:
+#         myst_substitutions = yaml.safe_load(fd.read())
 
-if os.path.exists('./reuse/substitutions.yaml'):
-    with open('./reuse/substitutions.yaml', 'r') as fd:
-        myst_substitutions = yaml.safe_load(fd.read())
-
-# Add configuration for intersphinx mapping
-
-intersphinx_mapping = {
-    'starter-pack': ('https://canonical-example-product-documentation.readthedocs-hosted.com/en/latest', None)
-}
+# Configuration for Intersphinx projects
+#
+# Uncomment and configure if you need to reference external documentation:
+#
+# intersphinx_mapping = {
+#     "starter-pack": ("https://canonical-example-product-documentation.readthedocs-hosted.com/en/latest", None),
+# }

@@ -9,7 +9,7 @@ myst:
 
 December 16, 2025
 
-This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Numbat), upgrades OpenSearch and OpenSearch Dashboards version to 2.19.4, and introduces significant features including OAuth and JWT authentication, and full Terraform support.
+This release of the OpenSearch Operator adds support for Ubuntu 24.04 LTS (Noble Numbat), upgrades OpenSearch and OpenSearch Dashboards version to 2.19.4, and introduces significant features including OAuth and JWT authentication, and full Terraform support.
 
 [Charmhub](https://charmhub.io/opensearch) | [Deploy guide](https://canonical-charmed-opensearch.readthedocs-hosted.com/2/how-to/deploy/deploy-on-lxd/) | [Upgrade instructions](https://canonical-charmed-opensearch.readthedocs-hosted.com/2/how-to/upgrade/perform-a-minor-upgrade/) | [System requirements](https://canonical-charmed-opensearch.readthedocs-hosted.com/2/reference/system-requirements/) 
 
@@ -46,7 +46,7 @@ This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Num
 
 ### Other improvements 
 
-* [[DPE-5830](https://warthogs.atlassian.net/browse/DPE-5830)] Bump to Ubuntu 24.04 ([PR \#495](https://github.com/canonical/opensearch-operator/pull/495))
+* [[DPE-5830](https://warthogs.atlassian.net/browse/DPE-5830)] Bump to Ubuntu 24.04 LTS (Noble Numbat) ([PR \#495](https://github.com/canonical/opensearch-operator/pull/495))
 * [[DPE-6598](https://warthogs.atlassian.net/browse/DPE-6598)] Move to OpenSearch v2.18 ([PR \#563](https://github.com/canonical/opensearch-operator/pull/563))
 * [[DPE-4196](https://warthogs.atlassian.net/browse/DPE-4196)] Plugin Management Refactor ([PR \#435](https://github.com/canonical/opensearch-operator/pull/435))
 * [[DPE-6922](https://warthogs.atlassian.net/browse/DPE-6922)] Integrate TiCS ([PR \#605](https://github.com/canonical/opensearch-operator/pull/605))
@@ -69,7 +69,7 @@ This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Num
 * [[DPE-6091](https://warthogs.atlassian.net/browse/DPE-6091)] Add oauth integration ([PR \#180](https://github.com/canonical/opensearch-dashboards-operator/pull/180))
 * [[DPE-6936](https://warthogs.atlassian.net/browse/DPE-6936)] Update to 2.19.1 ([PR \#182](https://github.com/canonical/opensearch-dashboards-operator/pull/182))
 * [[DPE-8018](https://warthogs.atlassian.net/browse/DPE-8018)] Add JWT authentication ([PR \#217](https://github.com/canonical/opensearch-dashboards-operator/pull/217))
-* [[DPE-5832](https://warthogs.atlassian.net/browse/DPE-5832)][[DPE-6252](https://warthogs.atlassian.net/browse/DPE-6252)] Add 24.04 support ([PR \#138](https://github.com/canonical/opensearch-dashboards-operator/pull/138))
+* [[DPE-5832](https://warthogs.atlassian.net/browse/DPE-5832)][[DPE-6252](https://warthogs.atlassian.net/browse/DPE-6252)] Add 24.04 LTS support ([PR \#138](https://github.com/canonical/opensearch-dashboards-operator/pull/138))
 * Add new Prometheus Rules using the python exporter ([PR \#159](https://github.com/canonical/opensearch-dashboards-operator/pull/159))
 * Bump version to 2.19.2 ([PR \#198](https://github.com/canonical/opensearch-dashboards-operator/pull/198))
 * Release 2.19.4 ([PR \#224](https://github.com/canonical/opensearch-dashboards-operator/pull/224))
@@ -81,7 +81,7 @@ This release of the OpenSearch Operator adds support for Ubuntu 24.04 (Noble Num
 * [[DPE-7928](https://warthogs.atlassian.net/browse/DPE-7928)] Block if we fail to get the provider info from the oauth relation ([PR \#218](https://github.com/canonical/opensearch-dashboards-operator/pull/218))
 * [[DPE-6600](https://warthogs.atlassian.net/browse/DPE-6600)] Move away from `libjuju` and `add_machine` ([PR \#167](https://github.com/canonical/opensearch-dashboards-operator/pull/167))
 * [[DPE-6598](https://warthogs.atlassian.net/browse/DPE-6598)][[DPE-6786](https://warthogs.atlassian.net/browse/DPE-6786)] Update to 2.18 and fix CI ([PR \#169](https://github.com/canonical/opensearch-dashboards-operator/pull/169))
-* [[DPE-5699](https://warthogs.atlassian.net/browse/DPE-5699)] Update CI workflow versions, add juju 3.6, and remove build wrapper ([PR \#124](https://github.com/canonical/opensearch-dashboards-operator/pull/124))
+* [[DPE-5699](https://warthogs.atlassian.net/browse/DPE-5699)] Update CI workflow versions, add Juju 3.6, and remove build wrapper ([PR \#124](https://github.com/canonical/opensearch-dashboards-operator/pull/124))
 * Fix branch release on CI ([PR \#123](https://github.com/canonical/opensearch-dashboards-operator/pull/123))
 * Remove dependency breaking ccc-hub ([PR \#136](https://github.com/canonical/opensearch-dashboards-operator/pull/136))
 * Rollback Cache use ([PR \#139](https://github.com/canonical/opensearch-dashboards-operator/pull/139))
