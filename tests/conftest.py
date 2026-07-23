@@ -21,15 +21,17 @@ def pytest_addoption(parser: Parser):
         default="vm",
     )
 
+
 @pytest.fixture(scope="session")
 def substrate(request) -> Substrate:
     """The substrate that we are testing."""
     return request.config.option.substrate
 
+
 @pytest.fixture
 def opensearch_base_path(substrate) -> Path:
     """The base path for the files of the opensearch charms, according to the substrate."""
     if substrate == "vm":
-        return _REPO_ROOT_DIR / "machines" 
+        return _REPO_ROOT_DIR / "machines"
     else:
         return _REPO_ROOT_DIR / "kubernetes"

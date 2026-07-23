@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
-import json
 import base64
+import json
 import logging
 import random
 import socket
 import subprocess
 import tempfile
 from pathlib import Path
-from urllib.parse import urlparse
 from types import SimpleNamespace
-from typing import Dict, List, Optional, Union, Any
-from tests.helpers import Substrate
+from typing import Any, Dict, List, Optional, Union
+from urllib.parse import urlparse
 
 import requests
 import yaml
+from dateutil.parser import parse
 from opensearchpy import OpenSearch
 from pytest_operator.plugin import OpsTest
 from tenacity import (
@@ -24,9 +24,9 @@ from tenacity import (
     wait_fixed,
     wait_random,
 )
-from tests.integration.conftest import CLIENT_CHARM
-from dateutil.parser import parse
 
+from tests.helpers import Substrate
+from tests.integration.conftest import CLIENT_CHARM
 
 from .helpers_deployments import get_application_units
 
@@ -99,6 +99,7 @@ class Unit:
             result[key] = vars(val) if isinstance(val, Status) else val
         return result
 
+
 class Shard:
     """Class for holding a shard."""
 
@@ -165,6 +166,7 @@ async def get_shards_by_index(
             )
 
     return result
+
 
 @retry(wait=wait_fixed(wait=15), stop=stop_after_attempt(15))
 async def run_action(
@@ -281,6 +283,7 @@ async def get_leader_unit_id(ops_test: OpsTest, app: str = APP_NAME) -> int:
 
     return int(leader_unit.name.split("/")[1])
 
+
 async def _find_k8s_unit_for_endpoint(
     ops_test: OpsTest, endpoint: str, app: str
 ) -> Optional[Unit]:
@@ -301,6 +304,7 @@ async def _find_k8s_unit_for_endpoint(
 
     return None
 
+
 def _model_name(ops_test: OpsTest) -> str:
     """Return the active Juju model name from pytest-operator."""
     return getattr(ops_test, "model_name", None) or ops_test.model.info.name
@@ -316,6 +320,7 @@ def _request_path(endpoint: str) -> str:
 def _k8s_unit_fqdn(ops_test: OpsTest, app: str, unit: Unit) -> str:
     """Return the fully qualified domain name for a K8s unit"""
     return f"{unit.short_name}.{app}-endpoints.{_model_name(ops_test)}.svc.cluster.local"
+
 
 def _http_request_headers(
     json_resp: bool,
@@ -333,8 +338,6 @@ def _http_request_headers(
     if extra_headers:
         headers.update(extra_headers)
     return headers
-
-
 
 
 async def http_request(  # noqa: C901
@@ -462,6 +465,7 @@ async def http_request(  # noqa: C901
         logger.info(f"\n{resp.text}")
         return resp
 
+
 async def debug_failed_unit(ops_test: OpsTest, app: str, endpoint: str) -> None:
     """Print the logs of a unit failing with a certain set of statuses."""
     unit_ip = endpoint[8:].split(":")[0]
@@ -483,6 +487,7 @@ async def debug_failed_unit(ops_test: OpsTest, app: str, endpoint: str) -> None:
         logger.debug(f"out:\n{out}\n---\nerr:\n{err}")
 
         logger.debug("\n\n------------------\n\n")
+
 
 async def deploy_opensearch(  # noqa: C901
     ops_test: OpsTest,
@@ -519,6 +524,7 @@ async def deploy_opensearch(  # noqa: C901
 
     await ops_test.model.deploy(charm, **deploy_kwargs)
 
+
 def opensearch_client(
     hosts: List[str], user_name: str, password: str, cert_path: str
 ) -> OpenSearch:
@@ -527,16 +533,22 @@ def opensearch_client(
         hosts=[{"host": ip, "port": 9200} for ip in hosts],
         http_auth=(user_name, password),
         http_compress=True,
-        sniff_on_start=True,  # sniff before doing anything
-        sniff_on_connection_fail=True,  # refresh nodes after a node fails to respond
-        sniffer_timeout=60.0,  # and also every 60 seconds
-        # sniff_timeout=5.0,  # and also every 60 seconds
+        # Integration tests already pass the current unit IPs explicitly.
+        # Node sniffing asks OpenSearch for the full node list and
+        # replaces the client's seed hosts with the discovered addresses.
+        # The discovered node endpoints are commonly pod IPs or cluster-local DNS names,
+        # and the runner outside Kubernetes cannot reliably use them.
+        # Disable it here because it is brittle during CA rotation and can fail
+        # before the client ever attempts the provided hosts.
         use_ssl=True,  # turn on ssl
         verify_certs=True,  # make sure we verify SSL certificates
         ssl_assert_hostname=False,
         ssl_show_warn=False,
         ca_certs=cert_path,  # cert path on disk
+        retry_on_timeout=True,
+        max_retries=3,
     )
+
 
 def get_file_contents(
     ops_test: OpsTest, unit: str, filename: str, substrate: Substrate = "vm"
@@ -557,4 +569,3 @@ def get_conf_as_dict(
     """Convert a yml config file to a dict."""
     config = get_file_contents(ops_test, unit, filename, substrate)
     return yaml.safe_load(str(config.decode("utf-8")).replace("ll", ""))
-

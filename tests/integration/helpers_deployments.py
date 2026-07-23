@@ -5,7 +5,6 @@
 import asyncio
 import json
 import logging
-import re
 import subprocess
 from datetime import datetime, timedelta
 from hashlib import md5
@@ -172,6 +171,7 @@ async def _get_unit(
         ),
     )
 
+
 def _get_unit_address(raw_unit: dict[str, Any]) -> Optional[str]:
     """Return unit address from raw status; K8s may use 'address' instead of 'public-address'."""
     return raw_unit.get("public-address") or raw_unit.get("address")
@@ -219,6 +219,7 @@ async def get_application_subordinate_units(
         units.append(_get_unit(ops_test, app, raw_app, u_name, raw_unit, subordinate=True))
     return await asyncio.gather(*units) if units else []
 
+
 def _check_status(status: Status, check: StatusObject) -> bool:
     """Check if charm status is the same as from the advanced status lib checked status.
 
@@ -243,6 +244,7 @@ def _check_status(status: Status, check: StatusObject) -> bool:
         or status.message.startswith(f"{check.message:.40}")
         or (check.short_message is not None and check.short_message in status.message)
     )
+
 
 def _is_every_condition_on_app_met(
     ops_test: OpsTest,

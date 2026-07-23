@@ -4,10 +4,10 @@
 import base64
 
 import pytest
+from machines.src.charm import DummyClientCharmCharm
 from ops import testing
 from scenario.errors import UncaughtCharmError
 
-from machines.src.charm import DummyClientCharmCharm
 from models import GenerateBulkTrainingDataActionParams, RequestActionParams
 
 CONSTRUCTED_CLIENT = None

@@ -5,10 +5,9 @@ from pathlib import Path
 
 import pytest
 import yaml
-
-from tests.helpers import Substrate
 from pytest_operator.plugin import OpsTest
 
+from tests.helpers import Substrate
 
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 TLS_STABLE_CHANNEL = "1/stable"
@@ -18,9 +17,7 @@ CONFIG = yaml.safe_load(Path("./machines/config.yaml").read_text())
 ACTIONS = yaml.safe_load(Path("./machines/actions.yaml").read_text())
 
 METADATA = yaml.safe_load(Path("./machines/metadata.yaml").read_text())
-K8S_METADATA = yaml.safe_load(
-    Path("./kubernetes/metadata.yaml").read_text()
-)
+K8S_METADATA = yaml.safe_load(Path("./kubernetes/metadata.yaml").read_text())
 
 APP_NAME = METADATA["name"]
 
@@ -42,6 +39,8 @@ MODEL_CONFIG = {
         - [ 'sysctl', '-w', 'net.ipv4.tcp_retries2=5' ]
     """,
 }
+
+
 @pytest.fixture
 def charm_resources(substrate: Substrate) -> dict[str, str]:
     """Resources to pass to `juju deploy` for the OpenSearch charm.

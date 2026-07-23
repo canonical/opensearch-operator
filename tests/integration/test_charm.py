@@ -11,18 +11,13 @@ from pathlib import Path
 
 import pytest
 import yaml
-from pytest_operator.plugin import OpsTest
-
 from opensearch_single_kernel.common.constants import (
     OPENSEARCH_SNAP_REVISION,
 )
 from opensearch_single_kernel.common.statuses import GeneralStatuses, TlsStatuses
+from pytest_operator.plugin import OpsTest
+
 from tests.helpers import Substrate
-from .continuous_writes import (
-    ContinuousWrites,
-    assert_continuous_writes_consistency,
-    assert_continuous_writes_increasing,
-)
 
 from .conftest import (
     APP_NAME,
@@ -31,7 +26,11 @@ from .conftest import (
     TLS_CERTIFICATES_APP_NAME,
     TLS_STABLE_CHANNEL,
 )
-
+from .continuous_writes import (
+    ContinuousWrites,
+    assert_continuous_writes_consistency,
+    assert_continuous_writes_increasing,
+)
 from .helpers import (
     deploy_opensearch,
     get_application_unit_ids,

@@ -33,6 +33,8 @@ from .helpers import (
     opensearch_client,
 )
 
+logger = logging.getLogger(__name__)
+
 logging.getLogger("opensearch").setLevel(logging.ERROR)
 logging.getLogger("opensearchpy.helpers").setLevel(logging.ERROR)
 # Explicitly silence the trace logger (which outputs the curl commands)
