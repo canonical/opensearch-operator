@@ -182,9 +182,18 @@ async def run_action(
         A SimpleNamespace with "status, response (results)"
     """
     if unit_id is None:
+        # On K8s there is no SSH server in the workload pod, so probing port 22 to
+        # decide whether a unit is reachable always fails and leaves us with no
+        # candidate units. Only run the SSH reachability check on VM.
+        is_k8s = ops_test.request.config.option.substrate == "k8s"
+
         online_units = []
         for unit in await get_application_units(ops_test, app):
             if unit.workload_status.value != "active":
+                continue
+
+            if is_k8s:
+                online_units.append(unit)
                 continue
 
             ping = subprocess.call(
@@ -194,6 +203,9 @@ async def run_action(
             )
             if ping == 0:
                 online_units.append(unit)
+
+        if not online_units:
+            raise RuntimeError(f"No active/reachable units found for application {app!r}")
 
         unit_id = random.choice(online_units).id
 
