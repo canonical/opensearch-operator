@@ -1,0 +1,23 @@
+rules:
+  dependabot-cooldown:
+    config:
+      days: 3
+
+  # Allowlist trusted actions.
+  forbidden-uses:
+    config:
+      allow:
+        - canonical/*
+        - actions/*
+        - pypa/gh-action-pypi-publish
+        - tiobe/tics-github-action
+  unpinned-uses:
+    config:
+      policies:
+        canonical/*: ref-pin
+        actions/*: ref-pin
+        pypa/gh-action-pypi-publish: ref-pin
+        tiobe/tics-github-action: ref-pin
+  secrets-inherit:
+    ignore:
+      - ci.yaml:155

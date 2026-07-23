@@ -1,0 +1,194 @@
+groups:
+- name: opensearch.logs
+  rules:
+
+  # Fatal errors
+  # ============
+
+  - alert: OpenSearchFatalError
+    expr: |
+      sum(rate({juju_application=~"opensearch.*"} |~ `\[FATAL\]` [5m])) by (juju_unit) > 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "OpenSearch fatal error on {{ $labels.juju_unit }}"
+      description: |
+        A FATAL log entry has been detected on {{ $labels.juju_unit }}.
+        The node may be in an unrecoverable state. Check the service logs immediately.
+        LABELS = {{ $labels }}
+
+  # Out of memory
+  # =============
+
+  - alert: OpenSearchOutOfMemory
+    expr: |
+      sum(rate({juju_application=~"opensearch.*"} |~ `OutOfMemoryError` [5m])) by (juju_unit) > 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "OpenSearch JVM OutOfMemoryError on {{ $labels.juju_unit }}"
+      description: |
+        An OutOfMemoryError was detected on {{ $labels.juju_unit }}.
+        The JVM heap is exhausted. The node may crash. Consider increasing heap size
+        or reducing load.
+        LABELS = {{ $labels }}
+
+  # Cluster health
+  # ==============
+
+  - alert: OpenSearchClusterRedLog
+    expr: |
+      sum(rate({juju_application=~"opensearch.*"} |~ `ClusterState.*RED|health.*RED|status.*RED` [2m])) by (juju_unit) > 0
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: "OpenSearch cluster RED detected in logs on {{ $labels.juju_unit }}"
+      description: |
+        Log entries indicate the cluster health is RED on {{ $labels.juju_unit }}.
+        The cluster may not accept writes and shards may be missing.
+        LABELS = {{ $labels }}
+
+  - alert: OpenSearchClusterManagerNotFound
+    expr: |
+      sum(rate({juju_application=~"opensearch.*"} |~ `master not discovered|cluster.manager not discovered|no cluster.manager` [5m])) by (juju_unit) > 0
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: "OpenSearch cluster manager not discovered on {{ $labels.juju_unit }}"
+      description: |
+        The node {{ $labels.juju_unit }} cannot find the cluster manager.
+        The cluster may be experiencing a split-brain or all cluster-manager eligible
+        nodes may be down.
+        LABELS = {{ $labels }}
+
+  # Disk watermarks
+  # ===============
+
+  - alert: OpenSearchDiskLowWatermark
+    expr: |
+      sum(rate({juju_application=~"opensearch.*"} |~ `low disk watermark` [5m])) by (juju_unit) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "OpenSearch low disk watermark reached on {{ $labels.juju_unit }}"
+      description: |
+        The low disk watermark has been reached on {{ $labels.juju_unit }}.
+        Shard allocation to this node will be restricted. Add more disk space or
+        delete old indices.
+        LABELS = {{ $labels }}
+
+  - alert: OpenSearchDiskHighWatermark
+    expr: |
+      sum(rate({juju_application=~"opensearch.*"} |~ `high disk watermark` [5m])) by (juju_unit) > 0
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: "OpenSearch high disk watermark reached on {{ $labels.juju_unit }}"
+      description: |
+        The high disk watermark has been reached on {{ $labels.juju_unit }}.
+        OpenSearch is relocating shards away from this node. Add more disk space
+        immediately.
+        LABELS = {{ $labels }}
+
+  - alert: OpenSearchDiskFloodStage
+    expr: |
+      sum(rate({juju_application=~"opensearch.*"} |~ `flood stage disk watermark` [5m])) by (juju_unit) > 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "OpenSearch flood-stage disk watermark reached on {{ $labels.juju_unit }}"
+      description: |
+        The flood-stage disk watermark has been reached on {{ $labels.juju_unit }}.
+        All indices on this node are now read-only. Add disk space and manually
+        clear the read-only block once space is available.
+        LABELS = {{ $labels }}
+
+  # Circuit breakers
+  # ================
+
+  - alert: OpenSearchCircuitBreakerTripped
+    expr: |
+      sum(rate({juju_application=~"opensearch.*"} |~ `CircuitBreakingException|circuit_breaker_exception|Data too large` [5m])) by (juju_unit) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "OpenSearch circuit breaker triggered on {{ $labels.juju_unit }}"
+      description: |
+        A circuit breaker exception was detected on {{ $labels.juju_unit }}.
+        The node is rejecting requests to protect itself from resource exhaustion.
+        Review indexing load or increase memory limits.
+        LABELS = {{ $labels }}
+
+  # Shard issues
+  # ============
+
+  - alert: OpenSearchShardFailure
+    expr: |
+      sum(rate({juju_application=~"opensearch.*"} |~ `failed shard|shard failure|ShardNotFoundException` [5m])) by (juju_unit) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "OpenSearch shard failure detected on {{ $labels.juju_unit }}"
+      description: |
+        Shard failure log entries were detected on {{ $labels.juju_unit }}.
+        One or more shards may be unavailable. Check the cluster health and shard
+        allocation status.
+        LABELS = {{ $labels }}
+
+  # Write rejections
+  # ================
+
+  - alert: OpenSearchWriteRejections
+    expr: |
+      sum(rate({juju_application=~"opensearch.*"} |~ `rejected execution.*write|write queue capacity` [5m])) by (juju_unit) > 0
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "OpenSearch write thread pool rejections on {{ $labels.juju_unit }}"
+      description: |
+        Write thread pool rejection log entries detected on {{ $labels.juju_unit }}.
+        The node is not keeping up with the indexing speed. Consider reducing indexing
+        load or scaling the cluster.
+        LABELS = {{ $labels }}
+
+  # Node disconnections
+  # ===================
+
+  - alert: OpenSearchNodeLeft
+    expr: |
+      sum(rate({juju_application=~"opensearch.*"} |~ `\[.*\] left the cluster` [5m])) by (juju_unit) > 0
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "OpenSearch node left the cluster ({{ $labels.juju_unit }})"
+      description: |
+        A node has left the cluster, as reported in logs on {{ $labels.juju_unit }}.
+        This may reduce cluster capacity and cause shard rebalancing.
+        LABELS = {{ $labels }}
+
+  # General errors
+  # ==============
+
+  - alert: OpenSearchErrorLogs
+    expr: |
+      sum(rate({juju_application=~"opensearch.*"} |~ `\[ERROR\]` [5m])) by (juju_unit) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "OpenSearch ERROR log entries on {{ $labels.juju_unit }}"
+      description: |
+        One or more ERROR log entries have appeared in the OpenSearch logs on
+        {{ $labels.juju_unit }} in the last 5 minutes. Review the logs for details.
+        LABELS = {{ $labels }}

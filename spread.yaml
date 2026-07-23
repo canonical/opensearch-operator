@@ -1,3 +1,8 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+# This file defines the spread backends and configuration.
+# This is used by the CI to run the tests, but can also be used locally.
+
 project: opensearch-operator
 
 backends:
@@ -50,16 +55,17 @@ backends:
       systemctl mask unattended-upgrades.service
       pipx install charmcraftcache
       cd "$SPREAD_PATH"
-      charmcraftcache pack -v
     restore-each: |
       cd "$SPREAD_PATH"
       # Revert python-libjuju version override
       git restore pyproject.toml poetry.lock
 
       # Use instead of `concierge restore` to save time between tests
-      # For example, with microk8s, using `concierge restore` takes twice as long as this (e.g. 6
+      # For example, with k8s, using `concierge restore` takes twice as long as this (e.g. 6
       # min instead of 3 min between every spread job)
-      juju destroy-model --force --no-wait --destroy-storage --no-prompt testing
+      juju destroy-model --force --no-wait --destroy-storage --no-prompt concierge-k8s:testing
+      juju destroy-model --force --no-wait --destroy-storage --no-prompt concierge-lxd:testing
+      juju kill-controller --no-prompt concierge-k8s
       juju kill-controller --no-prompt concierge-lxd
     restore: |
       rm -rf "$SPREAD_PATH"
@@ -82,37 +88,37 @@ backends:
       sudo systemctl daemon-reload
       sudo systemctl start ssh
 
-      # Needed for IS-hosted runners
-      sudo passwd --delete ubuntu
+      sudo passwd -d ubuntu
 
       ADDRESS localhost
     # HACK: spread does not pass environment variables set on runner
     # Manually pass specific environment variables
     environment:
-      CI: '$(HOST: echo $CI)'
-      CHARM_UBUNTU_BASE: '$(HOST: echo $CHARM_UBUNTU_BASE)'
-      AWS_ACCESS_KEY: '$(HOST: echo $AWS_ACCESS_KEY)'
-      AWS_SECRET_KEY: '$(HOST: echo $AWS_SECRET_KEY)'
-      AZURE_STORAGE_ACCOUNT: '$(HOST: echo $AZURE_STORAGE_ACCOUNT)'
-      AZURE_SECRET_KEY: '$(HOST: echo $AZURE_SECRET_KEY)'
-      GCP_ACCESS_KEY: '$(HOST: echo $GCP_ACCESS_KEY)'
-      GCP_SECRET_KEY: '$(HOST: echo $GCP_SECRET_KEY)'
-      GCP_SERVICE_ACCOUNT: '$(HOST: echo $GCP_SERVICE_ACCOUNT)'
-      DOCKERHUB_MIRROR: '$(HOST: echo $DOCKERHUB_MIRROR)'
-      # To install pipx on self-hosted runners
+      CI: "$(HOST: echo $CI)"
+      CHARM_UBUNTU_BASE: "$(HOST: echo $CHARM_UBUNTU_BASE)"
+      AWS_ACCESS_KEY: "$(HOST: echo $AWS_ACCESS_KEY)"
+      AWS_SECRET_KEY: "$(HOST: echo $AWS_SECRET_KEY)"
+      GCP_ACCESS_KEY: "$(HOST: echo $GCP_ACCESS_KEY)"
+      GCP_SECRET_KEY: "$(HOST: echo $GCP_SECRET_KEY)"
+      GCP_SERVICE_ACCOUNT: "$(HOST: echo $GCP_SERVICE_ACCOUNT)"
+      AZURE_STORAGE_ACCOUNT: "$(HOST: echo $AZURE_STORAGE_ACCOUNT)"
+      AZURE_SECRET_KEY: "$(HOST: echo $AZURE_SECRET_KEY)"
+      DOCKERHUB_MIRROR: "$(HOST: echo $DOCKERHUB_MIRROR)"
       CONCIERGE_EXTRA_DEBS: pipx
     systems:
+      - self-hosted-linux-amd64-noble-medium:
+          username: ubuntu
       - self-hosted-linux-amd64-noble-large:
           username: ubuntu
       - self-hosted-linux-amd64-noble-xlarge:
           username: ubuntu
-
 suites:
-  tests/spread/:
-    summary: General test suite
+  tests/spread/vm/:
+    summary: Spread tests for OpenSearch VM
+  tests/spread/k8s/:
+    summary: Spread tests for OpenSearch Kubernetes
 
 path: /root/spread_project
-
 kill-timeout: 3h
 environment:
   PATH: $PATH:$(pipx environment --value PIPX_BIN_DIR)
@@ -125,68 +131,69 @@ prepare: |
   cd "$SPREAD_PATH"
   snap install --classic concierge
 
-  if [[ $SPREAD_TASK == *"oauth"* ]]
+  if [[ $SPREAD_SUITE == *"k8s"* || $SPREAD_TASK == *"oauth"* ]]
   then
-    # Running on IS-hosted runner; configure microk8s to use Docker Hub mirror
-    # Run before concierge prepare because of https://github.com/canonical/concierge/issues/75
-    snap install microk8s  --classic
-    snap install kubectl --classic 
-    snap install yq
-    
-    if [[ -n "$DOCKERHUB_MIRROR" ]]
-    then
-      # Wait for microk8s to populate iptables
-      # https://chat.canonical.com/canonical/pl/jo5cg6wqjjrudqd5ybj6hhttee
-      until [[ -n $(iptables --list | grep -i "microk8s") ]]
-      do
-        echo "MicroK8s has not yet configured iptables."
-        sleep 10
-      done
-      tee /var/snap/microk8s/current/args/certs.d/docker.io/hosts.toml << EOF
-  server = "$DOCKERHUB_MIRROR"
-  [host."${DOCKERHUB_MIRROR#'https://'}"]
-  capabilities = ["pull", "resolve"]
-  EOF
-    fi
-
-    microk8s stop
-    microk8s start
-    microk8s enable dns
-    microk8s enable hostpath-storage
-    microk8s enable metallb:10.64.140.43-10.64.140.49
-    mkdir -p ~/.kube
-    microk8s config > ~/.kube/config
-    
-    echo "Waiting for all pods to be in 'Running' phase..."
-    until kubectl get po -A --field-selector=status.phase!=Running 2>&1 | grep -q "No resources found"; do
-      echo "Some pods are not running. Retrying in 5 seconds..."
-      sleep 5
+  # Remove docker and fix iptable forwarding rules to avoid conflicts with k8s and cilium
+    sudo apt-get purge -y docker.io containerd 2>/dev/null || true
+    sudo apt-get autoremove -y 2>/dev/null || true
+    for chain in DOCKER DOCKER-ISOLATION-STAGE-1 DOCKER-ISOLATION-STAGE-2 DOCKER-USER DOCKER-FORWARD; do
+      sudo iptables -D FORWARD -j $chain 2>/dev/null || true
+      sudo iptables -F $chain 2>/dev/null || true
+      sudo iptables -X $chain 2>/dev/null || true
+      sudo iptables -t nat -F $chain 2>/dev/null || true
+      sudo iptables -t nat -X $chain 2>/dev/null || true
     done
-    echo "Success: All pods are running!"
+    sudo iptables -P FORWARD ACCEPT
+
+    concierge prepare --trace -c concierge-k8s.yaml
+    # k8s status --wait-ready returns as soon as 1 node is ready
+    # (see https://github.com/canonical/k8s-snap/issues/1789)
+    # but Cilium, CoreDNS, and storage may still be initialising
+    for res in deployment/cilium-operator deployment/coredns deployment/metrics-server daemonset/cilium daemonset/ck-storage-rawfile-csi-node statefulset/ck-storage-rawfile-csi-controller; do
+        if k8s kubectl -n kube-system get "$res" >/dev/null 2>&1; then
+            k8s kubectl -n kube-system rollout status "$res" --timeout=5m
+        else
+            echo "Skipping rollout status for missing $res"
+        fi
+    done
+  fi
+
+  if [[ $SPREAD_SUITE == *"vm"* ]]
+  then
+    concierge prepare --trace -c concierge-lxd.yaml --extra-debs pipx
+    if [[ $SPREAD_TASK == *"oauth"* ]]
+    then
+      mkdir -p ~/.kube
+      k8s kubectl config view --raw > ~/.kube/config
+      export LOCAL_IP="127.0.0.1"
+      export PUBLIC_IP=$(ip -4 -j route get 2.2.2.2 | jq -r '.[] | .prefsrc')
+      sed -i 's/'${LOCAL_IP}'/'${PUBLIC_IP}'/g' ~/.kube/config
+      cat ~/.kube/config | juju add-k8s uk8s --client --controller $(/snap/bin/juju show-controller | yq "keys | .[0]")
+    fi
   fi
 
   # Install charmcraft & pipx (on lxd-vm backend)
-  concierge prepare --trace
   pipx install tox poetry
-
-  if [[ $SPREAD_TASK == *"oauth"* ]]
-  then
-    /snap/bin/juju add-k8s uk8s --client --controller $(/snap/bin/juju show-controller | yq "keys | .[0]")
-  fi
-
 prepare-each: |
   cd "$SPREAD_PATH"
-  if [[ $SPREAD_VARIANT == *"juju29"* ]]
-  then
-    # Each version of python-libjuju is only compatible with one major Juju version
-    # Override python-libjuju version pinned in poetry.lock
-    poetry add --lock --group integration juju@^2
-  fi
+
   # `concierge prepare` needs to be run for each spread job in case Juju version changed
-  concierge prepare --trace
+  if [[ $SPREAD_SUITE == *"vm"* ]]
+  then
+    concierge prepare --trace -c concierge-lxd.yaml
+  else
+    concierge prepare --trace -c concierge-k8s.yaml
+  fi
+
+  if [[ $SPREAD_SUITE == *"vm"* ]]
+  then
+    juju switch concierge-lxd
+  else
+    juju switch concierge-k8s
+  fi
 
   # Unable to set constraint on all models because of Juju bug:
   # https://bugs.launchpad.net/juju/+bug/2065050
   juju set-model-constraints arch="$(dpkg --print-architecture)"
 
-# Only restore on lxd backend. No need to restore on CI
+# Only restore on lxd backend—no need to restore on CI

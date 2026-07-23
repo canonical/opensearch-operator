@@ -1,0 +1,97 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: opensearch-k8s
+display-name: OpenSearch K8s
+
+description: |
+  Kubernetes charm for OpenSearch
+docs: https://discourse.charmhub.io/t/charmed-opensearch-documentation/9729
+summary: |
+  Kubernetes charm for OpenSearch
+
+assumes:
+  - k8s-api
+
+charm-user: sudoer
+
+peers:
+  opensearch-peers:
+    interface: opensearch_peers
+  node-lock-fallback:
+    interface: node_lock_fallback
+  upgrade-version-a:
+    # Relation versioning scheme:
+    # DA056 - Upgrading in-place upgrade protocol
+    # https://docs.google.com/document/d/1H7qy5SAwLiCOKO9xMQJbbQP5_-jGV6Lhi-mJOk4gZ08/edit
+    interface: upgrade
+  status-peers:
+    interface: status-peers
+
+provides:
+  peer-cluster-orchestrator:
+    interface: peer_cluster
+    optional: true
+  opensearch-client:
+    interface: opensearch_client
+  metrics-endpoint:
+    interface: prometheus_scrape
+  grafana-dashboard:
+    interface: grafana_dashboard
+
+requires:
+  certificates:
+    interface: tls-certificates
+    limit: 1
+  peer-cluster:
+    interface: peer_cluster
+    limit: 2 # (main+failover)_cluster_orchestrator(s)
+    optional: true
+  s3-credentials:
+    interface: s3
+    limit: 1
+  azure-credentials:
+    interface: azure
+    limit: 1
+  gcs-credentials:
+    interface: gcs
+    limit: 1
+  oauth:
+    interface: oauth
+    limit: 1
+    optional: true
+  jwt-configuration:
+    interface: jwt
+    limit: 1
+    optional: true
+  smtp:
+    interface: smtp
+  logging:
+    interface: loki_push_api
+
+storage:
+  opensearch-data:
+    type: filesystem
+    location: /var/lib/opensearch
+    description: Storage for OpenSearch data files
+  opensearch-logs:
+    type: filesystem
+    location: /var/log/opensearch
+    description: Storage for OpenSearch log files
+
+containers:
+  opensearch:
+    uid: 584792
+    gid: 584792
+    resource: opensearch-image
+    mounts:
+      - storage: opensearch-data
+        location: /var/lib/opensearch
+      - storage: opensearch-logs
+        location: /var/log/opensearch
+
+resources:
+  opensearch-image:
+    type: oci-image
+    description: OCI image for opensearch
+    upstream-source: ghcr.io/canonical/opensearch:2.19.5-24.04_edge@sha256:9736130a9dc2f7a042de5cbba51f3801ade23a4834bbde61450ca271fd772586

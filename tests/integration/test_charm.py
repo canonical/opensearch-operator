@@ -4,17 +4,20 @@
 
 import asyncio
 import logging
+import re
 import shlex
 import subprocess
+from pathlib import Path
 
 import pytest
 import yaml
 from opensearch_single_kernel.common.constants import (
     OPENSEARCH_SNAP_REVISION,
-    OPENSEARCH_SYSTEM_USERS,
 )
-from opensearch_single_kernel.common.statuses import TlsStatuses
+from opensearch_single_kernel.common.statuses import GeneralStatuses, TlsStatuses
 from pytest_operator.plugin import OpsTest
+
+from tests.helpers import Substrate
 
 from .conftest import (
     APP_NAME,
@@ -29,6 +32,7 @@ from .continuous_writes import (
     assert_continuous_writes_increasing,
 )
 from .helpers import (
+    deploy_opensearch,
     get_application_unit_ids,
     get_conf_as_dict,
     get_leader_unit_id,
@@ -45,15 +49,22 @@ DEFAULT_NUM_UNITS = 2
 
 
 @pytest.mark.abort_on_fail
-async def test_deploy_and_remove_single_unit(charm, series, ops_test: OpsTest) -> None:
+@pytest.mark.skip_if_deployed
+async def test_deploy_and_remove_single_unit(
+    charm, series, ops_test: OpsTest, substrate, charm_resources
+) -> None:
     """Build and deploy OpenSearch with a single unit and remove it."""
     await ops_test.model.set_config(MODEL_CONFIG)
 
-    await ops_test.model.deploy(
+    await deploy_opensearch(
+        ops_test,
         charm,
-        num_units=1,
+        substrate,
+        APP_NAME,
+        1,
         series=series,
         config=CONFIG_OPTS,
+        resources=charm_resources,
     )
     # Deploy TLS Certificates operator.
     config = {"ca-common-name": "CN_CA"}
@@ -66,6 +77,7 @@ async def test_deploy_and_remove_single_unit(charm, series, ops_test: OpsTest) -
         ops_test,
         apps=[APP_NAME],
         wait_for_exact_units=1,
+        units_statuses={APP_NAME: [GeneralStatuses.ACTIVE_IDLE.value]},
     )
     assert len(ops_test.model.applications[APP_NAME].units) == 1
 
@@ -83,24 +95,30 @@ async def test_deploy_and_remove_single_unit(charm, series, ops_test: OpsTest) -
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(charm, series, ops_test: OpsTest) -> None:
+@pytest.mark.skip_if_deployed
+async def test_build_and_deploy(
+    charm, series, ops_test: OpsTest, substrate, charm_resources
+) -> None:
     """Build and deploy a couple of OpenSearch units."""
     model_config = MODEL_CONFIG
     model_config["update-status-hook-interval"] = "1m"
 
     await ops_test.model.set_config(MODEL_CONFIG)
 
-    await ops_test.model.deploy(
+    await deploy_opensearch(
+        ops_test,
         charm,
-        num_units=DEFAULT_NUM_UNITS,
+        substrate,
+        APP_NAME,
+        DEFAULT_NUM_UNITS,
         series=series,
         config=CONFIG_OPTS,
+        resources=charm_resources,
     )
     await wait_until(
         ops_test,
         apps=[APP_NAME],
         wait_for_exact_units=DEFAULT_NUM_UNITS,
-        # Added this since we should wait for both statuses
         apps_statuses={APP_NAME: [TlsStatuses.TLS_RELATION_MISSING.value]},
         units_statuses={APP_NAME: [TlsStatuses.TLS_RELATION_MISSING.value]},
     )
@@ -108,7 +126,7 @@ async def test_build_and_deploy(charm, series, ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_actions_get_admin_password(ops_test: OpsTest) -> None:
+async def test_actions_get_admin_password(ops_test: OpsTest, substrate) -> None:
     """Test the retrieval of admin secrets."""
     leader_id = await get_leader_unit_id(ops_test)
 
@@ -262,6 +280,7 @@ async def test_actions_rotate_system_user_password(ops_test: OpsTest, user) -> N
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.skip_if_substrate("k8s")
 async def test_check_pinned_revision(ops_test: OpsTest) -> None:
     """Test check the pinned revision."""
     leader_id = await get_leader_unit_id(ops_test)
@@ -289,66 +308,78 @@ async def test_check_pinned_revision(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_check_workload_version(ops_test: OpsTest) -> None:
+async def test_check_workload_version(ops_test: OpsTest, substrate) -> None:
     """Test to check if the workload_version file is updated."""
     leader_id = await get_leader_unit_id(ops_test)
 
-    installed_info = yaml.safe_load(
-        subprocess.check_output(
-            [
-                "juju",
-                "ssh",
-                "-m",
-                ops_test.model.info.name,
-                f"opensearch/{leader_id}",
-                "--",
-                "sudo",
-                "snap",
-                "info",
-                "opensearch",
-                "--color=never",
-                "--unicode=always",
-            ],
-            text=True,
-        ).replace("\r\n", "\n")
-    )["installed"].split()
-    logger.info(f"Installed snap: {installed_info}")
+    command = [
+        "juju",
+        "ssh",
+        "-m",
+        ops_test.model.info.name,
+        f"{APP_NAME}/{leader_id}",
+        "--",
+        "sudo",
+        "opensearch.opensearch-bin",
+        "--version",
+    ]
+
+    if substrate == "k8s":
+        command = [
+            "juju",
+            "ssh",
+            "-m",
+            ops_test.model.info.name,
+            "--container",
+            "opensearch",
+            f"{APP_NAME}/{leader_id}",
+            "/usr/share/opensearch/bin/opensearch",
+            "--version",
+        ]
+
+    proc = await asyncio.create_subprocess_exec(
+        *command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
+    )
+    stdout, stderr = await proc.communicate()
+    if proc.returncode:
+        raise subprocess.CalledProcessError(proc.returncode, command, output=stdout, stderr=stderr)
+
+    version_output = stdout.decode().replace("\r\n", "\n")
+    version_match = re.search(r"Version:\s*([^,\s]+)", version_output)
+    assert version_match, f"Unable to extract workload version from: {version_output}"
+    installed_version = version_match.group(1)
 
     workload_version = None
-    workload_version_path = "./workload_version"
-    with open(workload_version_path) as f:
-        workload_version = f.read().rstrip("\n")
-    assert installed_info[0] == workload_version
+    if substrate == "k8s":
+        workload_version_path = "./kubernetes/workload_version"
+    elif substrate == "vm":
+        workload_version_path = "./machine/workload_version"
+    workload_version = Path(workload_version_path).read_text().strip()
+    assert installed_version == workload_version
 
 
 @pytest.mark.abort_on_fail
-async def test_all_units_have_all_local_users(ops_test: OpsTest) -> None:
+async def test_all_units_have_internal_users_synced(
+    ops_test: OpsTest, substrate: Substrate
+) -> None:
     """Compare the internal_users.yaml of all units."""
     # Get the leader's version of internal_users.yml
     leader_id = await get_leader_unit_id(ops_test)
     leader_name = f"{APP_NAME}/{leader_id}"
-    filename = "/var/snap/opensearch/current/etc/opensearch/opensearch-security/internal_users.yml"
-    leader_conf = get_conf_as_dict(ops_test, leader_name, filename)
+
+    filename = (
+        "/etc/opensearch/opensearch-security/internal_users.yml"
+        if substrate == "k8s"
+        else "/var/snap/opensearch/current/etc/opensearch/opensearch-security/internal_users.yml"
+    )
+
+    leader_conf = get_conf_as_dict(ops_test, leader_name, filename, substrate)
 
     # Check on all units if they have the same
     for unit in ops_test.model.applications[APP_NAME].units:
-        unit_conf = get_conf_as_dict(ops_test, unit.name, filename)
-        for user in OPENSEARCH_SYSTEM_USERS:
-            assert leader_conf[user]["hash"] == unit_conf[user]["hash"]
-
-
-@pytest.mark.abort_on_fail
-async def test_all_units_have_internal_users_synced(ops_test: OpsTest) -> None:
-    """Compare the internal_users.yaml of all units."""
-    # Get the leader's version of internal_users.yml
-    leader_id = await get_leader_unit_id(ops_test)
-    leader_name = f"{APP_NAME}/{leader_id}"
-    filename = "/var/snap/opensearch/current/etc/opensearch/opensearch-security/internal_users.yml"
-    leader_conf = get_conf_as_dict(ops_test, leader_name, filename)
-
-    # Check on all units if they have the same
-    for unit in ops_test.model.applications[APP_NAME].units:
-        unit_conf = get_conf_as_dict(ops_test, unit.name, filename)
+        unit_conf = get_conf_as_dict(ops_test, unit.name, filename, substrate)
         assert leader_conf == unit_conf
 
 
