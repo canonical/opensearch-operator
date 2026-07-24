@@ -39,7 +39,7 @@ The meaning of the metrics collected can be found in the upstream documentation:
 
 The charm deploys a pre-configured set of Prometheus alert rules by default.
 
-To ensure you are referencing the latest default alert rules, check the source file of alert definitions in the repository’s [prometheus_alerts.yaml](https://github.com/canonical/opensearch-operator/blob/2/edge/src/alert_rules/prometheus/prometheus_alerts.yaml) file.
+To ensure you are referencing the latest default alert rules, check the source file of alert definitions in the repository’s [prometheus_alerts.yaml](https://github.com/canonical/opensearch-operator/blob/2/edge/machine/src/alert_rules/prometheus/prometheus_alerts.yaml) file.
 
 ## Logs
 
