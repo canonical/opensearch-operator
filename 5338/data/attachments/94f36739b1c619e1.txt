@@ -1,0 +1,367 @@
+[32mINFO    [0m tests.integration.helpers:helpers.py:445 Calling: PUT -- https://10.89.180.122:9200/_plugins/_security/api/internalusers/my_user
+[32mINFO    [0m tests.integration.helpers:helpers.py:445 Calling: GET -- https://10.89.180.122:9200/_plugins/_security/api/internalusers/my_user
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.27   unsupported  02:25:23Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      2  opensearch                            1  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/1                 active    idle   2        10.89.180.3     9200/tcp  
+opensearch/2*                active    idle   3        10.89.180.122   9200/tcp  
+self-signed-certificates/1*  active    idle   4        10.89.180.72              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+2        started  10.89.180.3    juju-4ec97c-2  ubuntu@24.04  github-runner  Running
+3        started  10.89.180.122  juju-4ec97c-3  ubuntu@24.04  github-runner  Running
+4        started  10.89.180.72   juju-4ec97c-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+machine-0: 01:54:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:54:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:54:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:54:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:58:18 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:58:19 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:58:23 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:58:25 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:58:25 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:58:28 ERROR unit.opensearch/0.juju-log certificates:4: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:58:29 ERROR unit.opensearch/0.juju-log certificates:4: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:58:34 ERROR unit.opensearch/0.juju-log certificates:4: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:58:35 ERROR unit.opensearch/0.juju-log certificates:4: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:58:40 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:59:02 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 02:02:02 ERROR unit.opensearch/0.juju-log certificates:4: Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 02:02:06 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 02:02:13 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 02:02:13 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 02:02:14 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 02:02:17 ERROR unit.opensearch/0.juju-log certificates:4: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 02:02:17 ERROR unit.opensearch/0.juju-log certificates:4: Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 02:02:17 ERROR unit.opensearch/0.juju-log certificates:4: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 02:02:20 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 02:02:20 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 02:02:20 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 02:02:23 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 02:02:23 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 02:02:23 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.46:9200 and alternative_hosts: [] not reachable.'
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 02:02:23 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 02:02:27 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-3: 02:03:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:03:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:03:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:03:54 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 02:08:24 ERROR unit.opensearch/1.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-1: 02:08:27 ERROR unit.opensearch/1.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-2: 02:08:29 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:08:29 ERROR unit.opensearch/1.juju-log upgrade-version-a:7: Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-2: 02:08:30 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:08:33 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:08:33 ERROR unit.opensearch/1.juju-log node-lock-fallback:6: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:08:33 ERROR unit.opensearch/1.juju-log node-lock-fallback:6: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:08:35 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:08:35 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:08:36 ERROR unit.opensearch/1.juju-log node-lock-fallback:6: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:08:37 ERROR unit.opensearch/1.juju-log node-lock-fallback:6: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:08:38 ERROR unit.opensearch/2.juju-log node-lock-fallback:6: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:08:39 ERROR unit.opensearch/2.juju-log node-lock-fallback:6: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:08:40 ERROR unit.opensearch/1.juju-log opensearch-peers:5: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:08:42 ERROR unit.opensearch/2.juju-log upgrade-version-a:7: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:08:43 ERROR unit.opensearch/2.juju-log upgrade-version-a:7: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:08:43 ERROR unit.opensearch/1.juju-log upgrade-version-a:7: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:08:46 ERROR unit.opensearch/2.juju-log node-lock-fallback:6: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:08:46 ERROR unit.opensearch/1.juju-log opensearch-peers:5: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:08:46 ERROR unit.opensearch/2.juju-log node-lock-fallback:6: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:08:49 ERROR unit.opensearch/1.juju-log opensearch-peers:5: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:08:49 ERROR unit.opensearch/2.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:08:49 ERROR unit.opensearch/1.juju-log opensearch-peers:5: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:08:49 ERROR unit.opensearch/2.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:08:52 ERROR unit.opensearch/1.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:08:53 ERROR unit.opensearch/2.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:08:53 ERROR unit.opensearch/2.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:08:55 ERROR unit.opensearch/1.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:08:56 ERROR unit.opensearch/2.juju-log opensearch-peers:5: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:08:57 ERROR unit.opensearch/2.juju-log opensearch-peers:5: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:08:58 ERROR unit.opensearch/1.juju-log upgrade-version-a:7: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:08:59 ERROR unit.opensearch/2.juju-log opensearch-peers:5: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:00 ERROR unit.opensearch/2.juju-log opensearch-peers:5: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:04 ERROR unit.opensearch/2.juju-log opensearch-peers:5: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:04 ERROR unit.opensearch/2.juju-log opensearch-peers:5: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:04 ERROR unit.opensearch/2.juju-log opensearch-peers:5: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:07 ERROR unit.opensearch/2.juju-log upgrade-version-a:7: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:07 ERROR unit.opensearch/2.juju-log upgrade-version-a:7: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:11 ERROR unit.opensearch/2.juju-log upgrade-version-a:7: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:11 ERROR unit.opensearch/2.juju-log upgrade-version-a:7: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:09:24 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:09:24 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:09:25 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:28 ERROR unit.opensearch/2.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:29 ERROR unit.opensearch/2.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:44 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:44 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:44 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:44 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:45 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:46 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:09:49 ERROR unit.opensearch/1.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:49 ERROR unit.opensearch/2.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:09:49 ERROR unit.opensearch/2.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:09:51 ERROR unit.opensearch/1.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:10:25 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:10:25 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:10:25 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:10:28 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:10:29 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:10:34 ERROR unit.opensearch/1.juju-log certificates:9: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:10:37 ERROR unit.opensearch/2.juju-log certificates:9: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:10:37 ERROR unit.opensearch/2.juju-log certificates:9: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:10:41 ERROR unit.opensearch/2.juju-log opensearch-peers:5: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:10:41 ERROR unit.opensearch/2.juju-log opensearch-peers:5: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:10:43 ERROR unit.opensearch/1.juju-log opensearch-peers:5: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:10:45 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:10:45 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:10:46 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:10:46 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:10:46 ERROR unit.opensearch/1.juju-log opensearch-peers:5: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:10:46 ERROR unit.opensearch/1.juju-log opensearch-peers:5: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:10:47 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:10:47 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:10:50 ERROR unit.opensearch/1.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:10:51 ERROR unit.opensearch/2.juju-log opensearch-peers:5: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:10:51 ERROR unit.opensearch/2.juju-log opensearch-peers:5: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:10:51 ERROR unit.opensearch/2.juju-log opensearch-peers:5: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:10:53 ERROR unit.opensearch/1.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:10:54 ERROR unit.opensearch/2.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:10:55 ERROR unit.opensearch/2.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+machine-4: 02:11:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:11:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 02:11:20 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:11:20 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:11:21 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:11:24 ERROR unit.opensearch/2.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:11:24 ERROR unit.opensearch/2.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:11:24 ERROR unit.opensearch/1.juju-log certificates:9: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:11:27 ERROR unit.opensearch/2.juju-log certificates:9: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:11:27 ERROR unit.opensearch/1.juju-log certificates:9: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:11:28 ERROR unit.opensearch/2.juju-log certificates:9: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:11:31 ERROR unit.opensearch/2.juju-log certificates:9: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:11:31 ERROR unit.opensearch/2.juju-log certificates:9: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:11:33 ERROR unit.opensearch/1.juju-log certificates:9: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:11:37 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:11:38 ERROR unit.opensearch/2.juju-log certificates:9: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:11:39 ERROR unit.opensearch/2.juju-log certificates:9: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:11:43 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:11:43 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:11:44 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:11:44 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:11:47 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:11:49 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:11:50 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:11:53 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:11:57 ERROR unit.opensearch/1.juju-log certificates:9: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:12:01 ERROR unit.opensearch/1.juju-log node-lock-fallback:6: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:12:04 ERROR unit.opensearch/1.juju-log node-lock-fallback:6: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:12:07 ERROR unit.opensearch/1.juju-log status-peers:8: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:12:11 ERROR unit.opensearch/1.juju-log opensearch-peers:5: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:12:12 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:12:12 ERROR unit.opensearch/1.juju-log opensearch-peers:5: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:12:16 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:12:16 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:12:17 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:15:23 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:15:23 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:15:25 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:16:12 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:16:12 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.3:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:16:14 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.89.180.122:9200 and alternative_hosts: [] not reachable.'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
