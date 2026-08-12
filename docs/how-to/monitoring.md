@@ -107,7 +107,7 @@ The dashboard provides selectors to filter which cluster to watch at the time.
 ## Connect to the Grafana web interface
 
 To connect to the Grafana web interface, follow the
-[Browse dashboards](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s#heading--browse-dashboards)
+[Browse dashboards](https://documentation.ubuntu.com/observability/track-3.0/tutorial/cos-lite-microk8s-sandbox/#browse-dashboards)
 section of the MicroK8s "Getting started" guide:
 
 ```shell
