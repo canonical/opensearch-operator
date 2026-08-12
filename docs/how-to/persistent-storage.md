@@ -60,7 +60,7 @@ If a volume is detached (visible via `juju storage` with status `detached`),
 attach it to a new unit:
 
 ```shell
-juju add-unit opensearch -n 1 --attach-storage opensearch-data/<id>
+juju add-unit opensearch --attach-storage opensearch-data/<id>
 ```
 
 The new node will start with the existing data and rejoin the cluster automatically.
