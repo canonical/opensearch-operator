@@ -107,6 +107,12 @@ juju add-unit opensearch --attach-storage opensearch-data/<id>
 
 The unit will fail to join. Confirm this is the expected UUID-mismatch error by inspecting the logs:
 
+```shell
+sudo journalctl -u snap.opensearch.daemon -f
+```
+
+The unit repeatedly reports that it cannot join the cluster because of a UUID mismatch, similar to:
+
 ```text
 CoordinationStateRejectedException: join validation on cluster state with a different cluster uuid
 ... rejecting
@@ -148,6 +154,12 @@ juju deploy opensearch -n1 --attach-storage opensearch-data/<id>
 ```
 
 The unit will fail to start. Confirm this is the expected error by inspecting the logs:
+
+```shell
+sudo journalctl -u snap.opensearch.daemon -f
+```
+
+The unit repeatedly reports that it is waiting for a cluster it cannot reach, similar to:
 
 ```text
 ConfigurationRepository: Wait for cluster to be available
