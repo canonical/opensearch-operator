@@ -1,7 +1,7 @@
 ---
 myst:
   html_meta:
-    description: "Reuse and recover OpenSearch data from Juju-managed disks containing existing cluster metadata and data."
+    description: "Reuse and recover OpenSearch data from Juju-managed disks, including last-resort disaster-recovery metadata cleanup."
 ---
 
 (how-to-persistent-storage)=
@@ -11,24 +11,33 @@ This guide shows how to reuse disks that contain data from a previous OpenSearch
 For an explanation of the risks of disk reuse, dangling indices, and metadata cleanup,
 see [Persistent storage and disk recovery](explanation-persistent-storage).
 
+```{important}
+Prefer snapshot and restore whenever possible. The procedures on this page for reusing a
+disk from a **different** cluster are last-resort disaster recovery, not a general-purpose
+migration path. To move data between clusters, always try
+[creating a backup](how-to-create-a-backup) and
+[restoring or migrating it](how-to-migrate-a-cluster) first.
+```
+
 There are three scenarios:
 
-* **Same cluster** — a detached volume is reattached to a new unit in the same cluster.
-  The node rejoins automatically with no metadata changes required.
-* **Different cluster (attach)** — a disk from a different cluster is attached to an existing
-  cluster. The disk holds stale metadata referencing the old cluster UUID, so the
-  `detach-cluster` tool must be run to discard that metadata before the node can join.
-* **Different cluster (bootstrap)** — a disk from a different cluster is used to seed a brand
-  new single-node deployment. The `unsafe-bootstrap` tool resets the cluster metadata so that
-  a new cluster UUID is assigned and the node can start.
+* **Same cluster** (routine, safe) — a detached volume is reattached to a new unit in the
+  same cluster. The node rejoins automatically with no metadata changes required.
+* **Different cluster, attach** (last resort) — a disk from a different cluster is attached
+  to an existing cluster. The disk holds stale metadata referencing the old cluster UUID.
+  Only proceed if the source cluster is permanently gone and no viable snapshot exists —
+  in that case, the last-resort `detach-cluster` tool discards that metadata so the node
+  can join.
+* **Different cluster, bootstrap** (last resort) — a disk from a different cluster is used
+  to seed a brand new single-node deployment. Only proceed under the same conditions as
+  above — the last-resort `unsafe-bootstrap` tool resets the cluster metadata so that a
+  new cluster UUID is assigned and the node can start.
 
-```{note}
-These steps apply only to **persistent** disks under Juju management
+This guide applies only to **persistent** disks under Juju management
 (e.g. deployed using a persistent storage pool such as LXD ZFS or Btrfs).
 Non-persistent storage (such as the default `rootfs` pool) is destroyed
 when its unit is removed and cannot be reused.
 Bringing external disks or volumes into Juju is not currently supported.
-```
 
 ```{caution}
 Back up your data before proceeding. Reusing disks may cause older data
@@ -56,10 +65,37 @@ juju add-unit opensearch -n 1 --attach-storage opensearch-data/<id>
 
 The new node will start with the existing data and rejoin the cluster automatically.
 
-## Reuse a disk from a different cluster
+## Recover a disk from a different cluster (last resort)
 
 When attaching a disk from a different cluster, the node holds stale metadata
-referencing the old cluster UUID. You must clean this metadata manually.
+referencing the old cluster UUID. The steps below perform coordination-metadata surgery on
+that disk and are a **last resort** — use them only when the source cluster is permanently
+gone and no viable snapshot exists to restore from instead.
+
+```{danger}
+`detach-cluster` and `unsafe-bootstrap` are last-resort disaster-recovery commands.
+OpenSearch warns that they can cause **arbitrary data loss**, because the node running the
+command may not hold the most recent cluster metadata. Only use them after the
+**permanent** loss of a majority (or all) of the `cluster_manager`-eligible nodes in a
+cluster, or after a brutal cluster decommission, and only when no viable snapshot recovery
+exists. A success message from either command does not mean no data was lost.
+```
+
+Before proceeding, confirm all of the following:
+
+* The source cluster (or the majority of its `cluster_manager`-eligible nodes) is
+  permanently lost, decommissioned, or otherwise unrecoverable — not merely offline or
+  repairable by moving its data path to healthy hardware.
+* No usable snapshot exists to [restore or migrate](how-to-migrate-a-cluster) the data
+  instead.
+* All other nodes that were part of the old cluster are stopped, if any survive.
+* If more than one node survives from the old cluster, `unsafe-bootstrap` should be run on
+  the one reporting the highest `(term, version)` pair, since it holds the freshest
+  metadata.
+
+Both `detach-cluster` and `unsafe-bootstrap` (used below) prompt for interactive
+confirmation (`Confirm [y/N]`) and print their own data-loss warning before making any
+change.
 
 ### Attach to an existing cluster
 
@@ -160,7 +196,13 @@ After reusing a disk within the same cluster, the new unit rejoins automatically
 data. After `detach-cluster` or `unsafe-bootstrap`, the node joins the target cluster and
 `juju status` shows the unit `active/idle`.
 
+```{caution}
+An `active/idle` status and a successful `detach-cluster` or `unsafe-bootstrap` message do
+**not** mean no data was lost. Always audit the recovered indices and document counts, and
+check for dangling indices, before treating the recovery as complete.
+```
+
 ## Next steps
 
-* [Back up and restore](how-to-guides-back-up-and-restore-index) — create backups before reusing disks.
+* [Back up and restore](how-to-guides-back-up-and-restore-index) — the preferred, data-safe way to move data between clusters; create backups before reusing disks.
 * [Scale down safely](how-to-scale-horizontally) — safely remove units when reorganising storage.

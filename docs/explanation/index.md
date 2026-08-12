@@ -15,7 +15,7 @@ of foundational topics and concepts relevant to OpenSearch.
 * [Node roles and cluster topology](explanation-node-roles) — how node roles, data tiers, and the main orchestrator pattern work in large deployments.
 * [Cluster health and scaling](explanation-cluster-health) — understanding green/yellow/red health states and safe scaling practices.
 * [Performance profiles](explanation-performance-profiles) — how profiles tune JVM heap, node count, and resource requirements.
-* [Persistent storage and disk recovery](explanation-persistent-storage) — risks of disk reuse, dangling indices, and metadata cleanup.
+* [Persistent storage and disk recovery](explanation-persistent-storage) — risks of disk reuse, dangling indices, and last-resort disaster recovery.
 
 ## Security
 

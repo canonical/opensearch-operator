@@ -82,7 +82,7 @@ API returns `green`.
 ## Next steps
 
 * [Upgrade, rollback, and recover](how-to-minor-upgrade) — upgrade the cluster after restoring.
-* [Manage persistent storage](how-to-persistent-storage) — reuse disks across clusters.
+* [Manage persistent storage](how-to-persistent-storage) — reuse disks when no viable snapshot exists.
 
 ```{toctree}
 :titlesonly:
