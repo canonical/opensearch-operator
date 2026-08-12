@@ -77,9 +77,11 @@ Two subcommands are relevant:
 - **`detach-cluster`** — resets the cluster UUID on a surviving node so it can be adopted by
   a different cluster (for example, one freshly bootstrapped with `unsafe-bootstrap`).
 
-- **`unsafe-bootstrap`** — overrides the voting configuration so a single surviving
-  `cluster_manager`-eligible node forms a brand new cluster from its local copy of the
-  cluster metadata, under a new cluster UUID.
+- **`unsafe-bootstrap`** — creates a **new** cluster UUID and uses it to bootstrap a
+  single surviving `cluster_manager`-eligible node into a brand new cluster, built from
+  that node's own persisted metadata. This deliberately preserves the node's existing
+  indices and metadata where possible, but data loss is still possible if that metadata is
+  not the most up to date.
 
 ## Scenarios for disk reuse
 
