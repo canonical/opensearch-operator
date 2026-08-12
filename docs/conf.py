@@ -233,6 +233,7 @@ linkcheck_ignore = [
     "https://launchpad.net/soss",
     "https://matrix.to/#/#charmhub-data-platform:ubuntu.com",
     "https://app.element.io/#/room/#charmhub-data-platform:ubuntu.com",
+    "https://askubuntu.com/*",
 ]
 
 

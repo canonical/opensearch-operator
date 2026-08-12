@@ -58,7 +58,7 @@ sudo snap install juju --channel 3/stable
 
 Juju already has a built-in knowledge of LXD and how it works, so there is no additional setup
 or configuration needed, however, because Juju 3.x is a
-[strictly confined snap](https://snapcraft.io/docs/strict-confinement), and is not allowed
+[strictly confined snap](https://snapcraft.io/docs/explanation/security/snap-confinement), and is not allowed
 to create a `~/.local/share` directory, we need to create it manually.
 
 ```shell
