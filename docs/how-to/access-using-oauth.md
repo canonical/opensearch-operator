@@ -173,6 +173,10 @@ curl -k -H "Authorization: Bearer ${OAUTH_ACCESS_TOKEN}" \
 
 Expect a `403 security_exception` — the client has no mapped roles yet.
 
+```text
+{"error":{"root_cause":[{"type":"security_exception","reason":"no permissions for [indices:monitor/settings/get] and User [name=e9c3b483-90be-4843-b821-1152e40aaa0a, backend_roles=[], requestedTenant=null]"}],"type":"security_exception","reason":"no permissions for [indices:monitor/settings/get] and User [name=e9c3b483-90be-4843-b821-1152e40aaa0a, backend_roles=[], requestedTenant=null]"},"status":403}
+```
+
 ### Get a username from the Data Integrator
 
 Retrieve credentials from the `data-integrator` charm:
@@ -210,7 +214,16 @@ curl -k -H "Authorization: Bearer ${OAUTH_ACCESS_TOKEN}" \
   "https://${OPENSEARCH_ADDRESS}:9200/_cat/indices"
 ```
 
-You should now receive a `200 OK` response with a list of indices.
+You should now receive a `200 OK` response with a list of indices, for example:
+
+```text
+green  open .plugins-ml-config           QnsDThyaTAKw8cASRYeQMw 1 0  1 0   4kb   4kb
+green  open .opensearch-observability    coXcpdLWSOqbSQ136tbADg 1 0  0 0  208b  208b
+green  open top_queries-2025.08.29-70656 GDHtcml_R6Okh2siIKgmPw 1 0 40 6 108kb 108kb
+green  open .opendistro_security         RPVY1SdfT_KzAPAX-aUCuw 1 0 10 1  71kb  71kb
+yellow open admin-index                  1BQKqmjTQVa6_CeBTi53Gw 1 1  0 0  208b  208b
+green  open .charm_node_lock             8KbPHHy3QneIW8uWbTuBhQ 1 0  1 0 4.1kb 4.1kb
+```
 
 ## Expected result
 
