@@ -56,22 +56,30 @@ For more details, see [Juju storage management](https://juju.is/docs/juju/manage
 
 ## Reuse a disk within the same cluster
 
-If a volume is detached (visible via `juju storage` with status `detached`),
-attach it to a new unit:
-
-```shell
-juju add-unit opensearch --attach-storage opensearch-data/<id>
-```
-
-The new node will start with the existing data and rejoin the cluster automatically. Confirm
-the disk was reused correctly:
+To list available volumes:
 
 ```shell
 juju storage
 ```
 
-The reused volume now shows `attached` to the new unit, and `juju status` shows the new unit
-`active/idle`.
+Note the Storage ID from the output:
+
+```text
+Unit          Storage ID         Type        Pool             Size     Status    Message
+              opensearch-data/0  filesystem  opensearch-pool  2.0 GiB  detached
+opensearch/1  opensearch-data/1  filesystem  opensearch-pool  2.0 GiB  attached
+opensearch/2  opensearch-data/2  filesystem  opensearch-pool  2.0 GiB  attached
+```
+
+Attach the detached volume to a new unit:
+
+```shell
+juju add-unit opensearch --attach-storage opensearch-data/<id>
+```
+
+When the new unit shows `active/idle` in `juju status`, the node has rejoined the cluster
+with the existing data. Re-running `juju storage` shows the reused volume as `attached`
+to the new unit.
 
 ## Recover a disk from a different cluster (last resort)
 
