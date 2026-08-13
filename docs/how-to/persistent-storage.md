@@ -63,7 +63,15 @@ attach it to a new unit:
 juju add-unit opensearch --attach-storage opensearch-data/<id>
 ```
 
-The new node will start with the existing data and rejoin the cluster automatically.
+The new node will start with the existing data and rejoin the cluster automatically. Confirm
+the disk was reused correctly:
+
+```shell
+juju storage
+```
+
+The reused volume now shows `attached` to the new unit, and `juju status` shows the new unit
+`active/idle`.
 
 ## Recover a disk from a different cluster (last resort)
 
