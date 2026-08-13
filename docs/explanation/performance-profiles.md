@@ -60,7 +60,9 @@ Both profiles enforce the same system-level prerequisites:
 
 - **Swap must be disabled** — OpenSearch performs best when it is not swapped to disk.
 - `vm.max_map_count >= 262144` — required by OpenSearch for mmap-based file access.
-- `fs.file-max = 1048576` — ensures sufficient file descriptors for large deployments.
+
+Setting `fs.file-max = 1048576` is strongly recommended to ensure sufficient file descriptors
+for large deployments, but it is not currently enforced by either profile.
 
 The `net.ipv4.tcp_retries2` parameter is set automatically by the charm and does not
 need to be configured manually.

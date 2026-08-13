@@ -48,9 +48,9 @@ See also: [How to perform load testing](how-to-perform-load-testing).
 
 ## Kernel parameters
 
-OpenSearch requires specific kernel parameters. These settings are enforced by both the
-`testing` and `production` profiles. On LXD, they must be set on the host machine and
-propagated to every container.
+OpenSearch requires specific kernel parameters. Unless noted otherwise, these settings are
+enforced by both the `testing` and `production` profiles. On LXD, they must be set on the
+host machine and propagated to every container.
 
 See [Performance profiles](explanation-performance-profiles) for details on how profiles
 use these parameters.
@@ -59,7 +59,7 @@ use these parameters.
 | :--- | :--- | :--- |
 | `vm.swappiness` | `0` | Disables swap to prevent OpenSearch from being swapped to disk, which causes severe performance degradation. |
 | `vm.max_map_count` | `262144` | Required by OpenSearch for mmap-based file access to index segments. |
-| `fs.file-max` | `1048576` | Ensures sufficient file descriptors for large deployments with many shards and indices. |
+| `fs.file-max` | `1048576` | Ensures sufficient file descriptors for large deployments with many shards and indices. Strongly recommended, but not currently enforced by the charm. |
 
 The `net.ipv4.tcp_retries2` parameter is set automatically by the charm and does not
 need to be configured manually.
