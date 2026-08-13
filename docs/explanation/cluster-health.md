@@ -20,8 +20,24 @@ returns one of three states:
 | State | Meaning | Scaling down safe? |
 | :--- | :--- | :--- |
 | **`green`** | All primary and replica shards are allocated. The cluster is fully healthy. | Likely safe — but verify the target node does not hold a primary shard of an unreplicated index. |
-| **`yellow`** | All primary shards are allocated, but some replica shards are **unassigned**. The cluster is functional but lacks full redundancy. | **May not be safe** — removing a node could lose the only copy of a primary shard if replicas are unavailable. |
+| **`yellow`** | All primary shards are allocated, but some replica shards are not. The cluster is functional but lacks full redundancy. This is either **temporary** (replicas are still initializing or relocating) or **permanent** (replicas cannot be assigned at all). | **May not be safe** — removing a node could lose the only copy of a primary shard if replicas are unavailable. |
 | **`red`** | Some primary shards are **unassigned**. Data is missing. | **Not safe** — do not remove nodes. Add units to restore health first. |
+
+### Temporary and permanent `yellow`
+
+Only one of the two `yellow` cases needs your intervention:
+
+- **Temporary** — shards are `initializing` or `relocating`. Normal after adding or
+  removing a unit; resolves on its own.
+- **Permanent** — shards are `unassigned` and cannot be allocated, typically because
+  there are too few nodes. Does not resolve on its own; usually requires scaling up.
+
+Check these counts in the
+[cluster health API](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-health/)
+response to tell them apart, and see the matching
+[alert rule](ref-alert-rules) for each: a non-zero `initializing_shards` or
+`relocating_shards` (`OpenSearchClusterYellowTemp`) is temporary, while a non-decreasing
+`unassigned_shards` (`OpenSearchClusterYellow`) is permanent.
 
 ### How health maps to Juju status
 
