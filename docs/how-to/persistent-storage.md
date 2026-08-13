@@ -52,17 +52,7 @@ Ensure the disks are visible within Juju. List volumes with:
 juju storage
 ```
 
-For more details, see [Juju storage management](https://juju.is/docs/juju/manage-storage).
-
-## Reuse a disk within the same cluster
-
-To list available volumes:
-
-```shell
-juju storage
-```
-
-Note the Storage ID from the output:
+Note the Storage ID of a detached volume for use in the steps below:
 
 ```text
 Unit          Storage ID         Type        Pool             Size     Status    Message
@@ -70,6 +60,10 @@ Unit          Storage ID         Type        Pool             Size     Status   
 opensearch/1  opensearch-data/1  filesystem  opensearch-pool  2.0 GiB  attached
 opensearch/2  opensearch-data/2  filesystem  opensearch-pool  2.0 GiB  attached
 ```
+
+For more details, see [Juju storage management](https://juju.is/docs/juju/manage-storage).
+
+## Reuse a disk within the same cluster
 
 Attach the detached volume to a new unit:
 
