@@ -48,9 +48,9 @@ See also: [How to perform load testing](how-to-perform-load-testing).
 
 ## Kernel parameters
 
-OpenSearch requires specific kernel parameters to be set on the host machine and propagated
-to every container or VM where OpenSearch runs. These settings are enforced by both the
-`testing` and `production` profiles.
+OpenSearch requires specific kernel parameters. These settings are enforced by both the
+`testing` and `production` profiles. On LXD, they must be set on the host machine and
+propagated to every container.
 
 See [Performance profiles](explanation-performance-profiles) for details on how profiles
 use these parameters.
