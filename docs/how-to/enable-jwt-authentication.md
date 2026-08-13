@@ -50,6 +50,8 @@ juju config jwt-integrator roles-key=<roles-key> subject-key=<subject-key> jwt-u
 
 ## Integrate with OpenSearch
 
+Connect the JWT integrator to OpenSearch:
+
 ```shell
 juju integrate jwt-integrator opensearch
 ```

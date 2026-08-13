@@ -19,6 +19,8 @@ issued by the Canonical Identity Platform (Hydra).
 
 ## Deploy OpenSearch on LXD
 
+Deploy OpenSearch and the `data-integrator` charm in a new model:
+
 ```shell
 juju add-model opensearch-model localhost/localhost
 juju deploy opensearch -n 3 --channel 2/edge
@@ -39,6 +41,8 @@ The Identity Platform runs on Kubernetes. The steps below use MicroK8s, but any
 Juju-supported K8s cluster will work.
 
 ### Prepare MicroK8s
+
+Install MicroK8s and enable the required addons:
 
 ```shell
 sudo snap install microk8s --classic
@@ -63,6 +67,8 @@ juju add-k8s microk8s-cluster -c <controller-name>
 
 ### Deploy Identity Platform
 
+Create a model on the MicroK8s cloud and deploy the Identity Platform bundle:
+
 ```shell
 juju add-model -c <controller-name> oauth microk8s-cluster/localhost
 juju deploy identity-platform --channel edge --trust true
@@ -78,6 +84,8 @@ different clouds). Use Juju cross-model offers to connect them.
 
 ### Offer certificates and OAuth from the Identity Platform model
 
+Switch to the Identity Platform model and offer the certificates and OAuth endpoints:
+
 ```shell
 juju switch oauth
 juju offer self-signed-certificates:certificates
@@ -85,6 +93,8 @@ juju offer hydra:oauth
 ```
 
 ### Consume and integrate in the OpenSearch model
+
+Switch to the OpenSearch model, consume the offers, and integrate them with OpenSearch:
 
 ```shell
 juju switch opensearch-model
@@ -101,6 +111,8 @@ to request an access token.
 
 ### Create a client in Hydra
 
+Create an OAuth client:
+
 ```shell
 juju switch oauth
 juju run hydra/leader create-oauth-client \
@@ -112,6 +124,8 @@ juju run hydra/leader create-oauth-client \
 Record the `client-id` and `client-secret` from the output.
 
 ### Get the Hydra public URL
+
+Retrieve the proxied endpoints from Traefik:
 
 ```shell
 juju run traefik-public/0 show-proxied-endpoints
@@ -129,6 +143,8 @@ export HYDRA_URL=<hydra-url>
 
 ### Fetch an access token
 
+Request an access token from Hydra using the client credentials:
+
 ```shell
 curl -k -u "${OAUTH_CLIENT_ID}:${OAUTH_CLIENT_SECRET}" \
   -X POST "${HYDRA_URL}/oauth2/token" \
@@ -145,6 +161,8 @@ export OAUTH_ACCESS_TOKEN=<access-token>
 
 ### Test the token (before role mapping)
 
+Switch to the OpenSearch model and query the cluster with the token:
+
 ```shell
 juju switch opensearch-model
 export OPENSEARCH_ADDRESS="$(juju status | grep opensearch/0 | awk -F' ' '{print $5}')"
@@ -156,6 +174,8 @@ curl -k -H "Authorization: Bearer ${OAUTH_ACCESS_TOKEN}" \
 Expect a `403 security_exception` — the client has no mapped roles yet.
 
 ### Get a username from the Data Integrator
+
+Retrieve credentials from the `data-integrator` charm:
 
 ```shell
 juju run data-integrator/0 get-credentials
@@ -182,6 +202,8 @@ juju status --watch 5s
 ```
 
 ### Verify access
+
+Re-run the same request — it should now succeed:
 
 ```shell
 curl -k -H "Authorization: Bearer ${OAUTH_ACCESS_TOKEN}" \

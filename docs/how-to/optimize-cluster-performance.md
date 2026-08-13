@@ -17,6 +17,8 @@ Charmed OpenSearch supports two profiles:
 
 ## Deploy with the `testing` profile
 
+Deploy OpenSearch with the testing profile:
+
 ```shell
 juju deploy opensearch --channel=2/edge --config profile=testing
 ```
@@ -30,6 +32,8 @@ This profile is not suitable for production.
 ```
 
 ## Deploy with the `production` profile
+
+Deploy a multi-unit cluster with the production profile:
 
 ```shell
 juju deploy opensearch --channel=2/edge --config profile=production -n 3

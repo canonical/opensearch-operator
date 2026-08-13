@@ -63,6 +63,8 @@ these rules are required.
 
 ### 1. Deploy the main orchestrator
 
+Deploy the `main` application:
+
 ```shell
 juju deploy -n 3 \
     opensearch main \
@@ -102,6 +104,8 @@ juju deploy -n 3 \
 ```
 
 ### 4. Deploy TLS certificates
+
+Deploy a TLS certificate provider:
 
 ```shell
 juju deploy self-signed-certificates

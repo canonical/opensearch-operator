@@ -74,6 +74,8 @@ see [TLS certificates](explanation-tls-certificates).
 
 ### Auto-generate new keys
 
+Generate new private keys for each category:
+
 ```shell
 juju run opensearch/leader set-tls-private-key category=app-admin
 juju run opensearch/leader set-tls-private-key category=unit-transport

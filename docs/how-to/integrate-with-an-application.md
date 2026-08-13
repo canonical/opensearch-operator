@@ -61,6 +61,8 @@ in the `data_interfaces` library source for the full list of optional parameters
 
 ### Create the integration
 
+Connect OpenSearch to your application:
+
 ```shell
 juju integrate opensearch <application>
 ```

@@ -36,6 +36,8 @@ juju config smtp-integrator \
 
 ## Integrate with OpenSearch
 
+Connect the SMTP integrator to OpenSearch:
+
 ```shell
 juju integrate smtp-integrator:smtp opensearch:smtp
 ```

@@ -63,6 +63,8 @@ juju deploy cos-lite --trust --overlay ./offers-overlay.yaml
 
 ### Access Grafana (optional)
 
+Retrieve the Traefik load balancer IP and the Grafana admin password:
+
 ```shell
 kubectl get svc -A | grep traefik | grep LoadBalancer | awk '{print $5}'
 juju run -m cos grafana/leader get-admin-password
@@ -71,6 +73,8 @@ juju run -m cos grafana/leader get-admin-password
 Access Grafana at `http://<traefik-ip>/cos-grafana` (username: `admin`).
 
 ## Deploy OpenSearch
+
+Create a model with the required network and kernel configuration:
 
 ```shell
 juju add-model opensearch aws \
@@ -105,6 +109,8 @@ juju integrate self-signed-certificates opensearch
 ```
 
 ## Integrate with COS (optional)
+
+Consume the COS offers and integrate Grafana Agent with OpenSearch:
 
 ```shell
 juju consume admin/cos.grafana-dashboards
