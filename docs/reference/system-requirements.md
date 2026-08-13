@@ -64,5 +64,9 @@ use these parameters.
 The `net.ipv4.tcp_retries2` parameter is set automatically by the charm and does not
 need to be configured manually.
 
+```{note}
+On VM (machine) deployments, the charm applies all required `sysctl` settings automatically.
+```
+
 For instructions on how to apply these settings on the host and propagate them to
 containers, see [How to deploy on LXD](how-to-deploy-lxd).
