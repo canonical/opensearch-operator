@@ -109,7 +109,7 @@ change.
 
 ### Attach to an existing cluster
 
-Add a new unit with the used disk:
+Attach the used disk to a new unit:
 
 ```shell
 juju add-unit opensearch --attach-storage opensearch-data/<id>
@@ -175,7 +175,7 @@ The unit repeatedly reports that it is waiting for a cluster it cannot reach, si
 ConfigurationRepository: Wait for cluster to be available
 ```
 
-SSH in and fix it:
+SSH into the unit and stop the service:
 
 ```shell
 juju ssh opensearch/<unit-id>
