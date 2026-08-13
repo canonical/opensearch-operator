@@ -64,6 +64,11 @@ Charmed OpenSearch uses three certificate categories:
 * `unit-transport` — internal node-to-node communication
 * `unit-http` — external client-to-node communication
 
+```{note}
+Each unit has its own node certificate, so `unit-transport` and `unit-http` keys must be
+set on every target unit individually (e.g. `juju run opensearch/<unit-id> ...`).
+```
+
 For an explanation of why these three categories exist and how rotation works,
 see [TLS certificates](explanation-tls-certificates).
 
