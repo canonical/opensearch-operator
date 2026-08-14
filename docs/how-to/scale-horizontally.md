@@ -86,7 +86,10 @@ Investigate with:
 curl --cacert cert.pem -k -XGET "https://<unit-ip>:9200/_cluster/allocation/explain" -u admin:<password>
 ```
 
-Typical resolution: scale up to restore green health before scaling down:
+Depending on the cause, the resolution may be scaling up, adding storage to existing nodes, or
+[re-routing](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-reroute/) the
+affected shard to another node. The most common fix is to scale up to restore green health
+before scaling down:
 
 ```shell
 juju add-unit opensearch -n 1
@@ -126,7 +129,8 @@ Always verify health after each removal before proceeding.
 
 ### Verify and repeat
 
-After removal, the charm may reconfigure and restart another unit to rebalance node roles.
+After removal, the charm may reconfigure and restart another unit to rebalance
+[node roles](explanation-node-roles).
 Wait for the application to fully stabilise (`active/idle`), then
 [check cluster health](#scale-cluster-health-status) again.
 
