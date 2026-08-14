@@ -74,12 +74,18 @@ see [TLS certificates](explanation-tls-certificates).
 
 ### Auto-generate new keys
 
-Generate new private keys for each category:
+Generate the `app-admin` key on the leader:
 
 ```shell
 juju run opensearch/leader set-tls-private-key category=app-admin
-juju run opensearch/leader set-tls-private-key category=unit-transport
-juju run opensearch/leader set-tls-private-key category=unit-http
+```
+
+Then generate the `unit-transport` and `unit-http` keys on **each unit**, replacing
+`<unit-id>` (for example, `opensearch/0`, `opensearch/1`):
+
+```shell
+juju run opensearch/<unit-id> set-tls-private-key category=unit-transport
+juju run opensearch/<unit-id> set-tls-private-key category=unit-http
 ```
 
 ### Use custom keys
@@ -92,12 +98,18 @@ openssl genrsa -out unit-transport.pem 3072
 openssl genrsa -out app-admin.pem 3072
 ```
 
-Apply them:
+Apply the `app-admin` key on the leader:
 
 ```shell
 juju run opensearch/leader set-tls-private-key category=app-admin key="$(base64 -w0 app-admin.pem)"
-juju run opensearch/leader set-tls-private-key category=unit-http key="$(base64 -w0 unit-http.pem)"
-juju run opensearch/leader set-tls-private-key category=unit-transport key="$(base64 -w0 unit-transport.pem)"
+```
+
+Then apply the `unit-transport` and `unit-http` keys on **each unit**, replacing
+`<unit-id>` (for example, `opensearch/0`, `opensearch/1`):
+
+```shell
+juju run opensearch/<unit-id> set-tls-private-key category=unit-transport key="$(base64 -w0 unit-transport.pem)"
+juju run opensearch/<unit-id> set-tls-private-key category=unit-http key="$(base64 -w0 unit-http.pem)"
 ```
 
 (how-to-rotate-tls-ca-certificates)=
@@ -109,10 +121,12 @@ To rotate manually, regenerate the private key for the desired category:
 (manual-rotate-tls-cert)=
 
 ```shell
-juju run opensearch/leader set-tls-private-key category=<category>
+juju run opensearch/<unit-id> set-tls-private-key category=<category>
 ```
 
-Where `<category>` is `app-admin`, `unit-transport`, or `unit-http`.
+Where `<category>` is `app-admin`, `unit-transport`, or `unit-http`. Use `opensearch/leader`
+for `app-admin`; use `opensearch/<unit-id>` for `unit-transport` and `unit-http`, repeating
+for each unit.
 
 This generates a new private key and CSR, which is sent to the certificate provider for signing.
 Once signed, the new certificate is automatically applied to the cluster.
