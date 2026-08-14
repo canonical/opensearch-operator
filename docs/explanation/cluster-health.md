@@ -44,7 +44,9 @@ response to tell them apart, and see the matching
 The charm reflects cluster health in the application status:
 
 - **`active`** — the cluster is healthy (equivalent to `green`).
-- **`blocked`** — the cluster has issues (equivalent to `yellow` or `red`). The status
+- **`maintenance`** — shards are still initializing or relocating (a temporary `yellow`).
+  The message is *"Some shards are still initializing / relocating."*
+- **`blocked`** — the cluster has issues (a permanent `yellow`, or `red`). The status
   message describes the problem, e.g. *"1 or more 'replica' shards are not assigned,
   please scale your application up"*.
 
