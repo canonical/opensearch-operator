@@ -11,48 +11,29 @@ on:
       - 2/edge
 
 jobs:
-  tag:
-    name: Create charm refresh compatibility version git tag
-    uses: canonical/data-platform-workflows/.github/workflows/tag_charm_edge.yaml@v50.0.0
-    with:
-      track: '2'
-    permissions:
-      contents: write  # Needed to create git tag
 
   ci-tests:
     name: Tests
-    needs:
-      - tag
     uses: ./.github/workflows/ci.yaml
     permissions:
       contents: write  # Needed for Allure Report
 
-  release-machine:
-    name: Release machine charm
+  release:
+    name: Release charm | ${{ matrix.path }}
+    strategy:
+      matrix:
+        path:
+          - machine
+          - kubernetes
     needs:
-      - tag
       - ci-tests
     uses: canonical/data-platform-workflows/.github/workflows/release_charm_edge.yaml@v50.0.0
     with:
-      track: ${{ needs.tag.outputs.track }}
+      path-to-charm-directory: ${{ matrix.path }}
+      track: "2"
       artifact-prefix: ${{ needs.ci-tests.outputs.artifact-prefix }}
-      path-to-charm-directory: machine
     secrets:
       charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
     permissions:
       contents: write  # Needed to create git tags
-
-  release-k8s:
-    name: Release Kubernetes charm
-    needs:
-      - tag
-      - ci-tests
-    uses: canonical/data-platform-workflows/.github/workflows/release_charm_edge.yaml@v50.0.0
-    with:
-      track: ${{ needs.tag.outputs.track }}
-      artifact-prefix: ${{ needs.ci-tests.outputs.artifact-prefix }}
-      path-to-charm-directory: kubernetes
-    secrets:
-      charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
-    permissions:
-      contents: write  # Needed to create git tags
+      actions: read # Needed by reusable workflow
