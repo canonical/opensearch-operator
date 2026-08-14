@@ -239,7 +239,15 @@ with the newer revision number in the `Rev` column. All unit messages should be 
 (no version or upgrade messages).
 
 Check the cluster is healthy. OpenSearch's upstream documentation
-[suggests the following check](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/):
+[suggests the following check](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/).
+
+First, retrieve the admin credentials and the CA certificate chain:
+
+```shell
+juju run opensearch/leader get-password
+```
+
+Save the `ca-chain` value to a file (e.g. `cert.pem`) to use with `curl`:
 
 ```shell
 curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
@@ -464,10 +472,10 @@ This unit will not recover automatically, and additional steps are required to r
 
 ### Check cluster health
 
-Retrieve the cluster health:
+Retrieve the cluster health using the `cert.pem` and `<password>` obtained above:
 
 ```shell
-curl -X GET "10.45.114.156:9200/_cluster/health?pretty"
+curl --cacert cert.pem -X GET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
 ```
 
 If the cluster health is red, one or more primary shards cannot be allocated.
@@ -478,7 +486,7 @@ As the departed unit will not rejoin, these indices cannot be recovered and must
 Identify the problematic index from the output of:
 
 ```shell
-curl -X GET "10.45.114.156:9200/_cluster/allocation/explain?pretty"
+curl --cacert cert.pem -X GET "https://<unit-ip>:9200/_cluster/allocation/explain?pretty" -u admin:<password>
 ```
 
 For example, in the following output, `index1` cannot be recovered as its current state is
@@ -536,13 +544,13 @@ If you do not have a snapshot containing this index, the data will be lost!
 ```
 
 ```shell
-curl -X DELETE "10.45.114.156:9200/index1"
+curl --cacert cert.pem -X DELETE "https://<unit-ip>:9200/index1" -u admin:<password>
 ```
 
 After deleting any orphaned indices, verify that the cluster returns to green or yellow health:
 
 ```shell
-curl -X GET "10.45.114.156:9200/_cluster/health?pretty"
+curl --cacert cert.pem -X GET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
 ```
 
 ### Set allocation settings
@@ -551,7 +559,7 @@ During the upgrade process, the routing allocation setting may be restricted to 
 Restore normal allocation by enabling all routing:
 
 ```shell
-curl -X PUT "10.45.114.156:9200/_cluster/settings" -H 'Content-Type: application/json' -d'
+curl --cacert cert.pem -X PUT "https://<unit-ip>:9200/_cluster/settings" -H 'Content-Type: application/json' -u admin:<password> -d'
 {
   "persistent": {
     "cluster.routing.allocation.enable": "all"
@@ -606,7 +614,7 @@ Example response:
 If the departed unit holds the lock, delete the lock document:
 
 ```shell
-curl -X DELETE "10.45.114.156:9200/.charm_node_lock/_doc/0?refresh=true"
+curl --cacert cert.pem -X DELETE "https://<unit-ip>:9200/.charm_node_lock/_doc/0?refresh=true" -u admin:<password>
 ```
 
 Wait for the replacement unit to start and join the cluster. `juju status` should show all
@@ -618,7 +626,7 @@ restored.
 List the nodes in the current cluster:
 
 ```shell
-curl -X GET "10.45.114.156:9200/_cat/nodes"
+curl --cacert cert.pem -X GET "https://<unit-ip>:9200/_cat/nodes" -u admin:<password>
 ```
 
 Confirm that the new node is present in the output, which will look similar to the following:
