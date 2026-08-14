@@ -29,7 +29,7 @@ Charmed OpenSearch supports two profiles:
 | Setting | `testing` | `production` |
 | :--- | :--- | :--- |
 | Cluster size | Minimum 1 node (cluster manager + data) | Minimum 3 cluster manager + 3 data nodes |
-| Memory requirement | None enforced | Recommended 8 GB per node |
+| Memory requirement | None enforced | Minimum 8 GB per node |
 | JVM heap | Fixed at 1 GB | 50% of available RAM (min 4 GB, max 31 GB) |
 | Use case | Development, testing, lightweight workloads | Production workloads and large deployments |
 
@@ -49,7 +49,7 @@ Designed for production workloads. It enforces:
   [OpenSearch recommendation](https://opensearch.org/docs/latest/tuning-your-cluster/performance/)
   to allocate roughly half of available RAM to the JVM heap, leaving the rest for the
   operating system file cache.
-- Recommended 8 GB of RAM per node.
+- A minimum of 8 GB of RAM per node.
 
 If any of these requirements are not met, the charm remains in a `blocked` state until
 corrected.
