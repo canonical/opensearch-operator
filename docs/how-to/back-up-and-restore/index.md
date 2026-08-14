@@ -44,6 +44,19 @@ To list available, failed, and in-progress backups:
 juju run opensearch/leader list-backups
 ```
 
+<details>
+<summary>Output example</summary>
+
+```text
+backup-id            | backup-status
+-------------------------------------
+2026-01-01T10:30:00Z | in_progress
+2026-01-01T10:00:00Z | success
+2026-01-01T09:00:00Z | failed
+```
+
+</details>
+
 (how-to-restore-a-local-backup)=
 ## Restore a backup
 
@@ -75,7 +88,7 @@ The `<backup-id>` must reference a backup created by the previous cluster.
 
 ## Expected result
 
-After creating a backup, `list-backups` shows the new backup with an `available` status.
+After creating a backup, `list-backups` shows the new backup with a `success` status.
 After restoring, `juju status` shows the OpenSearch application `active` and the cluster health
 API returns `green`.
 
