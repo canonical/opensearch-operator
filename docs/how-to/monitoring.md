@@ -27,8 +27,8 @@ which creates cross-model offers named `grafana-dashboards`, `loki-logging`, and
 
 ```shell
 juju switch <k8s-controller>:<cos-model>
-juju deploy cos-lite --trust \
-    --overlay https://raw.githubusercontent.com/canonical/cos-lite-bundle/main/overlays/offers-overlay.yaml
+curl -L https://raw.githubusercontent.com/canonical/cos-lite-bundle/main/overlays/offers-overlay.yaml -O
+juju deploy cos-lite --trust --overlay ./offers-overlay.yaml
 ```
 
 If COS Lite is already deployed without the overlay, offer the interfaces manually:
