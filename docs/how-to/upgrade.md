@@ -68,7 +68,7 @@ as a safety measure for a rollback action.
 To accomplish this, run the `juju status` command and look for the deployed
 Charmed OpenSearch revision in the command output, e.g.:
 
-```shell
+```text
 Model  Controller           Cloud/Region         Version  SLA          Timestamp
 dev    localhost-localhost  localhost/localhost  3.6.25   unsupported  10:16:46+01:00
 

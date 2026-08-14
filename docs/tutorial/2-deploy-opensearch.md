@@ -88,7 +88,7 @@ for the HTTP and Transport layers. We will do this in the next step.
 
 If you see the following status message:
 
-```shell
+```text
 Missing requirements: vm.swappiness should be at most 0
 ```
 

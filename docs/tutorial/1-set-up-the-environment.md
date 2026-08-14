@@ -144,7 +144,7 @@ sudo sysctl -a | grep -E 'swappiness|max_map_count'
 
 This command should return something like the following:
 
-```shell
+```text
 vm.max_map_count = 262144
 vm.swappiness = 60
 ```
