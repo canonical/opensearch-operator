@@ -34,9 +34,9 @@ juju deploy cos-lite --trust --overlay ./offers-overlay.yaml
 If COS Lite is already deployed without the overlay, offer the interfaces manually:
 
 ```shell
-juju offer grafana:grafana-dashboard
-juju offer loki:logging
-juju offer prometheus:receive-remote-write
+juju offer grafana:grafana-dashboard grafana-dashboards
+juju offer loki:logging loki-logging
+juju offer prometheus:receive-remote-write prometheus-receive-remote-write
 ```
 
 ## Consume offers from the OpenSearch model
