@@ -7,8 +7,6 @@ myst:
 (how-to-guides-tls-encryption-index)=
 # How to manage TLS encryption
 
-(how-to-enable-tls-encryption)=
-
 This guide shows how to enable TLS encryption, update private keys, and rotate TLS/CA certificates
 for a Charmed OpenSearch deployment.
 
@@ -18,6 +16,7 @@ For a step-by-step introduction, see the [Tutorial](tutorial-3-enable-encryption
 TLS is mandatory for Charmed OpenSearch and cannot be disabled.
 ```
 
+(how-to-enable-tls-encryption)=
 ## Enable TLS encryption
 
 The example below uses the
