@@ -56,8 +56,11 @@ juju config s3-integrator \
     endpoint="https://<radosgw-url>" \
     bucket=<bucket-name> \
     path=<path> \
-    region=<region>
+    region=<region> \
+    tls-ca-chain="$(base64 -w0 <path-to-rgw-ca.pem>)"
 ```
+
+`tls-ca-chain` is the base64-encoded CA certificate that signed the RadosGW TLS certificate.
 
 ```{note}
 Set `region` to `default` if no custom region was configured in Ceph.
