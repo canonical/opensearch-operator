@@ -68,13 +68,13 @@ To understand why health states matter for scaling, it helps to understand shard
 You can inspect shard allocation with:
 
 ```shell
-curl --cacert cert.pem -k -XGET "https://<unit-ip>:9200/_cat/shards" -u admin:<password>
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cat/shards" -u admin:<password>
 ```
 
 And explain why a shard is unassigned with:
 
 ```shell
-curl --cacert cert.pem -k -XGET "https://<unit-ip>:9200/_cluster/allocation/explain" -u admin:<password>
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/allocation/explain" -u admin:<password>
 ```
 
 ## Safe scaling practices

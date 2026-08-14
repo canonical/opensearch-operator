@@ -242,7 +242,7 @@ Check the cluster is healthy. OpenSearch's upstream documentation
 [suggests the following check](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/):
 
 ```shell
-curl --cacert cert.pem -k -XGET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
 ```
 
 The response should look similar to the following example:
@@ -396,7 +396,7 @@ OpenSearch's upstream documentation
 [suggests the following check](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/):
 
 ```shell
-curl --cacert cert.pem -k -XGET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
 ```
 
 The response should look similar to the following example:
@@ -635,7 +635,7 @@ After a successful upgrade, `juju status` shows all units `active/idle` with the
 revision, and the cluster health API returns `green`:
 
 ```shell
-curl --cacert cert.pem -k -XGET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
 ```
 
 ## Next steps

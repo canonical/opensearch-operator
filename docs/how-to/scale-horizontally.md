@@ -73,7 +73,7 @@ see [Cluster health and scaling](explanation-cluster-health).
 Verify the target node does not hold a primary shard of an unreplicated index:
 
 ```shell
-curl --cacert cert.pem -k -XGET "https://<unit-ip>:9200/_cat/shards" -u admin:<password>
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cat/shards" -u admin:<password>
 ```
 
 If it does, [re-route](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-reroute/) the shard to another node first.
@@ -83,7 +83,7 @@ If it does, [re-route](https://opensearch.org/docs/latest/api-reference/cluster-
 Investigate with:
 
 ```shell
-curl --cacert cert.pem -k -XGET "https://<unit-ip>:9200/_cluster/allocation/explain" -u admin:<password>
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/allocation/explain" -u admin:<password>
 ```
 
 Depending on the cause, the resolution may be scaling up, adding storage to existing nodes, or
