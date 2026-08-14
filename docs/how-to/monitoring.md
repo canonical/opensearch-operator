@@ -98,7 +98,7 @@ For detailed instructions, see
 in the COS tutorial.
 
 In Grafana, select the **Charmed OpenSearch** dashboard. You can filter by
-application name, unit, model, cluster, and node roles.
+Juju model, application, unit, cluster, and node role.
 
 ```{note}
 For exploring and visualising your indexed data (as opposed to cluster health metrics),

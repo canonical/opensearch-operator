@@ -55,11 +55,11 @@ memory, disk I/O, JVM heap, shard counts, and document indexing rates.
 
 You can filter the displayed data using the selectors at the top of the dashboard:
 
-* **Application name** — the Juju application (e.g. `opensearch` or `opensearch-main`)
-* **Unit** — an individual Juju unit within the application
-* **Model** — the Juju model the cluster is deployed in
+* **Juju model** — the Juju model the cluster is deployed in
+* **Juju application** — the Juju application (e.g. `opensearch` or `opensearch-main`)
+* **Juju unit** — an individual Juju unit within the application
 * **Cluster** — the OpenSearch cluster name (useful when multiple clusters share a COS instance)
-* **Node roles** — filter by OpenSearch node role (e.g. `cluster_manager`, `data`)
+* **Role** — filter by OpenSearch node role (e.g. `cluster_manager`, `data`)
 
 ![Charmed OpenSearch Grafana dashboard — overview panel](../how-to/img/dash1.png)
 
