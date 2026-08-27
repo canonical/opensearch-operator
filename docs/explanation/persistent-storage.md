@@ -36,8 +36,8 @@ Reusing a disk from a different cluster involves editing the node's on-disk
 **coordination metadata** — the cluster UUID and voting configuration used to elect a
 cluster manager. This is a last resort for disaster recovery, valid only when the source
 cluster is permanently gone (for example, after losing a majority of
-`cluster_manager`-eligible nodes, or after a brutal cluster decommission) **and** no viable
-snapshot exists to restore from instead.
+[`cluster_manager`-eligible](explanation-node-roles-available) nodes, or after a brutal
+cluster decommission) **and** no viable snapshot exists to restore from instead.
 
 ## How OpenSearch detects existing data
 
@@ -74,14 +74,18 @@ data after recovery.
 
 Two subcommands are relevant:
 
-- **`detach-cluster`** — resets the cluster UUID on a surviving node so it can be adopted by
-  a different cluster (for example, one freshly bootstrapped with `unsafe-bootstrap`).
+- **`unsafe-bootstrap`** — use only when half or more of the `cluster_manager`-eligible
+  nodes are permanently lost, the cluster can no longer form a quorum, and snapshot
+  recovery is not possible. The command creates a new cluster UUID and bootstraps a new
+  cluster from one surviving eligible node's persisted metadata. If multiple eligible
+  nodes survived, choose the one with the highest cluster-state (term, version) pair.
 
-- **`unsafe-bootstrap`** — creates a **new** cluster UUID and uses it to bootstrap a
-  single surviving `cluster_manager`-eligible node into a brand new cluster, built from
-  that node's own persisted metadata. This deliberately preserves the node's existing
-  indices and metadata where possible, but data loss is still possible if that metadata is
-  not the most up to date.
+- **`detach-cluster`** — use to detach a node from its old cluster
+  (by reseting cluster UUID), so it can join a replacement
+  cluster. Do this only when snapshot recovery is impossible and either all
+  `cluster_manager`-eligible nodes have been permanently lost or a replacement cluster
+  has already been created with `unsafe-bootstrap` from an eligible node in the same
+  original cluster.
 
 ## Scenarios for disk reuse
 

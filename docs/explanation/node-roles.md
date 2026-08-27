@@ -13,6 +13,7 @@ Juju **application** level — all units within an application share the same se
 This page explains the available roles, how they interact, and how multiple applications
 combine to form a large deployment.
 
+(explanation-node-roles-available)=
 ## Available node roles
 
 OpenSearch supports the following built-in roles, all of which can be used in Charmed OpenSearch:
