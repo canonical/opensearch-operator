@@ -19,12 +19,20 @@ restore from a backup, and migrate data to a new cluster.
 
 ## Save cluster credentials
 
-Credentials are not stored in backups — this is intentional so that access to the storage
-backend does not grant access to the cluster data. Before you run a restore or migrate to a
-new cluster, save the admin password and the CA certificates of the target cluster:
+Backups exclude the security configuration, so the source cluster's users, passwords, and
+role mappings cannot be restored. Before you run a restore or migrate to a new cluster,
+save the admin password and the CA certificates of the target cluster:
 
 ```shell
 juju run opensearch/leader get-password
+```
+
+```{caution}
+Excluding the security configuration does not protect the data itself. The snapshot
+repository still contains all indexed application data in an unencrypted form. Anyone with
+access to the repository can register it in another compatible OpenSearch cluster and
+restore that data using their own cluster's admin credentials. Protect the repository with
+strict access controls and encryption at rest.
 ```
 
 (how-to-create-a-backup)=
