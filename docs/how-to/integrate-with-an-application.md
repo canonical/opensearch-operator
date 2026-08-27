@@ -98,11 +98,7 @@ To remove the integration:
 juju remove-relation data-integrator opensearch
 ```
 
-## Rotate passwords
-
-Both client and admin passwords can be rotated.
-
-### Rotate a client password
+## Rotate client credentials
 
 Remove and re-add the relation to generate a new user with a new password:
 
@@ -110,32 +106,6 @@ Remove and re-add the relation to generate a new user with a new password:
 juju remove-relation opensearch <application>
 juju integrate opensearch <application>
 ```
-
-### Rotate the admin password
-
-To set a specific password:
-
-```shell
-juju run opensearch/leader set-password password=<new-password>
-```
-
-To generate a random password:
-
-```shell
-juju run opensearch/leader set-password
-```
-
-To retrieve the current password:
-
-```shell
-juju run opensearch/leader get-password
-```
-
-## Expected result
-
-After integrating an application, `juju status --relations` shows the `opensearch` application and the
-integrated application both in `active` state, with an `opensearch_client` relation between them.
-The client application can connect using the credentials and endpoint returned by `get-password`.
 
 ## Next steps
 
