@@ -105,12 +105,6 @@ For exploring and visualising your indexed data (as opposed to cluster health me
 deploy [Charmed OpenSearch Dashboards](https://canonical-charmed-opensearch-dashboards.readthedocs-hosted.com/).
 ```
 
-## Expected result
-
-Grafana displays the **Charmed OpenSearch** dashboard with metrics from all OpenSearch units,
-and Loki receives OpenSearch logs. Verify by checking the dashboard in Grafana and confirming
-that metrics and logs appear for each unit.
-
 ## Next steps
 
 * [Perform load testing](how-to-perform-load-testing) — benchmark the cluster under load with COS monitoring.

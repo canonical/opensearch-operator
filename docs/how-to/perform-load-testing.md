@@ -154,10 +154,9 @@ opensearch-benchmark run \
 See the [opensearch-benchmark documentation](https://opensearch.org/docs/latest/benchmark/)
 for additional workloads and options.
 
-## Expected result
-
-The benchmark completes and prints a summary report with throughput, latency, and error metrics.
-If COS is integrated, the Grafana **Charmed OpenSearch** dashboard shows the load spike during the test.
+When the benchmark completes, it prints a summary report with throughput, latency, and
+error metrics. If COS is integrated, the Grafana **Charmed OpenSearch** dashboard shows
+the load spike during the test.
 
 ## Next steps
 

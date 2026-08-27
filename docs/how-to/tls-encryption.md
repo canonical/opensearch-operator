@@ -42,7 +42,8 @@ Integrate it with OpenSearch:
 juju integrate self-signed-certificates opensearch
 ```
 
-Verify the relation with `juju status --relations`.
+Verify the relation with `juju status --relations`. The OpenSearch application turns
+`active` — it is no longer `blocked` with a "Missing TLS relation" message.
 
 (how-to-check-tls-keys)=
 ## Check certificates in use
@@ -191,12 +192,6 @@ Verify the rotation:
 ```shell
 openssl s_client -showcerts -connect <unit-ip>:<port> < /dev/null | grep issuer
 ```
-
-## Expected result
-
-After enabling TLS, `juju status` shows the OpenSearch application `active` (no longer
-`blocked` with a "Missing TLS relation" message). After key updates or certificate/CA rotation,
-`openssl s_client ... | grep issuer` shows the new issuer.
 
 ## Next steps
 

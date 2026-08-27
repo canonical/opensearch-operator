@@ -225,12 +225,6 @@ yellow open admin-index                  1BQKqmjTQVa6_CeBTi53Gw 1 1  0 0  208b  
 green  open .charm_node_lock             8KbPHHy3QneIW8uWbTuBhQ 1 0  1 0 4.1kb 4.1kb
 ```
 
-## Expected result
-
-After role mapping is configured, requests to OpenSearch with a valid OAuth bearer token
-return `200 OK` instead of `403 security_exception`. The `_cat/indices` endpoint returns
-the list of indices the mapped user has access to.
-
 ## Next steps
 
 * [Enable JWT authentication](how-to-guides-enable-jwt-authentication) — an alternative token-based authentication method.

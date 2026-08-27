@@ -41,10 +41,9 @@ Connect the integrator to OpenSearch:
 juju integrate azure-storage-integrator opensearch
 ```
 
-## Expected result
-
-`juju status --relations` shows the `azure-storage-integrator` application `active` and a relation between
-`azure-storage-integrator` and `opensearch`. The OpenSearch application remains `active`.
+Once the integration is established, `juju status --relations` shows the
+`azure-storage-integrator` application `active` with a relation to `opensearch`.
+The OpenSearch application remains `active`.
 
 ## Next steps
 

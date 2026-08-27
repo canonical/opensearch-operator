@@ -36,6 +36,8 @@ Confirm the cluster is `active` and `idle` with `juju status`, then run:
 juju run opensearch/leader create-backup
 ```
 
+Once the backup completes, it appears in `list-backups` with a `success` status.
+
 ## List backups
 
 To list available, failed, and in-progress backups:
@@ -69,6 +71,9 @@ To restore from the same cluster, pass the `backup-id` from `list-backups`:
 juju run opensearch/leader restore backup-id=<backup-id>
 ```
 
+After the restore completes, `juju status` shows the OpenSearch application `active` and
+the cluster health API returns `green`.
+
 ```{note}
 If the restore takes longer than the Juju CLI timeout, it continues in the background.
 Monitor progress with `juju status`.
@@ -85,12 +90,6 @@ juju run opensearch/leader restore backup-id=<backup-id>
 ```
 
 The `<backup-id>` must reference a backup created by the previous cluster.
-
-## Expected result
-
-After creating a backup, `list-backups` shows the new backup with a `success` status.
-After restoring, `juju status` shows the OpenSearch application `active` and the cluster health
-API returns `green`.
 
 ## Next steps
 

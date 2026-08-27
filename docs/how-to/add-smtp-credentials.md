@@ -42,6 +42,10 @@ Connect the SMTP integrator to OpenSearch:
 juju integrate smtp-integrator:smtp opensearch:smtp
 ```
 
+Once the integration is established, `juju status --relations` shows both applications
+`active` with an `smtp` relation between them, and OpenSearch notification channels can
+send email via the configured SMTP server.
+
 ```{note}
 OpenSearch requires a stable identifier for each email sender, notification channel, and
 notification group. The charm derives this identifier from the Juju relation ID of the
@@ -71,12 +75,6 @@ juju integrate smtp-integrator:smtp opensearch-main
 
 If integrated with the wrong application, the charm shows a `blocked` status.
 Remove the invalid relation and integrate with the correct application.
-
-## Expected result
-
-`juju status --relations` shows the `smtp-integrator` and `opensearch` applications `active`, with an
-`smtp` relation between them. OpenSearch notification channels can now send email via the
-configured SMTP server.
 
 ## Next steps
 

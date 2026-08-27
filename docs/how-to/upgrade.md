@@ -637,10 +637,7 @@ Confirm that the new node is present in the output, which will look similar to t
 10.45.114.208 45 86 11 0.43 0.69 0.95 dim cluster_manager,data,ingest,ml - opensearch-1.4c1
 ```
 
-## Expected result
-
-After a successful upgrade, `juju status` shows all units `active/idle` with the new charm
-revision, and the cluster health API returns `green`:
+Finally, confirm the cluster is healthy again — the cluster health API should return `green`:
 
 ```shell
 curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>

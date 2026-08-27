@@ -76,10 +76,9 @@ Connect the s3-integrator to OpenSearch:
 juju integrate s3-integrator opensearch
 ```
 
-## Expected result
-
-`juju status --relations` shows the `s3-integrator` application `active` and an `s3-credentials` relation
-between `s3-integrator` and `opensearch`. The OpenSearch application remains `active`.
+Once the integration is established, `juju status --relations` shows the `s3-integrator`
+application `active` with an `s3-credentials` relation to `opensearch`.
+The OpenSearch application remains `active`.
 
 ## Next steps
 

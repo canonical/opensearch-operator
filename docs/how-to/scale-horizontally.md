@@ -136,11 +136,6 @@ Wait for the application to fully stabilise (`active/idle`), then
 
 Repeat the removal step for each additional unit you need to remove.
 
-## Expected result
-
-After scaling, `juju status` shows all remaining units `active/idle`, and the cluster health
-API returns `green`. For scale-up, new units appear and join the cluster automatically.
-
 ## Next steps
 
 * [Optimize cluster performance with profiles](how-to-optimize-cluster-performance) — tune resource allocation for the new cluster size.

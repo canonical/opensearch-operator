@@ -212,12 +212,6 @@ The dangling indices API cannot guarantee that imported data represents the late
 of the data when the index was still part of the original cluster.
 ```
 
-## Expected result
-
-After reusing a disk within the same cluster, the new unit rejoins automatically with existing
-data. After `detach-cluster` or `unsafe-bootstrap`, the node joins the target cluster and
-`juju status` shows the unit `active/idle`.
-
 ```{caution}
 An `active/idle` status and a successful `detach-cluster` or `unsafe-bootstrap` message do
 **not** mean no data was lost. Always audit the recovered indices and document counts, and

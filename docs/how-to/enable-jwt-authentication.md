@@ -56,7 +56,8 @@ Connect the JWT integrator to OpenSearch:
 juju integrate jwt-integrator opensearch
 ```
 
-After integration, OpenSearch updates its security plugin. Query with your JWT:
+After integration, both applications show `active` in `juju status`, and OpenSearch updates
+its security plugin. Requests with a valid JWT bearer token now return `200 OK`:
 
 ```shell
 curl -k -H "Authorization: Bearer <jwt>" -XGET "https://<unit-ip>:9200/_cat/nodes"
@@ -95,15 +96,6 @@ Access the UI by appending the JWT as a URL parameter:
 
 ```text
 http://<dashboards-ip>:5601?jwt=<jwt>
-```
-
-## Expected result
-
-After integrating the JWT integrator with OpenSearch, `juju status` shows both applications
-`active`. Requests to OpenSearch with a valid JWT bearer token return `200 OK`:
-
-```shell
-curl -k -H "Authorization: Bearer <jwt>" -XGET "https://<unit-ip>:9200/_cat/nodes"
 ```
 
 ## Next steps

@@ -57,7 +57,8 @@ juju config opensearch profile=<profile>
 ```
 
 Where `<profile>` is `testing` or `production`. The charm automatically reconfigures
-the cluster to match the new profile requirements.
+the cluster to match the new profile requirements. Once complete, `juju status` shows
+the OpenSearch application `active`.
 
 ## Profile comparison
 
@@ -70,11 +71,6 @@ For a detailed explanation of what profiles are and why they exist, see
 | Memory requirement | None enforced               | Recommended 8 GB                          |
 | JVM heap           | Fixed 1 GB                  | 50% of RAM (min 4 GB, max 31 GB)          |
 | Use case           | Development / testing       | Production workloads                      |
-
-## Expected result
-
-After applying a profile, `juju status` shows the OpenSearch application `active` with the
-chosen profile.
 
 ## Next steps
 
