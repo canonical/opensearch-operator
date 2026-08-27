@@ -98,16 +98,8 @@ To remove the integration:
 juju remove-relation data-integrator opensearch
 ```
 
-## Rotate client credentials
-
-Remove and re-add the relation to generate a new user with a new password:
-
-```shell
-juju remove-relation opensearch <application>
-juju integrate opensearch <application>
-```
-
 ## Next steps
 
+* [Manage passwords](how-to-manage-passwords) to rotate the credentials issued to the client.
 * [Enable monitoring (COS)](how-to-monitoring) to observe the integrated workload.
 * [Manage TLS encryption](how-to-enable-tls-encryption) to secure client-to-node traffic.
