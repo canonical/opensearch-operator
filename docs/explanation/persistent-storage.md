@@ -66,7 +66,8 @@ general-purpose way to migrate disks between clusters.
 `detach-cluster` and `unsafe-bootstrap` are last-resort disaster-recovery commands.
 OpenSearch warns that they can cause **arbitrary data loss**, because the node running the
 command may not hold the most recent cluster metadata. Only use them after the **permanent**
-loss of a majority (or all) of the `cluster_manager`-eligible nodes in a cluster, or after a
+loss of a majority (or all) of the
+[`cluster_manager`-eligible](explanation-node-roles-available) nodes in a cluster, or after a
 brutal cluster decommission, and only when no viable snapshot recovery exists.
 A success message from either command does not mean no data was lost — always audit the
 data after recovery.
