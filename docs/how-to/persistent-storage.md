@@ -11,7 +11,7 @@ This guide shows how to reuse disks that contain data from a previous OpenSearch
 For an explanation of the risks of disk reuse, dangling indices, and metadata cleanup,
 see [Persistent storage and disk recovery](explanation-persistent-storage).
 
-```{important}
+```{note}
 Prefer snapshot and restore whenever possible. The procedures on this page for reusing a
 disk from a **different** cluster are last-resort disaster recovery, not a general-purpose
 migration path. To move data between clusters, always try
@@ -82,7 +82,7 @@ referencing the old cluster UUID. The steps below perform coordination-metadata 
 that disk and are a **last resort** — use them only when the source cluster is permanently
 gone and no viable snapshot exists to restore from instead.
 
-```{danger}
+```{caution}
 `detach-cluster` and `unsafe-bootstrap` are last-resort disaster-recovery commands.
 OpenSearch warns that they can cause **arbitrary data loss**, because the node running the
 command may not hold the most recent cluster metadata. Only use them after the

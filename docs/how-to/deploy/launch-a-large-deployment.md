@@ -49,7 +49,7 @@ See [How to optimize cluster performance with profiles](how-to-optimize-cluster-
 for details on the available profiles.
 ```
 
-```{important}
+```{note}
 **Two critical configuration rules for large deployments:**
 
 1. All applications must share the same `cluster_name` value.

@@ -62,7 +62,7 @@ stopped node's disk: it edits the cluster UUID and voting configuration directly
 bypassing the normal cluster-formation and consensus protocol. It is **not** a
 general-purpose way to migrate disks between clusters.
 
-```{danger}
+```{caution}
 `detach-cluster` and `unsafe-bootstrap` are last-resort disaster-recovery commands.
 OpenSearch warns that they can cause **arbitrary data loss**, because the node running the
 command may not hold the most recent cluster metadata. Only use them after the **permanent**
