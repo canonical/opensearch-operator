@@ -64,10 +64,16 @@ juju config opensearch roles="cluster_manager,data,ml"
 ```
 
 ```{note}
-Removal of the `cluster_manager` or `data` roles is not supported.
-These roles are essential for cluster operation and data availability.
+Removal of the `cluster_manager` role is never supported: the charm rejects the change and
+the application becomes `blocked`.
+
+Removal of the `data` role is rejected in a simple (single-application) deployment, because
+the data on disk could no longer be served. In a
+[large deployment](explanation-node-roles-large), it is allowed only if another application in
+the cluster still holds the `data` role, so that shards can be reallocated.
 ```
 
+(explanation-node-roles-large)=
 ## Large deployments
 
 For production workloads, a single application is often insufficient. Charmed OpenSearch
