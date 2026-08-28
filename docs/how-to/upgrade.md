@@ -95,6 +95,7 @@ Charmed OpenSearch revision in the command output, e.g.:
 
 <!-- test:setup
 . /root/revisions.env
+save_ca_and_password
 -->
 
 <!-- test:vars

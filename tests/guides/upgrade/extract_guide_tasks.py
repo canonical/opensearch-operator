@@ -209,6 +209,12 @@ def _parse_vars_block(
     snippet_lines = []
     substitutions: list[tuple[str, str]] = []
     for idx, (placeholder, value) in enumerate(mappings):
+        if re.fullmatch(r"\$\{[A-Za-z_][A-Za-z0-9_]*\}", value):
+            # Runtime variable reference (e.g. ${OS_UNIT_IP}): substitute the
+            # placeholder with the variable itself so it resolves lazily at
+            # the point of use, after e.g. save_ca_and_password has run.
+            substitutions.append((placeholder, value))
+            continue
         var_name = f"_TEST_VAR_{idx}"
         snippet_lines.append(f'{var_name}="{value}"')
         substitutions.append((placeholder, f"${{{var_name}}}"))
