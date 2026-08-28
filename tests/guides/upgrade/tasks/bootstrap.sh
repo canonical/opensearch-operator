@@ -36,9 +36,11 @@ echo "Revisions: REV_TO=$REV_TO REV_FROM_SAME=$REV_FROM_SAME REV_FROM_DIFF=$REV_
 
 # ---------------------------------------------------------------------------
 # Baseline deployment: opensearch at REV_FROM_SAME + TLS
+# (DEPLOY_BASE comes from resolve_revisions.py and matches the charm revisions)
 # ---------------------------------------------------------------------------
 juju deploy self-signed-certificates --channel latest/stable
-juju deploy opensearch --channel 2/stable --revision="$REV_FROM_SAME" -n 3
+juju deploy opensearch --channel 2/stable --revision="$REV_FROM_SAME" \
+  --base "$DEPLOY_BASE" -n 3
 juju integrate self-signed-certificates opensearch
 
 wait_idle --timeout 3600
