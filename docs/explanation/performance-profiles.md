@@ -44,7 +44,8 @@ enforced. A warning is logged indicating that this profile is not suitable for p
 Designed for production workloads. It enforces:
 
 - A minimum of 3 cluster manager nodes and 3 data nodes for high availability.
-- JVM heap set to 50% of available RAM, with a minimum of 4 GB and a maximum of 31 GB.
+- JVM heap set to 50% of available RAM, capped at 31 GB. Since the profile also requires at
+  least 8 GB of RAM per node, the heap is effectively at least 4 GB.
   This follows the
   [OpenSearch recommendation](https://opensearch.org/docs/latest/tuning-your-cluster/performance/)
   to allocate roughly half of available RAM to the JVM heap, leaving the rest for the

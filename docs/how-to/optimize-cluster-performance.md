@@ -44,7 +44,7 @@ The `production` profile enforces:
 
 * Minimum 3 cluster manager nodes
 * Minimum 3 data nodes
-* Recommended memory: 8 GB per node
+* Minimum memory: 8 GB per node
 * JVM heap: 50% of available RAM (minimum 4 GB, maximum 31 GB)
 
 If requirements are not met, the charm remains `blocked` until corrected.
@@ -69,7 +69,7 @@ For a detailed explanation of what profiles are and why they exist, see
 | Setting            | `testing`                   | `production`                              |
 | :----------------- | :-------------------------- | :---------------------------------------- |
 | Cluster size       | Minimum 1 node              | Minimum 3 cluster manager + 3 data nodes  |
-| Memory requirement | None enforced               | Recommended 8 GB                          |
+| Memory requirement | None enforced               | Minimum 8 GB per node                     |
 | JVM heap           | Fixed 1 GB                  | 50% of RAM (min 4 GB, max 31 GB)          |
 | Use case           | Development / testing       | Production workloads                      |
 
