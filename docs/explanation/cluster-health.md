@@ -138,8 +138,10 @@ shard allocations. No additional configuration is required.
 2. **Remove one unit at a time** — never remove multiple units in a single command.
    After each removal, wait for the cluster to rebalance and return to `green` before
    removing the next unit.
-3. **Monitor after removal** — OpenSearch reallocates the departed node's shards, and the
-   charm updates the voting configuration if the node was `cluster_manager`-eligible.
+3. **Monitor during and after removal** — the charm requests OpenSearch to move shards away
+   from the departing data node to other data nodes before stopping it. If the node
+   participates in cluster-manager voting, the charm also excludes it from the voting
+   configuration. If it is the elected cluster manager, OpenSearch elects a replacement.
    Wait for the application to fully stabilise before proceeding.
 
 ```{note}
