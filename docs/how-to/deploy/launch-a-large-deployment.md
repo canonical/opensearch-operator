@@ -43,7 +43,7 @@ each configured with specific node roles. See
 main orchestrator, failover, and data-node pattern.
 
 ```{caution}
-The examples below use the `testing` profile (1 GB RAM per node) for a single-host LXD environment.
+The examples below use the `testing` profile (sets the JVM heap size to 1 GB per node) for a single-host LXD environment.
 For production, use the `production` profile (JVM heap set to 50% of RAM, capped at 31 GB).
 See [How to optimize cluster performance with profiles](how-to-optimize-cluster-performance)
 for details on the available profiles.
