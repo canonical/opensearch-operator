@@ -1,0 +1,58 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: Upgrade guide tests
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  schedule:
+    - cron: '0 3 15 * *'  # 15th of every month at 03:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  upgrade-guide-test:
+    name: Upgrade guide end-to-end
+    runs-on: [self-hosted, linux, amd64, xlarge, noble]
+    timeout-minutes: 360
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Check KVM availability
+        run: |
+          if [[ ! -e /dev/kvm ]]; then
+            echo "::error::KVM is not available on this runner. Multipass requires KVM for VM creation."
+            exit 1
+          fi
+
+      - name: Install Multipass
+        run: |
+          if ! command -v multipass &>/dev/null; then
+            sudo snap install multipass
+          fi
+
+      - name: Install Go and Spread
+        run: |
+          if ! command -v go &>/dev/null; then
+            sudo snap install go --classic
+          fi
+          go install github.com/canonical/spread/cmd/spread@latest
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+
+      - name: Install tox
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pipx
+          pipx install tox
+
+      - name: Run upgrade guide tests
+        run: tox -e guide-upgrade
+
+      - name: Cleanup Multipass VM
+        if: always()
+        run: |
+          multipass delete --purge opensearch-upgrade-vm 2>/dev/null || true
