@@ -44,8 +44,12 @@ Confirm the cluster is `active` and `idle` with `juju status`, then run:
 juju run opensearch/leader create-backup
 ```
 
-Once the backup completes, it appears in `list-backups` with a `success` status.
+Note the returned `backup-id` and use it to track the backup in
+[`list-backups`](#how-to-list-backups) until its status is `success`. Other snapshots can be
+created directly through the OpenSearch API, so the newest entry in the list is not
+necessarily yours.
 
+(how-to-list-backups)=
 ## List backups
 
 To list available, failed, and in-progress backups:
