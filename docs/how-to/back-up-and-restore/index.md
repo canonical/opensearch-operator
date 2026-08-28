@@ -7,7 +7,7 @@ myst:
 (how-to-guides-back-up-and-restore-index)=
 # How to back up and restore
 
-This guide shows how to create backups of a Charmed OpenSearch cluster,
+This guide shows how to create backups (snapshots) of a Charmed OpenSearch cluster,
 restore from a backup, and migrate data to a new cluster.
 
 ## Prerequisites
