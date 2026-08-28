@@ -46,12 +46,17 @@ The charm reflects cluster health in the application status:
 - **`active`** — the cluster is healthy (equivalent to `green`).
 - **`maintenance`** — shards are still initializing or relocating (a temporary `yellow`).
   The message is *"Some shards are still initializing / relocating."*
+- **`waiting`** — the charm is waiting for an operation to complete, for example
+  *"Waiting for OpenSearch to start..."* or for specific shards to finish building.
 - **`blocked`** — the cluster has issues (a permanent `yellow`, or `red`). The status
-  message describes the problem, e.g. *"1 or more 'replica' shards are not assigned,
-  please scale your application up"*.
+  message describes the problem: *"1 or more 'replica' shards are not assigned, please
+  scale your application up."* for a permanent `yellow`, and the same message with
+  *'primary'* in place of *'replica'* for `red`.
 
 This means you can use `juju status` as a quick health check without querying the
-OpenSearch API directly.
+OpenSearch API directly. The charm derives these statuses on a best-effort basis, so treat
+the OpenSearch health API as the source of truth when it matters — for example, before
+[scaling down](how-to-scale-horizontally).
 
 ## Shard allocation
 

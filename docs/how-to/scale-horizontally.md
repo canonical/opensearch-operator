@@ -42,10 +42,28 @@ Before removing a node, verify the cluster is healthy.
 
 The charm reflects cluster health in the application status on a best-effort basis:
 
-* `active` — cluster is healthy
-* `blocked` — cluster has issues (the message describes the problem)
+* `active` — the cluster is healthy
+* `maintenance` — shards are still initializing or relocating
+* `waiting` — the charm is waiting for an operation to complete
+* `blocked` — the cluster has issues (the message describes the problem)
 
 Run `juju status` and make sure the application is `active` before proceeding.
+A `maintenance` or `waiting` status does not necessarily mean something is wrong, but it
+does indicate that now is not the best time to scale down — wait for the cluster to settle.
+
+For example, the following output shows an application blocked because replica shards
+cannot be assigned:
+
+```text
+App         Version  Status   Scale  Charm       Channel  Rev  Exposed  Message
+opensearch           blocked      1  opensearch  2/edge   117  no       1 or more 'replica' shards are not assigned, please scale your application up.
+
+Unit           Workload  Agent  Machine  Public address  Ports     Message
+opensearch/0*  active    idle   1        10.95.38.230    9200/tcp
+```
+
+For an explanation of how each health state maps to a Juju status, see
+[Cluster health and scaling](explanation-cluster-health).
 The OpenSearch health API is the source of truth, so use the check below to confirm.
 
 ### Via the OpenSearch health API
