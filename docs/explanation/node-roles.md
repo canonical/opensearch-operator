@@ -16,22 +16,27 @@ combine to form a large deployment.
 (explanation-node-roles-available)=
 ## Available node roles
 
-OpenSearch supports the following built-in roles, all of which can be used in Charmed OpenSearch:
+Charmed OpenSearch accepts the following values in the `roles` configuration option:
 
 | Role | Description |
 | :--- | :--- |
 | `cluster_manager` | Handles cluster-wide operations: creating and deleting indices, managing shard allocation, and rebalancing data. One node is elected **cluster manager** among all `cluster_manager`-eligible nodes. |
 | `data` | Stores indexed data and performs search and indexing operations. Data nodes hold the shards that contain the indexed documents. |
-| `data.hot` | A data tier for time-series data that receives the most recent, most frequently queried data. |
-| `data.warm` | A data tier for data that is queried less frequently but still needs to be searchable. |
-| `data.cold` | A data tier for infrequently accessed data, stored on less expensive hardware. |
+| `data.<temperature>` | The `data` role, with a data tier assigned. The temperature is one of `hot` (most recent, most frequently queried data), `warm` (queried less frequently but still searchable), `cold` (infrequently accessed), `frozen`, or `content`. |
 | `ingest` | Pre-processes documents before they are indexed (pipelines, transformations). |
 | `coordinating` | Routes requests to the appropriate data nodes and aggregates results. Does not hold data. |
 | `voting_only` | Participates in cluster manager election but is never eligible to become the cluster manager node itself. |
 | `ml` | Runs machine learning tasks such as model training and inference. |
 
-Data nodes can optionally be classified into **tiers** (`data.hot`, `data.warm`, `data.cold`)
-to support [index lifecycle management](https://opensearch.org/docs/latest/im-plugin/ism/index/)
+```{note}
+The `data.<temperature>` values are a Charmed OpenSearch convenience, not OpenSearch roles.
+Upstream, the role is `data` and the tier is a separate node attribute. When you set
+`data.hot`, the charm assigns the `data` role and sets `node.attr.temp` to `hot`. Only one
+temperature may be set per application.
+```
+
+Classifying data nodes into **tiers** supports
+[index lifecycle management](https://opensearch.org/docs/latest/im-plugin/ism/index/)
 policies that move data between tiers as it ages.
 
 ## Auto-generated roles
