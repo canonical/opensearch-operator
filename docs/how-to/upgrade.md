@@ -113,7 +113,7 @@ juju status --format=json | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
 rev = data['applications']['opensearch']['charm-rev']
-assert str(rev) == '$REV_FROM_SAME', f'Expected revision $REV_FROM_SAME, got {rev}'
+assert str(rev) == '$REV_BASELINE', f'Expected revision $REV_BASELINE, got {rev}'
 "
 -->
 

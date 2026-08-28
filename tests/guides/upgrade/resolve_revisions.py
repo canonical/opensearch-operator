@@ -34,12 +34,16 @@ from pathlib import Path
 
 CHARM_NAME = "opensearch"
 CHANNEL = "2/stable"
+# The upgrade target channel. 2/stable on ubuntu@24.04 currently exposes only
+# one revision (no upgrade pair), so the target is taken from 2/edge, which
+# tracks the same base. The baseline always comes from 2/stable.
+TARGET_CHANNEL = "2/edge"
 # Preferred deploy base (see bootstrap.sh). Revisions on other bases cannot
 # be refreshed to ("cannot upgrade from single base" error in Juju), so the
 # resolver first tries to find a full revision set on this base. When the
-# channel map has no valid upgrade pair on the preferred base (e.g. only one
-# revision per base is released), it falls back to the alternate base and
-# reports the chosen base so the bootstrap can deploy on it.
+# channel map has no valid upgrade pair on the preferred base, it falls back
+# to the alternate base and reports the chosen base so the bootstrap can
+# deploy on it.
 PREFERRED_BASE = "ubuntu@24.04"
 FALLBACK_BASE = "ubuntu@22.04"
 API_URL = (
@@ -48,26 +52,27 @@ API_URL = (
 )
 
 # Curated revision → (workload OpenSearch version, base) map.
-# Sources: docs/reference/release-notes/ (rev 168 → 2.17.0, rev 315 → 2.19.4)
-# and the Charmhub channel map. Refresh when the charm releases new
+# Verified by downloading each revision and reading its manifest.yaml +
+# workload_version (August 2026). Refresh when the charm releases new
 # revisions; keep at least one revision sharing the workload version of the
-# current 2/stable release and one with an older workload version — both on
-# the same base as the current release.
+# baseline and one with an older workload version — both on the same base.
 REVISION_WORKLOAD_MAP: dict[int, tuple[str, str]] = {
     168: ("2.17.0", "ubuntu@22.04"),  # Sept 2024
-    315: ("2.19.4", "ubuntu@24.04"),  # Dec 2025, first 24.04 release
-    344: ("2.19.4", "ubuntu@24.04"),  # Apr 2026
-    345: ("2.19.4", "ubuntu@22.04"),  # Apr 2026
+    299: ("2.19.2", "ubuntu@24.04"),  # highest 24.04 rev with older workload
+    315: ("2.19.4", "ubuntu@22.04"),
+    342: ("2.19.4", "ubuntu@24.04"),  # same-workload rollback target
+    344: ("2.19.4", "ubuntu@24.04"),  # Apr 2026, 2/stable baseline
+    345: ("2.19.4", "ubuntu@22.04"),  # Apr 2026, 2/stable
+    360: ("2.19.4", "ubuntu@24.04"),  # Aug 2026, 2/edge upgrade target
 }
 
 # Fallback ONLY — used when neither the API nor the curated map can produce
-# a full set. Keep the workload version relationships intact when refreshing:
-#   REV_FROM_DIFF < REV_FROM_SAME (same workload as REV_TO) < REV_TO
-# All three must share the same base.
+# a full set. All revisions must share the same base.
 PINNED_FALLBACK = {
-    "REV_TO": "344",
-    "REV_FROM_SAME": "315",
-    "REV_FROM_DIFF": "315",  # no older-workload 24.04 revision known; same as FROM_SAME
+    "REV_TO": "360",
+    "REV_FROM_SAME": "342",
+    "REV_FROM_DIFF": "299",
+    "REV_BASELINE": "344",
     "DEPLOY_BASE": "ubuntu@24.04",
 }
 
@@ -97,12 +102,12 @@ def _entry_base(entry: dict) -> str:
     return f"{base.get('name')}@{base.get('channel')}"
 
 
-def fetch_latest_stable_revision(channel_map: list[dict], base: str) -> int | None:
-    """Return the latest revision released on the target channel and *base*."""
+def fetch_latest_revision(channel_map: list[dict], base: str, channel: str) -> int | None:
+    """Return the latest revision released on *channel* and *base*."""
     latest: int | None = None
     for entry in channel_map:
-        channel = entry.get("channel", {})
-        if channel.get("name") != CHANNEL or channel.get("risk") != "stable":
+        ch = entry.get("channel", {})
+        if ch.get("name") != channel or ch.get("risk") != channel.split("/")[-1]:
             continue
         if _entry_base(entry) != base:
             continue
@@ -123,26 +128,38 @@ def resolve() -> dict[str, str] | None:
     channel_map = fetch_channel_map()
 
     for base in (PREFERRED_BASE, FALLBACK_BASE):
-        rev_to = fetch_latest_stable_revision(channel_map, base)
-        if rev_to is None:
+        # Baseline: latest stable revision on this base.
+        rev_baseline = fetch_latest_revision(channel_map, base, CHANNEL)
+        if rev_baseline is None:
             continue
 
-        entry = REVISION_WORKLOAD_MAP.get(rev_to)
+        entry = REVISION_WORKLOAD_MAP.get(rev_baseline)
         if entry is None:
             # The curated map doesn't know this revision yet.
             continue
-        version_to, base_to = entry
-        if base_to != base:
+        version_baseline, base_baseline = entry
+        if base_baseline != base:
             continue
 
+        # Upgrade target: latest revision on the target channel, same base.
+        rev_to = fetch_latest_revision(channel_map, base, TARGET_CHANNEL)
+        if rev_to is None or rev_to == rev_baseline:
+            continue
+
+        entry_to = REVISION_WORKLOAD_MAP.get(rev_to)
+        if entry_to is None or entry_to[1] != base:
+            continue
+
+        # Same-workload rollback target: highest revision below the baseline
+        # with the same workload version on this base.
         rev_from_same: int | None = None
         rev_from_diff: int | None = None
         for rev, (version, rev_base) in REVISION_WORKLOAD_MAP.items():
-            if rev >= rev_to or rev_base != base:
+            if rev >= rev_baseline or rev_base != base:
                 continue
-            if version == version_to and (rev_from_same is None or rev > rev_from_same):
+            if version == version_baseline and (rev_from_same is None or rev > rev_from_same):
                 rev_from_same = rev
-            if _version_key(version) < _version_key(version_to) and (
+            if _version_key(version) < _version_key(version_baseline) and (
                 rev_from_diff is None or rev > rev_from_diff
             ):
                 rev_from_diff = rev
@@ -159,6 +176,7 @@ def resolve() -> dict[str, str] | None:
             "REV_TO": str(rev_to),
             "REV_FROM_SAME": str(rev_from_same),
             "REV_FROM_DIFF": str(rev_from_diff),
+            "REV_BASELINE": str(rev_baseline),
             "DEPLOY_BASE": base,
         }
     return None
