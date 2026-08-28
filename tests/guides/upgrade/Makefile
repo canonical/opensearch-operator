@@ -26,7 +26,7 @@ GUIDE    := $(ROOT)/docs/how-to/upgrade.md
 # Spread configuration
 # ---------------------------------------------------------------------------
 SPREAD     ?= spread
-SPREAD_JOB ?= multipass:ubuntu-24.04-64:
+SPREAD_JOB ?= multipass:ubuntu-24.04-64:tasks/
 
 # ---------------------------------------------------------------------------
 # Target: all  (default) — regenerate generated task scripts

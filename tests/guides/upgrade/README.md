@@ -17,8 +17,11 @@ run sequentially in a single VM, covering every logic branch of the guide:
 | `rollback-different-workload` | 600 | Rollback to a different workload version, `force-refresh-start check-compatibility=false` |
 | `recover-from-rollback` | 500 | Orphaned index deletion, allocation settings, unit replacement, node-lock removal |
 
-Teardown is implicit: Spread's `discard` phase purges the whole Multipass VM
-(`opensearch-upgrade-vm`), so no explicit cleanup task is needed.
+All tasks live in the single `tasks/` suite (mirroring the tutorial layout):
+`bootstrap.sh` + `bootstrap/task.yaml` are tracked in git; the four guide
+tasks are generated into `tasks/` by `extract_guide_tasks.py` and gitignored.
+Spread orders them by priority. Teardown is implicit: Spread's `discard`
+phase purges the whole Multipass VM (`opensearch-upgrade-vm`).
 
 ## Running
 

@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-. "${SPREAD_PATH:-$(cd "$(dirname "$0")/.." && pwd)}/helpers.sh"
+. "${SPREAD_PATH:-$(cd "$(dirname "$0")/../.." && pwd)}/helpers.sh"
 
 # ---------------------------------------------------------------------------
 # LXD + Juju

@@ -645,7 +645,7 @@ def build_task_yaml(heading: str, meta: dict[str, str]) -> str:
         f"priority: {priority}\n"
         f"kill-timeout: {kill_timeout}\n"
         f"execute: |\n"
-        f'  bash "$SPREAD_PATH/$SPREAD_TASK.sh"\n'
+        f'  bash "$SPREAD_PATH/tasks/{meta.get("name", "task")}.sh"\n'
     )
 
 
@@ -703,6 +703,8 @@ def _write_task(
     task_dir = output_path.with_suffix("")  # foo.sh → foo/
     task_yaml = task_dir / "task.yaml"
     task_yaml.parent.mkdir(parents=True, exist_ok=True)
+    meta = dict(meta)
+    meta.setdefault("name", output_path.stem)
     task_content = build_task_yaml(heading, meta)
     task_yaml.write_text(task_content, encoding="utf-8")
     print(f"Written task.yaml → {task_yaml}")
