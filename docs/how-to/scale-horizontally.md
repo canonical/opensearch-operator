@@ -40,12 +40,13 @@ Before removing a node, verify the cluster is healthy.
 
 ### Via Juju
 
-The charm reflects cluster health in the application status:
+The charm reflects cluster health in the application status on a best-effort basis:
 
 * `active` — cluster is healthy
 * `blocked` — cluster has issues (the message describes the problem)
 
-Run `juju status` and confirm the application is `active` before proceeding.
+Run `juju status` and make sure the application is `active` before proceeding.
+The OpenSearch health API is the source of truth, so use the check below to confirm.
 
 ### Via the OpenSearch health API
 
