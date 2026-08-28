@@ -8,7 +8,10 @@ myst:
 # How to enable JWT authentication
 
 This guide shows how to enable JSON Web Token (JWT) authentication for Charmed OpenSearch
-using the JWT integrator charm.
+using the JWT integrator charm. To enable JWT authentication, you need to:
+
+1. [Deploy and configure the JWT integrator](#deploy-and-configure-the-jwt-integrator).
+2. [Integrate it with OpenSearch](#integrate-with-opensearch-to-enable-jwt-authentication).
 
 ## Prerequisites
 
@@ -48,7 +51,7 @@ Set it together with any additional options for your JWT provider
 juju config jwt-integrator roles-key=<roles-key> subject-key=<subject-key> jwt-url-parameter=<parameter>
 ```
 
-## Integrate with OpenSearch
+## Integrate with OpenSearch to enable JWT authentication
 
 Connect the JWT integrator to OpenSearch:
 
