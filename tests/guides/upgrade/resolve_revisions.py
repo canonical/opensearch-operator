@@ -58,21 +58,25 @@ API_URL = (
 # baseline and one with an older workload version — both on the same base.
 REVISION_WORKLOAD_MAP: dict[int, tuple[str, str]] = {
     168: ("2.17.0", "ubuntu@22.04"),  # Sept 2024
+    295: ("2.19.2", "ubuntu@24.04"),
+    297: ("2.19.2", "ubuntu@24.04"),
     299: ("2.19.2", "ubuntu@24.04"),  # highest 24.04 rev with older workload
     315: ("2.19.4", "ubuntu@22.04"),
-    342: ("2.19.4", "ubuntu@24.04"),  # same-workload rollback target
-    344: ("2.19.4", "ubuntu@24.04"),  # Apr 2026, 2/stable baseline
+    342: ("2.19.4", "ubuntu@24.04"),
+    344: ("2.19.4", "ubuntu@24.04"),  # Apr 2026, 2/stable
     345: ("2.19.4", "ubuntu@22.04"),  # Apr 2026, 2/stable
-    360: ("2.19.4", "ubuntu@24.04"),  # Aug 2026, 2/edge upgrade target
+    360: ("2.19.4", "ubuntu@24.04"),  # Aug 2026, 2/edge
 }
 
 # Fallback ONLY — used when neither the API nor the curated map can produce
-# a full set. All revisions must share the same base.
+# a full set. All revisions must share the same base, and the baseline's
+# workload version must differ from the target's (otherwise the upgrade
+# state machine never triggers).
 PINNED_FALLBACK = {
-    "REV_TO": "360",
-    "REV_FROM_SAME": "342",
-    "REV_FROM_DIFF": "299",
-    "REV_BASELINE": "344",
+    "REV_TO": "344",
+    "REV_FROM_SAME": "297",
+    "REV_FROM_DIFF": "295",
+    "REV_BASELINE": "299",
     "DEPLOY_BASE": "ubuntu@24.04",
 }
 
@@ -128,32 +132,41 @@ def resolve() -> dict[str, str] | None:
     channel_map = fetch_channel_map()
 
     for base in (PREFERRED_BASE, FALLBACK_BASE):
-        # Baseline: latest stable revision on this base.
-        rev_baseline = fetch_latest_revision(channel_map, base, CHANNEL)
-        if rev_baseline is None:
-            continue
-
-        entry = REVISION_WORKLOAD_MAP.get(rev_baseline)
-        if entry is None:
-            # The curated map doesn't know this revision yet.
-            continue
-        version_baseline, base_baseline = entry
-        if base_baseline != base:
-            continue
-
-        # Upgrade target: latest revision on the target channel, same base.
-        rev_to = fetch_latest_revision(channel_map, base, TARGET_CHANNEL)
-        if rev_to is None or rev_to == rev_baseline:
+        # Upgrade target: latest stable revision on this base.
+        rev_to = fetch_latest_revision(channel_map, base, CHANNEL)
+        if rev_to is None:
             continue
 
         entry_to = REVISION_WORKLOAD_MAP.get(rev_to)
         if entry_to is None or entry_to[1] != base:
+            # The curated map doesn't know this revision yet.
+            continue
+        version_to = entry_to[0]
+
+        # Baseline: highest revision below the target with a DIFFERENT
+        # workload version on this base. The charm's upgrade state machine
+        # (blocked -> resume-upgrade) only triggers on a workload version
+        # change; a charm-only refresh completes without it.
+        rev_baseline: int | None = None
+        # Same-workload rollback target: highest revision below the baseline
+        # with the same workload version as the BASELINE on this base.
+        rev_from_same: int | None = None
+        # Different-workload rollback target: highest revision below the
+        # baseline with an older workload version than the BASELINE.
+        rev_from_diff: int | None = None
+
+        for rev, (version, rev_base) in sorted(
+            REVISION_WORKLOAD_MAP.items(), reverse=True
+        ):
+            if rev >= rev_to or rev_base != base:
+                continue
+            if version != version_to and rev_baseline is None:
+                rev_baseline = rev
+
+        if rev_baseline is None:
             continue
 
-        # Same-workload rollback target: highest revision below the baseline
-        # with the same workload version on this base.
-        rev_from_same: int | None = None
-        rev_from_diff: int | None = None
+        version_baseline = REVISION_WORKLOAD_MAP[rev_baseline][0]
         for rev, (version, rev_base) in REVISION_WORKLOAD_MAP.items():
             if rev >= rev_baseline or rev_base != base:
                 continue
@@ -166,9 +179,9 @@ def resolve() -> dict[str, str] | None:
 
         if rev_from_same is None:
             continue
-        # When no older-workload revision exists on this base, reuse the
-        # same-workload revision: the different-workload scenario then
-        # degrades gracefully (documented in README).
+        # When no older-workload revision exists below the baseline on this
+        # base, reuse the same-workload revision: the different-workload
+        # scenario then degrades gracefully (documented in README).
         if rev_from_diff is None:
             rev_from_diff = rev_from_same
 
