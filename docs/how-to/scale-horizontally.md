@@ -99,7 +99,8 @@ If it does, [re-route](https://opensearch.org/docs/latest/api-reference/cluster-
 
 **`yellow`** — Scaling down **may not be safe**. Some replica shards are unassigned.
 
-Investigate with:
+Investigate with the
+[cluster allocation explain API](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-allocation/):
 
 ```shell
 curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/allocation/explain" -u admin:<password>
@@ -114,9 +115,24 @@ before scaling down:
 juju add-unit opensearch -n 1
 ```
 
-**`red`** — Scaling down **is not safe**. Primary shards are unassigned.
+**`red`** — Scaling down **is not safe**. At least one primary shard is unassigned.
 
-Add units to restore cluster health:
+Do not add units before you know why. Adding capacity only helps for some causes, and an
+empty node cannot recreate data that no longer exists. Diagnose the cause first:
+
+```shell
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/allocation/explain" -u admin:<password>
+```
+
+Then act on what the output reports:
+
+| Cause | Resolution |
+| :--- | :--- |
+| Too little disk space, or too few suitable nodes | Scale up, or add storage to existing nodes. |
+| Allocation rules prevent the shard from being placed | Correct the allocation rules. |
+| `no_valid_shard_copy` — no valid copy of the primary shard exists on any available node | Recover the failed node, or [restore a snapshot](how-to-restore-a-local-backup). Adding units will not help. |
+
+Where the cause is capacity or topology, scale up:
 
 ```shell
 juju add-unit opensearch -n 1
