@@ -74,9 +74,9 @@ juju run opensearch/leader list-backups
 ```text
 backup-id            | backup-status
 -------------------------------------
-2026-01-01T10:30:00Z | in_progress
-2026-01-01T10:00:00Z | success
-2026-01-01T09:00:00Z | failed
+2026-01-01t10:30:00z | in_progress
+2026-01-01t10:00:00z | success
+2026-01-01t09:00:00z | failed
 ```
 
 </details>
