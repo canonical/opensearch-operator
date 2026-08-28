@@ -82,7 +82,7 @@ Two subcommands are relevant:
   nodes survived, choose the one with the highest cluster-state (term, version) pair.
 
 - **`detach-cluster`** — use to detach a node from its old cluster
-  (by reseting cluster UUID), so it can join a replacement
+  (by resetting cluster UUID), so it can join a replacement
   cluster. Do this only when snapshot recovery is impossible and either all
   `cluster_manager`-eligible nodes have been permanently lost or a replacement cluster
   has already been created with `unsafe-bootstrap` from an eligible node in the same
