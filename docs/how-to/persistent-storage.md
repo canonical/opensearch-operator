@@ -115,7 +115,16 @@ Attach the used disk to a new unit:
 juju add-unit opensearch --attach-storage opensearch-data/<id>
 ```
 
-The unit will fail to join. Confirm this is the expected UUID-mismatch error by inspecting the logs:
+The unit will fail to join. Connect to it to confirm this is the expected UUID-mismatch
+error and to run the remaining commands:
+
+```shell
+juju ssh opensearch/<unit-id>
+```
+
+All remaining commands in this section run **on the unit**, inside this session.
+
+Inspect the logs:
 
 ```shell
 sudo journalctl -u snap.opensearch.daemon -f
@@ -128,10 +137,9 @@ CoordinationStateRejectedException: join validation on cluster state with a diff
 ... rejecting
 ```
 
-SSH into the unit and fix it:
+Press `Ctrl+C` to stop following the log, then stop the service:
 
 ```shell
-juju ssh opensearch/<unit-id>
 sudo systemctl stop snap.opensearch.daemon
 ```
 
@@ -163,7 +171,16 @@ Deploy a new single-node cluster with the used disk:
 juju deploy opensearch -n1 --attach-storage opensearch-data/<id>
 ```
 
-The unit will fail to start. Confirm this is the expected error by inspecting the logs:
+The unit will fail to start. Connect to it to confirm this is the expected error and to run
+the remaining commands:
+
+```shell
+juju ssh opensearch/<unit-id>
+```
+
+All remaining commands in this section run **on the unit**, inside this session.
+
+Inspect the logs:
 
 ```shell
 sudo journalctl -u snap.opensearch.daemon -f
@@ -175,10 +192,9 @@ The unit repeatedly reports that it is waiting for a cluster it cannot reach, si
 ConfigurationRepository: Wait for cluster to be available
 ```
 
-SSH into the unit and stop the service:
+Press `Ctrl+C` to stop following the log, then stop the service:
 
 ```shell
-juju ssh opensearch/<unit-id>
 sudo systemctl stop snap.opensearch.daemon
 ```
 
