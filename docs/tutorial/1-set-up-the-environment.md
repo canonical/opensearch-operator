@@ -180,13 +180,20 @@ To do so, run the following commands:
 cat <<EOF > cloudinit-userdata.yaml
 cloudinit-userdata: |
   postruncmd:
-    - [ 'echo', 'vm.max_map_count=262144', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'vm.swappiness=0', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'fs.file-max=1048576', '>>', '/etc/sysctl.conf' ]
-    - [ 'sysctl', '-p' ]
+    - echo 'vm.max_map_count=262144' >> /etc/sysctl.conf
+    - echo 'vm.swappiness=0' >> /etc/sysctl.conf
+    - echo 'fs.file-max=1048576' >> /etc/sysctl.conf
+    - sysctl -p
 EOF
 
 juju model-config --file=./cloudinit-userdata.yaml
+```
+
+```{note}
+Keep each `postruncmd` entry as a **string**. Cloud-init runs string entries through a
+shell, so the `>>` redirection works. Entries written as a YAML list are passed straight to
+`execve(3)` with no shell, so `>>` would become a literal argument to `echo` instead of
+appending to the file.
 ```
 
 <!-- test:assert
