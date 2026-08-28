@@ -21,7 +21,7 @@ returns one of three states:
 | :--- | :--- | :--- |
 | **`green`** | All primary and replica shards are allocated. The cluster is fully healthy. | Likely safe — but verify the target node does not hold a primary shard of an unreplicated index. |
 | **`yellow`** | All primary shards are allocated, but some replica shards are not. The cluster is functional but lacks full redundancy. This is either **temporary** (replicas are still initializing or relocating) or **permanent** (replicas cannot be assigned at all). | **May not be safe** — removing a node could lose the only copy of a primary shard if replicas are unavailable. |
-| **`red`** | Some primary shards are **unassigned**. Data is missing. | **Not safe** — do not remove nodes. Add units to restore health first. |
+| **`red`** | At least one primary shard is **unassigned**. Some data is currently unavailable. | **Not safe** — do not remove nodes. [Diagnose the cause](#cluster-health-red-causes) and restore health first. |
 
 ### Temporary and permanent `yellow`
 
@@ -38,6 +38,27 @@ response to tell them apart, and see the matching
 [alert rule](ref-alert-rules) for each: a non-zero `initializing_shards` or
 `relocating_shards` (`OpenSearchClusterYellowTemp`) is temporary, while a non-decreasing
 `unassigned_shards` (`OpenSearchClusterYellow`) is permanent.
+
+(cluster-health-red-causes)=
+### Why a cluster turns `red`
+
+A `red` status means at least one primary shard is unassigned, so the data in that shard
+cannot be read or written. It does **not**, by itself, mean the data is permanently lost.
+There are three broad causes, and they call for different responses:
+
+- **Insufficient capacity** — there is too little disk space, or too few nodes suitable to
+  hold the shard. Adding capacity resolves it.
+- **Allocation rules** — awareness attributes, filters, or other allocation settings prevent
+  the shard from being placed on any node. The rules themselves must be corrected.
+- **No valid shard copy** — no available node holds a usable copy of the primary shard.
+  Adding an empty node cannot recreate that data; recovery requires bringing the failed node
+  back, or restoring from a snapshot.
+
+This is why scaling up is not a universal remedy for a `red` cluster. Use the
+[cluster allocation explain API](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-allocation/)
+to establish which cause applies before acting — a `no_valid_shard_copy` decision points to
+the third case. For the procedure, see
+[how to scale down safely](how-to-scale-horizontally).
 
 ### How health maps to Juju status
 
@@ -76,7 +97,8 @@ You can inspect shard allocation with:
 curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cat/shards" -u admin:<password>
 ```
 
-And explain why a shard is unassigned with:
+And explain why a shard is unassigned with the
+[cluster allocation explain API](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-allocation/):
 
 ```shell
 curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/allocation/explain" -u admin:<password>
@@ -107,7 +129,8 @@ In highly available deployments, **do not scale below 3 nodes**.
 The charm **reactively** (not proactively) blocks unsafe removals. This means it does not
 know in advance whether removing a specific unit will put the cluster in a `red` state.
 If health degrades to `red` after a removal, the charm will block further removals to give
-you the opportunity to scale back up.
+you the opportunity to recover — usually by scaling back up, though the appropriate action
+depends on [why the cluster turned `red`](#cluster-health-red-causes).
 
 ## See also
 
