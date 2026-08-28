@@ -58,7 +58,7 @@ This is why scaling up is not a universal remedy for a `red` cluster. Use the
 [cluster allocation explain API](https://opensearch.org/docs/2.19/api-reference/cluster-api/cluster-allocation/)
 to establish which cause applies before acting — a `no_valid_shard_copy` decision points to
 the third case. For the procedure, see
-[how to scale down safely](how-to-scale-horizontally).
+[how to scale a cluster horizontally](how-to-scale-horizontally).
 
 ### How health maps to Juju status
 
@@ -156,6 +156,6 @@ depends on [why the cluster turned `red`](#cluster-health-red-causes).
 
 ## See also
 
-* [How to scale down safely](how-to-scale-horizontally) — step-by-step scaling guide.
+* [How to scale a cluster horizontally](how-to-scale-horizontally) — step-by-step scaling guide.
 * [Node roles and cluster topology](explanation-node-roles) — how node roles affect scaling.
 * [Performance profiles](explanation-performance-profiles) — resource requirements for different deployment sizes.

@@ -157,4 +157,4 @@ Ensure `data` nodes are deployed and ready before forming the cluster.
 
 * [Manage TLS encryption](how-to-enable-tls-encryption) — configure and rotate TLS certificates.
 * [Enable monitoring (COS)](how-to-monitoring) — observe the cluster.
-* [Scale down safely](how-to-scale-horizontally) — adjust cluster size.
+* [Scale a cluster horizontally](how-to-scale-horizontally) — adjust cluster size.

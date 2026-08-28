@@ -648,4 +648,4 @@ curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/health?pretty" -u 
 ## Next steps
 
 * [Back up and restore](how-to-guides-back-up-and-restore-index) — create a backup after upgrading.
-* [Scale down safely](how-to-scale-horizontally) — adjust cluster size if needed.
+* [Scale a cluster horizontally](how-to-scale-horizontally) — adjust cluster size if needed.

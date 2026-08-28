@@ -275,4 +275,4 @@ check for dangling indices, before treating the recovery as complete.
 ## Next steps
 
 * [Back up and restore](how-to-guides-back-up-and-restore-index) — the preferred, data-safe way to move data between clusters; create backups before reusing disks.
-* [Scale down safely](how-to-scale-horizontally) — safely remove units when reorganising storage.
+* [Scale a cluster horizontally](how-to-scale-horizontally) — safely remove units when reorganising storage.

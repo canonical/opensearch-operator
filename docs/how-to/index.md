@@ -23,7 +23,7 @@ These guides help you accomplish specific tasks with Charmed OpenSearch on machi
 
 ## Operations
 
-* [Scale down safely](how-to-scale-horizontally)
+* [Scale a cluster horizontally](how-to-scale-horizontally)
 * [Integrate with an application](how-to-integrate-with-an-application)
 * [Manage persistent storage](how-to-persistent-storage)
 * [Optimize cluster performance](how-to-optimize-cluster-performance)
@@ -53,7 +53,7 @@ Manage TLS encryption <tls-encryption>
 Manage passwords <manage-passwords>
 Access using OAuth <access-using-oauth>
 Enable JWT authentication <enable-jwt-authentication>
-Scale down safely <scale-horizontally>
+Scale a cluster <scale-horizontally>
 Integrate with an application <integrate-with-an-application>
 Manage persistent storage <persistent-storage>
 Optimize cluster performance <optimize-cluster-performance>
