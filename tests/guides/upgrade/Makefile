@@ -17,8 +17,7 @@ PYTHON   ?= python3
 THIS_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 # Three levels up from tests/guides/upgrade/ reaches the project root.
-ROOT     := $(abspath $(THIS_DIR)/../../..)
-
+ROOT     := $(abspath $(THIS_DIR)../../..)
 EXTRACT  := $(THIS_DIR)extract_guide_tasks.py
 GUIDE    := $(ROOT)/docs/how-to/upgrade.md
 
