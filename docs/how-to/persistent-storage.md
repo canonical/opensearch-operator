@@ -75,6 +75,18 @@ When the new unit shows `active/idle` in `juju status`, the node has rejoined th
 with the existing data. Re-running `juju storage` shows the reused volume as `attached`
 to the new unit.
 
+To confirm from OpenSearch's side, retrieve the admin password and CA certificate chain with
+`juju run opensearch/leader get-password`, saving the chain to a file (e.g. `cert.pem`), and
+list the cluster nodes:
+
+```shell
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cat/nodes" -u admin:<password>
+```
+
+The new unit should appear in the output alongside the existing nodes. See
+[mapping Juju units to OpenSearch nodes](cluster-health-mapping-nodes) for how to read this
+output.
+
 ## Recover a disk from a different cluster (last resort)
 
 When attaching a disk from a different cluster, the node holds stale metadata
@@ -172,7 +184,9 @@ saving the chain to a file (e.g. `cert.pem`), and list the cluster nodes from th
 curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cat/nodes" -u admin:<password>
 ```
 
-The recovered node should appear in the output alongside the existing nodes.
+The recovered node should appear in the output alongside the existing nodes. See
+[mapping Juju units to OpenSearch nodes](cluster-health-mapping-nodes) for how to read this
+output.
 
 ### Bootstrap a new cluster from a used disk
 
@@ -238,8 +252,9 @@ saving the chain to a file (e.g. `cert.pem`), and list the cluster nodes from th
 curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cat/nodes" -u admin:<password>
 ```
 
-The single bootstrapped node should be listed as the elected cluster manager (marked `*`).
-You can then add more units (fresh or detached from another cluster).
+The single bootstrapped node should be listed as the elected cluster manager (marked `*`). See
+[mapping Juju units to OpenSearch nodes](cluster-health-mapping-nodes) for how to read this
+output. You can then add more units (fresh or detached from another cluster).
 
 ## Recover dangling indices
 

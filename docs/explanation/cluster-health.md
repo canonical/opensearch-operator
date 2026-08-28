@@ -79,6 +79,28 @@ OpenSearch API directly. The charm derives these statuses on a best-effort basis
 the OpenSearch health API as the source of truth when it matters — for example, before
 [scaling down](how-to-scale-horizontally).
 
+(cluster-health-mapping-nodes)=
+### Mapping Juju units to OpenSearch nodes
+
+Each Juju unit runs one OpenSearch node. To confirm a node's identity from OpenSearch's side —
+for example, after adding, removing, or recovering a node — query the
+[CAT nodes API](https://opensearch.org/docs/2.19/api-reference/cat/cat-nodes/):
+
+```shell
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cat/nodes?v" -u admin:<password>
+```
+
+```text
+ip            ... node.roles                     cluster_manager name
+10.81.173.167 ... cluster_manager,data,ingest,ml *               opensearch-1.f1a
+10.81.173.48  ... cluster_manager,data,ingest,ml -               opensearch-2.f1a
+```
+
+`name` and `ip` identify the Juju unit (`opensearch-1.f1a` is `opensearch/1`) and its
+`Public address`. `node.roles` lists the
+[assigned roles](explanation-node-roles), and `cluster_manager` marked `*` identifies the
+currently elected cluster manager.
+
 ## Shard allocation
 
 To understand why health states matter for scaling, it helps to understand shard allocation:

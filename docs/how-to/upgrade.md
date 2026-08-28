@@ -636,6 +636,9 @@ Confirm that the new node is present in the output, which will look similar to t
 10.45.114.208 45 86 11 0.43 0.69 0.95 dim cluster_manager,data,ingest,ml - opensearch-1.4c1
 ```
 
+See [mapping Juju units to OpenSearch nodes](cluster-health-mapping-nodes) for how to read this
+output.
+
 Finally, confirm the cluster is healthy again — the cluster health API should return `green`:
 
 ```shell
