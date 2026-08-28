@@ -168,7 +168,7 @@ The node will join the cluster.
 Deploy a new single-node cluster with the used disk:
 
 ```shell
-juju deploy opensearch -n1 --attach-storage opensearch-data/<id>
+juju deploy opensearch --attach-storage opensearch-data/<id>
 ```
 
 The unit will fail to start. Connect to it to confirm this is the expected error and to run
