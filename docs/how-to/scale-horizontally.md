@@ -148,8 +148,10 @@ Always verify health after each removal before proceeding.
 
 ### Verify and repeat
 
-After removal, the charm may reconfigure and restart another unit to rebalance
-[node roles](explanation-node-roles).
+After removal, OpenSearch reallocates the departed node's shards across the remaining nodes.
+If the removed node was `cluster_manager`-eligible, the charm also updates the cluster's voting
+configuration and a new cluster manager is elected.
+
 Wait for the application to fully stabilise (`active/idle`), then
 [check cluster health](#scale-cluster-health-status) again.
 
