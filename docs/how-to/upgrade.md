@@ -301,15 +301,14 @@ To execute a rollback we take the same procedure as the upgrade, the difference 
 the charm revision to upgrade to. As an example follow up
 [the minor upgrades guide](how-to-minor-upgrade).
 
-It is important to run the `pre-upgrade-check` action to ensure the cluster is in a healthy state
-before the rollback. This action will check the cluster health and the status of the upgrade.
+```{note}
+Do **not** run `pre-upgrade-check` before a rollback. The action refuses to run while an
+upgrade is in progress and fails with `Upgrade already in progress`. Because a rollback only
+happens mid-upgrade, the action can never succeed at this point.
 
-```shell
-juju run opensearch/leader pre-upgrade-check
+The charm runs the equivalent checks itself: after `juju refresh`, it detects the rollback
+and re-enables shard allocation without requiring the action.
 ```
-
-Once the pre-upgrade checks are complete, and you get the `Charm is ready for upgrade` message,
-you can proceed with the rollback.
 
 Before rolling back, check `juju status`. The application will show `blocked` with a message like
 `Upgrading. Verify highest unit is healthy & run \`resume-upgrade\` action. To rollback, \`juju refresh\` to last revision`.
