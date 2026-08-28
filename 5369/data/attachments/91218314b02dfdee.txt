@@ -1,0 +1,95 @@
+[32mINFO    [0m tests.integration.helpers:helpers.py:394 Calling through client-charm for opensearch-0.56e: PUT - opensearch-0.opensearch-endpoints.testing.svc.cluster.local route: /_plugins/_security/api/internalusers/my_user
+[32mINFO    [0m tests.integration.helpers:helpers.py:394 Calling through client-charm for opensearch-0.56e: GET - opensearch-0.opensearch-endpoints.testing.svc.cluster.local route: /_plugins/_security/api/internalusers/my_user
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.27   unsupported  04:40:10Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Address         Exposed  Message
+client-charm                       active      1  dummy-client-charm                    0  10.152.183.143  no       
+opensearch                         active      2  opensearch-k8s                        1  10.152.183.174  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  10.152.183.114  no       
+
+Unit                         Workload  Agent  Address     Ports  Message
+client-charm/0*              active    idle   10.1.0.254         
+opensearch/0*                active    idle   10.1.0.23          
+opensearch/1                 active    idle   10.1.0.97          
+self-signed-certificates/0*  active    idle   10.1.0.156         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-opensearch-0: 04:22:14 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-opensearch-0: 04:22:42 ERROR unit.opensearch/0.juju-log An error occurred while checking profile requirements: Command failed: sysctl
+stdout=
+stderr=Container not connected
+unit-opensearch-0: 04:22:44 ERROR unit.opensearch/0.juju-log An error occurred while purging initial default users: Could not connect to Pebble: socket not found at '/charm/containers/opensearch/pebble.socket' (container restarted?)
+unit-opensearch-0: 04:22:44 ERROR unit.opensearch/0.juju-log An error occurred while checking profile requirements: Command failed: sysctl
+stdout=
+stderr=Container not connected
+unit-opensearch-0: 04:22:46 ERROR unit.opensearch/0.juju-log certificates:4: An error occurred while purging initial default users: Could not connect to Pebble: socket not found at '/charm/containers/opensearch/pebble.socket' (container restarted?)
+unit-opensearch-0: 04:22:46 ERROR unit.opensearch/0.juju-log certificates:4: An error occurred while checking profile requirements: Command failed: sysctl
+stdout=
+stderr=Container not connected
+unit-opensearch-0: 04:22:48 ERROR unit.opensearch/0.juju-log certificates:4: An error occurred while purging initial default users: Could not connect to Pebble: socket not found at '/charm/containers/opensearch/pebble.socket' (container restarted?)
+unit-opensearch-0: 04:22:48 ERROR unit.opensearch/0.juju-log certificates:4: An error occurred while checking profile requirements: Command failed: sysctl
+stdout=
+stderr=Container not connected
+unit-opensearch-0: 04:22:50 ERROR unit.opensearch/0.juju-log opensearch-peers:1: An error occurred while purging initial default users: Could not connect to Pebble: socket not found at '/charm/containers/opensearch/pebble.socket' (container restarted?)
+unit-opensearch-0: 04:22:50 ERROR unit.opensearch/0.juju-log opensearch-peers:1: An error occurred while checking profile requirements: Command failed: sysctl
+stdout=
+stderr=Container not connected
+unit-opensearch-0: 04:22:50 ERROR unit.opensearch/0.juju-log opensearch-peers:1: An error occurred while checking profile requirements: Command failed: sysctl
+stdout=
+stderr=Container not connected
+unit-opensearch-0: 04:22:52 ERROR unit.opensearch/0.juju-log upgrade-version-a:3: An error occurred while purging initial default users: Could not connect to Pebble: socket not found at '/charm/containers/opensearch/pebble.socket' (container restarted?)
+unit-opensearch-0: 04:22:52 ERROR unit.opensearch/0.juju-log upgrade-version-a:3: An error occurred while checking profile requirements: Command failed: sysctl
+stdout=
+stderr=Container not connected
+unit-opensearch-0: 04:22:52 ERROR unit.opensearch/0.juju-log upgrade-version-a:3: An error occurred while checking profile requirements: Command failed: sysctl
+stdout=
+stderr=Container not connected
+unit-opensearch-0: 04:26:14 ERROR unit.opensearch/0.juju-log certificates:4: Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 04:26:16 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 04:26:18 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 04:26:24 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host opensearch-0.opensearch-endpoints.testing.svc.cluster.local:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 04:26:25 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 04:26:25 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host opensearch-0.opensearch-endpoints.testing.svc.cluster.local:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 04:26:26 ERROR unit.opensearch/0.juju-log certificates:4: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host opensearch-0.opensearch-endpoints.testing.svc.cluster.local:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 04:26:27 ERROR unit.opensearch/0.juju-log certificates:4: Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 04:26:27 ERROR unit.opensearch/0.juju-log certificates:4: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host opensearch-0.opensearch-endpoints.testing.svc.cluster.local:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 04:26:29 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host opensearch-0.opensearch-endpoints.testing.svc.cluster.local:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 04:26:29 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 04:26:29 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host opensearch-0.opensearch-endpoints.testing.svc.cluster.local:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 04:26:31 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host opensearch-0.opensearch-endpoints.testing.svc.cluster.local:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 04:26:31 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 04:26:31 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host opensearch-0.opensearch-endpoints.testing.svc.cluster.local:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 04:27:14 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-opensearch-1: 04:27:15 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-opensearch-1: 04:27:42 ERROR unit.opensearch/1.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-1: 04:27:44 ERROR unit.opensearch/1.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-1: 04:27:59 ERROR unit.opensearch/1.juju-log opensearch-peers:6: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host opensearch-1.opensearch-endpoints.testing.svc.cluster.local:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 04:28:03 ERROR unit.opensearch/0.juju-log opensearch-peers:6: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host opensearch-0.opensearch-endpoints.testing.svc.cluster.local:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 04:29:27 ERROR unit.opensearch/1.juju-log opensearch-peers:6: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host opensearch-1.opensearch-endpoints.testing.svc.cluster.local:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 04:29:27 ERROR unit.opensearch/0.juju-log opensearch-peers:6: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host opensearch-0.opensearch-endpoints.testing.svc.cluster.local:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 04:29:58 ERROR unit.opensearch/1.juju-log opensearch-peers:6: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host opensearch-1.opensearch-endpoints.testing.svc.cluster.local:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 04:32:36 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host opensearch-0.opensearch-endpoints.testing.svc.cluster.local:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 04:32:36 ERROR unit.opensearch/1.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host opensearch-1.opensearch-endpoints.testing.svc.cluster.local:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 04:32:37 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host opensearch-0.opensearch-endpoints.testing.svc.cluster.local:9200 and alternative_hosts: [] not reachable.'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
