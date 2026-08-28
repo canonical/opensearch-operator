@@ -163,6 +163,17 @@ sudo systemctl start snap.opensearch.daemon
 
 The node will join the cluster.
 
+To confirm, exit the unit session, retrieve the
+admin password and CA certificate chain with `juju run opensearch/leader get-password`,
+saving the chain to a file (e.g. `cert.pem`), and list the cluster nodes from the host with the
+[CAT nodes API](https://opensearch.org/docs/2.19/api-reference/cat/cat-nodes/):
+
+```shell
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cat/nodes" -u admin:<password>
+```
+
+The recovered node should appear in the output alongside the existing nodes.
+
 ### Bootstrap a new cluster from a used disk
 
 Deploy a new single-node cluster with the used disk:
@@ -216,7 +227,19 @@ Restart the service:
 sudo systemctl start snap.opensearch.daemon
 ```
 
-The cluster will form with a new UUID. You can then add more units (fresh or detached from another cluster).
+The cluster will form with a new UUID.
+
+To confirm, exit the unit session, retrieve the
+admin password and CA certificate chain with `juju run opensearch/leader get-password`,
+saving the chain to a file (e.g. `cert.pem`), and list the cluster nodes from the host with the
+[CAT nodes API](https://opensearch.org/docs/2.19/api-reference/cat/cat-nodes/):
+
+```shell
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cat/nodes" -u admin:<password>
+```
+
+The single bootstrapped node should be listed as the elected cluster manager (marked `*`).
+You can then add more units (fresh or detached from another cluster).
 
 ## Recover dangling indices
 
