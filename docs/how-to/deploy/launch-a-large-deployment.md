@@ -69,8 +69,7 @@ Deploy the `main` application:
 juju deploy -n 3 \
     opensearch main \
     --config cluster_name="app" \
-    --channel 2/edge \
-    --config profile="testing"
+    --channel 2/stable
 ```
 
 Since no roles are specified, the charm auto-assigns all default roles.
@@ -85,8 +84,7 @@ juju deploy -n 3 \
     --config cluster_name="app" \
     --config init_hold="true" \
     --config roles="cluster_manager" \
-    --channel 2/edge \
-    --config profile="testing"
+    --channel 2/stable
 ```
 
 ### 3. Deploy data nodes
@@ -99,8 +97,7 @@ juju deploy -n 3 \
     --config cluster_name="app" \
     --config roles="data.hot" \
     --config init_hold="true" \
-    --channel 2/edge \
-    --config profile="testing"
+    --channel 2/stable
 ```
 
 ### 4. Deploy TLS certificates

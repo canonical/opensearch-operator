@@ -73,7 +73,7 @@ Model  Controller           Cloud/Region         Version  SLA          Timestamp
 dev    localhost-localhost  localhost/localhost  3.6.25   unsupported  10:16:46+01:00
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch                         active      3  opensearch                2/edge         144  no
+opensearch                         active      3  opensearch                2/stable       144  no
 self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
@@ -153,14 +153,14 @@ Use the `juju refresh` command to trigger the charm upgrade process.
 You have control over what upgrade you want to apply:
 
 - You can upgrade the charm to the latest revision available in the charm store for a specific channel,
-  in this case, the edge channel:
+  in this case, the stable channel:
 
     ```shell
     # If your charm is running a revision prior to 185, then set the profile explicitly:
-    juju refresh opensearch --channel 2/edge --config profile="testing"
+    juju refresh opensearch --channel 2/stable --config profile="testing"
 
     # Otherwise, just refresh
-    juju refresh opensearch --channel 2/edge
+    juju refresh opensearch --channel 2/stable
     ```
 
 - You can also upgrade the charm to a specific revision:
@@ -182,8 +182,8 @@ the `juju status` output will look similar to:
 Model  Controller           Cloud/Region         Version  SLA          Timestamp
 dev    localhost-localhost  localhost/localhost  3.6.25   unsupported  10:29:07+01:00
 
-App                       Version  Status   Scale  Charm        Channel  Rev  Exposed  Message
-opensearch                         blocked      4  opensearch   2/edge   145  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+App                       Version  Status   Scale  Charm        Channel   Rev  Exposed  Message
+opensearch                         blocked      4  opensearch   2/stable  145  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
 self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message

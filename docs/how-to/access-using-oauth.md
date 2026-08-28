@@ -23,7 +23,7 @@ Deploy OpenSearch and the `data-integrator` charm in a new model:
 
 ```shell
 juju add-model opensearch-model localhost/localhost
-juju deploy opensearch -n 3 --channel 2/edge
+juju deploy opensearch -n 3 --channel 2/stable
 juju deploy data-integrator --channel=stable \
   --config index-name=admin-index \
   --config extra-user-roles=admin

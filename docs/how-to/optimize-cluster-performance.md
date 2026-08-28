@@ -17,10 +17,11 @@ Charmed OpenSearch supports two profiles:
 
 ## Deploy with the `testing` profile
 
-Deploy OpenSearch with the testing profile:
+`testing` is the default profile, so it applies when `profile` is not set.
+To set it explicitly:
 
 ```shell
-juju deploy opensearch --channel=2/edge --config profile=testing
+juju deploy opensearch --channel=2/stable --config profile=testing
 ```
 
 The `testing` profile allows a single node and sets JVM heap to 1 GB.
@@ -36,7 +37,7 @@ This profile is not suitable for production.
 Deploy a multi-unit cluster with the production profile:
 
 ```shell
-juju deploy opensearch --channel=2/edge --config profile=production -n 3
+juju deploy opensearch --channel=2/stable --config profile=production -n 3
 ```
 
 The `production` profile enforces:

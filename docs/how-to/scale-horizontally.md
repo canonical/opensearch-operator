@@ -55,8 +55,8 @@ For example, the following output shows an application blocked because replica s
 cannot be assigned:
 
 ```text
-App         Version  Status   Scale  Charm       Channel  Rev  Exposed  Message
-opensearch           blocked      1  opensearch  2/edge   117  no       1 or more 'replica' shards are not assigned, please scale your application up.
+App         Version  Status   Scale  Charm       Channel   Rev  Exposed  Message
+opensearch           blocked      1  opensearch  2/stable  344  no       1 or more 'replica' shards are not assigned, please scale your application up.
 
 Unit           Workload  Agent  Machine  Public address  Ports     Message
 opensearch/0*  active    idle   1        10.95.38.230    9200/tcp

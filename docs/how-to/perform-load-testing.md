@@ -100,7 +100,7 @@ juju deploy self-signed-certificates \
 juju create-storage-pool opensearch ebs volume-type=gp3
 
 juju deploy opensearch \
-    --channel=2/edge -n3 \
+    --channel=2/stable --config profile=production -n3 \
     --constraints="arch=amd64 instance-type=r5.xlarge root-disk=200G spaces=internal-space" \
     --bind "internal-space" \
     --storage opensearch-data=opensearch,512G
