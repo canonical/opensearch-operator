@@ -56,8 +56,8 @@ _SETUP_START = re.compile(r"<!--\s*test:setup\s*$")
 _TEARDOWN_START = re.compile(r"<!--\s*test:teardown\s*$")
 _ASSERT_START = re.compile(r"<!--\s*test:assert\s*$")
 _SPREAD_META_START = re.compile(r"<!--\s*test:spread\s*$")
-_SHELL_OPEN = re.compile(r"^```shell\s*$")
-_FENCE_CLOSE = re.compile(r"^```\s*$")
+_SHELL_OPEN = re.compile(r"^\s*```shell\s*$")
+_FENCE_CLOSE = re.compile(r"^\s*```\s*$")
 _ANCHOR_LINE = re.compile(r"^\(([^)]+)\)=\s*$")
 
 
