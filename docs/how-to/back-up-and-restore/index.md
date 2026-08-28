@@ -17,6 +17,24 @@ restore from a backup, and migrate data to a new cluster.
   or [Configure Azure storage](how-to-back-up-configure-azure-storage))
 * Storage integration already established with OpenSearch
 
+````{note}
+**Google Cloud Storage (GCS) is also supported.** Charmed OpenSearch can back up to and
+restore from GCS through the
+[`gcs-integrator`](https://charmhub.io/gcs-integrator) charm
+([source](https://github.com/canonical/object-storage-integrator/tree/main/gcs)):
+
+```shell
+juju deploy gcs-integrator --channel 1/stable
+juju integrate gcs-integrator opensearch
+```
+
+A dedicated configuration page for GCS is in progress. In the meantime, configure
+`gcs-integrator` as described in its
+[documentation](https://github.com/canonical/object-storage-integrator/blob/main/gcs/README.md);
+once it is integrated with OpenSearch, the backup and restore flow on this page is identical
+to S3 and Azure.
+````
+
 ## Save cluster credentials
 
 Backups exclude the security configuration, so the source cluster's users, passwords, and
