@@ -62,6 +62,16 @@ Confirm the cluster is `active` and `idle` with `juju status`, then run:
 juju run opensearch/leader create-backup
 ```
 
+<details>
+<summary>Output example</summary>
+
+```text
+backup-id: "2026-01-01t10:30:00z"
+status: in_progress
+```
+
+</details>
+
 The action only *initiates* the snapshot; it does not wait for it to finish. To confirm
 completion:
 
