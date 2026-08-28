@@ -141,12 +141,28 @@ export OAUTH_CLIENT_SECRET=<client-secret>
 export HYDRA_URL=<hydra-url>
 ```
 
+### Retrieve the CA certificate
+
+Both Hydra and OpenSearch serve TLS certificates issued by the
+`self-signed-certificates` charm, so the same CA verifies both. Save it to a file:
+
+```shell
+juju run self-signed-certificates/leader get-ca-certificate --format=json \
+  | jq -r '.[].results."ca-certificate"' > cert.pem
+```
+
+```{note}
+Use `--cacert cert.pem` with every `curl` command below so that TLS certificates are
+verified. Do not use `curl -k` (`--insecure`), which disables verification entirely and
+exposes the request, including the client secret and the access token.
+```
+
 ### Fetch an access token
 
 Request an access token from Hydra using the client credentials:
 
 ```shell
-curl -k -u "${OAUTH_CLIENT_ID}:${OAUTH_CLIENT_SECRET}" \
+curl --cacert cert.pem -u "${OAUTH_CLIENT_ID}:${OAUTH_CLIENT_SECRET}" \
   -X POST "${HYDRA_URL}/oauth2/token" \
   -d "scope=openid" \
   -d "grant_type=client_credentials" \
@@ -167,7 +183,7 @@ Switch to the OpenSearch model and query the cluster with the token:
 juju switch opensearch-model
 export OPENSEARCH_ADDRESS="$(juju status | grep opensearch/0 | awk -F' ' '{print $5}')"
 
-curl -k -H "Authorization: Bearer ${OAUTH_ACCESS_TOKEN}" \
+curl --cacert cert.pem -H "Authorization: Bearer ${OAUTH_ACCESS_TOKEN}" \
   "https://${OPENSEARCH_ADDRESS}:9200/_cat/indices"
 ```
 
@@ -210,7 +226,7 @@ juju status --watch 5s
 Re-run the same request — it should now succeed:
 
 ```shell
-curl -k -H "Authorization: Bearer ${OAUTH_ACCESS_TOKEN}" \
+curl --cacert cert.pem -H "Authorization: Bearer ${OAUTH_ACCESS_TOKEN}" \
   "https://${OPENSEARCH_ADDRESS}:9200/_cat/indices"
 ```
 

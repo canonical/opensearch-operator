@@ -126,11 +126,15 @@ juju integrate grafana-agent prometheus-receive-remote-write
 
 ## Run the benchmark
 
-Retrieve the admin password:
+Retrieve the admin password and save the CA certificate chain so that the benchmark client
+can verify the TLS certificates OpenSearch serves:
 
 ```shell
 juju run opensearch/leader get-password
 export OPENSEARCH_PWD=<password>
+
+juju run opensearch/leader get-password --format=json \
+  | jq -r '.[].results."ca-chain"' > cert.pem
 ```
 
 Install opensearch-benchmark:

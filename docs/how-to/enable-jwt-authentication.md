@@ -57,10 +57,25 @@ juju integrate jwt-integrator opensearch
 ```
 
 After integration, both applications show `active` in `juju status`, and OpenSearch updates
-its security plugin. Requests with a valid JWT bearer token now return `200 OK`:
+its security plugin.
+
+To verify, first save the cluster's CA certificate chain to a file so that `curl` can verify
+the TLS certificate OpenSearch serves:
 
 ```shell
-curl -k -H "Authorization: Bearer <jwt>" -XGET "https://<unit-ip>:9200/_cat/nodes"
+juju run opensearch/leader get-password --format=json \
+  | jq -r '.[].results."ca-chain"' > cert.pem
+```
+
+Requests with a valid JWT bearer token now return `200 OK`:
+
+```shell
+curl --cacert cert.pem -H "Authorization: Bearer <jwt>" -XGET "https://<unit-ip>:9200/_cat/nodes"
+```
+
+```{note}
+Do not use `curl -k` (`--insecure`) as a shortcut. It disables certificate verification and
+exposes the bearer token to man-in-the-middle interception.
 ```
 
 ## Large deployments
