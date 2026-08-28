@@ -14,7 +14,7 @@ health states is essential for safe scaling operations — particularly when rem
 
 ## Cluster health states
 
-The OpenSearch [cluster health API](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-health/)
+The OpenSearch [cluster health API](https://opensearch.org/docs/2.19/api-reference/cluster-api/cluster-health/)
 returns one of three states:
 
 | State | Meaning | Scaling down safe? |
@@ -33,7 +33,7 @@ Only one of the two `yellow` cases needs your intervention:
   there are too few nodes. Does not resolve on its own; usually requires scaling up.
 
 Check these counts in the
-[cluster health API](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-health/)
+[cluster health API](https://opensearch.org/docs/2.19/api-reference/cluster-api/cluster-health/)
 response to tell them apart, and see the matching
 [alert rule](ref-alert-rules) for each: a non-zero `initializing_shards` or
 `relocating_shards` (`OpenSearchClusterYellowTemp`) is temporary, while a non-decreasing
@@ -55,7 +55,7 @@ There are three broad causes, and they call for different responses:
   back, or restoring from a snapshot.
 
 This is why scaling up is not a universal remedy for a `red` cluster. Use the
-[cluster allocation explain API](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-allocation/)
+[cluster allocation explain API](https://opensearch.org/docs/2.19/api-reference/cluster-api/cluster-allocation/)
 to establish which cause applies before acting — a `no_valid_shard_copy` decision points to
 the third case. For the procedure, see
 [how to scale down safely](how-to-scale-horizontally).
@@ -98,7 +98,7 @@ curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cat/shards" -u admin:<pass
 ```
 
 And explain why a shard is unassigned with the
-[cluster allocation explain API](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-allocation/):
+[cluster allocation explain API](https://opensearch.org/docs/2.19/api-reference/cluster-api/cluster-allocation/):
 
 ```shell
 curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/allocation/explain" -u admin:<password>

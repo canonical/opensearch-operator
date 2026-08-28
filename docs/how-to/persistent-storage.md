@@ -221,7 +221,7 @@ The cluster will form with a new UUID. You can then add more units (fresh or det
 ## Recover dangling indices
 
 After reattaching a used disk, check for indices that were not part of the current cluster
-using the [dangling indices API](https://opensearch.org/docs/latest/api-reference/index-apis/dangling-index/).
+using the [dangling indices API](https://opensearch.org/docs/2.19/api-reference/index-apis/dangling-index/).
 
 ```{caution}
 The dangling indices API cannot guarantee that imported data represents the latest state

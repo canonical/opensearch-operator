@@ -36,7 +36,7 @@ temperature may be set per application.
 ```
 
 Classifying data nodes into **tiers** supports
-[index lifecycle management](https://opensearch.org/docs/latest/im-plugin/ism/index/)
+[index lifecycle management](https://opensearch.org/docs/2.19/im-plugin/ism/index/)
 policies that move data between tiers as it ages.
 
 ## Auto-generated roles

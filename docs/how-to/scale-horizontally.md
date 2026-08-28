@@ -69,7 +69,7 @@ The OpenSearch health API is the source of truth, so use the check below to conf
 ### Via the OpenSearch health API
 
 For more detail, query the
-[cluster health API](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-health/).
+[cluster health API](https://opensearch.org/docs/2.19/api-reference/cluster-api/cluster-health/).
 
 First, retrieve the admin credentials and the CA certificate:
 
@@ -100,7 +100,7 @@ If it does, [re-route](https://opensearch.org/docs/latest/api-reference/cluster-
 **`yellow`** — Scaling down **may not be safe**. Some replica shards are unassigned.
 
 Investigate with the
-[cluster allocation explain API](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-allocation/):
+[cluster allocation explain API](https://opensearch.org/docs/2.19/api-reference/cluster-api/cluster-allocation/):
 
 ```shell
 curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/allocation/explain" -u admin:<password>

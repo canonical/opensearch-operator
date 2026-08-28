@@ -44,7 +44,7 @@ See also: [How to perform load testing](how-to-perform-load-testing).
 * Internet access is required for downloading artifacts from the snap and charm stores
 * Certain network ports must be open for internal communication:
   See the OpenSearch documentation for
-  [Network requirements](https://opensearch.org/docs/2.6/install-and-configure/install-opensearch/index/#network-requirements).
+  [Network requirements](https://opensearch.org/docs/2.19/install-and-configure/install-opensearch/index/#network-requirements).
 
 ## Kernel parameters
 

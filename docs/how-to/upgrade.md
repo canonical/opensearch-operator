@@ -239,7 +239,7 @@ with the newer revision number in the `Rev` column. All unit messages should be 
 (no version or upgrade messages).
 
 Check the cluster is healthy. OpenSearch's upstream documentation
-[suggests the following check](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/).
+[suggests the following check](https://opensearch.org/docs/2.19/install-and-configure/upgrade-opensearch/rolling-upgrade/).
 
 First, retrieve the admin credentials and the CA certificate chain:
 
@@ -400,7 +400,7 @@ self-signed-certificates/0*  active    idle   0        10.149.40.55
 
 Once the charm is rolled back, it is important to check the cluster's health to ensure it is healthy.
 OpenSearch's upstream documentation
-[suggests the following check](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/):
+[suggests the following check](https://opensearch.org/docs/2.19/install-and-configure/upgrade-opensearch/rolling-upgrade/):
 
 ```shell
 curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>

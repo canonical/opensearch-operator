@@ -31,9 +31,9 @@ The charm enables the Prometheus Exporter plugin for OpenSearch by default:
 
 The meaning of the metrics collected can be found in the upstream documentation:
 
-* [{spellexception}`indices_stats_metrics`](https://opensearch.org/docs/latest/api-reference/index-apis/stats/)
-* [{spellexception}`nodes_stats_metrics`](https://opensearch.org/docs/latest/api-reference/nodes-apis/nodes-stats/)
-* [{spellexception}`cluster_stats_metrics`](https://opensearch.org/docs/latest/api-reference/cluster-api/cluster-stats/)
+* [{spellexception}`indices_stats_metrics`](https://opensearch.org/docs/2.19/api-reference/index-apis/stats/)
+* [{spellexception}`nodes_stats_metrics`](https://opensearch.org/docs/2.19/api-reference/nodes-apis/nodes-stats/)
+* [{spellexception}`cluster_stats_metrics`](https://opensearch.org/docs/2.19/api-reference/cluster-api/cluster-stats/)
 
 ## Alert rules
 

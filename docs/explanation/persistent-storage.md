@@ -47,7 +47,7 @@ OpenSearch provides two mechanisms for interacting with data on an attached disk
 
 When a node starts with a disk that contains index data not known to the current cluster,
 those indices are called **dangling indices**. The
-[dangling indices API](https://opensearch.org/docs/latest/api-reference/index-apis/dangling-index/)
+[dangling indices API](https://opensearch.org/docs/2.19/api-reference/index-apis/dangling-index/)
 allows you to list, import, or delete them.
 
 ```{caution}
