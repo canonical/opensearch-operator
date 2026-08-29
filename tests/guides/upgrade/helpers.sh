@@ -269,20 +269,61 @@ except Exception:
 save_ca_and_password() {
     local output
     output=$(juju run opensearch/leader get-password --format=json)
+    # The JSON shape of "juju run <action> --format=json" differs across juju
+    # versions (results may be a dict or a list, with or without a nested
+    # "result" key), so search for the keys anywhere in the document.
     OS_PASSWORD=$(echo "$output" | python3 -c "
 import json, sys
+
+def find_key(obj, key):
+    if isinstance(obj, dict):
+        if key in obj:
+            return obj[key]
+        for v in obj.values():
+            found = find_key(v, key)
+            if found is not None:
+                return found
+    elif isinstance(obj, list):
+        for item in obj:
+            found = find_key(item, key)
+            if found is not None:
+                return found
+    return None
+
 data = json.load(sys.stdin)
-result = list(data.values())[0]['results'][0]['result']
-print(result['password'])
+password = find_key(data, 'password')
+print(password if password is not None else '')
 ")
     local ca_chain
     ca_chain=$(echo "$output" | python3 -c "
 import json, sys
+
+def find_key(obj, key):
+    if isinstance(obj, dict):
+        if key in obj:
+            return obj[key]
+        for v in obj.values():
+            found = find_key(v, key)
+            if found is not None:
+                return found
+    elif isinstance(obj, list):
+        for item in obj:
+            found = find_key(item, key)
+            if found is not None:
+                return found
+    return None
+
 data = json.load(sys.stdin)
-result = list(data.values())[0]['results'][0]['result']
-chain = result.get('ca-chain', result.get('ca_chain', ''))
-print(chain)
+chain = find_key(data, 'ca-chain')
+if chain is None:
+    chain = find_key(data, 'ca_chain')
+print(chain if chain is not None else '')
 ")
+    if [[ -z "$OS_PASSWORD" || -z "$ca_chain" ]]; then
+        echo "ERROR: could not extract password/CA chain from get-password output:" >&2
+        echo "$output" >&2
+        return 1
+    fi
     printf '%s\n' "$ca_chain" > cert.pem
     OS_UNIT_IP=$(juju status --format=json | python3 -c "
 import json, sys
@@ -296,6 +337,7 @@ for name, unit in units.items():
     export OS_PASSWORD OS_UNIT_IP
     echo "Saved credentials (unit IP: ${OS_UNIT_IP})."
 }
+
 
 # ---------------------------------------------------------------------------
 # reset_baseline – destroy the model and redeploy the baseline cluster.
