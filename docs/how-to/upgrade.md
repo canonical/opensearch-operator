@@ -453,11 +453,9 @@ Rollbacks in Charmed OpenSearch are a best-effort process. It is recommended to 
 #### Rollback a charm revision with the same workload version
 
 <!-- test:setup
-# Reset to the pre-upgrade baseline: refresh back to REV_FROM_SAME and settle.
-. /root/revisions.env
-juju refresh opensearch --revision="$REV_FROM_SAME"
-wait_idle --timeout 3600
-save_ca_and_password
+# Workload downgrades are impossible, so restore the baseline by
+# redeploying a clean cluster (see helpers.sh reset_baseline).
+reset_baseline
 -->
 
 You can initiate the rollback by running the `refresh` command with the revision of
@@ -512,11 +510,11 @@ cluster_health green
 #### Rollback a charm revision with a different workload version
 
 <!-- test:setup
-# Reset to the upgraded baseline before testing the different-workload rollback.
-. /root/revisions.env
+# Start from a clean baseline, then upgrade so we can roll back.
+reset_baseline
+juju run opensearch/leader pre-upgrade-check
 juju refresh opensearch --revision="$REV_TO"
-wait_idle --timeout 3600
-save_ca_and_password
+wait_app_status opensearch blocked --timeout 1800
 -->
 
 If you roll back to a charm revision with a different workload version, the process will roll back the charm code and then make a best-effort attempt to roll back the workload, since OpenSearch does not support downgrades.
@@ -553,8 +551,11 @@ juju refresh opensearch --revision="$REV_FROM_DIFF"
 -->
 
 <!-- test:assert
-# Wait for the blocked unit and capture its id.
-BLOCKED_UNIT=$(juju status --format=json | python3 -c "
+# Poll for the blocked unit and capture its id (the rollback state takes
+# a few minutes to surface after the refresh).
+BLOCKED_UNIT=""
+for i in $(seq 1 60); do
+  BLOCKED_UNIT=$(juju status --format=json | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
 units = data['applications']['opensearch']['units']
@@ -564,12 +565,13 @@ for name, unit in units.items():
         print(name)
         break
 ")
-if [[ -z "$BLOCKED_UNIT" ]]; then
-  echo "ERROR: no blocked unit found after different-workload rollback"
-  juju status
-  exit 1
-fi
-echo "Blocked unit: $BLOCKED_UNIT"
+  if [[ -n "$BLOCKED_UNIT" ]]; then
+    echo "Blocked unit found after $((i * 30))s: $BLOCKED_UNIT"
+    break
+  fi
+  [[ "$i" == 60 ]] && { echo "ERROR: no blocked unit found after 1800s"; juju status; exit 1; }
+  sleep 30
+done
 juju run "$BLOCKED_UNIT" force-refresh-start check-compatibility=false
 -->
 
@@ -657,6 +659,8 @@ juju status
 ```
 
 <!-- test:setup
+# The recovery scenario starts from the broken state left by the
+# different-workload rollback in the previous task. Only refresh credentials.
 . /root/revisions.env
 save_ca_and_password
 -->
