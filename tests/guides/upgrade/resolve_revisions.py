@@ -177,15 +177,17 @@ def resolve() -> dict[str, str] | None:
         if rev_from_same is None:
             continue
         # When no older-workload revision exists below the baseline on this
-        # base, reuse the same-workload revision: the different-workload
-        # scenario then degrades gracefully (documented in README).
+        # base, leave REV_FROM_DIFF empty: the different-workload task then
+        # SKIPS with a clear message instead of silently degrading into a
+        # same-workload rollback (which can never produce the documented
+        # "Rollback incompatible" state and would fail after 30 minutes).
         if rev_from_diff is None:
-            rev_from_diff = rev_from_same
+            rev_from_diff = 0
 
         return {
             "REV_TO": str(rev_to),
             "REV_FROM_SAME": str(rev_from_same),
-            "REV_FROM_DIFF": str(rev_from_diff),
+            "REV_FROM_DIFF": "" if rev_from_diff == 0 else str(rev_from_diff),
             "REV_BASELINE": str(rev_baseline),
             "DEPLOY_BASE": base,
         }
@@ -214,6 +216,15 @@ def main() -> None:
             file=sys.stderr,
         )
         revisions = dict(PINNED_FALLBACK)
+
+    if not revisions.get("REV_FROM_DIFF"):
+        print(
+            "WARNING: no revision with an older workload version exists below "
+            "the baseline on this base — the different-workload rollback "
+            "scenario will be SKIPPED. Add verified revisions to "
+            "REVISION_WORKLOAD_MAP to enable it.",
+            file=sys.stderr,
+        )
 
     lines = [f'export {key}="{value}"' for key, value in sorted(revisions.items())]
     content = "\n".join(lines) + "\n"

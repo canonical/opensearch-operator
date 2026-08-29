@@ -123,9 +123,11 @@ kept in the script:
       `rollback-same-workload`).
    e. `REV_FROM_DIFF` = highest revision below `REV_BASELINE`, same base,
       with an **older** workload version than `REV_BASELINE` (used by
-      `rollback-different-workload`). If none exists, it falls back to
-      `REV_FROM_SAME` and the different-workload scenario degrades to a
-      same-workload rollback (no crash, just less coverage).
+      `rollback-different-workload` and to build the broken state for
+      `recover-from-rollback`). If none exists, `REV_FROM_DIFF` is left
+      **empty** and both tasks **skip with a clear message** instead of
+      silently degrading to a same-workload rollback (which can never
+      produce the documented `Rollback incompatible` state).
 3. If no base yields a complete set, fall back to the hardcoded
    `PINNED_FALLBACK` dict and print a loud warning — this means
    `REVISION_WORKLOAD_MAP` is stale and needs a new entry added.
@@ -141,9 +143,10 @@ As of the last update, this resolves to (no fallback warning):
 REV_BASELINE=299   REV_TO=344   REV_FROM_SAME=297   REV_FROM_DIFF=297   DEPLOY_BASE=ubuntu@24.04
 ```
 
-(`REV_FROM_DIFF` equals `REV_FROM_SAME` here because no older-workload
-revision below 299 on `ubuntu@24.04` is currently in the curated map — the
-degraded case from step 2e above.)
+(`REV_FROM_DIFF` is currently **empty** because no older-workload revision
+below 299 on `ubuntu@24.04` is in the curated map — the skip case from step
+2e above. Add verified revisions to `REVISION_WORKLOAD_MAP` to enable the
+different-workload rollback and recovery scenarios.)
 
 ### Known revisions (`REVISION_WORKLOAD_MAP`)
 
@@ -183,6 +186,10 @@ tests that don't exist in the tutorial harness (`tests/tutorial/helpers.sh`):
 | `current_revision APP` * | Read `charm-rev` for `APP` from `juju status --format=json` |
 | `wait_app_status APP STATUS` * | Poll until the application's workload status equals `STATUS` |
 | `wait_unit_message UNIT REGEX` * | Poll until a unit's workload-status message matches `REGEX` |
+| `juju_refresh APP REV` * | `juju refresh` with retry — tolerates the transient `deploy incomplete, please try refresh again` error |
+| `wait_highest_unit_upgraded [VER]` * | Poll until the highest-ordinal unit has actually finished its workload upgrade (active/idle, message reports a running version, no `(outdated)` marker); with `VER`, require that exact version |
+| `juju_run_action UNIT ACTION` * | Run a Juju action and fail the task when the action itself fails |
+| `clear_node_lock` * | Delete the `.charm_node_lock` document if a departed unit still holds it (tolerates 404) |
 | `save_ca_and_password` * | Run `get-password`, parse the (Juju-version-dependent) JSON shape via a recursive key search, write `cert.pem`, export `OS_PASSWORD`/`OS_UNIT_IP` |
 | `reset_baseline` * | Destroy and recreate the `upgrade` model, redeploy `REV_BASELINE` + TLS, seed a test index — used by both rollback tasks (see [scenario notes](#1-test-scenarios-task-path) above) |
 | `cluster_health [STATUS]` * | Query `_cluster/health`; with `STATUS`, poll until that status is reached |

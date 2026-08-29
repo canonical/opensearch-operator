@@ -666,6 +666,10 @@ def build_script(input_path: Path, blocks: list[str], state: _ParseState) -> str
         " exclude a block.\n"
         "\n"
         "set -euo pipefail\n"
+        "# Echo every command so failures in the Spread log are attributable\n"
+        "# to a specific line, and report the failing line on error.\n"
+        "set -x\n"
+        "trap 'echo \"TASK FAILED at line $LINENO (exit $?)\" >&2' ERR\n"
         "\n"
         "# Load shared helpers (wait_idle, retry_until_success, etc.).\n"
         'HELPERS="${SPREAD_PATH:-$(cd "$(dirname "$0")" && pwd)}/helpers.sh"\n'

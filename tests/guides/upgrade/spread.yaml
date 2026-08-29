@@ -12,9 +12,11 @@ backends:
       instance_name="opensearch-upgrade-vm"
       multipass delete --purge "$instance_name" 2>/dev/null || true
 
-      # VM resources — override with env vars if needed.
-      multipass launch --cpus "${SPREAD_VM_CPUS:-8}" --disk "${SPREAD_VM_DISK:-50G}" \
-        --memory "${SPREAD_VM_MEM:-16G}" --name "$instance_name" 24.04
+      # VM resources — override with env vars if needed. Memory is sized
+      # for the recovery scenario, which peaks at 5 opensearch containers
+      # plus the Juju controller and LXD overhead.
+      multipass launch --cpus "${SPREAD_VM_CPUS:-8}" --disk "${SPREAD_VM_DISK:-60G}" \
+        --memory "${SPREAD_VM_MEM:-24G}" --name "$instance_name" 24.04
 
       # Enable root SSH for Spread. The bootstrap task installs the required snaps.
       multipass exec "$instance_name" -- sudo sh -c "

@@ -340,6 +340,141 @@ for name, unit in units.items():
 
 
 # ---------------------------------------------------------------------------
+# juju_refresh APP REVISION [EXTRA_ARGS...] – refresh APP to REVISION with
+# retry.
+#
+# `juju refresh` intermittently fails right after a model churn with
+#   ERROR "app" deploy incomplete, please try refresh again in a little bit.
+# which Juju itself says is transient. Wrap the refresh in a retry loop so
+# the tasks don't die on this race.
+#
+# Returns 0 when the refresh was accepted, 1 when retries are exhausted.
+# ---------------------------------------------------------------------------
+juju_refresh() {
+    local app="$1"; shift
+    local revision="$1"; shift
+
+    retry_until_success \
+        --timeout 600 \
+        --interval 30 \
+        --description "juju refresh ${app} to revision ${revision}" \
+        -- juju refresh "$app" --revision="$revision" "$@"
+}
+
+# ---------------------------------------------------------------------------
+# wait_highest_unit_upgraded [EXPECTED_VERSION] – poll until the highest
+# ordinal unit of the opensearch app has actually finished its workload
+# upgrade.
+#
+# The app turns `blocked` as soon as the upgrade *starts*, long before the
+# highest unit's workload is actually replaced. This gate waits until the
+# highest unit is active/idle AND its status message reports a running
+# OpenSearch version that is not marked "(outdated)".
+#
+# When EXPECTED_VERSION is given (e.g. "2.19.4"), the message must report
+# exactly that version. Without it, any non-outdated running version is
+# accepted (used for rollbacks, where the target version is the old one).
+#
+# Returns 0 when the unit is upgraded, 1 on timeout.
+# ---------------------------------------------------------------------------
+wait_highest_unit_upgraded() {
+    local expected_version="${1:-}"
+    local timeout=1800
+    local interval=30
+    local elapsed=0
+
+    echo "Waiting for highest opensearch unit to finish its workload upgrade (timeout=${timeout}s)…"
+
+    while [[ "$elapsed" -lt "$timeout" ]]; do
+        local payload
+        payload=$(juju status --format=json 2>/dev/null | python3 -c "
+import json, sys
+try:
+    data = json.load(sys.stdin)
+    units = data['applications']['opensearch']['units']
+    highest = max(int(name.split('/')[1]) for name in units)
+    unit = units[f'opensearch/{highest}']
+    print(unit.get('workload-status', {}).get('current', ''))
+    print(unit.get('workload-status', {}).get('message', ''))
+    print(unit.get('juju-status', {}).get('current', ''))
+except Exception:
+    print('error')
+    print('')
+    print('')
+" ) || payload="error
+"
+
+        local workload_status message agent_status
+        workload_status=$(echo "$payload" | sed -n 1p)
+        message=$(echo "$payload" | sed -n 2p)
+        agent_status=$(echo "$payload" | sed -n 3p)
+
+        if [[ "$workload_status" == "active" && "$agent_status" == "idle" \
+              && "$message" != *"(outdated)"* && "$message" == *"running"* ]]; then
+            if [[ -z "$expected_version" || "$message" == *"OpenSearch ${expected_version} running"* ]]; then
+                echo "Highest unit upgraded after ${elapsed}s: ${message}"
+                return 0
+            fi
+        fi
+        echo "[${elapsed}s elapsed] highest unit: '${workload_status}/${agent_status}: ${message}' – rechecking in ${interval}s…"
+        sleep "$interval"
+        elapsed=$(( elapsed + interval ))
+    done
+
+    echo "ERROR: highest opensearch unit did not finish upgrading within ${timeout}s. Final status:"
+    juju status
+    return 1
+}
+
+# ---------------------------------------------------------------------------
+# juju_run_action UNIT ACTION [PARAMS...] – run a Juju action and fail the
+# task when the action itself fails.
+#
+# `juju run` returns non-zero when the action fails, but under `set -e` a
+# failing action inside a pipeline or subshell can be silently swallowed.
+# This wrapper always propagates the failure with a clear message.
+# ---------------------------------------------------------------------------
+juju_run_action() {
+    local unit="$1"; shift
+    local action="$1"; shift
+
+    echo "Running action ${action} on ${unit}…"
+    if ! juju run "$unit" "$action" "$@"; then
+        echo "ERROR: action ${action} on ${unit} failed" >&2
+        return 1
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# clear_node_lock – delete the charm node-lock document if it exists.
+#
+# Requires save_ca_and_password to have been called first. Tolerates a 404
+# (lock already gone).
+# ---------------------------------------------------------------------------
+clear_node_lock() {
+    local lock_holder
+    lock_holder=$(curl -sS --cacert cert.pem \
+        "https://${OS_UNIT_IP}:9200/.charm_node_lock/_doc/0" \
+        -u "admin:${OS_PASSWORD}" | python3 -c "
+import json, sys
+try:
+    data = json.load(sys.stdin)
+    if data.get('found'):
+        print(data['_source'].get('unit-name', ''))
+except Exception:
+    pass
+" || true)
+    if [[ -n "${lock_holder:-}" ]]; then
+        echo "Node lock held by ${lock_holder} — deleting"
+        curl -sS --cacert cert.pem \
+            -X DELETE "https://${OS_UNIT_IP}:9200/.charm_node_lock/_doc/0?refresh=true" \
+            -u "admin:${OS_PASSWORD}"
+    else
+        echo "No stale node lock found"
+    fi
+}
+
+# ---------------------------------------------------------------------------
 # reset_baseline – destroy the model and redeploy the baseline cluster.
 #
 # Used by task setups: scenarios must start from a clean baseline because
@@ -351,7 +486,18 @@ for name, unit in units.items():
 # ---------------------------------------------------------------------------
 reset_baseline() {
     . /root/revisions.env
-    juju destroy-model upgrade --force --no-wait --destroy-storage --no-prompt || true
+    juju destroy-model upgrade --force --no-wait --destroy-storage --no-prompt \
+        || { echo "ERROR: failed to destroy model 'upgrade'"; return 1; }
+    # Wait until the model is really gone; add-model races with teardown.
+    local elapsed=0
+    while juju models --format=json 2>/dev/null | python3 -c "
+import json, sys
+sys.exit(0 if 'upgrade' in [m['name'] for m in json.load(sys.stdin).get('models', [])] else 1)
+" 2>/dev/null; do
+        [[ "$elapsed" -ge 300 ]] && { echo "ERROR: model 'upgrade' still present after 300s"; return 1; }
+        sleep 10
+        elapsed=$(( elapsed + 10 ))
+    done
     juju add-model upgrade
 
     juju deploy self-signed-certificates --channel latest/stable

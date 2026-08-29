@@ -186,6 +186,8 @@ juju run opensearch/leader pre-upgrade-check
 ```
 
 <!-- test:assert
+# The visible command above must have printed the readiness result; assert
+# on a fresh run's output (single run, no duplicate execution).
 output=$(juju run opensearch/leader pre-upgrade-check 2>&1)
 echo "$output"
 echo "$output" | grep -q 'Charm is ready for upgrade'
@@ -269,24 +271,10 @@ instructing you to verify the upgraded unit and run `resume-upgrade`.
 
 <!-- test:assert
 wait_app_status opensearch blocked --timeout 1800
-# The highest unit's workload upgrade takes a few minutes after the app
-# turns blocked — poll until its message no longer says "(outdated)".
-for i in $(seq 1 60); do
-  message=$(juju status --format=json | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-units = data['applications']['opensearch']['units']
-highest = max(int(name.split('/')[1]) for name in units)
-print(units[f'opensearch/{highest}']['workload-status'].get('message', ''))
-")
-  if [[ "$message" != *"(outdated)"* ]]; then
-    echo "Highest unit upgraded after $((i * 30))s: $message"
-    break
-  fi
-  echo "[$((i * 30))s] highest unit still upgrading: $message"
-  [[ "$i" == 60 ]] && { echo "ERROR: highest unit not upgraded within 1800s"; exit 1; }
-  sleep 30
-done
+# The app turns blocked as soon as the upgrade *starts*; the highest unit's
+# workload upgrade takes several more minutes. Wait until it is actually
+# running the new version (no "(outdated)" marker) before resuming.
+wait_highest_unit_upgraded
 -->
 
 ```{note}
@@ -307,8 +295,32 @@ juju run opensearch/leader resume-upgrade
 <!-- test:await-idle --timeout 3600 -->
 
 <!-- test:assert
+# resume-upgrade legitimately fails while the highest unit is still
+# upgrading ("Highest number unit has not upgraded yet") — retry it.
+retry_until_success --timeout 600 --interval 30 \
+  --description "resume-upgrade" \
+  -- juju run opensearch/leader resume-upgrade
 rev=$(current_revision opensearch)
 [[ "$rev" == "$REV_TO" ]] || { echo "Expected revision $REV_TO after upgrade, got $rev"; exit 1; }
+# The upgrade is only complete when EVERY unit runs the new workload and the
+# app is back to active — a green cluster health alone is not sufficient.
+for unit in $(juju status --format=json | python3 -c "
+import json, sys
+units = json.load(sys.stdin)['applications']['opensearch']['units']
+print(' '.join(units.keys()))
+"); do
+  message=$(juju show-unit "$unit" --format=json | python3 -c "
+import json, sys
+unit = list(json.load(sys.stdin).values())[0]
+print(unit['workload-status'].get('message', ''))
+")
+  [[ "$message" != *"(outdated)"* ]] || { echo "ERROR: $unit still outdated: $message"; exit 1; }
+done
+app_status=$(juju status --format=json | python3 -c "
+import json, sys
+print(json.load(sys.stdin)['applications']['opensearch']['application-status']['current'])
+")
+[[ "$app_status" == "active" ]] || { echo "ERROR: app status is '$app_status', expected 'active'"; exit 1; }
 -->
 
 The `resume-upgrade` action will roll out the OpenSearch upgrade for the remaining units in the application.
@@ -460,8 +472,12 @@ reset_baseline
 
 <!-- test:run
 # Start a fresh upgrade so we can roll it back mid-flight.
-juju refresh opensearch --revision="$REV_TO"
+juju_refresh opensearch "$REV_TO"
 wait_app_status opensearch blocked --timeout 1800
+# The app is blocked as soon as the upgrade starts; wait until the highest
+# unit has actually finished its workload upgrade so the rollback starts
+# from the documented mid-upgrade state.
+wait_highest_unit_upgraded
 -->
 
 <!-- test:assert
@@ -489,6 +505,7 @@ When deploying from a local charm file, you must have the previous revision's `.
 Then, run:
 
 <!-- test:skip -->
+
 ```shell
 juju refresh opensearch --path=<path-to-charm-file>
 ```
@@ -503,6 +520,19 @@ back in sync with the running OpenSearch revision. `juju status` will show the a
 <!-- test:assert
 rev=$(current_revision opensearch)
 [[ "$rev" == "$REV_FROM_SAME" ]] || { echo "Expected revision $REV_FROM_SAME after rollback, got $rev"; exit 1; }
+# Every unit must be back on the old workload with no "(outdated)" marker.
+for unit in $(juju status --format=json | python3 -c "
+import json, sys
+units = json.load(sys.stdin)['applications']['opensearch']['units']
+print(' '.join(units.keys()))
+"); do
+  message=$(juju show-unit "$unit" --format=json | python3 -c "
+import json, sys
+unit = list(json.load(sys.stdin).values())[0]
+print(unit['workload-status'].get('message', ''))
+")
+  [[ "$message" != *"(outdated)"* ]] || { echo "ERROR: $unit still outdated: $message"; exit 1; }
+done
 cluster_health green
 -->
 
@@ -513,8 +543,11 @@ cluster_health green
 # Start from a clean baseline, then upgrade so we can roll back.
 reset_baseline
 juju run opensearch/leader pre-upgrade-check
-juju refresh opensearch --revision="$REV_TO"
+juju_refresh opensearch "$REV_TO"
 wait_app_status opensearch blocked --timeout 1800
+# Wait until the highest unit has actually finished its workload upgrade so
+# the rollback starts from the documented mid-upgrade state.
+wait_highest_unit_upgraded
 -->
 
 If you roll back to a charm revision with a different workload version, the process will roll back the charm code and then make a best-effort attempt to roll back the workload, since OpenSearch does not support downgrades.
@@ -541,13 +574,21 @@ self-signed-certificates/0*  active    idle   0        10.149.40.252
 Run the action on the blocked unit:
 
 <!-- test:skip -->
+
 ```shell
 juju run opensearch/<unit-id> force-refresh-start check-compatibility=false
 ```
 
 <!-- test:run
+# Skip the scenario when no older-workload revision is available on this
+# base (REV_FROM_DIFF empty): a same-workload rollback can never produce
+# the documented "Rollback incompatible" state.
+if [[ -z "${REV_FROM_DIFF:-}" ]]; then
+  echo "SKIP: REV_FROM_DIFF is empty — no older-workload revision available; see resolve_revisions.py"
+  exit 0
+fi
 # Roll back to a revision with a different workload version.
-juju refresh opensearch --revision="$REV_FROM_DIFF"
+juju_refresh opensearch "$REV_FROM_DIFF"
 -->
 
 <!-- test:assert
@@ -561,7 +602,7 @@ data = json.load(sys.stdin)
 units = data['applications']['opensearch']['units']
 for name, unit in units.items():
     msg = unit['workload-status'].get('message', '')
-    if 'Rollback incompatible' in msg or 'Rollback unsupported' in msg:
+    if 'Rollback incompatible' in msg or 'Rollback unsupported' in msg or 'force-refresh-start' in msg:
         print(name)
         break
 ")
@@ -569,10 +610,10 @@ for name, unit in units.items():
     echo "Blocked unit found after $((i * 30))s: $BLOCKED_UNIT"
     break
   fi
-  [[ "$i" == 60 ]] && { echo "ERROR: no blocked unit found after 1800s"; juju status; exit 1; }
+  [[ "$i" == 60 ]] && { echo "ERROR: no blocked unit found after 1800s"; juju status; juju debug-log --replay --no-tail | tail -100 || true; exit 1; }
   sleep 30
 done
-juju run "$BLOCKED_UNIT" force-refresh-start check-compatibility=false
+juju_run_action "$BLOCKED_UNIT" force-refresh-start check-compatibility=false
 -->
 
 ##### If the rollback between the versions is not possible
@@ -659,23 +700,59 @@ juju status
 ```
 
 <!-- test:setup
-# The recovery scenario starts from the broken state left by the
-# different-workload rollback in the previous task. Only refresh credentials.
+# The recovery scenario needs the broken state left by a different-workload
+# rollback. Build it deterministically here instead of inheriting whatever
+# state the previous task happened to leave behind.
 . /root/revisions.env
-save_ca_and_password
--->
-
-<!-- test:assert
-# Identify the stuck unit (waiting/executing with the start message).
-STUCK_UNIT=$(juju status --format=json | python3 -c "
+if [[ -z "${REV_FROM_DIFF:-}" ]]; then
+  echo "SKIP: REV_FROM_DIFF is empty — recovery scenario has no broken state to build; see resolve_revisions.py"
+  exit 0
+fi
+reset_baseline
+juju run opensearch/leader pre-upgrade-check
+juju_refresh opensearch "$REV_TO"
+wait_app_status opensearch blocked --timeout 1800
+wait_highest_unit_upgraded
+juju_refresh opensearch "$REV_FROM_DIFF"
+BLOCKED_UNIT=""
+for i in $(seq 1 60); do
+  BLOCKED_UNIT=$(juju status --format=json | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
 units = data['applications']['opensearch']['units']
 for name, unit in units.items():
     msg = unit['workload-status'].get('message', '')
-    if 'Waiting for OpenSearch to start' in msg:
+    if 'Rollback incompatible' in msg or 'Rollback unsupported' in msg or 'force-refresh-start' in msg:
         print(name)
         break
+")
+  if [[ -n "$BLOCKED_UNIT" ]]; then
+    break
+  fi
+  sleep 30
+done
+if [[ -n "$BLOCKED_UNIT" ]]; then
+  juju_run_action "$BLOCKED_UNIT" force-refresh-start check-compatibility=false || true
+fi
+save_ca_and_password
+-->
+
+<!-- test:assert
+# Identify the stuck unit: any opensearch unit that is not active/idle.
+# The message varies ("Waiting for OpenSearch to start...", "An error
+# occurred during the start of the OpenSearch service.", ...), so match on
+# the status itself and fall back to the highest ordinal.
+STUCK_UNIT=$(juju status --format=json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+units = data['applications']['opensearch']['units']
+stuck = [name for name, unit in units.items()
+         if unit.get('workload-status', {}).get('current', '') != 'active'
+         or unit.get('juju-status', {}).get('current', '') != 'idle']
+if stuck:
+    print(stuck[0])
+else:
+    print(max(units, key=lambda n: int(n.split('/')[1])))
 ")
 echo "Stuck unit: ${STUCK_UNIT:-<none>}"
 -->
@@ -799,12 +876,17 @@ Delete the problematic index identified in the previous step:
 If you do not have a snapshot containing this index, the data will be lost!
 ```
 
+<!-- test:skip -->
+
 ```shell
 curl --cacert cert.pem -X DELETE "https://<unit-ip>:9200/index1" -u admin:<password>
 ```
 
 <!-- test:run
-for index in ${ORPHANED_INDICES}; do
+# Delete the orphaned indices captured above (if any). The visible example
+# above uses a literal index name that only exists in the guide's example
+# output, so it is skipped.
+for index in ${ORPHANED_INDICES:-}; do
   curl -sS --cacert cert.pem -X DELETE "https://${OS_UNIT_IP}:9200/${index}" \
     -u "admin:${OS_PASSWORD}"
 done
@@ -849,6 +931,8 @@ juju add-unit opensearch -n 1
 
 Remove the rolled back unit:
 
+<!-- test:skip -->
+
 ```shell
 juju remove-unit opensearch/2 --no-prompt
 ```
@@ -858,12 +942,12 @@ juju remove-unit opensearch/2 --no-prompt
 -->
 
 <!-- test:run
+# The visible example hardcodes opensearch/2; remove the actual stuck unit
+# identified earlier instead.
 if [[ -n "${STUCK_UNIT:-}" ]]; then
   juju remove-unit "$STUCK_UNIT" --no-prompt
 fi
 -->
-
-<!-- test:await-idle --timeout 1800 -->
 
 Where `opensearch/2` is the name of the unit that was rolled back and blocked earlier.
 
@@ -894,32 +978,17 @@ Example response:
 
 If the departed unit holds the lock, delete the lock document:
 
+<!-- test:skip -->
+
 ```shell
 curl --cacert cert.pem -X DELETE "https://<unit-ip>:9200/.charm_node_lock/_doc/0?refresh=true" -u admin:<password>
 ```
 
 <!-- test:run
-# Check whether the departed unit still holds the node lock; delete if so.
-LOCK_HOLDER=$(curl -sS --cacert cert.pem \
-  "https://${OS_UNIT_IP}:9200/.charm_node_lock/_doc/0" \
-  -u "admin:${OS_PASSWORD}" | python3 -c "
-import json, sys
-try:
-    data = json.load(sys.stdin)
-    if data.get('found'):
-        print(data['_source'].get('unit-name', ''))
-except Exception:
-    pass
-" || true)
-if [[ -n "${LOCK_HOLDER:-}" ]]; then
-  echo "Lock held by ${LOCK_HOLDER} — deleting"
-  curl -sS --cacert cert.pem \
-    -X DELETE "https://${OS_UNIT_IP}:9200/.charm_node_lock/_doc/0?refresh=true" \
-    -u "admin:${OS_PASSWORD}"
-else
-  echo "No stale lock found"
-fi
+clear_node_lock
 -->
+
+<!-- test:await-idle --timeout 1800 -->
 
 Wait for the replacement unit to start and join the cluster. `juju status` should show all
 units `active`/`idle` with no messages, and the application `active` with the original scale
@@ -934,6 +1003,9 @@ curl --cacert cert.pem -X GET "https://<unit-ip>:9200/_cat/nodes" -u admin:<pass
 ```
 
 <!-- test:assert
+# OS_UNIT_IP may point at a unit removed during recovery — re-resolve the
+# leader address before querying the cluster.
+save_ca_and_password
 nodes=$(curl -sS --cacert cert.pem "https://${OS_UNIT_IP}:9200/_cat/nodes" \
   -u "admin:${OS_PASSWORD}" | wc -l)
 expected=$(juju status --format=json | python3 -c "
