@@ -322,7 +322,7 @@ If you scaled up the application in step 2, you can now scale it back down to th
 -->
 
 ```shell
-juju remove-unit opensearch/<highest unit number>
+juju remove-unit opensearch/<highest unit number> --no-prompt
 ```
 
 <!-- test:await-idle --timeout 1800 -->
@@ -836,7 +836,7 @@ juju add-unit opensearch -n 1
 Remove the rolled back unit:
 
 ```shell
-juju remove-unit opensearch/2
+juju remove-unit opensearch/2 --no-prompt
 ```
 
 <!-- test:vars
@@ -845,7 +845,7 @@ juju remove-unit opensearch/2
 
 <!-- test:run
 if [[ -n "${STUCK_UNIT:-}" ]]; then
-  juju remove-unit "$STUCK_UNIT"
+  juju remove-unit "$STUCK_UNIT" --no-prompt
 fi
 -->
 
