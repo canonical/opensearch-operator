@@ -917,16 +917,6 @@ curl --cacert cert.pem -X PUT "https://<unit-ip>:9200/_cluster/settings" -H 'Con
 '
 ```
 
-### Add a new unit
-
-While optional, it is highly advisable to add a replacement unit to restore the application to its original scale:
-
-```shell
-juju add-unit opensearch -n 1
-```
-
-<!-- test:await-idle --timeout 1800 -->
-
 ### Remove rolled back unit
 
 Remove the rolled back unit:
@@ -953,8 +943,9 @@ Where `opensearch/2` is the name of the unit that was rolled back and blocked ea
 
 ### Remove lock
 
-If the replacement unit appears stuck displaying the status message
-`Requesting lock on operation: start`, check if the departed unit still hold the lock:
+If the departed unit still holds the node lock, the replacement unit added in the next
+step would hang forever on `Requesting lock on operation: start`. Check whether the
+lock document is still present:
 
 ```text
 GET /.charm_node_lock/_doc/0
@@ -987,6 +978,14 @@ curl --cacert cert.pem -X DELETE "https://<unit-ip>:9200/.charm_node_lock/_doc/0
 <!-- test:run
 clear_node_lock
 -->
+
+### Add a new unit
+
+While optional, it is highly advisable to add a replacement unit to restore the application to its original scale:
+
+```shell
+juju add-unit opensearch -n 1
+```
 
 <!-- test:await-idle --timeout 1800 -->
 
