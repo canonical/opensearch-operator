@@ -6,24 +6,9 @@ approach as the tutorial tests (`tests/tutorial/`): shell commands are
 extracted from the Markdown guide and executed as Spread tasks inside a
 Multipass VM.
 
-Unlike the tutorial, the upgrade guide is split into **multiple tasks** that
-run sequentially in a single VM, covering every logic branch of the guide:
+## 0. Running the tests
 
-| Task | Priority | Covers |
-| ---- | -------- | ------ |
-| `bootstrap` (hand-written) | 900 | Environment setup, revision resolution, baseline deployment, seed index |
-| `upgrade-happy-path` | 800 | Scale-up, `pre-upgrade-check`, `juju refresh`, `resume-upgrade`, scale-back, health check |
-| `rollback-same-workload` | 700 | Mid-upgrade rollback to a revision with the same workload version |
-| `rollback-different-workload` | 600 | Rollback to a different workload version, `force-refresh-start check-compatibility=false` |
-| `recover-from-rollback` | 500 | Orphaned index deletion, allocation settings, unit replacement, node-lock removal |
-
-All tasks live in the single `tasks/` suite (mirroring the tutorial layout):
-`bootstrap.sh` + `bootstrap/task.yaml` are tracked in git; the four guide
-tasks are generated into `tasks/` by `extract_guide_tasks.py` and gitignored.
-Spread orders them by priority. Teardown is implicit: Spread's `discard`
-phase purges the whole Multipass VM (`opensearch-upgrade-vm`).
-
-## Running
+### Manually
 
 From the project root:
 
@@ -35,19 +20,66 @@ tox -e guide-upgrade-extract    # only regenerate the task scripts
 Or directly:
 
 ```bash
-make -f tests/guides/upgrade/Makefile test         # abort on first failure
-make -f tests/guides/upgrade/Makefile test-continue # run all tasks
-make -f tests/guides/upgrade/Makefile test-debug    # shell on failure
+make -f tests/guides/upgrade/Makefile test          # abort on first failure
+make -f tests/guides/upgrade/Makefile test-continue # run all tasks even if some fail
+make -f tests/guides/upgrade/Makefile test-debug    # drop into a shell on failure
 ```
 
-## How it works
+Both entry points run `extract_guide_tasks.py` first to regenerate `tasks/`
+from the current `docs/how-to/upgrade.md`, then invoke Spread. Requires
+`multipass` and `spread` (`go install github.com/canonical/spread/cmd/spread`)
+on `$PATH`.
 
-`extract_guide_tasks.py` parses the guide and emits one shell script per task
-into `tasks/`, plus a `task.yaml` for Spread. Task boundaries are declared in
-the guide's existing `<!-- test:spread ... -->` metadata block — no extra
-inline markers and no page split:
+### Via CI
 
+[`.github/workflows/upgrade-guide-tests.yaml`](../../../.github/workflows/upgrade-guide-tests.yaml)
+runs the full suite on a self-hosted runner (`multipass` + `spread` installed
+on the fly). Triggers:
+
+- `schedule`: monthly, on the 15th at 03:00 UTC
+- `workflow_dispatch`: manual run from the Actions tab
+- `workflow_call`: so other workflows can invoke it
+
+## 1. Test scenarios (task path)
+
+Tasks live in the single `tasks/` Spread suite (mirroring the tutorial
+layout) and run **sequentially in one VM**, ordered by descending priority.
+`bootstrap.sh` + `bootstrap/task.yaml` are hand-written and tracked in git;
+the other four are generated from the guide by `extract_guide_tasks.py` into
+`tasks/` (gitignored). Teardown is implicit: Spread's `discard` phase purges
+the whole Multipass VM (`opensearch-upgrade-vm`).
+
+| Task | Priority | Covers |
+| ---- | -------- | ------ |
+| `bootstrap` (hand-written) | 900 | Environment setup, revision resolution, baseline deployment, seed index |
+| `upgrade-happy-path` | 800 | Scale-up, `pre-upgrade-check`, `juju refresh`, `resume-upgrade`, scale-back, health check |
+| `rollback-same-workload` | 700 | Mid-upgrade rollback to a revision with the same workload version |
+| `rollback-different-workload` | 600 | Rollback to a different workload version, `force-refresh-start check-compatibility=false` |
+| `recover-from-rollback` | 500 | Orphaned index deletion, allocation settings, unit replacement, node-lock removal |
+
+```mermaid
+flowchart TD
+    A["bootstrap (900)\ndeploy REV_BASELINE, seed index"] --> B["upgrade-happy-path (800)\nrefresh -> REV_TO, resume-upgrade"]
+    B --> C["rollback-same-workload (700)\nreset_baseline, refresh -> REV_TO (blocked mid-upgrade),\nrollback -> REV_FROM_SAME"]
+    C --> D["rollback-different-workload (600)\nreset_baseline, refresh -> REV_TO,\nrollback -> REV_FROM_DIFF, force-refresh-start"]
+    D --> E["recover-from-rollback (500)\ndelete orphaned indices, fix allocation,\nreplace unit, clear node lock"]
 ```
+
+`rollback-same-workload` and `rollback-different-workload` each start by
+calling `reset_baseline` (in `helpers.sh`): OpenSearch cannot downgrade its
+workload, so refreshing back to an older revision *after* an upgrade leaves
+the cluster in an undefined state. `reset_baseline` destroys and recreates
+the `upgrade` Juju model instead of trying to "undo" a previous task's
+changes, so each rollback scenario starts clean. `recover-from-rollback` is
+the exception — it deliberately continues from the broken state left by
+`rollback-different-workload`, since that is the scenario the guide's
+recovery steps are meant to fix.
+
+Task boundaries are declared in the guide's existing `<!-- test:spread ... -->`
+metadata block at the top of `docs/how-to/upgrade.md` — no extra inline
+markers and no page split:
+
+```text
 <!-- test:spread
 kill-timeout: 90m
 tasks:
@@ -58,46 +90,136 @@ tasks:
 -->
 ```
 
-If a `from`/`to` reference no longer resolves (e.g. a heading was renamed),
-extraction fails loudly — this guards against silent test drift.
+`extract_guide_tasks.py` slices the guide at those `from`/`to` anchors, emits
+one shell script per task into `tasks/`, plus a `task.yaml` for Spread. If an
+anchor no longer resolves (e.g. a heading was renamed), extraction fails
+loudly instead of silently skipping content.
 
-### Annotations
+## 2. Choosing revisions
 
-All annotations are HTML comments and never render in the published docs.
+`resolve_revisions.py` runs once, at `bootstrap` time, and writes
+`/root/revisions.env` (`REV_TO`, `REV_BASELINE`, `REV_FROM_SAME`,
+`REV_FROM_DIFF`, `DEPLOY_BASE`), which every later task sources.
 
-| Annotation | Purpose |
-| ---------- | ------- |
-| `<!-- test:spread ... -->` | Task metadata + `tasks:` partition list |
-| `<!-- test:vars ... -->` | Map placeholders (`<target-revision>`) to literals or `${VAR}` references |
-| `<!-- test:setup ... -->` | Hidden commands emitted before the task body (state resets) |
-| `<!-- test:teardown ... -->` | Hidden commands emitted after the task body |
-| `<!-- test:run ... -->` | Hidden commands emitted inline |
-| `<!-- test:assert ... -->` | Hidden assertion commands (fail the task on non-zero exit) |
-| `<!-- test:await-idle ... -->` | Wait for all Juju units to settle |
-| `<!-- test:skip -->` | Skip the next ```shell block (e.g. local `.charm` file paths) |
-| `<!-- test:wait --seconds N -->` | Plain sleep |
-| `<!-- test:retry ... -->` | Retry a command until success |
+The Charmhub API exposes the current `channel-map` (revision numbers
+released per channel/base) but **not** the OpenSearch workload version each
+revision runs — only the charm revision number. Since the upgrade state
+machine only triggers on a *workload* version change (a charm-only refresh
+completes silently, without a `blocked` step), the resolver needs to know
+workload versions too. It combines a live API call with a small curated map
+kept in the script:
 
-The guide itself stays generic: concrete values (revisions, unit IPs,
-passwords) are injected through `test:vars` and hidden `test:run` blocks.
+1. Fetch the `2/stable` channel-map from Charmhub (amd64 only).
+2. For each base, preferred first (`ubuntu@24.04`, then `ubuntu@22.04`):
+   a. `REV_TO` = latest revision released on `2/stable` for that base.
+   b. Look up `REV_TO`'s workload version in the curated
+      `REVISION_WORKLOAD_MAP`. If unknown, try the next base.
+   c. `REV_BASELINE` = highest revision below `REV_TO`, same base, with a
+      **different** workload version than `REV_TO` (this guarantees the
+      upgrade actually goes through the `blocked` → `resume-upgrade` state
+      machine instead of completing as a silent charm-only refresh).
+   d. `REV_FROM_SAME` = highest revision below `REV_BASELINE`, same base,
+      with the **same** workload version as `REV_BASELINE` (used by
+      `rollback-same-workload`).
+   e. `REV_FROM_DIFF` = highest revision below `REV_BASELINE`, same base,
+      with an **older** workload version than `REV_BASELINE` (used by
+      `rollback-different-workload`). If none exists, it falls back to
+      `REV_FROM_SAME` and the different-workload scenario degrades to a
+      same-workload rollback (no crash, just less coverage).
+3. If no base yields a complete set, fall back to the hardcoded
+   `PINNED_FALLBACK` dict and print a loud warning — this means
+   `REVISION_WORKLOAD_MAP` is stale and needs a new entry added.
 
-## Revision resolution
+All four revisions in a resolved set are always on the **same base** —
+Juju refuses to refresh a charm across bases ("cannot upgrade from single
+base ubuntu@24.04 to a charm supporting ubuntu@22.04"), so mixing bases
+within one run is not possible.
 
-`resolve_revisions.py` queries the Charmhub API at test time and picks:
+As of the last update, this resolves to (no fallback warning):
 
-- `REV_TO` — latest `2/stable` revision
-- `REV_FROM_SAME` — highest revision with the same workload version (for the
-  same-workload rollback)
-- `REV_FROM_DIFF` — highest revision with an older workload version (for the
-  different-workload rollback)
+```text
+REV_BASELINE=299   REV_TO=344   REV_FROM_SAME=297   REV_FROM_DIFF=297   DEPLOY_BASE=ubuntu@24.04
+```
 
-If the API cannot yield a suitable pair, a pinned fallback in
-`PINNED_FALLBACK` is used and a loud warning is printed — refresh the pins
-when that happens.
+(`REV_FROM_DIFF` equals `REV_FROM_SAME` here because no older-workload
+revision below 299 on `ubuntu@24.04` is currently in the curated map — the
+degraded case from step 2e above.)
 
-## Helpers
+### Known revisions (`REVISION_WORKLOAD_MAP`)
 
-`helpers.sh` provides `wait_idle`, `retry_until_success` (from the tutorial
-harness) plus upgrade-specific helpers: `current_revision`,
-`wait_app_status`, `wait_unit_message`, `save_ca_and_password`, and
-`cluster_health`.
+Verified manually by downloading each revision (`juju download opensearch
+--revision N`) and reading its `manifest.yaml` (base) and `workload_version`
+file. Refresh this table — and the map in `resolve_revisions.py` — when the
+charm releases new revisions.
+
+| Revision | Workload version | Base | Notes |
+| -------- | ----------------- | ---- | ----- |
+| 168 | 2.17.0 | ubuntu@22.04 | Sept 2024 |
+| 295 | 2.19.2 | ubuntu@24.04 | |
+| 297 | 2.19.2 | ubuntu@24.04 | |
+| 299 | 2.19.2 | ubuntu@24.04 | highest 24.04 rev with the older workload version |
+| 315 | 2.19.4 | ubuntu@22.04 | Ubuntu 24.04 support, OAuth/JWT, per [release notes](../../../docs/reference/release-notes/revision-315.md) |
+| 342 | 2.19.4 | ubuntu@24.04 | |
+| 344 | 2.19.4 | ubuntu@24.04 | Apr 2026, `2/stable` |
+| 345 | 2.19.4 | ubuntu@22.04 | Apr 2026, `2/stable` |
+| 360 | 2.19.4 | ubuntu@24.04 | Aug 2026, `2/edge` |
+
+This table intentionally only lists revisions actually referenced by
+`REVISION_WORKLOAD_MAP` in `resolve_revisions.py` — treat that dict as the
+source of truth and this table as its human-readable mirror.
+
+## 3. Helpers (`helpers.sh`)
+
+Shared bash functions sourced by every task script (`bootstrap.sh` and the
+four generated task scripts). 
+
+`*` marks functions added for this guide's
+tests that don't exist in the tutorial harness (`tests/tutorial/helpers.sh`):
+
+| Function | Purpose |
+| -------- | ------- |
+| `wait_idle` | Poll until every Juju unit is `active`/`idle` (`--allow-blocked` for expected blocked apps) |
+| `retry_until_success` | Retry a command on a fixed interval until it succeeds or times out |
+| `current_revision APP` * | Read `charm-rev` for `APP` from `juju status --format=json` |
+| `wait_app_status APP STATUS` * | Poll until the application's workload status equals `STATUS` |
+| `wait_unit_message UNIT REGEX` * | Poll until a unit's workload-status message matches `REGEX` |
+| `save_ca_and_password` * | Run `get-password`, parse the (Juju-version-dependent) JSON shape via a recursive key search, write `cert.pem`, export `OS_PASSWORD`/`OS_UNIT_IP` |
+| `reset_baseline` * | Destroy and recreate the `upgrade` model, redeploy `REV_BASELINE` + TLS, seed a test index — used by both rollback tasks (see [scenario notes](#1-test-scenarios-task-path) above) |
+| `cluster_health [STATUS]` * | Query `_cluster/health`; with `STATUS`, poll until that status is reached |
+
+## 4. Other notes
+
+- **Annotations** in the guide are HTML comments and never render in the
+  published docs. 
+  
+  `*` marks annotations added for this guide's extractor
+  (`extract_guide_tasks.py`) that the tutorial extractor
+  (`tests/tutorial/extract_commands.py`) doesn't support:
+
+  | Annotation | Purpose |
+  | ---------- | ------- |
+  | `<!-- test:spread ... -->` | Task metadata + `tasks:` partition list |
+  | `<!-- test:vars ... -->` * | Map placeholders (`<target-revision>`) to literals or `${VAR}` references |
+  | `<!-- test:setup ... -->` * | Hidden commands emitted before the task body (state resets) |
+  | `<!-- test:teardown ... -->` * | Hidden commands emitted after the task body |
+  | `<!-- test:run ... -->` | Hidden commands emitted inline |
+  | `<!-- test:assert ... -->` | Hidden assertion commands (fail the task on non-zero exit) |
+  | `<!-- test:await-idle ... -->` | Wait for all Juju units to settle |
+  | `<!-- test:skip -->` | Skip the next ` ```shell ` block (e.g. local `.charm` file paths) |
+  | `<!-- test:wait --seconds N -->` | Plain sleep |
+  | `<!-- test:retry ... -->` | Retry a command until success |
+
+- **Order matters inside a task.** Hidden `test:run`/`test:assert` blocks are
+  emitted in document order, interleaved with the visible ` ```shell ` blocks
+  they annotate. If a hidden block needs to run *before* a visible command
+  (e.g. starting an upgrade before a rollback command can do anything
+  useful), it must be placed above that command in the Markdown — the
+  extractor does not reorder anything.
+- **The guide stays generic.** Concrete values (revisions, unit IPs,
+  passwords) never appear literally in the guide; they're injected through
+  `test:vars` and hidden `test:run` blocks referencing shell variables
+  (`$REV_TO`, `$OS_UNIT_IP`, etc.) set by `resolve_revisions.py` or
+  `save_ca_and_password`.
+- **Regenerating fails loudly on drift.** If a task's `from`/`to` anchor in
+  the `test:spread` block no longer resolves (e.g. a heading was renamed),
+  `extract_guide_tasks.py` errors out instead of silently skipping content.
