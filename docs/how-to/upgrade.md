@@ -269,14 +269,24 @@ instructing you to verify the upgraded unit and run `resume-upgrade`.
 
 <!-- test:assert
 wait_app_status opensearch blocked --timeout 1800
-juju status --format=json | python3 -c "
+# The highest unit's workload upgrade takes a few minutes after the app
+# turns blocked — poll until its message no longer says "(outdated)".
+for i in $(seq 1 60); do
+  message=$(juju status --format=json | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
 units = data['applications']['opensearch']['units']
 highest = max(int(name.split('/')[1]) for name in units)
-message = units[f'opensearch/{highest}']['workload-status']['message']
-assert 'outdated' not in message, f'Highest unit not upgraded yet: {message}'
-"
+print(units[f'opensearch/{highest}']['workload-status'].get('message', ''))
+")
+  if [[ "$message" != *"(outdated)"* ]]; then
+    echo "Highest unit upgraded after $((i * 30))s: $message"
+    break
+  fi
+  echo "[$((i * 30))s] highest unit still upgrading: $message"
+  [[ "$i" == 60 ]] && { echo "ERROR: highest unit not upgraded within 1800s"; exit 1; }
+  sleep 30
+done
 -->
 
 ```{note}
