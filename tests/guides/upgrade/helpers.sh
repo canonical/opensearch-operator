@@ -269,61 +269,20 @@ except Exception:
 save_ca_and_password() {
     local output
     output=$(juju run opensearch/leader get-password --format=json)
-    # The JSON shape of "juju run <action> --format=json" differs across juju
-    # versions (results may be a dict or a list, with or without a nested
-    # "result" key), so search for the keys anywhere in the document.
     OS_PASSWORD=$(echo "$output" | python3 -c "
 import json, sys
-
-def find_key(obj, key):
-    if isinstance(obj, dict):
-        if key in obj:
-            return obj[key]
-        for v in obj.values():
-            found = find_key(v, key)
-            if found is not None:
-                return found
-    elif isinstance(obj, list):
-        for item in obj:
-            found = find_key(item, key)
-            if found is not None:
-                return found
-    return None
-
 data = json.load(sys.stdin)
-password = find_key(data, 'password')
-print(password if password is not None else '')
+result = list(data.values())[0]['results'][0]['result']
+print(result['password'])
 ")
     local ca_chain
     ca_chain=$(echo "$output" | python3 -c "
 import json, sys
-
-def find_key(obj, key):
-    if isinstance(obj, dict):
-        if key in obj:
-            return obj[key]
-        for v in obj.values():
-            found = find_key(v, key)
-            if found is not None:
-                return found
-    elif isinstance(obj, list):
-        for item in obj:
-            found = find_key(item, key)
-            if found is not None:
-                return found
-    return None
-
 data = json.load(sys.stdin)
-chain = find_key(data, 'ca-chain')
-if chain is None:
-    chain = find_key(data, 'ca_chain')
-print(chain if chain is not None else '')
+result = list(data.values())[0]['results'][0]['result']
+chain = result.get('ca-chain', result.get('ca_chain', ''))
+print(chain)
 ")
-    if [[ -z "$OS_PASSWORD" || -z "$ca_chain" ]]; then
-        echo "ERROR: could not extract password/CA chain from get-password output:" >&2
-        echo "$output" >&2
-        return 1
-    fi
     printf '%s\n' "$ca_chain" > cert.pem
     OS_UNIT_IP=$(juju status --format=json | python3 -c "
 import json, sys
@@ -336,6 +295,46 @@ for name, unit in units.items():
 ")
     export OS_PASSWORD OS_UNIT_IP
     echo "Saved credentials (unit IP: ${OS_UNIT_IP})."
+}
+
+# ---------------------------------------------------------------------------
+# reset_baseline – destroy the model and redeploy the baseline cluster.
+#
+# Used by task setups: scenarios must start from a clean baseline because
+# workload downgrades are impossible (OpenSearch cannot downgrade), so a
+# `juju refresh` back to the baseline revision after an upgrade leaves a
+# poisoned state. Redeploying is the only reliable reset.
+#
+# Requires /root/revisions.env (REV_BASELINE, DEPLOY_BASE) — sourced here.
+# ---------------------------------------------------------------------------
+reset_baseline() {
+    . /root/revisions.env
+    juju destroy-model upgrade --force --no-wait --destroy-storage --no-prompt || true
+    juju add-model upgrade
+
+    juju deploy self-signed-certificates --channel latest/stable
+    juju deploy opensearch --channel 2/stable --revision="$REV_BASELINE" \
+        --base "$DEPLOY_BASE" -n 3
+    juju integrate self-signed-certificates opensearch
+
+    wait_idle --timeout 3600
+    save_ca_and_password
+
+    # Seed a test index so shard/health assertions are meaningful.
+    curl -sS --cacert cert.pem -X PUT \
+        "https://${OS_UNIT_IP}:9200/upgrade-test-index" \
+        -u "admin:${OS_PASSWORD}" \
+        -H 'Content-Type: application/json' \
+        -d '{"settings": {"number_of_shards": 1, "number_of_replicas": 1}}'
+
+    curl -sS --cacert cert.pem -X POST \
+        "https://${OS_UNIT_IP}:9200/upgrade-test-index/_doc?refresh=true" \
+        -u "admin:${OS_PASSWORD}" \
+        -H 'Content-Type: application/json' \
+        -d '{"message": "baseline document"}'
+
+    cluster_health green
+    echo "Baseline reset complete: rev $REV_BASELINE on $DEPLOY_BASE."
 }
 
 # ---------------------------------------------------------------------------
