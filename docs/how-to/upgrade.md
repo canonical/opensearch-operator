@@ -360,16 +360,21 @@ In this case, both the charm code and the workload will be rolled back to the pr
 Model    Controller           Cloud/Region         Version  SLA          Timestamp
 testing  localhost-localhost  localhost/localhost  3.6.25   unsupported  08:36:09+01:00
 
-App                       Version  Status   Scale  Charm       Channel  Rev  Exposed  Message
-opensearch                         blocked      3  opensearch            215  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+App                       Version  Status   Scale  Charm       Channel   Rev  Exposed  Message
+opensearch                         blocked      3  opensearch  2/stable  344  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
 self-signed-certificates           active       1  self-signed-certificates  1/stable  586  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
-opensearch/0                 active    idle   1        10.149.40.7     9200/tcp  OpenSearch 2.18.0 running; Snap rev 66; Charmed operator 1+014d4d8-dirty
-opensearch/1                 active    idle   2        10.149.40.93    9200/tcp  OpenSearch 2.18.0 running; Snap rev 66; Charmed operator 1+014d4d8-dirty
+opensearch/0                 active    idle   1        10.149.40.7     9200/tcp  OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966-dirty
+opensearch/1                 active    idle   2        10.149.40.93    9200/tcp  OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966-dirty
 opensearch/2*                blocked   idle   3        10.149.40.126   9200/tcp  Rollback incompatible. Run 'juju run <unit> force-refresh-start' with `check-compatibility` set to false to override ...
 self-signed-certificates/0*  active    idle   0        10.149.40.252
 ```
+
+Units that had not yet upgraded their workload before the rollback (`opensearch/0` and
+`opensearch/1` above) simply run revision **344** normally. Only the unit that already
+advanced to the newer workload (`opensearch/2`) needs to roll that workload back and is
+blocked until you do.
 
 Run the action on the blocked unit:
 
@@ -385,15 +390,15 @@ In this case, the charm code will be rolled back, but the OpenSearch workload wi
 Model    Controller           Cloud/Region         Version  SLA          Timestamp
 testing  localhost-localhost  localhost/localhost  3.6.25   unsupported  08:03:52+01:00
 
-App                       Version  Status   Scale  Charm       Channel  Rev  Exposed  Message
-opensearch                         blocked      3  opensearch            198  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+App                       Version  Status   Scale  Charm       Channel   Rev  Exposed  Message
+opensearch                         blocked      3  opensearch  2/stable  344  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
 self-signed-certificates           active       1  self-signed-certificates  1/stable  586  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
-opensearch/6*                active    idle   7        10.149.40.239   9200/tcp  OpenSearch 2.17.0 running; Snap rev 58; Charmed operator 1+c11cd1c
-opensearch/7                 active    idle   8        10.149.40.64    9200/tcp  OpenSearch 2.17.0 running; Snap rev 58; Charmed operator 1+c11cd1c
-opensearch/8                 blocked   idle   9        10.149.40.31    9200/tcp  Rollback unsupported. Refresh to a newer revision or consult the recovery documentation
-self-signed-certificates/0*  active    idle   0        10.149.40.55
+opensearch/0                 active    idle   1        10.149.40.7     9200/tcp  OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966-dirty
+opensearch/1                 active    idle   2        10.149.40.93    9200/tcp  OpenSearch 2.19.4 running; Snap rev 98; Charmed operator 1+b55ac3966-dirty
+opensearch/2*                blocked   idle   3        10.149.40.126   9200/tcp  Rollback unsupported. Refresh to a newer revision or consult the recovery documentation
+self-signed-certificates/0*  active    idle   0        10.149.40.252
 ```
 
 ### Check the cluster's health
