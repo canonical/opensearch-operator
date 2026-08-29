@@ -458,17 +458,6 @@ Rollbacks in Charmed OpenSearch are a best-effort process. It is recommended to 
 reset_baseline
 -->
 
-You can initiate the rollback by running the `refresh` command with the revision of
-the charm you want to rollback to. For example, to rollback to revision **144**, run:
-
-<!-- test:vars
-<previous-revision>: ${REV_FROM_SAME}
--->
-
-```shell
-juju refresh opensearch --revision=<previous-revision>
-```
-
 <!-- test:run
 # Start a fresh upgrade so we can roll it back mid-flight.
 juju refresh opensearch --revision="$REV_TO"
@@ -484,6 +473,17 @@ if [[ "$rc" -eq 0 ]]; then
 fi
 echo "$output" | grep -q 'Upgrade already in progress'
 -->
+
+You can initiate the rollback by running the `refresh` command with the revision of
+the charm you want to rollback to. For example, to rollback to revision **144**, run:
+
+<!-- test:vars
+<previous-revision>: ${REV_FROM_SAME}
+-->
+
+```shell
+juju refresh opensearch --revision=<previous-revision>
+```
 
 When deploying from a local charm file, you must have the previous revision's `.charm` file.
 Then, run:

@@ -33,11 +33,8 @@ import urllib.request
 from pathlib import Path
 
 CHARM_NAME = "opensearch"
+# Both the upgrade target and the baseline are resolved from this channel.
 CHANNEL = "2/stable"
-# The upgrade target channel. 2/stable on ubuntu@24.04 currently exposes only
-# one revision (no upgrade pair), so the target is taken from 2/edge, which
-# tracks the same base. The baseline always comes from 2/stable.
-TARGET_CHANNEL = "2/edge"
 # Preferred deploy base (see bootstrap.sh). Revisions on other bases cannot
 # be refreshed to ("cannot upgrade from single base" error in Juju), so the
 # resolver first tries to find a full revision set on this base. When the
