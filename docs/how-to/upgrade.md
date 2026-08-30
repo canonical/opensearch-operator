@@ -499,7 +499,8 @@ juju refresh opensearch --path=<path-to-charm-file>
 After the refresh command, the application will show `blocked` with a message asking you
 to verify the highest unit is healthy and run the `resume-upgrade` action: the rollback
 reverted the charm code, and the rolling upgrade of the workload must still be completed
-under the rolled-back charm. Verify the highest unit is healthy, then resume the rollout:
+under the rolled-back charm. Verify the highest unit is healthy, then resume the
+rolling upgrade:
 
 <!-- test:skip -->
 
@@ -517,7 +518,7 @@ retry_until_success --timeout 600 --interval 30 \
   -- juju_run_action opensearch/leader resume-upgrade
 -->
 
-Once the rollout completes, the Juju controller revision for the application will be
+Once the rolling upgrade completes, the Juju controller revision for the application will be
 back in sync with the running OpenSearch revision. `juju status` will show the application
 `active` with the previous revision number in the `Rev` column (e.g. **144**), and all units
 `active`/`idle` with no messages.
