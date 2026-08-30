@@ -496,7 +496,24 @@ Then, run:
 juju refresh opensearch --path=<path-to-charm-file>
 ```
 
-After the refresh command, the Juju controller revision for the application will be
+After the refresh command, the application will show `blocked` with a message asking you
+to verify the highest unit is healthy and run the `resume-upgrade` action: the rollback
+reverted the charm code, and the rolling upgrade of the workload must still be completed
+under the rolled-back charm. Verify the highest unit is healthy, then resume the rollout:
+
+```shell
+juju run opensearch/leader resume-upgrade
+```
+
+<!-- test:run
+# resume-upgrade legitimately fails while the highest unit is still
+# upgrading ("Highest number unit has not upgraded yet") — retry it.
+retry_until_success --timeout 600 --interval 30 \
+  --description "resume-upgrade" \
+  -- juju run opensearch/leader resume-upgrade
+-->
+
+Once the rollout completes, the Juju controller revision for the application will be
 back in sync with the running OpenSearch revision. `juju status` will show the application
 `active` with the previous revision number in the `Rev` column (e.g. **144**), and all units
 `active`/`idle` with no messages.
@@ -506,7 +523,8 @@ back in sync with the running OpenSearch revision. `juju status` will show the a
 <!-- test:assert
 rev=$(current_revision opensearch)
 [[ "$rev" == "$REV_FROM_SAME" ]] || { echo "Expected revision $REV_FROM_SAME after rollback, got $rev"; exit 1; }
-# Every unit must be back on the old workload with no "(outdated)" marker.
+# Every unit must run the workload expected by the rolled-back charm,
+# with no "(outdated)" marker.
 assert_no_outdated_units
 cluster_health green
 -->
@@ -518,7 +536,9 @@ cluster_health green
 # Skip the scenario when no older-workload revision is available on this
 # base (REV_FROM_DIFF empty): a same-workload rollback can never produce
 # the documented "Rollback incompatible" state. Check BEFORE the
-# expensive baseline rebuild.
+# expensive baseline rebuild. Source the revisions first — the guard
+# reads REV_FROM_DIFF.
+. /root/revisions.env
 if [[ -z "${REV_FROM_DIFF:-}" ]]; then
   echo "SKIP: REV_FROM_DIFF is empty — no older-workload revision available; see resolve_revisions.py"
   exit 0
@@ -570,7 +590,11 @@ juju_refresh opensearch "$REV_FROM_DIFF"
 
 <!-- test:assert
 # Poll for the blocked unit and capture its id (the rollback state takes
-# a few minutes to surface after the refresh).
+# a few minutes to surface after the refresh). Depending on the version
+# pair, the unit shows "Rollback incompatible"/"Rollback unsupported",
+# or it fails to start the downgraded workload ("An error occurred during
+# the start of the OpenSearch service." / "Waiting for OpenSearch to
+# start...").
 BLOCKED_UNIT=""
 for i in $(seq 1 60); do
   BLOCKED_UNIT=$(juju status --format=json | python3 -c "
@@ -579,7 +603,10 @@ data = json.load(sys.stdin)
 units = data['applications']['opensearch']['units']
 for name, unit in units.items():
     msg = unit['workload-status'].get('message', '')
-    if 'Rollback incompatible' in msg or 'Rollback unsupported' in msg or 'force-refresh-start' in msg:
+    if ('Rollback incompatible' in msg or 'Rollback unsupported' in msg
+            or 'force-refresh-start' in msg
+            or 'An error occurred during the start' in msg
+            or 'Waiting for OpenSearch to start' in msg):
         print(name)
         break
 ")
@@ -590,7 +617,12 @@ for name, unit in units.items():
   [[ "$i" == 60 ]] && { echo "ERROR: no blocked unit found after 1800s"; juju status; juju debug-log --replay --no-tail | tail -100 || true; exit 1; }
   sleep 30
 done
-juju_run_action "$BLOCKED_UNIT" force-refresh-start check-compatibility=false
+# Attempt the documented best-effort recovery. The action may refuse
+# ("No rollback in progress") when the charm does not classify this
+# refresh as a rollback — the unit then stays stuck and the recovery
+# task handles it.
+juju_run_action "$BLOCKED_UNIT" force-refresh-start check-compatibility=false \
+  || echo "force-refresh-start refused; the unit remains stuck — recovery follows in the next task"
 -->
 
 ##### If the rollback between the versions is not possible
@@ -700,7 +732,10 @@ data = json.load(sys.stdin)
 units = data['applications']['opensearch']['units']
 for name, unit in units.items():
     msg = unit['workload-status'].get('message', '')
-    if 'Rollback incompatible' in msg or 'Rollback unsupported' in msg or 'force-refresh-start' in msg:
+    if ('Rollback incompatible' in msg or 'Rollback unsupported' in msg
+            or 'force-refresh-start' in msg
+            or 'An error occurred during the start' in msg
+            or 'Waiting for OpenSearch to start' in msg):
         print(name)
         break
 ")
@@ -897,12 +932,13 @@ curl --cacert cert.pem -X PUT "https://<unit-ip>:9200/_cluster/settings" -H 'Con
 
 ### Remove rolled back unit
 
-Remove the rolled back unit:
+Remove the rolled back unit. If the unit is stuck (its hooks cannot complete a graceful
+removal), add `--force --destroy-storage`:
 
 <!-- test:skip -->
 
 ```shell
-juju remove-unit opensearch/2 --no-prompt
+juju remove-unit opensearch/2 --no-prompt --force --destroy-storage
 ```
 
 <!-- test:vars
@@ -911,9 +947,20 @@ juju remove-unit opensearch/2 --no-prompt
 
 <!-- test:run
 # The visible example hardcodes opensearch/2; remove the actual stuck unit
-# identified earlier instead.
+# identified earlier instead. --force is required: the stuck unit's hooks
+# cannot complete a graceful removal. --destroy-storage removes its data so
+# the replacement unit starts fresh.
 if [[ -n "${STUCK_UNIT:-}" ]]; then
-  juju remove-unit "$STUCK_UNIT" --no-prompt
+  juju remove-unit "$STUCK_UNIT" --no-prompt --force --destroy-storage
+  # Wait until the unit is fully gone before touching the lock or adding
+  # the replacement — the lock cleanup depends on the departed unit's
+  # lock document being the only thing left behind.
+  elapsed=0
+  while juju status --format=json 2>/dev/null | grep -q "\"${STUCK_UNIT}\""; do
+    [[ "$elapsed" -ge 600 ]] && { echo "ERROR: ${STUCK_UNIT} still present after 600s"; juju status; exit 1; }
+    sleep 30
+    elapsed=$(( elapsed + 30 ))
+  done
 fi
 -->
 
@@ -965,7 +1012,7 @@ While optional, it is highly advisable to add a replacement unit to restore the 
 juju add-unit opensearch -n 1
 ```
 
-<!-- test:await-idle --timeout 1800 -->
+<!-- test:await-idle --timeout 3600 -->
 
 Wait for the replacement unit to start and join the cluster. `juju status` should show all
 units `active`/`idle` with no messages, and the application `active` with the original scale
