@@ -25,7 +25,7 @@ Large deployments support a diverse range of deployment constraints, roles, and 
 
 * [How to set up a large deployment](how-to-deploy-large)
 
-### Security automations
+### Security automation
 
 Manage TLS certificates and passwords in single point with Juju integrations and rotate your
 TLS certificates without any downtime.
