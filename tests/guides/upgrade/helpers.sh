@@ -235,12 +235,15 @@ wait_unit_message() {
 
     while [[ "$elapsed" -lt "$timeout" ]]; do
         local message
-        message=$(juju show-unit "$unit" --format=json 2>/dev/null | python3 -c "
+        # `juju show-unit --format=json` does NOT expose workload-status
+        # (its UnitInfo struct has no such field), so read it from
+        # `juju status --format=json` instead.
+        message=$(juju status --format=json 2>/dev/null | python3 -c "
 import json, sys
 try:
     data = json.load(sys.stdin)
-    unit = list(data.values())[0]
-    print(unit['workload-status'].get('message', ''))
+    units = data['applications']['${unit%%/*}']['units']
+    print(units.get('${unit}', {}).get('workload-status', {}).get('message', ''))
 except Exception:
     print('')
 " ) || message=""
@@ -427,22 +430,95 @@ except Exception:
 }
 
 # ---------------------------------------------------------------------------
+# _action_output_failed OUTPUT – return 0 (success) if the captured output
+# of `juju run` indicates that the action itself FAILED.
+#
+# `juju run`'s process exit code does NOT reliably reflect action failure:
+# the CLI only exits non-zero when the action's result map contains a
+# numeric `return-code` >= 1 (see cmd/juju/action/common.go,
+# convertActionOutput). Charm actions that fail via `action-fail` (e.g.
+# pre-upgrade-check refusing to run mid-upgrade) do not set `return-code`,
+# so the CLI exits 0 even though the action failed. The reliable signal is
+# the plain-text line "Action id N failed: <message>" that the CLI always
+# prints for a failed action (printPlainOutput in the same file).
+# ---------------------------------------------------------------------------
+_action_output_failed() {
+    echo "$1" | grep -Eq 'Action id [0-9]+ failed:'
+}
+
+# ---------------------------------------------------------------------------
 # juju_run_action UNIT ACTION [PARAMS...] – run a Juju action and fail the
 # task when the action itself fails.
 #
-# `juju run` returns non-zero when the action fails, but under `set -e` a
-# failing action inside a pipeline or subshell can be silently swallowed.
-# This wrapper always propagates the failure with a clear message.
+# Detects failure via the action output text (see _action_output_failed),
+# NOT via `juju run`'s exit code, which does not reflect action failure.
 # ---------------------------------------------------------------------------
 juju_run_action() {
     local unit="$1"; shift
     local action="$1"; shift
 
     echo "Running action ${action} on ${unit}…"
-    if ! juju run "$unit" "$action" "$@"; then
+    local output
+    output=$(juju run "$unit" "$action" "$@" 2>&1) || true
+    echo "$output"
+    if _action_output_failed "$output"; then
         echo "ERROR: action ${action} on ${unit} failed" >&2
         return 1
     fi
+}
+
+# ---------------------------------------------------------------------------
+# assert_action_fails UNIT ACTION EXPECTED_SUBSTRING [PARAMS...] – run a
+# Juju action that is EXPECTED to fail, and assert that it did.
+#
+# Failure is detected via the action output text (see
+# _action_output_failed), not via `juju run`'s exit code. If
+# EXPECTED_SUBSTRING is non-empty, the output must also contain it.
+# ---------------------------------------------------------------------------
+assert_action_fails() {
+    local unit="$1"; shift
+    local action="$1"; shift
+    local expected="$1"; shift
+
+    echo "Running action ${action} on ${unit} (expected to fail)…"
+    local output
+    output=$(juju run "$unit" "$action" "$@" 2>&1) || true
+    echo "$output"
+    if ! _action_output_failed "$output"; then
+        echo "ERROR: action ${action} on ${unit} unexpectedly succeeded" >&2
+        return 1
+    fi
+    if [[ -n "$expected" ]] && ! echo "$output" | grep -q "$expected"; then
+        echo "ERROR: action ${action} on ${unit} failed, but output does not contain '${expected}'" >&2
+        return 1
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# assert_no_outdated_units [APP] – assert that no unit of APP (default:
+# opensearch) still carries the "(outdated)" workload-status marker.
+#
+# Reads workload-status messages from `juju status --format=json`.
+# (`juju show-unit --format=json` does NOT expose workload-status at all —
+# its UnitInfo struct has no such field — so it must not be used here.)
+# ---------------------------------------------------------------------------
+assert_no_outdated_units() {
+    local app="${1:-opensearch}"
+    local outdated
+    outdated=$(juju status --format=json | python3 -c "
+import json, sys
+units = json.load(sys.stdin)['applications']['${app}']['units']
+for name, unit in units.items():
+    msg = unit.get('workload-status', {}).get('message', '')
+    if '(outdated)' in msg:
+        print(f'{name}: {msg}')
+")
+    if [[ -n "$outdated" ]]; then
+        echo "ERROR: units of ${app} still outdated:" >&2
+        echo "$outdated" >&2
+        return 1
+    fi
+    echo "All units of ${app} are on the new workload (no '(outdated)' markers)."
 }
 
 # ---------------------------------------------------------------------------
