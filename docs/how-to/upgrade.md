@@ -919,7 +919,7 @@ Where `opensearch/2` is the name of the unit that was rolled back and blocked ea
 ### Remove lock
 
 If the departed unit still holds the node lock, the replacement unit added in the next
-step would hang forever on `Requesting lock on operation: start`. Check whether the
+step would get stuck forever on `Requesting lock on operation: start`. Check whether the
 lock document is still present:
 
 ```text
