@@ -304,18 +304,7 @@ rev=$(current_revision opensearch)
 [[ "$rev" == "$REV_TO" ]] || { echo "Expected revision $REV_TO after upgrade, got $rev"; exit 1; }
 # The upgrade is only complete when EVERY unit runs the new workload and the
 # app is back to active — a green cluster health alone is not sufficient.
-for unit in $(juju status --format=json | python3 -c "
-import json, sys
-units = json.load(sys.stdin)['applications']['opensearch']['units']
-print(' '.join(units.keys()))
-"); do
-  message=$(juju show-unit "$unit" --format=json | python3 -c "
-import json, sys
-unit = list(json.load(sys.stdin).values())[0]
-print(unit['workload-status'].get('message', ''))
-")
-  [[ "$message" != *"(outdated)"* ]] || { echo "ERROR: $unit still outdated: $message"; exit 1; }
-done
+assert_no_outdated_units
 app_status=$(juju status --format=json | python3 -c "
 import json, sys
 print(json.load(sys.stdin)['applications']['opensearch']['application-status']['current'])
@@ -481,13 +470,10 @@ wait_highest_unit_upgraded
 -->
 
 <!-- test:assert
-# pre-upgrade-check must refuse to run mid-upgrade.
-output=$(juju run opensearch/leader pre-upgrade-check 2>&1) && rc=0 || rc=$?
-if [[ "$rc" -eq 0 ]]; then
-  echo "ERROR: pre-upgrade-check unexpectedly succeeded mid-upgrade"
-  exit 1
-fi
-echo "$output" | grep -q 'Upgrade already in progress'
+# pre-upgrade-check must refuse to run mid-upgrade. `juju run`'s exit code
+# does not reflect action failure (the action fails via `action-fail`
+# without setting a `return-code`), so assert on the action output text.
+assert_action_fails opensearch/leader pre-upgrade-check 'Upgrade already in progress'
 -->
 
 You can initiate the rollback by running the `refresh` command with the revision of
@@ -521,18 +507,7 @@ back in sync with the running OpenSearch revision. `juju status` will show the a
 rev=$(current_revision opensearch)
 [[ "$rev" == "$REV_FROM_SAME" ]] || { echo "Expected revision $REV_FROM_SAME after rollback, got $rev"; exit 1; }
 # Every unit must be back on the old workload with no "(outdated)" marker.
-for unit in $(juju status --format=json | python3 -c "
-import json, sys
-units = json.load(sys.stdin)['applications']['opensearch']['units']
-print(' '.join(units.keys()))
-"); do
-  message=$(juju show-unit "$unit" --format=json | python3 -c "
-import json, sys
-unit = list(json.load(sys.stdin).values())[0]
-print(unit['workload-status'].get('message', ''))
-")
-  [[ "$message" != *"(outdated)"* ]] || { echo "ERROR: $unit still outdated: $message"; exit 1; }
-done
+assert_no_outdated_units
 cluster_health green
 -->
 
