@@ -57,13 +57,19 @@ the whole Multipass VM (`opensearch-upgrade-vm`).
 | `rollback-different-workload` | 600 | Rollback to a different workload version, `force-refresh-start check-compatibility=false` |
 | `recover-from-rollback` | 500 | Orphaned index deletion, allocation settings, unit replacement, node-lock removal |
 
-```mermaid
-flowchart TD
-    A["bootstrap (900)\ndeploy REV_BASELINE, seed index"] --> B["upgrade-happy-path (800)\nrefresh -> REV_TO, resume-upgrade"]
-    B --> C["rollback-same-workload (700)\nreset_baseline, refresh -> REV_TO (blocked mid-upgrade),\nrollback -> REV_FROM_SAME"]
-    C --> D["rollback-different-workload (600)\nreset_baseline, refresh -> REV_TO,\nrollback -> REV_FROM_DIFF, force-refresh-start"]
-    D --> E["recover-from-rollback (500)\ndelete orphaned indices, fix allocation,\nreplace unit, clear node lock"]
-```
+The revision each task moves the cluster through, in order of occurrence:
+
+| Task | Revision sequence (in order) | Revision sequence example | Workload versions example |
+| ---- | ---------------------------- | ------------------------- | ------------------------- |
+| `bootstrap` | deploy `REV_BASELINE` on `DEPLOY_BASE` | deploy 299 on ubuntu@24.04 | 2.19.2 |
+| `upgrade-happy-path` | deploy `REV_BASELINE` → refresh to `REV_TO` | deploy 299 → refresh to 344 | 2.19.2 → 2.19.4 |
+| `rollback-same-workload` | deploy `REV_BASELINE` → refresh to `REV_TO` → rollback to `REV_FROM_SAME` | deploy 299 → refresh to 344 → rollback to 342 | 2.19.2 → 2.19.4 → 2.19.4 |
+| `rollback-different-workload` | deploy `REV_BASELINE` → refresh to `REV_TO` → rollback to `REV_FROM_DIFF` | deploy 299 → refresh to 344 → rollback to 299 | 2.19.2 → 2.19.4 → 2.19.2 (best-effort) |
+| `recover-from-rollback` | deploy `REV_BASELINE` → refresh to `REV_TO` → rollback to `REV_FROM_DIFF` → `force-refresh-start` on the blocked unit | deploy 299 → refresh to 344 → rollback to 299 → `force-refresh-start` | 2.19.2 → 2.19.4 → stuck → recovered |
+
+Rows are in execution order. The example columns show the values resolved at
+the time of writing (see [Choosing revisions](#2-choosing-revisions) below
+for how they are derived).
 
 `rollback-same-workload` and `rollback-different-workload` each start by
 calling `reset_baseline` (in `helpers.sh`): OpenSearch cannot downgrade its
