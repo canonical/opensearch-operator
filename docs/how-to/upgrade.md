@@ -501,16 +501,20 @@ to verify the highest unit is healthy and run the `resume-upgrade` action: the r
 reverted the charm code, and the rolling upgrade of the workload must still be completed
 under the rolled-back charm. Verify the highest unit is healthy, then resume the rollout:
 
+<!-- test:skip -->
+
 ```shell
 juju run opensearch/leader resume-upgrade
 ```
 
 <!-- test:run
 # resume-upgrade legitimately fails while the highest unit is still
-# upgrading ("Highest number unit has not upgraded yet") — retry it.
+# upgrading ("Highest number unit has not upgraded yet"), and `juju run`
+# can time out while the unit's action queue is backed up behind upgrade
+# hooks — retry until the action actually succeeds.
 retry_until_success --timeout 600 --interval 30 \
   --description "resume-upgrade" \
-  -- juju run opensearch/leader resume-upgrade
+  -- juju_run_action opensearch/leader resume-upgrade
 -->
 
 Once the rollout completes, the Juju controller revision for the application will be

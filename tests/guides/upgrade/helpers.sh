@@ -450,17 +450,27 @@ _action_output_failed() {
 # juju_run_action UNIT ACTION [PARAMS...] – run a Juju action and fail the
 # task when the action itself fails.
 #
-# Detects failure via the action output text (see _action_output_failed),
-# NOT via `juju run`'s exit code, which does not reflect action failure.
-# ---------------------------------------------------------------------------
+# Detects failure via BOTH:
+#   1. `juju run`'s process exit code – non-zero for CLI-level errors such as
+#      "ERROR timed out waiting for results from: unit ..." (happens when the
+#      unit's action queue is backed up behind long-running hooks, e.g. right
+#      after a `juju refresh` mid-upgrade).
+#   2. the action output text (see _action_output_failed) – because the CLI
+#      exits 0 when the action fails via `action-fail` without a numeric
+#      `return-code`.
+# --------------------------------------------------------------------------
 juju_run_action() {
     local unit="$1"; shift
     local action="$1"; shift
 
     echo "Running action ${action} on ${unit}…"
-    local output
-    output=$(juju run "$unit" "$action" "$@" 2>&1) || true
+    local output rc
+    output=$(juju run "$unit" "$action" "$@" 2>&1) && rc=0 || rc=$?
     echo "$output"
+    if [[ "$rc" -ne 0 ]]; then
+        echo "ERROR: juju run for action ${action} on ${unit} exited with code ${rc}" >&2
+        return 1
+    fi
     if _action_output_failed "$output"; then
         echo "ERROR: action ${action} on ${unit} failed" >&2
         return 1
