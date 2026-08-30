@@ -118,11 +118,15 @@ kept in the script:
       **different** workload version than `REV_TO` (this guarantees the
       upgrade actually goes through the `blocked` → `resume-upgrade` state
       machine instead of completing as a silent charm-only refresh).
-   d. `REV_FROM_SAME` = highest revision below `REV_BASELINE`, same base,
-      with the **same** workload version as `REV_BASELINE` (used by
-      `rollback-same-workload`).
-   e. `REV_FROM_DIFF` = highest revision below `REV_BASELINE`, same base,
-      with an **older** workload version than `REV_BASELINE` (used by
+   d. `REV_FROM_SAME` = highest revision below `REV_TO`, same base, with
+      the **same** workload version as `REV_TO` (used by
+      `rollback-same-workload`). Both rollback targets are relative to
+      `REV_TO`'s workload, not the baseline's: a rollback happens
+      mid-upgrade, when the highest unit already runs `REV_TO`'s workload,
+      so a baseline-workload target would be a workload downgrade for that
+      unit — which OpenSearch refuses, leaving it permanently stuck.
+   e. `REV_FROM_DIFF` = highest revision below `REV_TO`, same base,
+      with an **older** workload version than `REV_TO` (used by
       `rollback-different-workload` and to build the broken state for
       `recover-from-rollback`). If none exists, `REV_FROM_DIFF` is left
       **empty** and both tasks **skip with a clear message** instead of
@@ -140,13 +144,13 @@ within one run is not possible.
 As of the last update, this resolves to (no fallback warning):
 
 ```text
-REV_BASELINE=299   REV_TO=344   REV_FROM_SAME=297   REV_FROM_DIFF=297   DEPLOY_BASE=ubuntu@24.04
+REV_BASELINE=299   REV_TO=344   REV_FROM_SAME=342   REV_FROM_DIFF=299   DEPLOY_BASE=ubuntu@24.04
 ```
 
-(`REV_FROM_DIFF` is currently **empty** because no older-workload revision
-below 299 on `ubuntu@24.04` is in the curated map — the skip case from step
-2e above. Add verified revisions to `REVISION_WORKLOAD_MAP` to enable the
-different-workload rollback and recovery scenarios.)
+(With the `REV_TO`-relative semantics, `REV_FROM_DIFF` is now non-empty on
+this base: 299 ships an older workload (2.19.2) than `REV_TO` 344
+(2.19.4), so the different-workload rollback and recovery scenarios
+actually run instead of skipping.)
 
 ### Known revisions (`REVISION_WORKLOAD_MAP`)
 

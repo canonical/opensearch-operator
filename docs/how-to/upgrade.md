@@ -515,6 +515,14 @@ cluster_health green
 #### Rollback a charm revision with a different workload version
 
 <!-- test:setup
+# Skip the scenario when no older-workload revision is available on this
+# base (REV_FROM_DIFF empty): a same-workload rollback can never produce
+# the documented "Rollback incompatible" state. Check BEFORE the
+# expensive baseline rebuild.
+if [[ -z "${REV_FROM_DIFF:-}" ]]; then
+  echo "SKIP: REV_FROM_DIFF is empty — no older-workload revision available; see resolve_revisions.py"
+  exit 0
+fi
 # Start from a clean baseline, then upgrade so we can roll back.
 reset_baseline
 juju run opensearch/leader pre-upgrade-check
@@ -555,14 +563,8 @@ juju run opensearch/<unit-id> force-refresh-start check-compatibility=false
 ```
 
 <!-- test:run
-# Skip the scenario when no older-workload revision is available on this
-# base (REV_FROM_DIFF empty): a same-workload rollback can never produce
-# the documented "Rollback incompatible" state.
-if [[ -z "${REV_FROM_DIFF:-}" ]]; then
-  echo "SKIP: REV_FROM_DIFF is empty — no older-workload revision available; see resolve_revisions.py"
-  exit 0
-fi
-# Roll back to a revision with a different workload version.
+# Roll back to a revision with a different workload version. The skip
+# guard for an empty REV_FROM_DIFF lives in the setup block above.
 juju_refresh opensearch "$REV_FROM_DIFF"
 -->
 
@@ -677,7 +679,8 @@ juju status
 <!-- test:setup
 # The recovery scenario needs the broken state left by a different-workload
 # rollback. Build it deterministically here instead of inheriting whatever
-# state the previous task happened to leave behind.
+# state the previous task happened to leave behind. The skip guard runs
+# BEFORE the expensive baseline rebuild.
 . /root/revisions.env
 if [[ -z "${REV_FROM_DIFF:-}" ]]; then
   echo "SKIP: REV_FROM_DIFF is empty — recovery scenario has no broken state to build; see resolve_revisions.py"

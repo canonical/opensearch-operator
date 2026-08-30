@@ -12,10 +12,18 @@ The Charmhub API does NOT expose workload (OpenSearch) versions — the
 so the rollback pairs cannot be derived dynamically. They come from a small
 curated map (``REVISION_WORKLOAD_MAP``) maintained in this file:
 
-  * ``REV_FROM_SAME``  — highest known revision with the SAME workload
-                         version as ``REV_TO`` (same-workload rollback)
-  * ``REV_FROM_DIFF``  — highest known revision with an OLDER workload
-                         version (different-workload rollback)
+  * ``REV_FROM_SAME``  — highest known revision below ``REV_TO`` with the
+                         SAME workload version as ``REV_TO``
+                         (same-workload rollback)
+  * ``REV_FROM_DIFF``  — highest known revision below ``REV_TO`` with an
+                         OLDER workload version than ``REV_TO``
+                         (different-workload rollback)
+
+Both rollback targets are relative to ``REV_TO``'s workload version, not the
+baseline's: a rollback happens mid-upgrade, when the highest unit already
+runs ``REV_TO``'s workload. For that unit, a revision whose workload matches
+the *baseline* is a workload downgrade, which OpenSearch refuses — the unit
+gets permanently stuck ("Waiting for OpenSearch to start...").
 
 When the curated map cannot satisfy a pair, ``PINNED_FALLBACK`` is used and a
 loud warning is printed so the map gets refreshed (the monthly workflow run
@@ -71,8 +79,8 @@ REVISION_WORKLOAD_MAP: dict[int, tuple[str, str]] = {
 # state machine never triggers).
 PINNED_FALLBACK = {
     "REV_TO": "344",
-    "REV_FROM_SAME": "297",
-    "REV_FROM_DIFF": "295",
+    "REV_FROM_SAME": "342",
+    "REV_FROM_DIFF": "299",
     "REV_BASELINE": "299",
     "DEPLOY_BASE": "ubuntu@24.04",
 }
@@ -145,11 +153,14 @@ def resolve() -> dict[str, str] | None:
         # (blocked -> resume-upgrade) only triggers on a workload version
         # change; a charm-only refresh completes without it.
         rev_baseline: int | None = None
-        # Same-workload rollback target: highest revision below the baseline
-        # with the same workload version as the BASELINE on this base.
+        # Same-workload rollback target: highest revision below REV_TO with
+        # the same workload version as REV_TO on this base. A rollback happens
+        # mid-upgrade, when the highest unit already runs REV_TO's workload —
+        # so "same workload" must mean same as REV_TO, not same as the
+        # baseline (which would be a downgrade for the upgraded unit).
         rev_from_same: int | None = None
-        # Different-workload rollback target: highest revision below the
-        # baseline with an older workload version than the BASELINE.
+        # Different-workload rollback target: highest revision below REV_TO
+        # with an older workload version than REV_TO.
         rev_from_diff: int | None = None
 
         for rev, (version, rev_base) in sorted(
@@ -159,24 +170,16 @@ def resolve() -> dict[str, str] | None:
                 continue
             if version != version_to and rev_baseline is None:
                 rev_baseline = rev
-
-        if rev_baseline is None:
-            continue
-
-        version_baseline = REVISION_WORKLOAD_MAP[rev_baseline][0]
-        for rev, (version, rev_base) in REVISION_WORKLOAD_MAP.items():
-            if rev >= rev_baseline or rev_base != base:
-                continue
-            if version == version_baseline and (rev_from_same is None or rev > rev_from_same):
+            if version == version_to and (rev_from_same is None or rev > rev_from_same):
                 rev_from_same = rev
-            if _version_key(version) < _version_key(version_baseline) and (
+            if _version_key(version) < _version_key(version_to) and (
                 rev_from_diff is None or rev > rev_from_diff
             ):
                 rev_from_diff = rev
 
-        if rev_from_same is None:
+        if rev_baseline is None or rev_from_same is None:
             continue
-        # When no older-workload revision exists below the baseline on this
+        # When no older-workload revision exists below REV_TO on this
         # base, leave REV_FROM_DIFF empty: the different-workload task then
         # SKIPS with a clear message instead of silently degrading into a
         # same-workload rollback (which can never produce the documented
@@ -220,7 +223,7 @@ def main() -> None:
     if not revisions.get("REV_FROM_DIFF"):
         print(
             "WARNING: no revision with an older workload version exists below "
-            "the baseline on this base — the different-workload rollback "
+            "REV_TO on this base — the different-workload rollback "
             "scenario will be SKIPPED. Add verified revisions to "
             "REVISION_WORKLOAD_MAP to enable it.",
             file=sys.stderr,
