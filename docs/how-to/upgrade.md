@@ -4,18 +4,43 @@ myst:
     description: "Upgrade Charmed OpenSearch from one minor version to another, including pre-upgrade checks, in-place upgrades, health verification, and rollback procedures."
 ---
 
-(how-to-guides-upgrade-index)=
-# How to upgrade revision
+<!-- test:spread
+kill-timeout: 90m
+tasks:
+  - name: upgrade-happy-path
+    summary: Perform a minor upgrade end to end
+    from: how-to-minor-upgrade
+    to: how-to-minor-rollback
+    priority: 800
+  - name: rollback-same-workload
+    summary: Roll back mid-upgrade to a revision with the same workload version
+    from: how-to-rollback-same-workload
+    to: how-to-rollback-different-workload
+    priority: 700
+  - name: rollback-different-workload
+    summary: Roll back to a revision with a different workload version
+    from: how-to-rollback-different-workload
+    to: how-to-recover-rollback
+    priority: 600
+  - name: recover-from-rollback
+    summary: Recover the cluster from a failed rollback
+    from: how-to-recover-rollback
+    to: how-to-upgrade-next-steps
+    priority: 500
+-->
 
-This guide shows how to perform a minor upgrade of a Charmed OpenSearch deployment and, if needed,
-how to roll back to the previous revision.
+(how-to-guides-upgrade-index)=
+# How to upgrade, rollback, and recover
+
+This guide shows how to perform a minor revision upgrade of a Charmed OpenSearch deployment,
+roll back if needed, and recover from a failed rollback.
 
 (how-to-minor-upgrade)=
 ## Perform a minor upgrade
 
 A minor upgrade is an upgrade from one minor version to another:
 OpenSearch `X.Y` -> OpenSearch `X.Y+1`.
-For example, from OpenSearch `2.14` to OpenSearch `2.15`.
+For example, from OpenSearch `2.15` to OpenSearch `2.16`.
 
 This guide will walk you through the steps to upgrade your OpenSearch cluster,
 including pre-upgrade checks, upgrading the OpenSearch cluster, preparing the application
@@ -68,12 +93,38 @@ as a safety measure for a rollback action.
 To accomplish this, run the `juju status` command and look for the deployed
 Charmed OpenSearch revision in the command output, e.g.:
 
+<!-- test:setup
+. /root/revisions.env
+save_ca_and_password
+-->
+
+<!-- test:vars
+<target-revision>: ${REV_TO}
+<unit-ip>: ${OS_UNIT_IP}
+<password>: ${OS_PASSWORD}
+-->
+
 ```shell
-Model  Controller   Cloud/Region         Version  SLA          Timestamp
-dev    development  localhost/localhost  3.5.3    unsupported  10:16:46Z
+juju status
+```
+
+<!-- test:assert
+juju status --format=json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+rev = data['applications']['opensearch']['charm-rev']
+assert str(rev) == '$REV_BASELINE', f'Expected revision $REV_BASELINE, got {rev}'
+"
+-->
+
+The output should look similar to the following:
+
+```text
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+dev    localhost-localhost  localhost/localhost  3.6.25   unsupported  10:16:46+01:00
 
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch                         active      3  opensearch                2/edge         144  no
+opensearch                         active      3  opensearch                2/stable       144  no
 self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
@@ -83,10 +134,10 @@ opensearch/2*                active    idle   2        10.214.176.175  9200/tcp
 self-signed-certificates/0*  active    idle   3        10.214.176.31
 
 Machine  State    Address         Inst id        Base          AZ  Message
-0        started  10.214.176.180  juju-0c35d2-0  ubuntu@22.04      Running
-1        started  10.214.176.220  juju-0c35d2-1  ubuntu@22.04      Running
-2        started  10.214.176.175  juju-0c35d2-2  ubuntu@22.04      Running
-3        started  10.214.176.31   juju-0c35d2-3  ubuntu@22.04      Running
+0        started  10.214.176.180  juju-0c35d2-0  ubuntu@24.04      Running
+1        started  10.214.176.220  juju-0c35d2-1  ubuntu@24.04      Running
+2        started  10.214.176.175  juju-0c35d2-2  ubuntu@24.04      Running
+3        started  10.214.176.31   juju-0c35d2-3  ubuntu@24.04      Running
 ```
 
 For this example, the current revision is **144** for OpenSearch.
@@ -107,6 +158,17 @@ In the event of a failure, an extra unit simplifies manual recovery without disr
 juju add-unit opensearch
 ```
 
+<!-- test:await-idle --timeout 1800 -->
+
+<!-- test:assert
+juju status --format=json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+units = data['applications']['opensearch']['units']
+assert len(units) == 4, f'Expected 4 units after scale-up, got {len(units)}'
+"
+-->
+
 Wait for the new unit to be up and ready.
 
 ### Prepare the application for the in-place upgrade
@@ -123,16 +185,22 @@ After the application has settled, it's necessary to run the `pre-upgrade-check`
 juju run opensearch/leader pre-upgrade-check
 ```
 
-The output should be the following:
+<!-- test:assert
+# The visible command above must have printed the readiness result; assert
+# on a fresh run's output (single run, no duplicate execution).
+output=$(juju run opensearch/leader pre-upgrade-check 2>&1)
+echo "$output"
+echo "$output" | grep -q 'Charm is ready for upgrade'
+-->
 
-```shell
+The output should be similar to the following:
 
+```text
 Running operation 1 with 1 task
   - task 2 on unit-opensearch-2
 
 Waiting for task 2...
 result: Charm is ready for upgrade
-
 ```
 
 The action will ensure and check the health of OpenSearch and determine if the charm
@@ -141,73 +209,77 @@ is well prepared to start an upgrade procedure.
 ### Initiate the upgrade
 
 ```{caution}
-**Caution**: Charmed OpenSearch supports performance profiles and will have
-different RAM consumption according to the profile chosen:
+Charmed OpenSearch supports performance profiles with different RAM consumption:
 
-* `production`: consumes 50% of the RAM available, up to 32G
-* `staging`: consumes 25% of the RAM available, up to 32G
-* `testing`: consumes 1G of RAM
+* `production`: JVM heap set to 50% of the available RAM, capped at 31 GB
+* `testing`: JVM heap fixed at ~1 GB of RAM
 
-In case your charm is running on revision prior to `185`, the `testing` profile will be your default value. Ensure you have it set at upgrade and then feel free to switch to another profile that is more suitable to your use-case.
-
+If the charm is running on a revision prior to `185`, the `testing` profile is the default.
+Ensure it is set before upgrading, then switch to a profile that suits your use case.
+See [How to optimize cluster performance with profiles](how-to-optimize-cluster-performance).
 ```
 
 Use the `juju refresh` command to trigger the charm upgrade process.
 You have control over what upgrade you want to apply:
 
 - You can upgrade the charm to the latest revision available in the charm store for a specific channel,
-  in this case, the edge channel:
+  in this case, the stable channel:
 
+    <!-- test:skip -->
     ```shell
     # If your charm is running a revision prior to 185, then set the profile explicitly:
-    juju refresh opensearch --channel 2/edge --config profile="testing"
+    juju refresh opensearch --channel 2/stable --config profile="testing"
 
     # Otherwise, just refresh
-    juju refresh opensearch --channel 2/edge
+    juju refresh opensearch --channel 2/stable
     ```
 
 - You can also upgrade the charm to a specific revision:
 
     ```shell
-    juju refresh opensearch --revision 145
+    juju refresh opensearch --revision <target-revision>
     ```
 
 - Or you can upgrade the charm using a local charm file:
 
+    <!-- test:skip -->
     ```shell
     juju refresh opensearch --path /path/to/your/charm/file.charm
     ```
 
-The OpenSearch upgrade will execute only on the highest ordinal unit, for the running example
-OpenSearch, the `juju status` will look as follows:
+The OpenSearch upgrade will execute only on the highest ordinal unit. For the running example,
+the `juju status` output will look similar to:
 
-```shell
-Model  Controller   Cloud/Region         Version  SLA          Timestamp
-dev    development  localhost/localhost  3.5.3    unsupported  10:29:07Z
+```text
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+dev    localhost-localhost  localhost/localhost  3.6.25   unsupported  10:29:07+01:00
 
-App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch                         blocked      4  opensearch                2/edge         145  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
+App                       Version  Status   Scale  Charm        Channel   Rev  Exposed  Message
+opensearch                         blocked      4  opensearch   2/stable  145  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision
 self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
-opensearch/0                 active    idle   0        10.214.176.180  9200/tcp  OpenSearch 2.15.0 running; Snap rev 56 (outdated); Charmed operator 1+e686854
-opensearch/1                 active    idle   1        10.214.176.220  9200/tcp  OpenSearch 2.15.0 running; Snap rev 56 (outdated); Charmed operator 1+e686854
-opensearch/2*                active    idle   2        10.214.176.175  9200/tcp  OpenSearch 2.15.0 running; Snap rev 56 (outdated); Charmed operator 1+e686854
-opensearch/3                 active    idle   4        10.214.176.7    9200/tcp  OpenSearch 2.16.0 running; Snap rev 57; Charmed operator 1+e686854
+opensearch/0                 active    idle   0        10.214.176.180  9200/tcp  OpenSearch 2.15.0 running; Snap rev 56 (outdated)
+opensearch/1                 active    idle   1        10.214.176.220  9200/tcp  OpenSearch 2.15.0 running; Snap rev 56 (outdated)
+opensearch/2*                active    idle   2        10.214.176.175  9200/tcp  OpenSearch 2.15.0 running; Snap rev 56 (outdated)
+opensearch/3                 active    idle   4        10.214.176.7    9200/tcp  OpenSearch 2.16.0 running; Snap rev 57
 self-signed-certificates/0*  active    idle   3        10.214.176.31
-
-Machine  State    Address         Inst id        Base          AZ  Message
-0        started  10.214.176.180  juju-0c35d2-0  ubuntu@22.04      Running
-1        started  10.214.176.220  juju-0c35d2-1  ubuntu@22.04      Running
-2        started  10.214.176.175  juju-0c35d2-2  ubuntu@22.04      Running
-3        started  10.214.176.31   juju-0c35d2-3  ubuntu@22.04      Running
-4        started  10.214.176.7    juju-0c35d2-4  ubuntu@22.04      Running
-    
 ```
+
+The highest unit (`opensearch/3`) is upgraded first. The application shows `blocked` with a message
+instructing you to verify the upgraded unit and run `resume-upgrade`.
+
+<!-- test:assert
+wait_app_status opensearch blocked --timeout 1800
+# The app turns blocked as soon as the upgrade *starts*; the highest unit's
+# workload upgrade takes several more minutes. Wait until it is actually
+# running the new version (no "(outdated)" marker) before resuming.
+wait_highest_unit_upgraded
+-->
 
 ```{note}
 The unit should recover shortly after, but the time can vary depending on the amount of data
-written to the cluster while the unit was not part of the cluster. Please be patient with the huge installations.
+written to the cluster while the unit was not part of the cluster. Be patient with large installations.
 ```
 
 ### Resume the upgrade
@@ -220,63 +292,32 @@ If the unit is healthy within the cluster, the next step is to resume the upgrad
 juju run opensearch/leader resume-upgrade
 ```
 
+<!-- test:await-idle --timeout 3600 -->
+
+<!-- test:assert
+# resume-upgrade legitimately fails while the highest unit is still
+# upgrading ("Highest number unit has not upgraded yet") — retry it.
+retry_until_success --timeout 600 --interval 30 \
+  --description "resume-upgrade" \
+  -- juju run opensearch/leader resume-upgrade
+rev=$(current_revision opensearch)
+[[ "$rev" == "$REV_TO" ]] || { echo "Expected revision $REV_TO after upgrade, got $rev"; exit 1; }
+# The upgrade is only complete when EVERY unit runs the new workload and the
+# app is back to active — a green cluster health alone is not sufficient.
+assert_no_outdated_units
+app_status=$(juju status --format=json | python3 -c "
+import json, sys
+print(json.load(sys.stdin)['applications']['opensearch']['application-status']['current'])
+")
+[[ "$app_status" == "active" ]] || { echo "ERROR: app status is '$app_status', expected 'active'"; exit 1; }
+-->
+
 The `resume-upgrade` action will roll out the OpenSearch upgrade for the remaining units in the application.
 The action will be executed sequentially from the highest unit number to the lowest.
 
-After every unit is upgraded, its status will be set to `active/idle` and its message will indicate
-the new version of OpenSearch running on the unit. The `juju status` output will look as follows:
-
-```shell
-Model  Controller   Cloud/Region         Version  SLA          Timestamp
-dev    development  localhost/localhost  3.5.3    unsupported  10:39:06Z
-
-App                       Version  Status       Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch                         maintenance      4  opensearch                2/edge         145  no       Upgrading. To rollback, `juju refresh` to the previous revision
-self-signed-certificates           active           1  self-signed-certificates  latest/stable  155  no
-
-Unit                         Workload  Agent      Machine  Public address  Ports     Message
-opensearch/0                 active    idle       0        10.214.176.180  9200/tcp  OpenSearch 2.15.0 running; Snap rev 56 (outdated); Charmed operator 1+e686854
-opensearch/1                 waiting   executing  1        10.214.176.220  9200/tcp  Waiting for OpenSearch to start...
-opensearch/2*                active    idle       2        10.214.176.175  9200/tcp  OpenSearch 2.16.0 running; Snap rev 57; Charmed operator 1+e686854
-opensearch/3                 active    idle       4        10.214.176.7    9200/tcp  OpenSearch 2.16.0 running; Snap rev 57; Charmed operator 1+e686854
-self-signed-certificates/0*  active    idle       3        10.214.176.31
-
-Machine  State    Address         Inst id        Base          AZ  Message
-0        started  10.214.176.180  juju-0c35d2-0  ubuntu@22.04      Running
-1        started  10.214.176.220  juju-0c35d2-1  ubuntu@22.04      Running
-2        started  10.214.176.175  juju-0c35d2-2  ubuntu@22.04      Running
-3        started  10.214.176.31   juju-0c35d2-3  ubuntu@22.04      Running
-4        started  10.214.176.7    juju-0c35d2-4  ubuntu@22.04      Running
-```
-
-Once all units are upgraded, the application status will be set to `active`
-and the message indicating the new version of OpenSearch running on the units will disappear.
-
-```shell
-Model  Controller   Cloud/Region         Version  SLA          Timestamp
-dev    development  localhost/localhost  3.5.3    unsupported  10:43:41Z
-
-App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch                         active      4  opensearch                2/edge         145  no
-self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
-
-Unit                         Workload  Agent  Machine  Public address  Ports     Message
-opensearch/0                 active    idle   0        10.214.176.180  9200/tcp
-opensearch/1                 active    idle   1        10.214.176.220  9200/tcp
-opensearch/2*                active    idle   2        10.214.176.175  9200/tcp
-opensearch/3                 active    idle   4        10.214.176.7    9200/tcp
-self-signed-certificates/0*  active    idle   3        10.214.176.31
-
-Machine  State    Address         Inst id        Base          AZ  Message
-0        started  10.214.176.180  juju-0c35d2-0  ubuntu@22.04      Running
-1        started  10.214.176.220  juju-0c35d2-1  ubuntu@22.04      Running
-2        started  10.214.176.175  juju-0c35d2-2  ubuntu@22.04      Running
-3        started  10.214.176.31   juju-0c35d2-3  ubuntu@22.04      Running
-4        started  10.214.176.7    juju-0c35d2-4  ubuntu@22.04      Running
-```
-
-Notice the `Rev` column in the `juju status` output.
-The revision number should reflect the new revision of the application.
+Once all units are upgraded, the application status will return to `active`, all units will
+show `active`/`idle`, and the version messages will disappear. The `Rev` column in the
+`juju status` output will reflect the new charm revision.
 
 ### Rollback (optional)
 
@@ -287,42 +328,53 @@ To do so, follow the [Perform a minor rollback](how-to-minor-rollback) section b
 
 If you scaled up the application in step 2, you can now scale it back down to the original number of units:
 
+<!-- test:vars
+<highest unit number>: $(juju status --format=json | python3 -c "import json,sys; units=json.load(sys.stdin)['applications']['opensearch']['units']; print(max(int(n.split('/')[1]) for n in units))")
+-->
+
 ```shell
-juju remove-unit opensearch/<highest unit number>
+juju remove-unit opensearch/<highest unit number> --no-prompt
 ```
+
+<!-- test:await-idle --timeout 1800 -->
+
+<!-- test:assert
+juju status --format=json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+units = data['applications']['opensearch']['units']
+assert len(units) == 3, f'Expected 3 units after scale-back, got {len(units)}'
+"
+-->
 
 ### Check the cluster health
 
-First, check the units have settled as `active/idle` state on `juju status`,
-with the newer revision number:
-
-```shell
-Model  Controller   Cloud/Region         Version  SLA          Timestamp
-dev    development  localhost/localhost  3.5.3    unsupported  10:45:39Z
-
-App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch                         active      3  opensearch                2/edge         145  no
-self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
-
-Unit                         Workload  Agent  Machine  Public address  Ports     Message
-opensearch/0                 active    idle   0        10.214.176.180  9200/tcp
-opensearch/1                 active    idle   1        10.214.176.220  9200/tcp
-opensearch/2*                active    idle   2        10.214.176.175  9200/tcp
-self-signed-certificates/0*  active    idle   3        10.214.176.31
-
-Machine  State    Address         Inst id        Base          AZ  Message
-0        started  10.214.176.180  juju-0c35d2-0  ubuntu@22.04      Running
-1        started  10.214.176.220  juju-0c35d2-1  ubuntu@22.04      Running
-2        started  10.214.176.175  juju-0c35d2-2  ubuntu@22.04      Running
-3        started  10.214.176.31   juju-0c35d2-3  ubuntu@22.04      Running
-```
+First, check the units have settled as `active`/`idle` in `juju status`,
+with the newer revision number in the `Rev` column. All unit messages should be empty
+(no version or upgrade messages).
 
 Check the cluster is healthy. OpenSearch's upstream documentation
-[suggests the following check](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/):
+[suggests the following check](https://opensearch.org/docs/2.19/install-and-configure/upgrade-opensearch/rolling-upgrade/).
+
+First, retrieve the admin credentials and the CA certificate chain:
 
 ```shell
-GET "/_cluster/health?pretty"
+juju run opensearch/leader get-password
 ```
+
+<!-- test:run
+save_ca_and_password
+-->
+
+Save the `ca-chain` value to a file (e.g. `cert.pem`) to use with `curl`:
+
+```shell
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
+```
+
+<!-- test:assert
+cluster_health green
+-->
 
 The response should look similar to the following example:
 
@@ -357,7 +409,7 @@ For more information, please refer to the upstream
 [OpenSearch documentation about rolling upgrades](https://docs.opensearch.org/latest/migrate-or-upgrade/rolling-upgrade/#preparing-to-upgrade).
 ```
 
-While rollbacking a charm revision that does not change the underlying OpenSearch version is a safe operation, it is important to note that rollbacking in Charmed OpenSearch is a best-effort process to restore the cluster to a previous revision. If the OpenSearch workload version is different, it does not guarantee that the cluster will be rolled back to a previous version. 
+While rolling back a charm revision that does not change the underlying OpenSearch version is a safe operation, it is important to note that rolling back in Charmed OpenSearch is a best-effort process to restore the cluster to a previous revision. If the OpenSearch workload version is different, it does not guarantee that the cluster will be rolled back to a previous version. 
 
 After a `juju refresh`, if there are any version incompatibilities in charm revisions,
 their dependencies, or any other unexpected failure in the upgrade process,
@@ -372,158 +424,251 @@ To execute a rollback we take the same procedure as the upgrade, the difference 
 the charm revision to upgrade to. As an example follow up
 [the minor upgrades guide](how-to-minor-upgrade).
 
-It is important to run the `pre-upgrade-check` action to ensure the cluster is in a healthy state
-before the rollback. This action will check the cluster health and the status of the upgrade.
+```{note}
+Do **not** run `pre-upgrade-check` before a rollback. The action refuses to run while an
+upgrade is in progress and fails with `Upgrade already in progress`. Because a rollback only
+happens mid-upgrade, the action can never succeed at this point.
 
-```shell
-juju run opensearch/leader pre-upgrade-check
+The charm runs the equivalent checks itself: after `juju refresh`, it detects the rollback
+and re-enables shard allocation without requiring the action.
 ```
 
-Once the pre-upgrade checks are complete, and you get the `Charm is ready for upgrade` message,
-you can proceed with the rollback.
-
-For example, here is the status of the OpenSearch cluster after upgrading one unit to revision 145:
-
-```shell
-Model  Controller   Cloud/Region         Version  SLA          Timestamp
-dev    development  localhost/localhost  3.5.3    unsupported  12:24:17Z
-
-App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch                         blocked      3  opensearch                2/edge         145  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to la
-st revision
-self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  no
-
-Unit                         Workload  Agent  Machine  Public address  Ports     Message
-opensearch/0*                active    idle   0        10.214.176.187  9200/tcp  OpenSearch 2.15.0 running; Snap rev 56 (outdated); Charmed operator 1+e686854
-opensearch/1                 active    idle   1        10.214.176.197  9200/tcp  OpenSearch 2.15.0 running; Snap rev 56 (outdated); Charmed operator 1+e686854
-opensearch/2                 active    idle   2        10.214.176.222  9200/tcp  OpenSearch 2.16.0 running; Snap rev 57; Charmed operator 1+e686854
-self-signed-certificates/0*  active    idle   3        10.214.176.93
-
-Machine  State    Address         Inst id        Base          AZ  Message
-0        started  10.214.176.187  juju-dd97d9-0  ubuntu@22.04      Running
-1        started  10.214.176.197  juju-dd97d9-1  ubuntu@22.04      Running
-2        started  10.214.176.222  juju-dd97d9-2  ubuntu@22.04      Running
-3        started  10.214.176.93   juju-dd97d9-3  ubuntu@22.04      Running
-```
-
-Notice that the OpenSearch charm is at revision **145**.
+Before rolling back, check `juju status`. The application will show `blocked` with a message like
+`Upgrading. Verify highest unit is healthy & run \`resume-upgrade\` action. To rollback, \`juju refresh\` to last revision`.
+The unit messages will show which units have already been upgraded (newer OpenSearch version)
+and which are still on the old version (marked `(outdated)`). Note the current charm revision
+from the `Rev` column — in this example, it is **145**.
 
 ### Rollback the charm
 
 ```{caution}
-**Caution**:  Do not trigger rollback during the running upgrade action.
-It may cause an unpredictable OpenSearch state. 
+Do not trigger a rollback during a running upgrade action.
+It may cause an unpredictable OpenSearch state.
 ```
 
 ```{caution}
-**Caution**:  Rollbacks in Charmed OpenSearch are a best-effort process. It is recommended to perform a backup and restore to a new deployment with the desired OpenSearch version instead of performing a rollback. Rollbacks carry the potential of *data loss* and *downtime*.
+Rollbacks in Charmed OpenSearch are a best-effort process. It is recommended to perform a backup and restore to a new deployment with the desired OpenSearch version instead of performing a rollback. Rollbacks carry the potential of *data loss* and *downtime*.
 ```
 
+(how-to-rollback-same-workload)=
 #### Rollback a charm revision with the same workload version
+
+<!-- test:setup
+# Workload downgrades are impossible, so restore the baseline by
+# redeploying a clean cluster (see helpers.sh reset_baseline).
+reset_baseline
+-->
+
+<!-- test:run
+# Start a fresh upgrade so we can roll it back mid-flight.
+juju_refresh opensearch "$REV_TO"
+wait_app_status opensearch blocked --timeout 1800
+# The app is blocked as soon as the upgrade starts; wait until the highest
+# unit has actually finished its workload upgrade so the rollback starts
+# from the documented mid-upgrade state.
+wait_highest_unit_upgraded
+-->
+
+<!-- test:assert
+# pre-upgrade-check must refuse to run mid-upgrade. `juju run`'s exit code
+# does not reflect action failure (the action fails via `action-fail`
+# without setting a `return-code`), so assert on the action output text.
+assert_action_fails opensearch/leader pre-upgrade-check 'Upgrade already in progress'
+-->
 
 You can initiate the rollback by running the `refresh` command with the revision of
 the charm you want to rollback to. For example, to rollback to revision **144**, run:
 
+<!-- test:vars
+<previous-revision>: ${REV_FROM_SAME}
+-->
+
 ```shell
-juju refresh opensearch --revision=144
+juju refresh opensearch --revision=<previous-revision>
 ```
 
 When deploying from a local charm file, you must have the previous revision's `.charm` file.
 Then, run:
 
-```shell
-juju refresh opensearch --path=<path_to_charm_file>
-```
-
-After the refresh command, the Juju controller revision for the application will be
-back in sync with the running OpenSearch revision.
+<!-- test:skip -->
 
 ```shell
-Model  Controller   Cloud/Region         Version  SLA          Timestamp
-dev    development  localhost/localhost  3.5.3    unsupported  12:27:02Z
-
-App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch                         active      3  opensearch                2/edge         144  no
-self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no
-
-Unit                         Workload  Agent  Machine  Public address  Ports     Message
-opensearch/0*                active    idle   0        10.214.176.187  9200/tcp
-opensearch/1                 active    idle   1        10.214.176.197  9200/tcp
-opensearch/2                 active    idle   2        10.214.176.222  9200/tcp
-self-signed-certificates/0*  active    idle   3        10.214.176.93
-
-Machine  State    Address         Inst id        Base          AZ  Message
-0        started  10.214.176.187  juju-dd97d9-0  ubuntu@22.04      Running
-1        started  10.214.176.197  juju-dd97d9-1  ubuntu@22.04      Running
-2        started  10.214.176.222  juju-dd97d9-2  ubuntu@22.04      Running
-3        started  10.214.176.93   juju-dd97d9-3  ubuntu@22.04      Running
+juju refresh opensearch --path=<path-to-charm-file>
 ```
 
-Notice that the OpenSearch charm is now at revision **144**.
+After the refresh command, the application will show `blocked` with a message asking you
+to verify the highest unit is healthy and run the `resume-upgrade` action: the rollback
+reverted the charm code, and the rolling upgrade of the workload must still be completed
+under the rolled-back charm. Verify the highest unit is healthy, then resume the
+rolling upgrade:
 
+<!-- test:skip -->
+
+```shell
+juju run opensearch/leader resume-upgrade
+```
+
+<!-- test:run
+# resume-upgrade legitimately fails while the highest unit is still
+# upgrading ("Highest number unit has not upgraded yet"), and `juju run`
+# can time out while the unit's action queue is backed up behind upgrade
+# hooks — retry until the action actually succeeds.
+retry_until_success --timeout 600 --interval 30 \
+  --description "resume-upgrade" \
+  -- juju_run_action opensearch/leader resume-upgrade
+-->
+
+Once the rolling upgrade completes, the Juju controller revision for the application will be
+back in sync with the running OpenSearch revision. `juju status` will show the application
+`active` with the previous revision number in the `Rev` column (e.g. **144**), and all units
+`active`/`idle` with no messages.
+
+<!-- test:await-idle --timeout 3600 -->
+
+<!-- test:assert
+rev=$(current_revision opensearch)
+[[ "$rev" == "$REV_FROM_SAME" ]] || { echo "Expected revision $REV_FROM_SAME after rollback, got $rev"; exit 1; }
+# Every unit must run the workload expected by the rolled-back charm,
+# with no "(outdated)" marker.
+assert_no_outdated_units
+cluster_health green
+-->
+
+(how-to-rollback-different-workload)=
 #### Rollback a charm revision with a different workload version
+
+<!-- test:setup
+# Skip the scenario when no older-workload revision is available on this
+# base (REV_FROM_DIFF empty): a same-workload rollback can never produce
+# the documented "Rollback incompatible" state. Check BEFORE the
+# expensive baseline rebuild. Source the revisions first — the guard
+# reads REV_FROM_DIFF.
+. /root/revisions.env
+if [[ -z "${REV_FROM_DIFF:-}" ]]; then
+  echo "SKIP: REV_FROM_DIFF is empty — no older-workload revision available; see resolve_revisions.py"
+  exit 0
+fi
+# Start from a clean baseline, then upgrade so we can roll back.
+reset_baseline
+juju run opensearch/leader pre-upgrade-check
+juju_refresh opensearch "$REV_TO"
+wait_app_status opensearch blocked --timeout 1800
+# Wait until the highest unit has actually finished its workload upgrade so
+# the rollback starts from the documented mid-upgrade state.
+wait_highest_unit_upgraded
+-->
 
 If you roll back to a charm revision with a different workload version, the process will roll back the charm code and then make a best-effort attempt to roll back the workload, since OpenSearch does not support downgrades.
 
 ##### If the rollback between the versions is possible
 
-In this case, both the charm code and the workload will be rolled back to the previous version. However, because rollback is a risky operation, rolling back the workload requires manual intervention. The charm will enter a blocked state and display a message instructing you to run the `force-refresh-start` action with `check-compatibility=false` to continue the best-effort workload rollback.
+In this case, both the charm code and the workload will be rolled back to the previous version. However, because rollback is a risky operation, rolling back the workload requires manual intervention. The charm will enter a `blocked` state and display a message instructing you to run the `force-refresh-start` action with `check-compatibility=false` to continue the best-effort workload rollback:
 
-```shell
-Model    Controller  Cloud/Region         Version  SLA          Timestamp
-testing  lxd         localhost/localhost  3.6.14   unsupported  08:36:09Z
+```text
+Model    Controller           Cloud/Region         Version  SLA          Timestamp
+testing  localhost-localhost  localhost/localhost  3.6.25   unsupported  08:36:09+01:00
 
-App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
-opensearch                         blocked      3  opensearch                            2  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+App                       Version  Status   Scale  Charm       Channel  Rev  Exposed  Message
+opensearch                         blocked      3  opensearch            2  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
 self-signed-certificates           active       1  self-signed-certificates  1/stable  586  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
-opensearch/0                 active    idle   1        10.149.40.7     9200/tcp  OpenSearch 2.18.0 running; Snap rev 66; Charmed operator 1+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-...
-opensearch/1                 active    idle   2        10.149.40.93    9200/tcp  OpenSearch 2.18.0 running; Snap rev 66; Charmed operator 1+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-...
-opensearch/2*                blocked   idle   3        10.149.40.126   9200/tcp  Rollback incompatible. Run 'juju run <unit> force-refresh-start' with `check-compatibility` set to false to override ...
+opensearch/0                 active    idle   1        10.149.40.7     9200/tcp  OpenSearch 2.18.0 running; Snap rev 66
+opensearch/1                 active    idle   2        10.149.40.93    9200/tcp  OpenSearch 2.18.0 running; Snap rev 66
+opensearch/2*                blocked   idle   3        10.149.40.126   9200/tcp  Rollback incompatible. Run 'juju run <unit> force-refresh-start' with `check-compatibility` set to false to override
 self-signed-certificates/0*  active    idle   0        10.149.40.252
-
-Machine  State    Address        Inst id        Base          AZ   Message
-0        started  10.149.40.252  juju-f44a9a-0  ubuntu@24.04  xof  Running
-1        started  10.149.40.7    juju-f44a9a-1  ubuntu@24.04  xof  Running
-2        started  10.149.40.93   juju-f44a9a-2  ubuntu@24.04  xof  Running
-3        started  10.149.40.126  juju-f44a9a-3  ubuntu@24.04  xof  Running
 ```
+
+Run the action on the blocked unit:
+
+<!-- test:skip -->
+
+```shell
+juju run opensearch/<unit-id> force-refresh-start check-compatibility=false
+```
+
+<!-- test:run
+# Roll back to a revision with a different workload version. The skip
+# guard for an empty REV_FROM_DIFF lives in the setup block above.
+juju_refresh opensearch "$REV_FROM_DIFF"
+-->
+
+<!-- test:assert
+# Poll for the blocked unit and capture its id (the rollback state takes
+# a few minutes to surface after the refresh). Depending on the version
+# pair, the unit shows "Rollback incompatible"/"Rollback unsupported",
+# or it fails to start the downgraded workload ("An error occurred during
+# the start of the OpenSearch service." / "Waiting for OpenSearch to
+# start...").
+BLOCKED_UNIT=""
+for i in $(seq 1 60); do
+  BLOCKED_UNIT=$(juju status --format=json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+units = data['applications']['opensearch']['units']
+for name, unit in units.items():
+    msg = unit['workload-status'].get('message', '')
+    if ('Rollback incompatible' in msg or 'Rollback unsupported' in msg
+            or 'force-refresh-start' in msg
+            or 'An error occurred during the start' in msg
+            or 'Waiting for OpenSearch to start' in msg):
+        print(name)
+        break
+")
+  if [[ -n "$BLOCKED_UNIT" ]]; then
+    echo "Blocked unit found after $((i * 30))s: $BLOCKED_UNIT"
+    break
+  fi
+  [[ "$i" == 60 ]] && { echo "ERROR: no blocked unit found after 1800s"; juju status; juju debug-log --replay --no-tail | tail -100 || true; exit 1; }
+  sleep 30
+done
+# Attempt the documented best-effort recovery. The action may refuse
+# ("No rollback in progress") when the charm does not classify this
+# refresh as a rollback — the unit then stays stuck and the recovery
+# task handles it.
+juju_run_action "$BLOCKED_UNIT" force-refresh-start check-compatibility=false \
+  || echo "force-refresh-start refused; the unit remains stuck — recovery follows in the next task"
+-->
 
 ##### If the rollback between the versions is not possible
 
-In this case, the charm code will be rolled back, but the OpenSearch workload will remain on the newer version. The charm will enter a blocked state and display a message instructing you to either refresh to a charm revision with the same workload version or perform a backup and restore to a new deployment.
+In this case, the charm code will be rolled back, but the OpenSearch workload will remain on the newer version. The charm will enter a `blocked` state and display a message instructing you to either refresh to a charm revision with the same workload version or perform a backup and restore to a new deployment:
 
-```shell
-Model    Controller  Cloud/Region         Version  SLA          Timestamp
-testing  lxd         localhost/localhost  3.6.14   unsupported  08:03:52Z
+```text
+Model    Controller           Cloud/Region         Version  SLA          Timestamp
+testing  localhost-localhost  localhost/localhost  3.6.25   unsupported  08:03:52+01:00
 
-App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
-opensearch                         blocked      3  opensearch                           17  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+App                       Version  Status   Scale  Charm       Channel  Rev  Exposed  Message
+opensearch                         blocked      3  opensearch            17  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
 self-signed-certificates           active       1  self-signed-certificates  1/stable  586  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports     Message
-opensearch/6*                active    idle   7        10.149.40.239   9200/tcp  OpenSearch 2.17.0 running; Snap rev 58; Charmed operator 1+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-...
-opensearch/7                 active    idle   8        10.149.40.64    9200/tcp  OpenSearch 2.17.0 running; Snap rev 58; Charmed operator 1+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-dirty+530fe10bb-...
+opensearch/6*                active    idle   7        10.149.40.239   9200/tcp  OpenSearch 2.17.0 running; Snap rev 58
+opensearch/7                 active    idle   8        10.149.40.64    9200/tcp  OpenSearch 2.17.0 running; Snap rev 58
 opensearch/8                 blocked   idle   9        10.149.40.31    9200/tcp  Rollback unsupported. Refresh to a newer revision or consult the recovery documentation
 self-signed-certificates/0*  active    idle   0        10.149.40.55
-
-Machine  State    Address        Inst id        Base          AZ   Message
-0        started  10.149.40.55   juju-0bfd52-0  ubuntu@24.04  xof  Running
-7        started  10.149.40.239  juju-0bfd52-7  ubuntu@24.04  xof  Running
-8        started  10.149.40.64   juju-0bfd52-8  ubuntu@24.04  xof  Running
-9        started  10.149.40.31   juju-0bfd52-9  ubuntu@24.04  xof  Running
 ```
 
 ### Check the cluster's health
 
 Once the charm is rolled back, it is important to check the cluster's health to ensure it is healthy.
 OpenSearch's upstream documentation
-[suggests the following check](https://opensearch.org/docs/latest/install-and-configure/upgrade-opensearch/rolling-upgrade/):
+[suggests the following check](https://opensearch.org/docs/2.19/install-and-configure/upgrade-opensearch/rolling-upgrade/):
+
+<!-- test:vars
+<unit-ip>: ${OS_UNIT_IP}
+<password>: ${OS_PASSWORD}
+-->
 
 ```shell
-GET "/_cluster/health?pretty"
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
 ```
+
+<!-- test:assert
+# After the forced rollback the cluster may be degraded; recovery is the
+# next task. Here we only assert the endpoint responds.
+cluster_health
+-->
 
 The response should look similar to the following example:
 
@@ -568,9 +713,74 @@ First, check Juju model status:
 juju status
 ```
 
+<!-- test:setup
+# The recovery scenario needs the broken state left by a different-workload
+# rollback. Build it deterministically here instead of inheriting whatever
+# state the previous task happened to leave behind. The skip guard runs
+# BEFORE the expensive baseline rebuild.
+. /root/revisions.env
+if [[ -z "${REV_FROM_DIFF:-}" ]]; then
+  echo "SKIP: REV_FROM_DIFF is empty — recovery scenario has no broken state to build; see resolve_revisions.py"
+  exit 0
+fi
+reset_baseline
+juju run opensearch/leader pre-upgrade-check
+juju_refresh opensearch "$REV_TO"
+wait_app_status opensearch blocked --timeout 1800
+wait_highest_unit_upgraded
+juju_refresh opensearch "$REV_FROM_DIFF"
+BLOCKED_UNIT=""
+for i in $(seq 1 60); do
+  BLOCKED_UNIT=$(juju status --format=json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+units = data['applications']['opensearch']['units']
+for name, unit in units.items():
+    msg = unit['workload-status'].get('message', '')
+    if ('Rollback incompatible' in msg or 'Rollback unsupported' in msg
+            or 'force-refresh-start' in msg
+            or 'An error occurred during the start' in msg
+            or 'Waiting for OpenSearch to start' in msg):
+        print(name)
+        break
+")
+  if [[ -n "$BLOCKED_UNIT" ]]; then
+    break
+  fi
+  sleep 30
+done
+if [[ -n "$BLOCKED_UNIT" ]]; then
+  juju_run_action "$BLOCKED_UNIT" force-refresh-start check-compatibility=false || true
+fi
+save_ca_and_password
+-->
+
+<!-- test:assert
+# Identify the stuck unit: any opensearch unit that is not active/idle.
+# The message varies ("Waiting for OpenSearch to start...", "An error
+# occurred during the start of the OpenSearch service.", ...), so match on
+# the status itself and fall back to the highest ordinal.
+STUCK_UNIT=$(juju status --format=json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+units = data['applications']['opensearch']['units']
+stuck = [name for name, unit in units.items()
+         if unit.get('workload-status', {}).get('current', '') != 'active'
+         or unit.get('juju-status', {}).get('current', '') != 'idle']
+if stuck:
+    print(stuck[0])
+else:
+    print(max(units, key=lambda n: int(n.split('/')[1])))
+")
+echo "Stuck unit: ${STUCK_UNIT:-<none>}"
+-->
+
 The rolled back unit may appear stuck displaying the status `Waiting for OpenSearch to start...`:
 
 ```text
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.6.25   unsupported  01:32:11+01:00
+
 App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
 opensearch                         active      3  opensearch                2/stable       168  no
 self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no
@@ -580,12 +790,6 @@ opensearch/0*                active    idle       0        10.45.114.156   9200/
 opensearch/1                 active    idle       1        10.45.114.208   9200/tcp
 opensearch/2                 waiting   executing  2        10.45.114.147   9200/tcp  Waiting for OpenSearch to start...
 self-signed-certificates/0*  active    idle       3        10.45.114.124
-
-Machine  State    Address        Inst id        Base          AZ  Message
-0        started  10.45.114.156  juju-1fafd0-0  ubuntu@22.04      Running
-1        started  10.45.114.208  juju-1fafd0-1  ubuntu@22.04      Running
-2        started  10.45.114.147  juju-1fafd0-2  ubuntu@22.04      Running
-3        started  10.45.114.124  juju-1fafd0-3  ubuntu@22.04      Running
 ```
 
 Note the blocked unit; in this example, it is `opensearch/2`.
@@ -593,11 +797,20 @@ This unit will not recover automatically, and additional steps are required to r
 
 ### Check cluster health
 
-Retrieve the cluster health:
+Retrieve the cluster health using the `cert.pem` and `<password>` obtained above:
+
+<!-- test:vars
+<unit-ip>: ${OS_UNIT_IP}
+<password>: ${OS_PASSWORD}
+-->
 
 ```shell
-curl -X GET "10.45.114.156:9200/_cluster/health?pretty"
+curl --cacert cert.pem -X GET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
 ```
+
+<!-- test:assert
+cluster_health
+-->
 
 If the cluster health is red, one or more primary shards cannot be allocated.
 Allocation explanations will identify any indices that exist only on the rolled back unit
@@ -607,8 +820,25 @@ As the departed unit will not rejoin, these indices cannot be recovered and must
 Identify the problematic index from the output of:
 
 ```shell
-curl -X GET "10.45.114.156:9200/_cluster/allocation/explain?pretty"
+curl --cacert cert.pem -X GET "https://<unit-ip>:9200/_cluster/allocation/explain?pretty" -u admin:<password>
 ```
+
+<!-- test:assert
+# Capture any orphaned index names for the delete step.
+ORPHANED_INDICES=$(curl -sS --cacert cert.pem \
+  "https://${OS_UNIT_IP}:9200/_cluster/allocation/explain?pretty" \
+  -u "admin:${OS_PASSWORD}" | python3 -c "
+import json, sys
+try:
+    data = json.load(sys.stdin)
+    index = data.get('index')
+    if index and data.get('current_state') == 'unassigned':
+        print(index)
+except Exception:
+    pass
+")
+echo "Orphaned indices: ${ORPHANED_INDICES:-<none>}"
+-->
 
 For example, in the following output, `index1` cannot be recovered as its current state is
 `unassigned` with the reason `NODE_LEFT`:
@@ -664,15 +894,31 @@ Delete the problematic index identified in the previous step:
 If you do not have a snapshot containing this index, the data will be lost!
 ```
 
+<!-- test:skip -->
+
 ```shell
-curl -X DELETE "10.45.114.156:9200/index1"
+curl --cacert cert.pem -X DELETE "https://<unit-ip>:9200/index1" -u admin:<password>
 ```
+
+<!-- test:run
+# Delete the orphaned indices captured above (if any). The visible example
+# above uses a literal index name that only exists in the guide's example
+# output, so it is skipped.
+for index in ${ORPHANED_INDICES:-}; do
+  curl -sS --cacert cert.pem -X DELETE "https://${OS_UNIT_IP}:9200/${index}" \
+    -u "admin:${OS_PASSWORD}"
+done
+-->
 
 After deleting any orphaned indices, verify that the cluster returns to green or yellow health:
 
 ```shell
-curl -X GET "10.45.114.156:9200/_cluster/health?pretty"
+curl --cacert cert.pem -X GET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
 ```
+
+<!-- test:assert
+cluster_health
+-->
 
 ### Set allocation settings
 
@@ -680,7 +926,7 @@ During the upgrade process, the routing allocation setting may be restricted to 
 Restore normal allocation by enabling all routing:
 
 ```shell
-curl -X PUT "10.45.114.156:9200/_cluster/settings" -H 'Content-Type: application/json' -d'
+curl --cacert cert.pem -X PUT "https://<unit-ip>:9200/_cluster/settings" -H 'Content-Type: application/json' -u admin:<password> -d'
 {
   "persistent": {
     "cluster.routing.allocation.enable": "all"
@@ -689,28 +935,47 @@ curl -X PUT "10.45.114.156:9200/_cluster/settings" -H 'Content-Type: application
 '
 ```
 
-### Add a new unit
-
-While optional, it is highly advisable to add a replacement unit to restore the application to its original scale:
-
-```shell
-juju add-unit opensearch -n 1
-```
-
 ### Remove rolled back unit
 
-Remove the rolled back unit:
+Remove the rolled back unit. If the unit is stuck (its hooks cannot complete a graceful
+removal), add `--force --destroy-storage`:
+
+<!-- test:skip -->
 
 ```shell
-juju remove-unit opensearch/2
+juju remove-unit opensearch/2 --no-prompt --force --destroy-storage
 ```
+
+<!-- test:vars
+<stuck unit>: ${STUCK_UNIT}
+-->
+
+<!-- test:run
+# The visible example hardcodes opensearch/2; remove the actual stuck unit
+# identified earlier instead. --force is required: the stuck unit's hooks
+# cannot complete a graceful removal. --destroy-storage removes its data so
+# the replacement unit starts fresh.
+if [[ -n "${STUCK_UNIT:-}" ]]; then
+  juju remove-unit "$STUCK_UNIT" --no-prompt --force --destroy-storage
+  # Wait until the unit is fully gone before touching the lock or adding
+  # the replacement — the lock cleanup depends on the departed unit's
+  # lock document being the only thing left behind.
+  elapsed=0
+  while juju status --format=json 2>/dev/null | grep -q "\"${STUCK_UNIT}\""; do
+    [[ "$elapsed" -ge 600 ]] && { echo "ERROR: ${STUCK_UNIT} still present after 600s"; juju status; exit 1; }
+    sleep 30
+    elapsed=$(( elapsed + 30 ))
+  done
+fi
+-->
 
 Where `opensearch/2` is the name of the unit that was rolled back and blocked earlier.
 
 ### Remove lock
 
-If the replacement unit appears stuck displaying the status message
-`Requesting lock on operation: start`, check if the departed unit still hold the lock:
+If the departed unit still holds the node lock, the replacement unit added in the next
+step would get stuck forever on `Requesting lock on operation: start`. Check whether the
+lock document is still present:
 
 ```text
 GET /.charm_node_lock/_doc/0
@@ -734,37 +999,51 @@ Example response:
 
 If the departed unit holds the lock, delete the lock document:
 
+<!-- test:skip -->
+
 ```shell
-curl -X DELETE "10.45.114.156:9200/.charm_node_lock/_doc/0?refresh=true"
+curl --cacert cert.pem -X DELETE "https://<unit-ip>:9200/.charm_node_lock/_doc/0?refresh=true" -u admin:<password>
 ```
 
-Wait for the replacement unit to start and join the cluster.
+<!-- test:run
+clear_node_lock
+-->
 
-```text
-App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch                         active      3  opensearch                2/stable       168  no
-self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no
+### Add a new unit
 
-Unit                         Workload  Agent  Machine  Public address  Ports     Message
-opensearch/0*                active    idle   0        10.45.114.156   9200/tcp
-opensearch/1                 active    idle   1        10.45.114.208   9200/tcp
-opensearch/3                 active    idle   4        10.45.114.228   9200/tcp
-self-signed-certificates/0*  active    idle   3        10.45.114.124
+While optional, it is highly advisable to add a replacement unit to restore the application to its original scale:
 
-Machine  State    Address        Inst id        Base          AZ  Message
-0        started  10.45.114.156  juju-1fafd0-0  ubuntu@22.04      Running
-1        started  10.45.114.208  juju-1fafd0-1  ubuntu@22.04      Running
-3        started  10.45.114.124  juju-1fafd0-3  ubuntu@22.04      Running
-4        started  10.45.114.228  juju-1fafd0-4  ubuntu@22.04      Running
+```shell
+juju add-unit opensearch -n 1
 ```
+
+<!-- test:await-idle --timeout 3600 -->
+
+Wait for the replacement unit to start and join the cluster. `juju status` should show all
+units `active`/`idle` with no messages, and the application `active` with the original scale
+restored.
 
 ### Verify new unit has joined the cluster
 
 List the nodes in the current cluster:
 
 ```shell
-curl -X GET "10.45.114.156:9200/_cat/nodes"
+curl --cacert cert.pem -X GET "https://<unit-ip>:9200/_cat/nodes" -u admin:<password>
 ```
+
+<!-- test:assert
+# OS_UNIT_IP may point at a unit removed during recovery — re-resolve the
+# leader address before querying the cluster.
+save_ca_and_password
+nodes=$(curl -sS --cacert cert.pem "https://${OS_UNIT_IP}:9200/_cat/nodes" \
+  -u "admin:${OS_PASSWORD}" | wc -l)
+expected=$(juju status --format=json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+print(len(data['applications']['opensearch']['units']))
+")
+[[ "$nodes" -eq "$expected" ]] || { echo "Expected ${expected} nodes in cluster, got ${nodes}"; exit 1; }
+-->
 
 Confirm that the new node is present in the output, which will look similar to the following:
 
@@ -773,3 +1052,19 @@ Confirm that the new node is present in the output, which will look similar to t
 10.45.114.156 32 86 11 0.43 0.69 0.95 dim cluster_manager,data,ingest,ml * opensearch-0.4c1
 10.45.114.208 45 86 11 0.43 0.69 0.95 dim cluster_manager,data,ingest,ml - opensearch-1.4c1
 ```
+
+Finally, confirm the cluster is healthy again — the cluster health API should return `green`:
+
+```shell
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
+```
+
+<!-- test:assert
+cluster_health green
+-->
+
+(how-to-upgrade-next-steps)=
+## Next steps
+
+* [Back up and restore](how-to-guides-back-up-and-restore-index) — create a backup after upgrading.
+* [Scale down safely](how-to-scale-horizontally) — adjust cluster size if needed.
