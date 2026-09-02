@@ -11,7 +11,7 @@ December 16, 2025
 
 This release of the OpenSearch Operator adds support for Ubuntu 24.04 LTS (Noble Numbat), upgrades OpenSearch and OpenSearch Dashboards version to 2.19.4, and introduces significant features including OAuth and JWT authentication, and full Terraform support.
 
-[Charmhub](https://charmhub.io/opensearch) | [Deploy guide](https://canonical-charmed-opensearch.readthedocs-hosted.com/2/how-to/deploy/deploy-on-lxd/) | [Upgrade instructions](https://canonical-charmed-opensearch.readthedocs-hosted.com/2/how-to/upgrade/perform-a-minor-upgrade/) | [System requirements](https://canonical-charmed-opensearch.readthedocs-hosted.com/2/reference/system-requirements/) 
+[Charmhub](https://charmhub.io/opensearch) | [Deploy guide](https://canonical-charmed-opensearch.readthedocs-hosted.com/2/how-to/deploy/standard/) | [Upgrade instructions](https://canonical-charmed-opensearch.readthedocs-hosted.com/2/how-to/upgrade/perform-a-minor-upgrade/) | [System requirements](https://canonical-charmed-opensearch.readthedocs-hosted.com/2/reference/system-requirements/)
 
 ## Charmed OpenSearch
 

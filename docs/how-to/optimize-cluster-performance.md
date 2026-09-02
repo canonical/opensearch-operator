@@ -75,6 +75,6 @@ For a detailed explanation of what profiles are and why they exist, see
 
 ## Next steps
 
-* [Deploy on LXD](how-to-deploy-lxd) — deploy a cluster with a specific profile.
+* [Standard deployment](how-to-deploy-standard) — deploy a cluster with a specific profile.
 * [Scale a cluster horizontally](how-to-scale-horizontally) — adjust cluster size after changing the profile.
 

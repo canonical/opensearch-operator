@@ -5,9 +5,9 @@ myst:
 ---
 
 <!-- vale off -->
-(how-to-deploy-lxd)=
+(how-to-deploy-standard)=
 <!-- vale on -->
-# How to deploy on LXD
+# How to deploy Charmed OpenSearch
 
 This guide shows how to deploy Charmed OpenSearch on
 [LXD](https://ubuntu.com/server/docs/lxd-containers), Canonical's lightweight container hypervisor.

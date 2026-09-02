@@ -98,6 +98,38 @@ To remove the integration:
 juju remove-relation data-integrator opensearch
 ```
 
+### Retrieve the credentials
+
+Once the integration is established, retrieve the connection credentials (username, password,
+endpoints, and CA certificate) by running the `get-credentials` action:
+
+```shell
+juju run data-integrator/leader get-credentials
+```
+
+<details>
+
+<summary>Output example</summary>
+
+```yaml
+opensearch:
+  endpoints: 10.95.38.139:9200,10.95.38.212:9200,10.95.38.94:9200
+  index: test-index
+  password: j3JWFnDkoumCxn0CtKZRCmdRMUlYTZFI
+  tls-ca: |-
+    -----BEGIN CERTIFICATE-----
+    -----END CERTIFICATE-----
+    -----BEGIN CERTIFICATE-----
+    -----END CERTIFICATE-----
+  username: opensearch-client_5
+  version: 2.14.0
+```
+
+</details>
+
+Use these credentials to connect your application to OpenSearch. For an example of connecting
+with `curl`, see the [Tutorial](tutorial-4-integrate-with-a-client-application).
+
 ## Next steps
 
 * [Manage passwords](how-to-manage-passwords) to rotate the credentials issued to the client.

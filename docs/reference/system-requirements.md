@@ -69,4 +69,4 @@ On VM (machine) deployments, the charm applies all required `sysctl` settings au
 ```
 
 For instructions on how to apply these settings on the host and propagate them to
-containers, see [How to deploy on LXD](how-to-deploy-lxd).
+containers, see [How to deploy](how-to-deploy-standard).

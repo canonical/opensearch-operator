@@ -18,6 +18,8 @@ The example uses AWS, but the approach applies to any
 * [`jq`](https://jqlang.github.io/jq/)
 * A VPC on AWS (or equivalent in your cloud)
 * AWS `ACCESS_KEY` and `SECRET_KEY`
+* Optional, for the COS monitoring sections: a Kubernetes cluster (e.g. MicroK8s)
+  with `kubectl` configured
 
 ## Set up the environment
 

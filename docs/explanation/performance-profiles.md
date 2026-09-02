@@ -10,7 +10,7 @@ myst:
 Charmed OpenSearch provides **performance profiles** that tune resource allocation and
 OpenSearch parameters to suit different use cases. Profiles simplify deployment by
 automatically configuring JVM heap size, node count requirements, and system-level
-constraints based on the intended workload.
+constraints based on the intended deployment scenario.
 
 ## Why profiles exist
 
@@ -69,7 +69,7 @@ The `net.ipv4.tcp_retries2` parameter is set automatically by the charm and does
 need to be configured manually.
 
 For instructions on how to apply these settings, see
-[How to deploy on LXD](how-to-deploy-lxd). For the full list of required kernel parameters,
+[How to deploy](how-to-deploy-standard). For the full list of required kernel parameters,
 see [System requirements](reference-system-requirements).
 
 ## Changing profiles

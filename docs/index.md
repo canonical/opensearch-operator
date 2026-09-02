@@ -27,7 +27,7 @@ Charmed OpenSearch documentation has the following topics.
 | | |
 |---|---|
 | **Getting started** | [Requirements](reference-system-requirements) • [Tutorial: Introduction](tutorial-index) • [Step 1: Environment setup](tutorial-1-set-up-the-environment) |
-| **Deployment** | [Deploy with LXD](how-to-deploy-lxd) • [Large deployment](how-to-deploy-large) |
+| **Deployment** | [Standard deployment](how-to-deploy-standard) • [Large deployment](how-to-deploy-large) |
 | **Cluster management** | [Horizontal scaling](how-to-scale-horizontally) • [Applications integration](how-to-integrate-with-an-application) • [Version upgrades](how-to-minor-upgrade) • [Version rollback](how-to-minor-rollback) |
 | **Monitoring & performance** | [Monitoring](how-to-monitoring) • [SMTP notifications](how-to-guides-add-smtp-credentials) • [Performance optimization](how-to-optimize-cluster-performance) • [Load testing](how-to-perform-load-testing) • [OpenSearch Dashboards](dashboard-index) |
 | **Backups** | [Create a backup](how-to-create-a-backup) • [Azure configuration](how-to-back-up-configure-azure-storage) • [S3 configuration](how-to-back-up-configure-s3) • [Restore from a local backup](how-to-restore-a-local-backup) • [Migrate a cluster](how-to-migrate-a-cluster) • [Recover from attached storage](how-to-persistent-storage) |

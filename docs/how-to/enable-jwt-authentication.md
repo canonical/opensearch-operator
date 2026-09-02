@@ -100,7 +100,7 @@ Integrate:
 juju integrate jwt-integrator opensearch-main
 ```
 
-If integrated with the wrong application, the charm shows `blocked`.
+If integrated with the wrong application, the charm shows `blocked` status.
 Remove the invalid relation and integrate with the main orchestrator.
 
 ## Use with OpenSearch Dashboards

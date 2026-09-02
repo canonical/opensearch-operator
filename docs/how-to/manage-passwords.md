@@ -16,8 +16,10 @@ The `admin` user is an internal charm user. Use its credentials for cluster admi
 only — client applications must obtain their own credentials through an integration.
 
 ```{note}
-The `get-password` and `set-password` actions take an optional `username` parameter
-that defaults to `admin`. `set-password` must be run on the leader unit.
+The `get-password` and `set-password` actions take an optional `username` parameter.
+Besides `admin` (the default), they accept other internal charm users:
+`kibanaserver` (used by OpenSearch Dashboards) and `monitor` (used by COS monitoring).
+`set-password` must be run on the leader unit.
 ```
 
 ### Retrieve the admin password
@@ -29,7 +31,8 @@ juju run opensearch/leader get-password
 ```
 
 The action returns the `admin` password and the CA certificate chain used to generate the
-admin client certificate.
+admin client certificate. To retrieve the password of another internal user, pass its
+username: `juju run opensearch/leader get-password username=<username>`.
 
 ### Rotate the admin password
 
@@ -47,6 +50,12 @@ juju run opensearch/leader set-password password=<new-password>
 
 Both commands return the new password as `admin-password`.
 The previous password stops working immediately.
+
+To rotate the password of another internal user, pass its username:
+
+```shell
+juju run opensearch/leader set-password username=<username> password=<new-password>
+```
 
 ## Manage client credentials
 

@@ -75,8 +75,9 @@ This causes the following sequence:
 4. Once new certificates are issued, a **rolling restart** is triggered to apply the
    new CA across all nodes.
 
-Until the rolling restart completes, nodes continue using the old certificates. This
-ensures that the cluster remains operational during the transition.
+During the transition, nodes trust both the old and the new CA: the old CA is kept
+until the new one is applied to all nodes. This keeps the cluster operational throughout
+the rolling restart.
 
 ### With `manual-tls-certificates`
 

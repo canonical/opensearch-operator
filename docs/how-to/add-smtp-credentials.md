@@ -11,6 +11,10 @@ This guide shows how to configure SMTP credentials so that OpenSearch can send e
 via the [SMTP integrator charm](https://charmhub.io/smtp-integrator).
 
 ```{note}
+SMTP integration requires Charmed OpenSearch revision 344 or higher.
+```
+
+```{note}
 SMTP servers using self-signed certificates are not currently supported.
 ```
 
@@ -43,8 +47,8 @@ juju integrate smtp-integrator:smtp opensearch:smtp
 ```
 
 Once the integration is established, `juju status --relations` shows both applications
-`active` with an `smtp` relation between them, and OpenSearch notification channels can
-send email via the configured SMTP server.
+`active` with an `smtp` relation between them, and OpenSearch can send email notifications
+via the configured SMTP server.
 
 ```{note}
 OpenSearch requires a stable identifier for each email sender, notification channel, and

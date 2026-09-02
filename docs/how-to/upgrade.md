@@ -336,8 +336,7 @@ the charm you want to rollback to. For example, to rollback to revision **144**,
 juju refresh opensearch --revision=144
 ```
 
-When deploying from a local charm file, you must have the previous revision's `.charm` file.
-Then, run:
+To deploy the previous revision's `.charm` file:
 
 ```shell
 juju refresh opensearch --path=<path-to-charm-file>

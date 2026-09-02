@@ -30,14 +30,17 @@ Only one of the two `yellow` cases needs your intervention:
 - **Temporary** — shards are `initializing` or `relocating`. Normal after adding or
   removing a unit; resolves on its own.
 - **Permanent** — shards are `unassigned` and cannot be allocated, typically because
-  there are too few nodes. Does not resolve on its own; usually requires scaling up.
+  there are too few nodes or an allocation setting prevents their placement. Does not
+  resolve on its own; usually requires [scaling up](how-to-scale-horizontally).
 
-Check these counts in the
+Check the number of shards in each state in the
 [cluster health API](https://opensearch.org/docs/2.19/api-reference/cluster-api/cluster-health/)
 response to tell them apart, and see the matching
 [alert rule](ref-alert-rules) for each: a non-zero `initializing_shards` or
 `relocating_shards` (`OpenSearchClusterYellowTemp`) is temporary, while a non-decreasing
-`unassigned_shards` (`OpenSearchClusterYellow`) is permanent.
+`unassigned_shards` (`OpenSearchClusterYellow`) is permanent. To find out why an
+unassigned shard cannot be allocated, use the
+[cluster allocation explain API](https://opensearch.org/docs/2.19/api-reference/cluster-api/cluster-allocation/).
 
 (cluster-health-red-causes)=
 ### Why a cluster turns `red`
@@ -57,8 +60,8 @@ There are three broad causes, and they call for different responses:
 This is why scaling up is not a universal remedy for a `red` cluster. Use the
 [cluster allocation explain API](https://opensearch.org/docs/2.19/api-reference/cluster-api/cluster-allocation/)
 to establish which cause applies before acting — a `no_valid_shard_copy` decision points to
-the third case. For the procedure, see
-[how to scale a cluster horizontally](how-to-scale-horizontally).
+the third case. But if the cause can be fixed by scaling, see
+[how to scale a cluster horizontally](how-to-scale-horizontally) for instructions.
 
 ### How health maps to Juju status
 
@@ -71,8 +74,8 @@ The charm reflects cluster health in the application status:
   *"Waiting for OpenSearch to start..."* or for specific shards to finish building.
 - **`blocked`** — the cluster has issues (a permanent `yellow`, or `red`). The status
   message describes the problem: *"1 or more 'replica' shards are not assigned, please
-  scale your application up."* for a permanent `yellow`, and the same message with
-  *'primary'* in place of *'replica'* for `red`.
+  scale your application up."* for a permanent `yellow`, and *"1 or more 'primary'
+  shards are not assigned, please scale your application up."* for `red`.
 
 This means you can use `juju status` as a quick health check without querying the
 OpenSearch API directly. The charm derives these statuses on a best-effort basis, so treat

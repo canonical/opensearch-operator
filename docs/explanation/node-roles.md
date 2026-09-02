@@ -16,7 +16,7 @@ combine to form a large deployment.
 (explanation-node-roles-available)=
 ## Available node roles
 
-Charmed OpenSearch accepts the following values in the `roles` configuration option:
+Charmed OpenSearch accepts the following comma-separated values in the `roles` configuration option:
 
 | Role | Description |
 | :--- | :--- |
@@ -37,7 +37,9 @@ temperature may be set per application.
 
 Classifying data nodes into **tiers** supports
 [index lifecycle management](https://opensearch.org/docs/2.19/im-plugin/ism/index/)
-policies that move data between tiers as it ages.
+policies that move data between tiers as it ages. Note that the charm only tags nodes
+with their temperature — it does not place data on them. To route indices to the
+appropriate tier, you need to configure the index lifecycle management policies yourself.
 
 ## Auto-generated roles
 
@@ -133,8 +135,8 @@ target the **main orchestrator** application, not the data or failover applicati
 The main orchestrator is responsible for distributing configuration to the rest of the
 cluster. If integrated with the wrong application, the charm will enter a `blocked` state.
 
-You can identify the main orchestrator by inspecting the `integrations` section of
-`juju status` — look for the application providing the `peer-cluster-orchestrator` endpoint.
+You can identify the main orchestrator by inspecting the integrations section of
+`juju status --relations` — look for the application providing the `peer-cluster-orchestrator` endpoint.
 
 ## See also
 
