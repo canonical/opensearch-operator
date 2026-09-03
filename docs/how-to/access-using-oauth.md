@@ -12,10 +12,10 @@ issued by the Canonical Identity Platform (Hydra).
 
 ## Prerequisites
 
-* A working LXD cloud with Juju bootstrapped
-* MicroK8s installed locally (for the Identity Platform)
-* Network access between the host and LXD containers
 * Minimum 4 CPUs, 16 GB RAM
+* Network access between the host and LXD containers
+* MicroK8s installed locally (for the Identity Platform)
+* A working LXD cloud with Juju bootstrapped (see the [Environment setup](tutorial-1-set-up-the-environment) stage of our tutorial for more details)
 
 ## Deploy OpenSearch on LXD
 
