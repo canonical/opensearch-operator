@@ -89,7 +89,7 @@ for the HTTP and Transport layers. We will do this in the next step.
 If you see the following status message:
 
 ```text
-vm.swappiness should be 0 - net.ipv4.tcp_retries2 should be 5
+Missing requirements: vm.swappiness should be at most 0
 ```
 
 you need to [set the correct kernel parameters](tutorial-1-set-up-the-environment) to continue.

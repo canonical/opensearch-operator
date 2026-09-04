@@ -104,16 +104,15 @@ If you did not save those values, use the second reset option.
 Leaving the custom kernel parameters outside of this tutorial scope can impact
 the host machine's performance.
 
-To reset them, you can either :
+To reset them, you can either:
 
 * Reboot your computer
-* Set your original parameters with the following command :
+* Set your original parameters with the following command:
 
 ```shell
 sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
 vm.max_map_count=262144
 vm.swappiness=60
-net.ipv4.tcp_retries2=15
 fs.file-max=1048576
 EOT
 
