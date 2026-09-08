@@ -1,4 +1,5 @@
 ---
+relatedlinks: "[GitHub](https://github.com/canonical/opensearch-operator), [Charmhub](https://charmhub.io/opensearch), [Charmhub&#32;(K8s)](https://charmhub.io/opensearch-k8s)"
 myst:
   html_meta:
     description: "Deploy and manage OpenSearch clusters with automated operations, TLS encryption, backups, and horizontal scaling on any cloud using Juju."
@@ -33,6 +34,7 @@ Charmed OpenSearch documentation has the following topics.
 | **Backups** | [Create a backup](how-to-create-a-backup) • [Azure configuration](how-to-back-up-configure-azure-storage) • [S3 configuration](how-to-back-up-configure-s3) • [Restore from a local backup](how-to-restore-a-local-backup) • [Migrate a cluster](how-to-migrate-a-cluster) • [Recover from attached storage](how-to-persistent-storage) |
 | **Security** | [Overview](explanation-security-index) • [Enable encryption](how-to-enable-tls-encryption) • [Rotate certificates](how-to-rotate-tls-ca-certificates) • [Manage passwords](how-to-manage-passwords) • [OAuth](how-to-access-using-oauth) • [JWT Auth](how-to-guides-enable-jwt-authentication) • [Cryptography](explanation-security-cryptography) |
 | **Internals** | [Node roles](explanation-node-roles) • [Cluster health](explanation-cluster-health) • [Performance profiles](explanation-performance-profiles) • [Persistent storage](explanation-persistent-storage) • [TLS certificates](explanation-tls-certificates) • [Alert rules](ref-alert-rules) • [Monitoring overview](explanation-monitoring) • [Software testing](explanation-software-testing) • [Release notes](reference-release-notes-index) |
+| **Contributing** | [Contribute](contributing-guide) |
 
 ## How the documentation is organized
 
@@ -47,12 +49,21 @@ This documentation uses the [Diátaxis documentation structure](https://diataxis
 
 Charmed OpenSearch is an official distribution of OpenSearch.
 It’s an open-source project that welcomes community contributions, suggestions,
-fixes and constructive feedback:
+fixes and constructive feedback.
 
-- Raise an issue or feature request in the [GitHub repository](https://github.com/canonical/opensearch-operator/issues).
-- Meet the community and chat with us in our [Matrix channel](https://matrix.to/#/#charmhub-data-platform:ubuntu.com) or [leave a comment](https://discourse.charmhub.io/t/charmed-opensearch-documentation/9729).
-- See the Charmed OpenSearch [contribution guidelines](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md) on GitHub and read the Ubuntu Community's [Code of Conduct](https://ubuntu.com/community/code-of-conduct).
-- Explore [Canonical's open-source data platform](https://canonical.com/data).
+### Get involved
+
+- [Join the Discourse forum](https://discourse.charmhub.io/tag/opensearch)
+- [Chat with us on Matrix](https://matrix.to/#/#charmhub-data-platform:ubuntu.com)
+- [Report an issue](https://github.com/canonical/opensearch-operator/issues/new)
+- [Contribute](contributing-guide) to the code and documentation
+- Explore [Canonical's open-source data platform](https://canonical.com/data)
+
+### Governance and policies
+
+- [Read our Code of Conduct](https://ubuntu.com/community/code-of-conduct)
+- [Report a security issue](https://wiki.ubuntu.com/DebuggingSecurity#How_to_File) — please do not use GitHub issues for security topics
+- [Canonical Contributor Agreement](https://ubuntu.com/legal/contributors)
 
 ## License & trademark
 
@@ -75,6 +86,7 @@ tutorial/index
 how-to/index
 reference/index
 explanation/index
+Contributor's guide<contributing>
 ```
 
 ```{toctree}
