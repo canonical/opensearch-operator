@@ -136,16 +136,15 @@ and add the parameters to the Juju model's configuration.
 First, we need to make note of the current parameters of the kernel because we will need to reset
 them after the tutorial (although rebooting your machine will also do the trick).
 
-Let's run `sysctl` and filter the output for the three specific parameters that we will be changing:
+Let's run `sysctl` and filter the output for the two specific parameters that we will be changing:
 
 ```shell
-sudo sysctl -a | grep -E 'swappiness|max_map_count|tcp_retries2'
+sudo sysctl -a | grep -E 'swappiness|max_map_count'
 ```
 
 This command should return something like the following:
 
 ```text
-net.ipv4.tcp_retries2 = 15
 vm.max_map_count = 262144
 vm.swappiness = 60
 ```
@@ -162,7 +161,6 @@ Set the kernel parameters to the recommended values for OpenSearch with the foll
 sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
 vm.max_map_count=262144
 vm.swappiness=0
-net.ipv4.tcp_retries2=5
 fs.file-max=1048576
 EOT
 
@@ -182,14 +180,20 @@ To do so, run the following commands:
 cat <<EOF > cloudinit-userdata.yaml
 cloudinit-userdata: |
   postruncmd:
-    - [ 'echo', 'vm.max_map_count=262144', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'vm.swappiness=0', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'net.ipv4.tcp_retries2=5', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'fs.file-max=1048576', '>>', '/etc/sysctl.conf' ]
-    - [ 'sysctl', '-p' ]
+    - echo 'vm.max_map_count=262144' >> /etc/sysctl.conf
+    - echo 'vm.swappiness=0' >> /etc/sysctl.conf
+    - echo 'fs.file-max=1048576' >> /etc/sysctl.conf
+    - sysctl -p
 EOF
 
 juju model-config --file=./cloudinit-userdata.yaml
+```
+
+```{note}
+Keep each `postruncmd` entry as a **string**. Cloud-init runs string entries through a
+shell, so the `>>` redirection works. Entries written as a YAML list are passed straight to
+`execve(3)` with no shell, so `>>` would become a literal argument to `echo` instead of
+appending to the file.
 ```
 
 <!-- test:assert

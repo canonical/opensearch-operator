@@ -123,6 +123,10 @@ For instructions, see the
 
 ## Additional resources
 
+* [TLS certificates](explanation-tls-certificates) — the three certificate categories, rotation mechanics, and CA rotation.
+* [Cryptography](explanation-security-cryptography) — resource checksums, source verification, encryption, and authentication.
+* [How to manage TLS encryption](how-to-enable-tls-encryption) — step-by-step guide for enabling TLS and rotating certificates.
+
 For details on the cryptography used by Charmed OpenSearch, see the
 [Cryptography](explanation-security-cryptography)
 explanation page.
@@ -132,4 +136,5 @@ explanation page.
 :hidden:
 
 cryptography
+tls-certificates
 ```

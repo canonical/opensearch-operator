@@ -1,279 +1,278 @@
 ---
 myst:
   html_meta:
-    description: "Reuse and recover OpenSearch data from Juju-managed disks containing existing cluster metadata and data."
+    description: "Reuse and recover OpenSearch data from Juju-managed disks, including last-resort disaster-recovery metadata cleanup."
 ---
 
 (how-to-persistent-storage)=
 # How to manage persistent storage
 
-This document describes the steps needed to reuse disks that contain data
-and metadata of an OpenSearch cluster.
+This guide shows how to reuse disks that contain data from a previous OpenSearch cluster.
+For an explanation of the risks of disk reuse, dangling indices, and metadata cleanup,
+see [Persistent storage and disk recovery](explanation-persistent-storage).
 
 ```{note}
-This document's steps can only be applied for disks under Juju management.
-It is not currently supported to bring external disks or volumes into Juju.
+Prefer snapshot and restore whenever possible. The procedures on this page for reusing a
+disk from a **different** cluster are last-resort disaster recovery, not a general-purpose
+migration path. To move data between clusters, always try
+[creating a backup](how-to-create-a-backup) and
+[restoring or migrating it](how-to-migrate-a-cluster) first.
 ```
+
+There are three scenarios:
+
+* **Same cluster** (routine, safe) — a detached volume is reattached to a new unit in the
+  same cluster. The node rejoins automatically with no metadata changes required.
+* **Different cluster, attach** (last resort) — a disk from a different cluster is attached
+  to an existing cluster. The disk holds stale metadata referencing the old cluster UUID.
+  Only proceed if the source cluster is permanently gone and no viable snapshot exists —
+  in that case, the last-resort `detach-cluster` tool discards that metadata so the node
+  can join.
+* **Different cluster, bootstrap** (last resort) — a disk from a different cluster is used
+  to seed a brand new single-node deployment. Only proceed under the same conditions as
+  above — the last-resort `unsafe-bootstrap` tool resets the cluster metadata so that a
+  new cluster UUID is assigned and the node can start.
+
+This guide applies only to **persistent** disks under Juju management
+(e.g. deployed using a persistent storage pool such as LXD ZFS or Btrfs).
+Non-persistent storage (such as the default `rootfs` pool) is destroyed
+when its unit is removed and cannot be reused.
+Bringing external disks or volumes into Juju is not currently supported.
 
 ```{caution}
-Make sure you have safely backed up your data,
-the steps described here may potentially cause data loss.
+Back up your data before proceeding. Reusing disks may cause older data
+to override newer data.
 ```
 
-## Introduction
+## Prerequisites
 
-This document will describe the different steps needed to bring disks that have previously
-been used by OpenSearch, and hence still hold data and metadata of that cluster;
-and how to reuse these disks. These disks will be named across this document as *used disks*.
+Ensure the disks are visible within Juju. List volumes with:
 
-The document is intended for cases where a quick recovery is needed.
-However, it is important to understand that reusing disks may cause older data
-to override existing / newer data. Make sure the disks and their content are known
-before proceeding with any of the steps described below.
-
-### Pre-requisites
-
-Before starting, make sure that the disks are visible within Juju.
-For the remainder of the document, the following deployment will be used as example:
-
-```text
-$ juju status
-Model       Controller           Cloud/Region         Version  SLA          Timestamp
-opensearch  localhost-localhost  localhost/localhost  3.5.3    unsupported  16:46:04Z
-
-App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch                         active      3  opensearch                2/edge         164  no       
-self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
-
-Unit                         Workload  Agent  Machine  Public address  Ports     Message
-opensearch/0*                active    idle   1        10.81.173.18    9200/tcp  
-opensearch/1                 active    idle   2        10.81.173.167   9200/tcp  
-opensearch/2                 active    idle   3        10.81.173.48    9200/tcp  
-self-signed-certificates/0*  active    idle   0        10.81.173.30              
-
-Machine  State    Address        Inst id        Base          AZ  Message
-0        started  10.81.173.30   juju-e7601c-0  ubuntu@22.04      Running
-1        started  10.81.173.18   juju-e7601c-1  ubuntu@22.04      Running
-2        started  10.81.173.167  juju-e7601c-2  ubuntu@22.04      Running
-3        started  10.81.173.48   juju-e7601c-3  ubuntu@22.04      Running
+```shell
+juju storage
 ```
 
-Volumes can be listed with:
+Note the Storage ID of a detached volume for use in the steps below:
 
 ```text
-$ juju storage
 Unit          Storage ID         Type        Pool             Size     Status    Message
-opensearch/0  opensearch-data/0  filesystem  opensearch-pool  2.0 GiB  attached  
-opensearch/1  opensearch-data/1  filesystem  opensearch-pool  2.0 GiB  attached  
-opensearch/2  opensearch-data/2  filesystem  opensearch-pool  2.0 GiB  attached 
-```
-
-For more details, [refer to Juju storage management documentation](https://juju.is/docs/juju/manage-storage).
-
-## Re-using disks use-cases
-
-OpenSearch provides a set of APIs and mechanisms to detect existing data
-on a given node and how to interact with that data. Most notable mechanisms are:
-(i) the `/_dangling` API,
-[as described in the upstream docs](https://opensearch.org/docs/latest/api-reference/index-apis/dangling-index/);
-and (ii) the `opensearch-node` CLI that allows operators to clean up portions of the metadata
-in the *used disk* before re-attaching to the cluster.
-
-The cases can be broken down into two groups: reusing disks from older nodes but
-the **same cluster** or reusing disks from **another cluster**.
-They will be named *same cluster* and *other cluster* scenarios.
-
-The following scenarios will be considered:
-
-1) Same cluster: reusing disks from another node
-2) Other cluster: bootstrapping a new cluster with an used disk
-3) Other cluster: attaching an used disk from another cluster to an existing cluster
-
-The main concern in these cases is the management of the cluster metadata
-and the status of the previous indices.
-
-### Same cluster scenario
-
-We can check which volumes are currently available to be reattached:
-
-```text
-$ juju storage
-Unit          Storage ID         Type        Pool             Size     Status    Message
-              opensearch-data/0  filesystem  opensearch-pool  2.0 GiB  detached  
-opensearch/1  opensearch-data/1  filesystem  opensearch-pool  2.0 GiB  attached  
+              opensearch-data/0  filesystem  opensearch-pool  2.0 GiB  detached
+opensearch/1  opensearch-data/1  filesystem  opensearch-pool  2.0 GiB  attached
 opensearch/2  opensearch-data/2  filesystem  opensearch-pool  2.0 GiB  attached
 ```
 
-To reuse a given disk within the same cluster, it is enough to spin up a new node and attach that volume:
+For more details, see [Juju storage management](https://juju.is/docs/juju/manage-storage).
+
+## Reuse a disk within the same cluster
+
+Attach the detached volume to a new unit:
 
 ```shell
-juju add-unit opensearch -n 1 --attach-storage opensearch-data/0
+juju add-unit opensearch --attach-storage opensearch-data/<id>
 ```
 
-The node will eventually come up:
+When the new unit shows `active/idle` in `juju status`, the node has rejoined the cluster
+with the existing data. Re-running `juju storage` shows the reused volume as `attached`
+to the new unit.
 
-```text
-$ juju status
-Model       Controller           Cloud/Region         Version  SLA          Timestamp
-opensearch  localhost-localhost  localhost/localhost  3.5.3    unsupported  16:51:39Z
-
-App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
-opensearch                         active      3  opensearch                2/edge         164  no       
-self-signed-certificates           active      1  self-signed-certificates  latest/stable  155  no       
-
-Unit                         Workload  Agent  Machine  Public address  Ports     Message
-opensearch/1*                active    idle   2        10.81.173.167   9200/tcp  
-opensearch/2                 active    idle   3        10.81.173.48    9200/tcp  
-opensearch/3                 active    idle   4        10.81.173.102   9200/tcp  
-self-signed-certificates/0*  active    idle   0        10.81.173.30              
-
-Machine  State    Address        Inst id        Base          AZ  Message
-0        started  10.81.173.30   juju-e7601c-0  ubuntu@22.04      Running
-2        started  10.81.173.167  juju-e7601c-2  ubuntu@22.04      Running
-3        started  10.81.173.48   juju-e7601c-3  ubuntu@22.04      Running
-4        started  10.81.173.102  juju-e7601c-4  ubuntu@22.04      Running
-```
-
-The new node will have `opensearch-data/0` successfully attached:
-
-```text
-$ juju storage
-Unit          Storage ID         Type        Pool             Size     Status    Message
-opensearch/1  opensearch-data/1  filesystem  opensearch-pool  2.0 GiB  attached  
-opensearch/2  opensearch-data/2  filesystem  opensearch-pool  2.0 GiB  attached  
-opensearch/3  opensearch-data/0  filesystem  opensearch-pool  2.0 GiB  attached
-```
-
-Finally, the node will show up on the cluster status:
-
-```text
-$ curl -sk -u admin:$PASSWORD https://$IP:9200/_cat/nodes
-10.81.173.102 15 98 16 3.75 5.59 4.99 dim cluster_manager,data,ingest,ml - opensearch-3.f1a
-10.81.173.48  20 98 16 3.75 5.59 4.99 dim cluster_manager,data,ingest,ml - opensearch-2.f1a
-10.81.173.167 29 98 16 3.75 5.59 4.99 dim cluster_manager,data,ingest,ml * opensearch-1.f1a
-```
-
-### Different cluster scenarios
-
-In these cases, the cluster has been removed and the application will be redeployed
-reusing these disks in part or in total. In all of the following cases, the `opensearch-node`
-CLI will be needed to clean up portions of the metadata.
-
-#### Reusing a disk in a *different cluster*
-
-To reuse a disk from another cluster, add a new unit with the *used disk*:
+To confirm from OpenSearch's side, retrieve the admin password and CA certificate chain with
+`juju run opensearch/leader get-password`, saving the chain to a file (e.g. `cert.pem`), and
+list the cluster nodes:
 
 ```shell
-juju add-unit opensearch --attach-storage opensearch-data/0
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cat/nodes" -u admin:<password>
 ```
 
-The deployment of this node will eventually stop its normal process and will be unable to proceed.
-That happens because the new unit holds old metadata, with reference to the *old cluster UUID*.
-To resolve that, access the unit:
+The new unit should appear in the output alongside the existing nodes. See
+[mapping Juju units to OpenSearch nodes](cluster-health-mapping-nodes) for how to read this
+output.
 
-```shell
-juju ssh opensearch/0
-```
+## Recover a disk from a different cluster (last resort)
 
-Checking the logs, it is possible to see the unit is waiting for the cluster to become available
-and intermittently listing its last-known peers that are now unreachable.
-The following message will appear in the logs:
-
-```text
-sudo journalctl -u snap.opensearch.daemon -f
-...
-
-Caused by: org.opensearch.cluster.coordination.CoordinationStateRejectedException: join validation on cluster state with a different cluster uuid K-LFo5AqQ--lamWCNc6ZsA than local cluster uuid gRaym5GmSUebyPO5o3Ay4w, rejecting
-```
-
-To remove the stale metadata, first, stop the service:
-
-```shell
-sudo systemctl stop snap.opensearch.daemon
-```
-
-Then, detach the node from its old references:
-
-```text
-$ sudo -u snap_daemon \
-	    OPENSEARCH_JAVA_HOME=/snap/opensearch/current/usr/lib/jvm/java-21-openjdk-amd64 \
-	    OPENSEARCH_PATH_CONF=/var/snap/opensearch/current/etc/opensearch \
-	    OPENSEARCH_HOME=/var/snap/opensearch/current/usr/share/opensearch \
-	    OPENSEARCH_LIB=/var/snap/opensearch/current/usr/share/opensearch/lib \
-	    OPENSEARCH_PATH_CERTS=/var/snap/opensearch/current/etc/opensearch/certificates \
-	    /snap/opensearch/current/usr/share/opensearch/bin/opensearch-node detach-cluster
-```
-
-Restart the service:
-
-```shell
-sudo systemctl start snap.opensearch.daemon
-```
-
-The cluster will eventually add the new node.
-
-#### Bootstrapping from a *used disk*
-
-To create a new cluster reusing one of the disks, first deploy a new OpenSearch cluster with one of the attached volumes:
-
-```shell
-juju deploy opensearch -n1 --attach-storage opensearch-data/XXX
-```
-
-The deployment will eventually stop its normal process and will be unable to proceed.
-That happens because the cluster is currently loading its original metadata and cannot reach out
-to any of its peers. To resolve that, access the unit:
-
-```shell
-juju ssh opensearch/0
-```
-
-Checking the logs, it is possible to see the unit is waiting for the cluster to become available
-and intermittently listing its last-known peers that are now unreachable.
-The following message on the logs will show up:
-
-```text
-sudo journalctl -u snap.opensearch.daemon -f
-...
-
-Sep 09 10:33:55 juju-05dbd1-4 opensearch.daemon[8573]: [2024-09-09T10:33:55,415][INFO ][o.o.s.c.ConfigurationRepository] [opensearch-3.bf4] Wait for cluster to be available ... 
-```
-
-To remove the stale metadata, first, stop the service:
-
-```shell
-sudo systemctl stop snap.opensearch.daemon
-```
-
-Then, execute the unsafe-bootstrap to remove the stale metadata:
-
-```text
-$ sudo -u snap_daemon \
-	    OPENSEARCH_JAVA_HOME=/snap/opensearch/current/usr/lib/jvm/java-21-openjdk-amd64 \
-	    OPENSEARCH_PATH_CONF=/var/snap/opensearch/current/etc/opensearch \
-	    OPENSEARCH_HOME=/var/snap/opensearch/current/usr/share/opensearch \
-	    OPENSEARCH_LIB=/var/snap/opensearch/current/usr/share/opensearch/lib \
-	    OPENSEARCH_PATH_CERTS=/var/snap/opensearch/current/etc/opensearch/certificates \
-	    /snap/opensearch/current/usr/share/opensearch/bin/opensearch-node unsafe-bootstrap
-```
-
-Restart the service:
-
-```shell
-sudo systemctl start snap.opensearch.daemon
-```
-
-The cluster will correctly form a new UUID. It is possible to also add more units, either fresh ones or even units detached from another cluster, as explained on the previous section.
-
-## Dangling indices
-
-Now, the *used disk*  is successfully mounted to the cluster.
-The next step is to check for indices that did not exist in the cluster.
-That can be done using the `/_dangling` API.
-For more details on how to list and recover dangling indices, refer to the
-[OpenSearch documentation on this API](https://opensearch.org/docs/latest/api-reference/index-apis/dangling-index/).
+When attaching a disk from a different cluster, the node holds stale metadata
+referencing the old cluster UUID. The steps below perform coordination-metadata surgery on
+that disk and are a **last resort** — use them only when the source cluster is permanently
+gone and no viable snapshot exists to restore from instead.
 
 ```{caution}
-This API cannot guarantee that the imported data accurately represents the latest state of the data
-when the index was still part of the cluster.
+`detach-cluster` and `unsafe-bootstrap` are last-resort disaster-recovery commands.
+OpenSearch warns that they can cause **arbitrary data loss**, because the node running the
+command may not hold the most recent cluster metadata. Only use them after the
+**permanent** loss of a majority (or all) of the `cluster_manager`-eligible nodes in a
+cluster, or after a brutal cluster decommission, and only when no viable snapshot recovery
+exists. A success message from either command does not mean no data was lost.
 ```
+
+Before proceeding, confirm all of the following:
+
+* The source cluster (or the majority of its `cluster_manager`-eligible nodes) is
+  permanently lost, decommissioned, or otherwise unrecoverable — not merely offline or
+  repairable by moving its data path to healthy hardware.
+* No usable snapshot exists to [restore or migrate](how-to-migrate-a-cluster) the data
+  instead.
+* All other nodes that were part of the old cluster are stopped, if any survive.
+* If more than one node survives from the old cluster, `unsafe-bootstrap` should be run on
+  the one reporting the highest `(term, version)` pair, since it holds the freshest
+  metadata.
+
+Both `detach-cluster` and `unsafe-bootstrap` (used below) prompt for interactive
+confirmation (`Confirm [y/N]`) and print their own data-loss warning before making any
+change.
+
+### Attach to an existing cluster
+
+Attach the used disk to a new unit:
+
+```shell
+juju add-unit opensearch --attach-storage opensearch-data/<id>
+```
+
+The unit will fail to join. Connect to it to confirm this is the expected UUID-mismatch
+error and to run the remaining commands:
+
+```shell
+juju ssh opensearch/<unit-id>
+```
+
+All remaining commands in this section run **on the unit**, inside this session.
+
+Inspect the logs:
+
+```shell
+sudo journalctl -u snap.opensearch.daemon -f
+```
+
+The unit repeatedly reports that it cannot join the cluster because of a UUID mismatch, similar to:
+
+```text
+CoordinationStateRejectedException: join validation on cluster state with a different cluster uuid
+... rejecting
+```
+
+Press `Ctrl+C` to stop following the log, then stop the service:
+
+```shell
+sudo systemctl stop snap.opensearch.daemon
+```
+
+Detach the node from its old cluster references:
+
+```shell
+sudo -u snap_daemon \
+    OPENSEARCH_JAVA_HOME=/snap/opensearch/current/usr/lib/jvm/java-21-openjdk-amd64 \
+    OPENSEARCH_PATH_CONF=/var/snap/opensearch/current/etc/opensearch \
+    OPENSEARCH_HOME=/var/snap/opensearch/current/usr/share/opensearch \
+    OPENSEARCH_LIB=/var/snap/opensearch/current/usr/share/opensearch/lib \
+    OPENSEARCH_PATH_CERTS=/var/snap/opensearch/current/etc/opensearch/certificates \
+    /snap/opensearch/current/usr/share/opensearch/bin/opensearch-node detach-cluster
+```
+
+Restart the service:
+
+```shell
+sudo systemctl start snap.opensearch.daemon
+```
+
+The node will join the cluster.
+
+To confirm, exit the unit session, retrieve the
+admin password and CA certificate chain with `juju run opensearch/leader get-password`,
+saving the chain to a file (e.g. `cert.pem`), and list the cluster nodes from the host with the
+[CAT nodes API](https://opensearch.org/docs/2.19/api-reference/cat/cat-nodes/):
+
+```shell
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cat/nodes" -u admin:<password>
+```
+
+The recovered node should appear in the output alongside the existing nodes. See
+[mapping Juju units to OpenSearch nodes](cluster-health-mapping-nodes) for how to read this
+output.
+
+### Bootstrap a new cluster from a used disk
+
+Deploy a new single-node cluster with the used disk:
+
+```shell
+juju deploy opensearch --attach-storage opensearch-data/<id>
+```
+
+The unit will fail to start. Connect to it to confirm this is the expected error and to run
+the remaining commands:
+
+```shell
+juju ssh opensearch/<unit-id>
+```
+
+All remaining commands in this section run **on the unit**, inside this session.
+
+Inspect the logs:
+
+```shell
+sudo journalctl -u snap.opensearch.daemon -f
+```
+
+The unit repeatedly reports that it is waiting for a cluster it cannot reach, similar to:
+
+```text
+ConfigurationRepository: Wait for cluster to be available
+```
+
+Press `Ctrl+C` to stop following the log, then stop the service:
+
+```shell
+sudo systemctl stop snap.opensearch.daemon
+```
+
+Run `unsafe-bootstrap` to reset cluster metadata:
+
+```shell
+sudo -u snap_daemon \
+    OPENSEARCH_JAVA_HOME=/snap/opensearch/current/usr/lib/jvm/java-21-openjdk-amd64 \
+    OPENSEARCH_PATH_CONF=/var/snap/opensearch/current/etc/opensearch \
+    OPENSEARCH_HOME=/var/snap/opensearch/current/usr/share/opensearch \
+    OPENSEARCH_LIB=/var/snap/opensearch/current/usr/share/opensearch/lib \
+    OPENSEARCH_PATH_CERTS=/var/snap/opensearch/current/etc/opensearch/certificates \
+    /snap/opensearch/current/usr/share/opensearch/bin/opensearch-node unsafe-bootstrap
+```
+
+Restart the service:
+
+```shell
+sudo systemctl start snap.opensearch.daemon
+```
+
+The cluster will form with a new UUID.
+
+To confirm, exit the unit session, retrieve the
+admin password and CA certificate chain with `juju run opensearch/leader get-password`,
+saving the chain to a file (e.g. `cert.pem`), and list the cluster nodes from the host with the
+[CAT nodes API](https://opensearch.org/docs/2.19/api-reference/cat/cat-nodes/):
+
+```shell
+curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cat/nodes" -u admin:<password>
+```
+
+The single bootstrapped node should be listed as the elected cluster manager (marked `*`). See
+[mapping Juju units to OpenSearch nodes](cluster-health-mapping-nodes) for how to read this
+output. You can then add more units (fresh or detached from another cluster).
+
+## Recover dangling indices
+
+After reattaching a used disk, check for indices that were not part of the current cluster
+using the [dangling indices API](https://opensearch.org/docs/2.19/api-reference/index-apis/dangling-index/).
+
+```{caution}
+The dangling indices API cannot guarantee that imported data represents the latest state
+of the data when the index was still part of the original cluster.
+```
+
+```{caution}
+An `active/idle` status and a successful `detach-cluster` or `unsafe-bootstrap` message do
+**not** mean no data was lost. Always audit the recovered indices and document counts, and
+check for dangling indices, before treating the recovery as complete.
+```
+
+## Next steps
+
+* [Back up and restore](how-to-guides-back-up-and-restore-index) — the preferred, data-safe way to move data between clusters; create backups before reusing disks.
+* [Scale a cluster horizontally](how-to-scale-horizontally) — safely remove units when reorganising storage.

@@ -4,7 +4,7 @@ myst:
     description: "Monitor Charmed OpenSearch with Canonical Observability Stack (COS) using Grafana, Prometheus metrics, and alert rules."
 ---
 
-(alert-rules)=
+(ref-alert-rules)=
 # Default alert rules
 
 The following alert rules are set by default in Charmed OpenSearch.

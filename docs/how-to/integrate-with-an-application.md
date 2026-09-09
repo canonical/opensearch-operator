@@ -5,25 +5,18 @@ myst:
 ---
 
 (how-to-integrate-with-an-application)=
-# How to integrate OpenSearch with an application
+# How to integrate with an application
 
-[Integrations](https://juju.is/docs/juju/relation) (formerly "relations") are connections between
-two applications with compatible endpoints. These connections simplify creating and managing users,
-passwords, and other shared data.
+This guide shows how to connect applications to Charmed OpenSearch, either through
+a Juju charm integration or via the `data-integrator` charm for non-Juju applications.
 
-This guide will walk you through integrating your charm with OpenSearch via the `opensearch_client`
-interface or the `data-integrator` charm.
+## Integrate a Juju charm with OpenSearch
 
-## Integrate a different charm with OpenSearch
+If you are developing a charm that needs to connect to OpenSearch, use the `opensearch_client` interface.
 
-The Charmed OpenSearch provides the `opensearch_client` interface
-to allow other charms to connect to it.
-This interface manages users, passwords, and other shared data.
+### Define the interface
 
-### Add the `opensearch_client` interface to your charm
-
-To integrate your client application you must define the `opensearch_client` interface
-in your charm's `metadata.yaml` file.
+In your charm's `metadata.yaml`:
 
 ```yaml
 requires:
@@ -31,45 +24,19 @@ requires:
     interface: opensearch_client
 ```
 
-### Import the database interface libraries and define database event handlers
+### Implement the interface in your charm
 
-To integrate with the `opensearch_client` interface, import the database interface libraries
-and define the database event handlers in your charm's `charm.py` file.
+Fetch the library:
 
-First, navigate to your charm directory and fetch the
-[`data_interfaces`](https://charmhub.io/data-platform-libs/libraries/data_interfaces)
-charm library from Charmhub:
-
-```bash
+```shell
 charmcraft fetch-lib charms.data_platform_libs.v0.data_interfaces
 ```
 
-Next, import the `OpenSearchRequires` class from the `data_interfaces` library in your `charm.py` file:
+In your `charm.py`:
 
 ```python
-from charms.data_platform.libs.interfaces.opensearch_client import OpenSearchRequires
-```
+from charms.data_platform_libs.v0.data_interfaces import OpenSearchRequires
 
-Then, instantiate the `OpenSearchRequires` class in your charm.
-The class takes the following parameters:
-
-- `charm`: The charm instance
-- `relation_name`: The name of the relation to which to connect. This should match the name of the relation defined in the `metadata.yaml` file (`opensearch` in the example above).
-- `index`: The name of the index the client application will connect to.
-- `extra_user_roles`: A string containing the additional roles to assign to the user. This is optional and defaults to `None`.
-- `addional_secret_fields`: A list of additional secret fields to be shared with the client application. This is optional and defaults to an empty list.
-
-```python
-class MyCharm(CharmBase):
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.opensearch = OpenSearchRequires(self, "opensearch", "my_index")
-```
-
-Finally, define a callback function to handle the `index_created` event.
-This function will be called when the index is created in the OpenSearch cluster.
-
-```python
 class MyCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
@@ -81,81 +48,90 @@ class MyCharm(CharmBase):
         pass
 ```
 
-### Integrate the client application with OpenSearch
+The `OpenSearchRequires` constructor accepts:
 
-To integrate `opensearch` with your client application, run:
+* `charm` — the charm instance
+* `relation_name` — must match the name in `metadata.yaml`
+* `index` — the index name to connect to
+* `extra_user_roles` (optional) — additional roles for the user
+* `additional_secret_fields` (optional) — extra secret fields to share
+
+See the [`OpenSearchRequires` class](https://github.com/canonical/data-platform-libs/blob/main/lib/charms/data_platform_libs/v0/data_interfaces.py)
+in the `data_interfaces` library source for the full list of optional parameters.
+
+### Create the integration
+
+Connect OpenSearch to your application:
 
 ```shell
 juju integrate opensearch <application>
 ```
 
-To remove the integration, run:
+To remove:
 
 ```shell
 juju remove-relation opensearch <application>
 ```
 
-## Integrate an application outside of Juju with OpenSearch
+## Integrate a non-Juju application with OpenSearch
 
-The `data-integrator` charm is a bare-bones charm that allows for central management
-of database users, providing support for different kinds of data platform products
-(e.g. MongoDB, MySQL, PostgreSQL, Kafka, etc) with a consistent, opinionated
-and robust user experience.
+Use the [`data-integrator`](https://charmhub.io/data-integrator) charm to provide
+credentials and connection details to applications outside the Juju ecosystem.
 
-### Deploy the `data-integrator` charm
-
-To deploy the `data-integrator` charm, run:
+Deploy it:
 
 ```shell
 juju deploy data-integrator --config index-name=<index-name>
 ```
 
-### Relate the `data-integrator` charm to an OpenSearch cluster
-
-Once the `data-integrator` charm is deployed it will `blocked`
-until it is related to an OpenSearch cluster.
-To relate the `data-integrator` charm to an OpenSearch cluster, run:
+Integrate with OpenSearch:
 
 ```shell
 juju integrate data-integrator opensearch
 ```
 
-### Remove the client integration
+The charm will be `blocked` until the integration is established.
 
-To remove the integration (also known as "relation") between the `data-integrator` charm
-and the OpenSearch cluster, run:
+To remove the integration:
 
 ```shell
 juju remove-relation data-integrator opensearch
 ```
 
-## Rotate the client password
+### Retrieve the credentials
 
-To rotate the client password, remove the relation between the client application
-and the OpenSearch cluster and then re-add the relation.
-This will generate a user with a new password.
-
-```shell
-juju remove-relation opensearch <application>
-juju integrate opensearch <application>
-```
-
-### Rotate the `admin` password in the OpenSearch cluster
-
-To rotate the `admin` password in the OpenSearch cluster, run the following:
+Once the integration is established, retrieve the connection credentials (username, password,
+endpoints, and CA certificate) by running the `get-credentials` action:
 
 ```shell
-juju run opensearch/leader set-password password=<new-password>
+juju run data-integrator/leader get-credentials
 ```
 
-A random password will be generated if you do not specify a password.
+<details>
 
-```shell
-juju run opensearch/leader set-password
+<summary>Output example</summary>
+
+```yaml
+opensearch:
+  endpoints: 10.95.38.139:9200,10.95.38.212:9200,10.95.38.94:9200
+  index: test-index
+  password: j3JWFnDkoumCxn0CtKZRCmdRMUlYTZFI
+  tls-ca: |-
+    -----BEGIN CERTIFICATE-----
+    -----END CERTIFICATE-----
+    -----BEGIN CERTIFICATE-----
+    -----END CERTIFICATE-----
+  username: opensearch-client_5
+  version: 2.14.0
 ```
 
-To get the password, run:
+</details>
 
-```shell
-juju run opensearch/leader get-password
-```
+Use these credentials to connect your application to OpenSearch. For an example of connecting
+with `curl`, see the [Tutorial](tutorial-4-integrate-with-a-client-application).
+
+## Next steps
+
+* [Manage passwords](how-to-manage-passwords) to rotate the credentials issued to the client.
+* [Enable monitoring (COS)](how-to-monitoring) to observe the integrated workload.
+* [Manage TLS encryption](how-to-enable-tls-encryption) to secure client-to-node traffic.

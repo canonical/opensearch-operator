@@ -18,7 +18,7 @@ This page outlines the minimum requirements to deploy Charmed OpenSearch success
 ## Software
 
 * Ubuntu 22.04 LTS (Jammy) or later
-* Juju `v.3.5.3+`
+* Juju `3.6` (latest LTS) — recommended; `3.5.3+` minimum required
   * Older minor versions of Juju 3 may be compatible, but are not officially supported.
 * LXD `6.1+`
 
@@ -44,4 +44,29 @@ See also: [How to perform load testing](how-to-perform-load-testing).
 * Internet access is required for downloading artifacts from the snap and charm stores
 * Certain network ports must be open for internal communication:
   See the OpenSearch documentation for
-  [Network requirements](https://opensearch.org/docs/2.6/install-and-configure/install-opensearch/index/#network-requirements).
+  [Network requirements](https://opensearch.org/docs/2.19/install-and-configure/install-opensearch/index/#network-requirements).
+
+## Kernel parameters
+
+OpenSearch requires specific kernel parameters. Unless noted otherwise, these settings are
+enforced by both the `testing` and `production` profiles. On LXD, they must be set on the
+host machine and propagated to every container.
+
+See [Performance profiles](explanation-performance-profiles) for details on how profiles
+use these parameters.
+
+| Parameter | Required value | Purpose |
+| :--- | :--- | :--- |
+| `vm.swappiness` | `0` | Disables swap to prevent OpenSearch from being swapped to disk, which causes severe performance degradation. |
+| `vm.max_map_count` | `262144` | Required by OpenSearch for mmap-based file access to index segments. |
+| `fs.file-max` | `1048576` | Ensures sufficient file descriptors for large deployments with many shards and indices. Strongly recommended, but not currently enforced by the charm. |
+
+The `net.ipv4.tcp_retries2` parameter is set automatically by the charm and does not
+need to be configured manually.
+
+```{note}
+On VM (machine) deployments, the charm applies all required `sysctl` settings automatically.
+```
+
+For instructions on how to apply these settings on the host and propagate them to
+containers, see [How to deploy](how-to-deploy-standard).

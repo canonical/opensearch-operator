@@ -295,7 +295,7 @@ This call should output something like the following:
 ```
 
 To add data in bulk using the
-[OpenSearch Bulk API](https://opensearch.org/docs/latest/api-reference/document-apis/bulk/),
+[OpenSearch Bulk API](https://opensearch.org/docs/2.19/api-reference/document-apis/bulk/),
 copy and paste the following data into a file called `bulk-albums.json`,
 ensuring that you keep the newline at the end of the file:
 
