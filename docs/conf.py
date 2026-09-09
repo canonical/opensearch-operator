@@ -86,20 +86,13 @@ html_context = {
     # TODO: To add a tag image, uncomment and update as needed.
     # 'product_tag': '_static/tag.png',
     # Your Discourse instance URL
-    #
-    # TODO: Change to your Discourse instance URL or leave empty.
-    #
-    # NOTE: If set, adding ':discourse: 123' to an .rst file
-    #       will add a link to Discourse topic 123 at the bottom of the page.
-    "discourse": "https://discourse.ubuntu.com",
+    "discourse": "https://discourse.charmhub.io",
     # Your Mattermost channel URL
     #
     # TODO: Change to your Mattermost channel URL or leave empty.
     "mattermost": "https://chat.canonical.com/canonical/channels/documentation",
     # Your Matrix channel URL
-    #
-    # TODO: Change to your Matrix channel URL or leave empty.
-    "matrix": "https://matrix.to/#/#documentation:ubuntu.com",
+    "matrix": "https://matrix.to/#/#charmhub-data-platform:ubuntu.com",
     # Your documentation GitHub repository URL
     #
     # TODO: Change to your documentation GitHub repository URL or leave empty.
@@ -224,16 +217,14 @@ if os.environ.get("READTHEDOCS"):
 ###########################
 
 # A regex list of URLs that are ignored by 'make linkcheck'
-#
-# TODO: Remove or adjust the ACME entry after you update the contributing guide
 
 linkcheck_ignore = [
     "http://127.0.0.1:8000",
-    "https://github.com/canonical/ACME/*",
     "https://launchpad.net/soss",
     "https://matrix.to/#/#charmhub-data-platform:ubuntu.com",
     "https://app.element.io/#/room/#charmhub-data-platform:ubuntu.com",
     "https://askubuntu.com/*",
+    "https://canonical.com/data/opensearch#get-in-touch",
 ]
 
 
@@ -281,7 +272,6 @@ extensions = [
     "sphinxcontrib.cairosvgconverter",
     "sphinx.ext.intersphinx",
     "sphinx_sitemap",
-    "sphinx_rerediraffe",
 ]
 
 # Excludes files or directories from processing
