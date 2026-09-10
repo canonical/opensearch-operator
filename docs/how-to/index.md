@@ -33,6 +33,7 @@ These guides help you accomplish specific tasks with Charmed OpenSearch on machi
 
 * [Configure S3 storage](how-to-back-up-configure-s3)
 * [Configure Azure storage](how-to-back-up-configure-azure-storage)
+* [Configure Google Cloud Storage](how-to-back-up-configure-gcs-storage)
 * [Create and restore backups](how-to-create-a-backup)
 
 ## Upgrades
