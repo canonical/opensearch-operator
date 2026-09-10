@@ -651,7 +651,7 @@ Unit                         Workload  Agent      Address     Ports  Message
 opensearch-k8s/0             active    idle       10.1.0.232         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
 opensearch-k8s/1             active    idle       10.1.0.242         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
 opensearch-k8s/2*            active    idle       10.1.0.239         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
-opensearch-k8s/3             blocked   executing  10.1.0.73          Rollback incompatible. Run 'juju run <unit> force-refresh-start' with `check-compatibility` set to false to override ...
+opensearch-k8s/3             blocked   idle       10.1.0.73          Rollback incompatible. Run 'juju run <unit> force-refresh-start' with `check-compatibility` set to false to override ...
 self-signed-certificates/0*  active    idle       10.1.0.165
 ```
 
@@ -678,6 +678,12 @@ juju run opensearch-k8s/leader resume-upgrade
 
 In this case, the charm code will be rolled back, but the OpenSearch workload will remain on the newer version. The charm will enter a `blocked` state and display a message instructing you to either refresh to a charm revision with the same workload version or perform a backup and restore to a new deployment:
 
+`````{tab-set}
+:sync-group: substrate
+
+````{tab-item} VM
+:sync: vm
+
 ```text
 Model    Controller           Cloud/Region         Version  SLA          Timestamp
 testing  localhost-localhost  localhost/localhost  3.6.25   unsupported  08:03:52+01:00
@@ -692,7 +698,27 @@ opensearch/1                 active    idle   2        10.149.40.93    9200/tcp 
 opensearch/2*                blocked   idle   3        10.149.40.126   9200/tcp  Rollback unsupported. Refresh to a newer revision or consult the recovery documentation
 self-signed-certificates/0*  active    idle   0        10.149.40.252
 ```
+````
 
+````{tab-item} K8s
+:sync: k8s
+
+```text
+Model  Controller      Cloud/Region  Version  SLA          Timestamp
+dev    opensearch-k8s  ck8s          3.6.28   unsupported  20:12:33+01:00
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Address         Exposed  Message
+opensearch-k8s                     blocked      3  opensearch-k8s            2/edge      8  10.152.183.109  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+self-signed-certificates           active       1  self-signed-certificates  1/stable  586  10.152.183.241  no
+
+Unit                         Workload  Agent  Address     Ports  Message
+opensearch-k8s/0*            active    idle   10.1.0.66          OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch-k8s/1             active    idle   10.1.0.129         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch-k8s/2             active    idle   10.1.0.232         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch-k8s/3             blocked   idle   10.1.0.168         Rollback unsupported. Refresh to a newer revision or consult the recovery documentation
+self-signed-certificates/0*  active    idle   10.1.0.251
+```
+`````
 ### Check the cluster's health
 
 Once the charm is rolled back, it is important to check the cluster's health to ensure it is healthy.
