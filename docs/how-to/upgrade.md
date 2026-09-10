@@ -756,6 +756,13 @@ The response should look similar to the following example:
 (how-to-recover-rollback)=
 ## Recovering from a rollback
 
+
+`````{tab-set}
+:sync-group: substrate
+
+````{tab-item} VM
+:sync: vm
+
 OpenSearch does not support downgrades.
 Running `juju refresh` to a previous revision may cause OpenSearch to fail to start.
 In that case, manual recovery is required.
@@ -764,7 +771,7 @@ Follow the steps in this section to restore the cluster to a healthy state.
 For more information, please refer to the upstream
 [OpenSearch documentation about rolling upgrades](https://docs.opensearch.org/latest/migrate-or-upgrade/rolling-upgrade/#preparing-to-upgrade).
 
-### Check Juju status
+**Check Juju status**
 
 First, check Juju model status:
 
@@ -792,7 +799,7 @@ self-signed-certificates/0*  active    idle       3        10.45.114.124
 Note the blocked unit; in this example, it is `opensearch/2`.
 This unit will not recover automatically, and additional steps are required to replace it.
 
-### Check cluster health
+**Check cluster health**
 
 Retrieve the cluster health using the `cert.pem` and `<password>` obtained above:
 
@@ -875,7 +882,7 @@ After deleting any orphaned indices, verify that the cluster returns to green or
 curl --cacert cert.pem -X GET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
 ```
 
-### Set allocation settings
+**Set allocation settings**
 
 During the upgrade process, the routing allocation setting may be restricted to `primaries`.
 Restore normal allocation by enabling all routing:
@@ -890,7 +897,7 @@ curl --cacert cert.pem -X PUT "https://<unit-ip>:9200/_cluster/settings" -H 'Con
 '
 ```
 
-### Add a new unit
+**Add a new unit**
 
 While optional, it is highly advisable to add a replacement unit to restore the application to its original scale:
 
@@ -898,7 +905,7 @@ While optional, it is highly advisable to add a replacement unit to restore the 
 juju add-unit opensearch -n 1
 ```
 
-### Remove rolled back unit
+**Remove rolled back unit**
 
 Remove the rolled back unit:
 
@@ -908,7 +915,7 @@ juju remove-unit opensearch/2
 
 Where `opensearch/2` is the name of the unit that was rolled back and blocked earlier.
 
-### Remove lock
+**Remove lock**
 
 If the replacement unit appears stuck displaying the status message
 `Requesting lock on operation: start`, check if the departed unit still hold the lock:
@@ -943,7 +950,7 @@ Wait for the replacement unit to start and join the cluster. `juju status` shoul
 units `active`/`idle` with no messages, and the application `active` with the original scale
 restored.
 
-### Verify new unit has joined the cluster
+**Verify new unit has joined the cluster**
 
 List the nodes in the current cluster:
 
@@ -967,7 +974,16 @@ Finally, confirm the cluster is healthy again — the cluster health API should 
 ```shell
 curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
 ```
+````
 
+````{tab-item} K8s
+:sync: k8s
+
+This procedure applies to machine deployments. On Kubernetes, restore from backup to a
+new deployment as described in [How to back up and restore](how-to-migrate-a-cluster).
+````
+
+`````
 ## Next steps
 
 * [Back up and restore](how-to-guides-back-up-and-restore-index) — create a backup after upgrading.
