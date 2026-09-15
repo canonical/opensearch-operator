@@ -1,7 +1,7 @@
 ---
 myst:
   html_meta:
-    description: "Upgrade Charmed OpenSearch from one minor version to another, including pre-upgrade checks, in-place upgrades, health verification, and rollback procedures."
+    description: "Upgrade Charmed OpenSearch on machines or Kubernetes from one minor version to another, including pre-upgrade checks, in-place upgrades, health verification, and rollback procedures."
 ---
 
 (how-to-guides-upgrade-index)=
@@ -67,6 +67,11 @@ The first step is to record the revision of the running application,
 as a safety measure for a rollback action.
 To accomplish this, run the `juju status` command and look for the deployed
 Charmed OpenSearch revision in the command output, e.g.:
+`````{tab-set}
+:sync-group: subtrate
+
+````{tab-item} VM
+:sync: vm
 
 ```text
 Model  Controller           Cloud/Region         Version  SLA          Timestamp
@@ -90,6 +95,30 @@ Machine  State    Address         Inst id        Base          AZ  Message
 ```
 
 For this example, the current revision is **144** for OpenSearch.
+````
+
+````{tab-item} K8s
+:sync: k8s
+
+```text
+Model  Controller      Cloud/Region  Version  SLA          Timestamp
+dev    opensearch-k8s  ck8s          3.6.28   unsupported  16:13:42+01:00
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Address         Exposed  Message
+opensearch-k8s                     active      3  opensearch-k8s            2/edge      8  10.152.183.239  no
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  10.152.183.56   no
+
+Unit                         Workload  Agent  Address     Ports  Message
+opensearch-k8s/0             active    idle   10.1.0.134
+opensearch-k8s/1*            active    idle   10.1.0.203
+opensearch-k8s/2             active    idle   10.1.0.181
+self-signed-certificates/0*  active    idle   10.1.0.84
+```
+
+For this example, the current revision is **8** for OpenSearch.
+````
+
+`````
 
 ```{note}
 Make sure to store the revision number in case of rollback.
@@ -103,9 +132,26 @@ Optionally, it is recommended to scale the application up by one unit before upg
 The new unit will be the first one to be updated, and it will assert that the upgrade is possible.
 In the event of a failure, an extra unit simplifies manual recovery without disrupting service.
 
+`````{tab-set}
+:sync-group: substrate
+
+````{tab-item} VM
+:sync: vm
+
 ```shell
 juju add-unit opensearch
 ```
+````
+
+````{tab-item} K8s
+:sync: k8s
+
+```shell
+juju add-unit opensearch-k8s
+```
+````
+
+`````
 
 Wait for the new unit to be up and ready.
 
@@ -118,6 +164,12 @@ Refer to [How to create a backup](how-to-create-a-backup).
 2. Perform the `pre-upgrade-check` action
 
 After the application has settled, it's necessary to run the `pre-upgrade-check` action against the leader unit:
+
+`````{tab-set}
+:sync-group: substrate
+
+````{tab-item} VM
+:sync: vm
 
 ```shell
 juju run opensearch/leader pre-upgrade-check
@@ -132,11 +184,37 @@ Running operation 1 with 1 task
 Waiting for task 2...
 result: Charm is ready for upgrade
 ```
+````
+
+````{tab-item} K8s
+:sync: k8s
+
+```shell
+juju run opensearch-k8s/leader pre-upgrade-check
+```
+
+The output should be similar to the following:
+```text
+Running operation 1 with 1 task
+  - task 2 on unit-opensearch-2
+
+Waiting for task 2...
+result: Charm is ready for upgrade
+```
+````
+
+`````
 
 The action will ensure and check the health of OpenSearch and determine if the charm
 is well prepared to start an upgrade procedure.
 
 ### Initiate the upgrade
+
+`````{tab-set}
+:sync-group: substrate
+
+````{tab-item} VM
+:sync: vm
 
 ```{caution}
 Charmed OpenSearch supports performance profiles with different RAM consumption:
@@ -148,9 +226,31 @@ If the charm is running on a revision prior to `185`, the `testing` profile is t
 Ensure it is set before upgrading, then switch to a profile that suits your use case.
 See [How to optimize cluster performance with profiles](how-to-optimize-cluster-performance).
 ```
+````
+
+````{tab-item} K8s
+:sync: k8s
+
+```{caution}
+Charmed OpenSearch supports performance profiles with different RAM consumption:
+
+* `production`: JVM heap set to 50% of the available RAM, capped at 31 GB
+* `testing`: JVM heap fixed at ~1 GB of RAM
+
+See [How to optimize cluster performance with profiles](how-to-optimize-cluster-performance).
+```
+````
+
+`````
 
 Use the `juju refresh` command to trigger the charm upgrade process.
 You have control over what upgrade you want to apply:
+
+`````{tab-set}
+:sync-group: substrate
+
+````{tab-item} VM
+:sync: vm
 
 - You can upgrade the charm to the latest revision available in the charm store for a specific channel,
   in this case, the stable channel:
@@ -174,9 +274,40 @@ You have control over what upgrade you want to apply:
     ```shell
     juju refresh opensearch --path /path/to/your/charm/file.charm
     ```
+````
 
+````{tab-item} K8s
+:sync: k8s
+
+- You can upgrade the charm to the latest revision available in the charm store for a specific channel,
+  in this case, the stable channel:
+
+    ```shell
+    juju refresh opensearch-k8s --channel 2/edge
+    ```
+
+- You can also upgrade the charm to a specific revision:
+
+    ```shell
+    juju refresh opensearch-k8s --revision 14
+    ```
+
+- Or you can upgrade the charm using a local charm file:
+
+    ```shell
+    juju refresh opensearch-k8s --path /path/to/your/charm/file.charm \
+        --resource opensearch-image=<image-reference>
+    ```
+````
+`````
 The OpenSearch upgrade will execute only on the highest ordinal unit. For the running example,
 the `juju status` output will look similar to:
+
+`````{tab-set}
+:sync-group: substrate
+
+````{tab-item} VM
+:sync: vm
 
 ```text
 Model  Controller           Cloud/Region         Version  SLA          Timestamp
@@ -196,6 +327,31 @@ self-signed-certificates/0*  active    idle   3        10.214.176.31
 
 The highest unit (`opensearch/3`) is upgraded first. The application shows `blocked` with a message
 instructing you to verify the upgraded unit and run `resume-upgrade`.
+````
+
+````{tab-item} K8s
+:sync: k8s
+
+```text
+Model  Controller      Cloud/Region  Version  SLA          Timestamp
+dev    opensearch-k8s  ck8s          3.6.28   unsupported  16:35:33+01:00
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Address         Exposed  Message
+opensearch-k8s                     blocked      4  opensearch-k8s            2/edge     14  10.152.183.239  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+self-signed-certificates           active       1  self-signed-certificates  1/stable  586  10.152.183.56   no
+
+Unit                         Workload  Agent  Address     Ports  Message
+opensearch-k8s/0             active    idle   10.1.0.134         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch-k8s/1*            active    idle   10.1.0.203         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch-k8s/2             active    idle   10.1.0.181         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch-k8s/3             active    idle   10.1.0.100         OpenSearch 2.19.6 running; Charmed operator 1
+self-signed-certificates/0*  active    idle   10.1.0.84
+```
+
+The highest unit (`opensearch-k8s/3`) is upgraded first. The application shows `blocked` with a message
+instructing you to verify the upgraded unit and run `resume-upgrade`.
+````
+`````
 
 ```{note}
 The unit should recover shortly after, but the time can vary depending on the amount of data
@@ -208,10 +364,25 @@ After the first unit is upgraded, the charm will set the unit upgrade state as c
 If deemed necessary, you can further assert the success of the upgrade.
 If the unit is healthy within the cluster, the next step is to resume the upgrade process by running:
 
+`````{tab-set}
+:sync-group: substrate
+
+````{tab-item} VM
+:sync: vm
+
 ```shell
 juju run opensearch/leader resume-upgrade
 ```
+````
 
+````{tab-item} K8s
+:sync: k8s
+
+```shell
+juju run opensearch-k8s/leader resume-upgrade
+```
+````
+`````
 The `resume-upgrade` action will roll out the OpenSearch upgrade for the remaining units in the application.
 The action will be executed sequentially from the highest unit number to the lowest.
 
@@ -228,9 +399,26 @@ To do so, follow the [Perform a minor rollback](how-to-minor-rollback) section b
 
 If you scaled up the application in step 2, you can now scale it back down to the original number of units:
 
+`````{tab-set}
+:sync-group: substrate
+
+````{tab-item} VM
+:sync: vm
+
 ```shell
 juju remove-unit opensearch/<highest unit number>
 ```
+````
+
+````{tab-item} K8s
+:sync: k8s
+
+```shell
+juju remove-unit opensearch-k8s --num-units 1
+```
+````
+
+`````
 
 ### Check the cluster health
 
@@ -243,9 +431,28 @@ Check the cluster is healthy. OpenSearch's upstream documentation
 
 First, retrieve the admin credentials and the CA certificate chain:
 
+`````{tab-set}
+:sync-group: substrate
+
+````{tab-item} VM
+:sync: vm
+
+
 ```shell
 juju run opensearch/leader get-password
 ```
+````
+
+````{tab-item} K8s
+:sync: k8s
+
+
+```shell
+juju run opensearch-k8s/leader get-password
+```
+````
+
+`````
 
 Save the `ca-chain` value to a file (e.g. `cert.pem`) to use with `curl`:
 
@@ -330,7 +537,15 @@ Rollbacks in Charmed OpenSearch are a best-effort process. It is recommended to 
 #### Rollback a charm revision with the same workload version
 
 You can initiate the rollback by running the `refresh` command with the revision of
-the charm you want to rollback to. For example, to rollback to revision **144**, run:
+the charm you want to rollback to. 
+
+`````{tab-set}
+:sync-group: substrate
+
+````{tab-item} VM
+:sync: vm
+
+For example, to rollback to revision **144**, run:
 
 ```shell
 juju refresh opensearch --revision=144
@@ -346,6 +561,39 @@ After the refresh command, the Juju controller revision for the application will
 back in sync with the running OpenSearch revision. `juju status` will show the application
 `active` with the previous revision number in the `Rev` column (e.g. **144**), and all units
 `active`/`idle` with no messages.
+````
+
+````{tab-item} K8s
+:sync: k8s
+
+For example, to rollback to revision **8**, run:
+
+```shell
+juju refresh opensearch-k8s --revision=8 \
+    --resource opensearch-image=<resource-revision>
+```
+
+To deploy the previous revision's `.charm` file:
+
+```shell
+juju refresh opensearch-k8s --path=<path-to-charm-file> \
+    --resource opensearch-image=<image-reference>
+```
+
+The highest unit is rolled back first. Once it is `active`, resume the rollback for the
+remaining units:
+
+```shell
+juju run opensearch-k8s/leader resume-upgrade
+```
+
+After the resume-upgrade action, the Juju controller revision for the application will be
+back in sync with the running OpenSearch revision. `juju status` will show the application
+`active` with the previous revision number in the `Rev` column (e.g. **8**), and all units
+`active`/`idle` with no messages.
+````
+
+`````
 
 #### Rollback a charm revision with a different workload version
 
@@ -354,6 +602,12 @@ If you roll back to a charm revision with a different workload version, the proc
 ##### If the rollback between the versions is possible
 
 In this case, both the charm code and the workload will be rolled back to the previous version. However, because rollback is a risky operation, rolling back the workload requires manual intervention. The charm will enter a `blocked` state and display a message instructing you to run the `force-refresh-start` action with `check-compatibility=false` to continue the best-effort workload rollback:
+
+`````{tab-set}
+:sync-group: substrate
+
+````{tab-item} VM
+:sync: vm
 
 ```text
 Model    Controller           Cloud/Region         Version  SLA          Timestamp
@@ -380,10 +634,55 @@ Run the action on the blocked unit:
 ```shell
 juju run opensearch/<unit-id> force-refresh-start check-compatibility=false
 ```
+````
 
+````{tab-item} K8s
+:sync: k8s
+
+```text
+Model  Controller      Cloud/Region  Version  SLA          Timestamp
+dev    opensearch-k8s  ck8s          3.6.28   unsupported  10:22:45+01:00
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Address         Exposed  Message
+opensearch-k8s                     blocked      4  opensearch-k8s            2/edge      8  10.152.183.50   no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+self-signed-certificates           active       1  self-signed-certificates  1/stable  586  10.152.183.237  no
+
+Unit                         Workload  Agent      Address     Ports  Message
+opensearch-k8s/0             active    idle       10.1.0.232         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch-k8s/1             active    idle       10.1.0.242         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch-k8s/2*            active    idle       10.1.0.239         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch-k8s/3             blocked   idle       10.1.0.73          Rollback incompatible. Run 'juju run <unit> force-refresh-start' with `check-compatibility` set to false to override ...
+self-signed-certificates/0*  active    idle       10.1.0.165
+```
+
+Units that had not yet upgraded their workload before the rollback (`opensearch-k8s/0`,
+`opensearch-k8s/1` and `opensearch-k8s/2 above) simply run revision **8** normally. Only the unit that already
+advanced to the newer workload (`opensearch-k8s/3`) needs to roll that workload back and is
+blocked until you do.
+
+Run the action on the blocked unit:
+
+```shell
+juju run opensearch-k8s/<unit-id> force-refresh-start check-compatibility=false
+```
+
+Once it is `active`, run the `resume-upgrade` action:
+
+```shell
+juju run opensearch-k8s/leader resume-upgrade
+```
+````
+
+`````
 ##### If the rollback between the versions is not possible
 
 In this case, the charm code will be rolled back, but the OpenSearch workload will remain on the newer version. The charm will enter a `blocked` state and display a message instructing you to either refresh to a charm revision with the same workload version or perform a backup and restore to a new deployment:
+
+`````{tab-set}
+:sync-group: substrate
+
+````{tab-item} VM
+:sync: vm
 
 ```text
 Model    Controller           Cloud/Region         Version  SLA          Timestamp
@@ -399,7 +698,27 @@ opensearch/1                 active    idle   2        10.149.40.93    9200/tcp 
 opensearch/2*                blocked   idle   3        10.149.40.126   9200/tcp  Rollback unsupported. Refresh to a newer revision or consult the recovery documentation
 self-signed-certificates/0*  active    idle   0        10.149.40.252
 ```
+````
 
+````{tab-item} K8s
+:sync: k8s
+
+```text
+Model  Controller      Cloud/Region  Version  SLA          Timestamp
+dev    opensearch-k8s  ck8s          3.6.28   unsupported  20:12:33+01:00
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Address         Exposed  Message
+opensearch-k8s                     blocked      3  opensearch-k8s            2/edge      8  10.152.183.109  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+self-signed-certificates           active       1  self-signed-certificates  1/stable  586  10.152.183.241  no
+
+Unit                         Workload  Agent  Address     Ports  Message
+opensearch-k8s/0*            active    idle   10.1.0.66          OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch-k8s/1             active    idle   10.1.0.129         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch-k8s/2             active    idle   10.1.0.232         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch-k8s/3             blocked   idle   10.1.0.168         Rollback unsupported. Refresh to a newer revision or consult the recovery documentation
+self-signed-certificates/0*  active    idle   10.1.0.251
+```
+`````
 ### Check the cluster's health
 
 Once the charm is rolled back, it is important to check the cluster's health to ensure it is healthy.
@@ -437,6 +756,13 @@ The response should look similar to the following example:
 (how-to-recover-rollback)=
 ## Recovering from a rollback
 
+
+`````{tab-set}
+:sync-group: substrate
+
+````{tab-item} VM
+:sync: vm
+
 OpenSearch does not support downgrades.
 Running `juju refresh` to a previous revision may cause OpenSearch to fail to start.
 In that case, manual recovery is required.
@@ -445,7 +771,7 @@ Follow the steps in this section to restore the cluster to a healthy state.
 For more information, please refer to the upstream
 [OpenSearch documentation about rolling upgrades](https://docs.opensearch.org/latest/migrate-or-upgrade/rolling-upgrade/#preparing-to-upgrade).
 
-### Check Juju status
+**Check Juju status**
 
 First, check Juju model status:
 
@@ -473,7 +799,7 @@ self-signed-certificates/0*  active    idle       3        10.45.114.124
 Note the blocked unit; in this example, it is `opensearch/2`.
 This unit will not recover automatically, and additional steps are required to replace it.
 
-### Check cluster health
+**Check cluster health**
 
 Retrieve the cluster health using the `cert.pem` and `<password>` obtained above:
 
@@ -556,7 +882,7 @@ After deleting any orphaned indices, verify that the cluster returns to green or
 curl --cacert cert.pem -X GET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
 ```
 
-### Set allocation settings
+**Set allocation settings**
 
 During the upgrade process, the routing allocation setting may be restricted to `primaries`.
 Restore normal allocation by enabling all routing:
@@ -571,7 +897,7 @@ curl --cacert cert.pem -X PUT "https://<unit-ip>:9200/_cluster/settings" -H 'Con
 '
 ```
 
-### Add a new unit
+**Add a new unit**
 
 While optional, it is highly advisable to add a replacement unit to restore the application to its original scale:
 
@@ -579,7 +905,7 @@ While optional, it is highly advisable to add a replacement unit to restore the 
 juju add-unit opensearch -n 1
 ```
 
-### Remove rolled back unit
+**Remove rolled back unit**
 
 Remove the rolled back unit:
 
@@ -589,7 +915,7 @@ juju remove-unit opensearch/2
 
 Where `opensearch/2` is the name of the unit that was rolled back and blocked earlier.
 
-### Remove lock
+**Remove lock**
 
 If the replacement unit appears stuck displaying the status message
 `Requesting lock on operation: start`, check if the departed unit still hold the lock:
@@ -624,7 +950,7 @@ Wait for the replacement unit to start and join the cluster. `juju status` shoul
 units `active`/`idle` with no messages, and the application `active` with the original scale
 restored.
 
-### Verify new unit has joined the cluster
+**Verify new unit has joined the cluster**
 
 List the nodes in the current cluster:
 
@@ -648,7 +974,16 @@ Finally, confirm the cluster is healthy again — the cluster health API should 
 ```shell
 curl --cacert cert.pem -XGET "https://<unit-ip>:9200/_cluster/health?pretty" -u admin:<password>
 ```
+````
 
+````{tab-item} K8s
+:sync: k8s
+
+This procedure applies to machine deployments. On Kubernetes, restore from backup to a
+new deployment as described in [How to back up and restore](how-to-migrate-a-cluster).
+````
+
+`````
 ## Next steps
 
 * [Back up and restore](how-to-guides-back-up-and-restore-index) — create a backup after upgrading.
