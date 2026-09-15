@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Charmed OpenSearch Revision 366 release notes - OpenSearch 2.19.6 upgrade, GCS snapshot support, and Kubernetes charm consolidation."
+---
+
 <!--
 Release notes review notes (not published):
 
@@ -49,12 +55,6 @@ TODOs for the release owner:
   amd64 revision 155, both 2.19.6) match what the release pins.
 - Add the OCI rock/image artifacts for the two K8s charm rows.
 -->
-
----
-myst:
-  html_meta:
-    description: "Charmed OpenSearch Revision 366 release notes - OpenSearch 2.19.6 upgrade, GCS snapshot support, and Kubernetes charm consolidation."
----
 
 (reference-release-notes-revision-366)=
 # Revision 366
