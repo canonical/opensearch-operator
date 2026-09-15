@@ -20,6 +20,7 @@ These guides help you accomplish specific tasks with Charmed OpenSearch on machi
 * [Manage passwords](how-to-manage-passwords)
 * [Access OpenSearch using OAuth](how-to-access-using-oauth)
 * [Enable JWT authentication](how-to-guides-enable-jwt-authentication)
+* [Enable LDAP authentication](how-to-enable-ldap-authentication)
 
 ## Operations
 
@@ -53,6 +54,7 @@ Manage TLS encryption <tls-encryption>
 Manage passwords <manage-passwords>
 Access using OAuth <access-using-oauth>
 Enable JWT authentication <enable-jwt-authentication>
+Enable LDAP authentication <enable-ldap-authentication>
 Scale a cluster <scale-horizontally>
 Integrate with an application <integrate-with-an-application>
 Manage persistent storage <persistent-storage>
