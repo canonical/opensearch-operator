@@ -1,7 +1,7 @@
 # OpenSearch Operator
 [![Charmhub](https://charmhub.io/opensearch/badge.svg)](https://charmhub.io/opensearch)
 [![Release](https://github.com/canonical/opensearch-operator/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/opensearch-operator/actions/workflows/release.yaml)
-[![Tests](https://github.com/canonical/opensearch-operator/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/canonical/opensearch-operator/actions/workflows/ci.yaml)
+[![Tests](https://github.com/canonical/opensearch-operator/actions/workflows/ci.yaml/badge.svg?branch=2/edge)](https://github.com/canonical/opensearch-operator/actions/workflows/ci.yaml)
 [![Docs](https://github.com/canonical/opensearch-operator/actions/workflows/sync_docs.yaml/badge.svg)](https://github.com/canonical/opensearch-operator/actions/workflows/sync_docs.yaml)
 
 ## Description
@@ -154,7 +154,7 @@ juju remove-relation opensearch self-signed-certificates
 
 For the security features overview, see the [security hardening guide](https://canonical.com/data/opensearch/docs/latest/explanation/security/) in the Charmed OpenSearch documentation.
 
-Security issues in the Charmed OpenSearch Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues. See [SECURITY.md](https://github.com/canonical/opensearch-operator/blob/main/SECURITY.md) for the full security policy.
+Security issues in the Charmed OpenSearch Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues. See [SECURITY.md](https://github.com/canonical/opensearch-operator/blob/2/edge/SECURITY.md) for the full security policy.
 
 ## Contributing
 
@@ -163,4 +163,4 @@ The documentation for Charmed OpenSearch is available at [canonical.com/data/ope
 See the [contributor's guide](https://canonical.com/data/opensearch/docs/) in the documentation for how to report issues, build and test the charm, and contribute code and documentation.
 
 ## License
-The Charmed OpenSearch Operator is free software, distributed under the Apache Software License, version 2.0. See [LICENSE](https://github.com/canonical/opensearch-operator/blob/main/LICENSE) for more information.
+The Charmed OpenSearch Operator is free software, distributed under the Apache Software License, version 2.0. See [LICENSE](https://github.com/canonical/opensearch-operator/blob/2/edge/LICENSE) for more information.

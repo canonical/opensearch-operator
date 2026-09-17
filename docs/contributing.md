@@ -215,7 +215,7 @@ examines code quality, test coverage, and the user experience for Juju
 administrators of this charm.
 
 Please help us out in ensuring easy-to-review branches by rebasing your pull
-request branch onto the `main` branch. This also avoids merge commits and
+request branch onto the `2/edge` branch. This also avoids merge commits and
 creates a linear Git commit history.
 
 Familiarising yourself with the
@@ -250,8 +250,8 @@ page, where you can submit a pull request directly through the web interface.
 For larger contributions:
 
 1. Create a branch (in the main repository or in a fork) from the current
-   `main` and modify the documentation files as necessary.
-2. Raise a pull request against `main` to start the review process.
+   `2/edge` and modify the documentation files as necessary.
+2. Raise a pull request against `2/edge` to start the review process.
 3. Once the pull request is approved and all comments are addressed, it can
    be merged.
 

@@ -120,7 +120,7 @@ html_context = {
     # Documentation license information
     "license": {
         "name": "CC-BY-SA-3.0",
-        "url": "https://github.com/canonical/opensearch-operator/blob/main/LICENSE",
+        "url": "https://github.com/canonical/opensearch-operator/blob/2/edge/LICENSE",
     },
 }
 
