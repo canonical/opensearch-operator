@@ -17,13 +17,13 @@ are applicable to Charmed OpenSearch.
 
 ## Unit test
 
-Check the [Contributing](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md#testing)
+Check the [Contributing](https://github.com/canonical/opensearch-operator/blob/2/edge/CONTRIBUTING.md#testing)
 guide and follow `tox run -e unit` examples there.
 
 ## Integration test
 
 The integration tests coverage is rather rich in the OpenSearch charm.
-Check the [Contributing](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md#testing)
+Check the [Contributing](https://github.com/canonical/opensearch-operator/blob/2/edge/CONTRIBUTING.md#testing)
 guide and follow `tox run -e integration` examples there.
 
 For high availability (HA) related tests, each test serves as an integration as well as a smoke test

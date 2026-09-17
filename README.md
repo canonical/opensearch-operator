@@ -1,7 +1,7 @@
 # OpenSearch Operator
 [![Charmhub](https://charmhub.io/opensearch/badge.svg)](https://charmhub.io/opensearch)
 [![Release](https://github.com/canonical/opensearch-operator/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/opensearch-operator/actions/workflows/release.yaml)
-[![Tests](https://github.com/canonical/opensearch-operator/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/canonical/opensearch-operator/actions/workflows/ci.yaml)
+[![Tests](https://github.com/canonical/opensearch-operator/actions/workflows/ci.yaml/badge.svg?branch=2/edge)](https://github.com/canonical/opensearch-operator/actions/workflows/ci.yaml)
 [![Docs](https://github.com/canonical/opensearch-operator/actions/workflows/sync_docs.yaml/badge.svg)](https://github.com/canonical/opensearch-operator/actions/workflows/sync_docs.yaml)
 
 ## Description
@@ -151,11 +151,16 @@ juju remove-relation opensearch self-signed-certificates
 **Note:** The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The Self Signed Certificates Operator offers a variety of configuration options. Read more on the TLS Certificates Operator [here](https://charmhub.io/self-signed-certificates).
 
 ## Security
-Security issues in the Charmed OpenSearch Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.
+
+For the security features overview, see the [security hardening guide](https://canonical.com/data/opensearch/docs/latest/explanation/security/) in the Charmed OpenSearch documentation.
+
+Security issues in the Charmed OpenSearch Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues. See [SECURITY.md](https://github.com/canonical/opensearch-operator/blob/2/edge/SECURITY.md) for the full security policy.
 
 ## Contributing
 
-Please see the [Juju SDK docs](https://juju.is/docs/sdk) for guidelines on enhancements to this charm following best practice guidelines, and [CONTRIBUTING.md](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md) for developer guidance.
+The documentation for Charmed OpenSearch is available at [canonical.com/data/opensearch/docs](https://canonical.com/data/opensearch/docs/).
+
+See the [contributor's guide](https://canonical.com/data/opensearch/docs/) in the documentation for how to report issues, build and test the charm, and contribute code and documentation.
 
 ## License
-The Charmed OpenSearch Operator is free software, distributed under the Apache Software License, version 2.0. See [LICENSE](https://github.com/canonical/opensearch-operator/blob/main/LICENSE) for more information.
+The Charmed OpenSearch Operator is free software, distributed under the Apache Software License, version 2.0. See [LICENSE](https://github.com/canonical/opensearch-operator/blob/2/edge/LICENSE) for more information.
