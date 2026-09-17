@@ -234,6 +234,9 @@ linkcheck_ignore = [
     "https://matrix.to/#/#charmhub-data-platform:ubuntu.com",
     "https://app.element.io/#/room/#charmhub-data-platform:ubuntu.com",
     "https://askubuntu.com/*",
+    # Expected dashboards revision for the revision-366 release; the tag is
+    # created when the release is published, so the link 404s until then.
+    "https://github.com/canonical/opensearch-dashboards-operator/tree/opensearch-dashboards/rev79",
 ]
 
 
