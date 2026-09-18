@@ -68,7 +68,7 @@ as a safety measure for a rollback action.
 To accomplish this, run the `juju status` command and look for the deployed
 Charmed OpenSearch revision in the command output, e.g.:
 `````{tab-set}
-:sync-group: subtrate
+:sync-group: substrate
 
 ````{tab-item} VM
 :sync: vm
@@ -258,7 +258,7 @@ See [How to optimize cluster performance with profiles](how-to-optimize-cluster-
 :sync: k8s
 
 - You can upgrade the charm to the latest revision available in the charm store for a specific channel,
-  in this case, the stable channel:
+  in this case, the edge channel:
 
     ```shell
     juju refresh opensearch-k8s --channel 2/edge
@@ -634,7 +634,7 @@ self-signed-certificates/0*  active    idle       10.1.0.165
 ```
 
 Units that had not yet upgraded their workload before the rollback (`opensearch-k8s/0`,
-`opensearch-k8s/1` and `opensearch-k8s/2 above) simply run revision **8** normally. Only the unit that already
+`opensearch-k8s/1` and `opensearch-k8s/2` above) simply run revision **8** normally. Only the unit that already
 advanced to the newer workload (`opensearch-k8s/3`) needs to roll that workload back and is
 blocked until you do.
 
@@ -686,7 +686,7 @@ Model  Controller      Cloud/Region  Version  SLA          Timestamp
 dev    opensearch-k8s  ck8s          3.6.28   unsupported  20:12:33+01:00
 
 App                       Version  Status   Scale  Charm                     Channel   Rev  Address         Exposed  Message
-opensearch-k8s                     blocked      3  opensearch-k8s            2/edge      8  10.152.183.109  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+opensearch-k8s                     blocked      4  opensearch-k8s            2/edge      8  10.152.183.109  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
 self-signed-certificates           active       1  self-signed-certificates  1/stable  586  10.152.183.241  no
 
 Unit                         Workload  Agent  Address     Ports  Message
@@ -696,6 +696,8 @@ opensearch-k8s/2             active    idle   10.1.0.232         OpenSearch 2.19
 opensearch-k8s/3             blocked   idle   10.1.0.168         Rollback unsupported. Refresh to a newer revision or consult the recovery documentation
 self-signed-certificates/0*  active    idle   10.1.0.251
 ```
+````
+
 `````
 ### Check the cluster's health
 
