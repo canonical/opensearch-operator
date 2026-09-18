@@ -196,7 +196,7 @@ juju run opensearch-k8s/leader pre-upgrade-check
 The output should be similar to the following:
 ```text
 Running operation 1 with 1 task
-  - task 2 on unit-opensearch-2
+  - task 2 on unit-opensearch-k8s-2
 
 Waiting for task 2...
 result: Charm is ready for upgrade
@@ -496,7 +496,7 @@ and re-enables shard allocation without requiring the action.
 ```
 
 Before rolling back, check `juju status`. The application will show `blocked` with a message like
-`Upgrading. Verify highest unit is healthy & run \`resume-upgrade\` action. To rollback, \`juju refresh\` to last revision`.
+``Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision``.
 The unit messages will show which units have already been upgraded (newer OpenSearch version)
 and which are still on the old version (marked `(outdated)`). Note the current charm revision
 from the `Rev` column — in this example, it is **145**.
