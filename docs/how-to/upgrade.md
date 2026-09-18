@@ -147,7 +147,7 @@ juju add-unit opensearch
 :sync: k8s
 
 ```shell
-juju add-unit opensearch-k8s
+juju scale-application opensearch-k8s <current number of units + 1>
 ```
 ````
 
@@ -210,6 +210,9 @@ is well prepared to start an upgrade procedure.
 
 ### Initiate the upgrade
 
+Use the `juju refresh` command to trigger the charm upgrade process.
+You have control over what upgrade you want to apply:
+
 `````{tab-set}
 :sync-group: substrate
 
@@ -226,31 +229,6 @@ If the charm is running on a revision prior to `185`, the `testing` profile is t
 Ensure it is set before upgrading, then switch to a profile that suits your use case.
 See [How to optimize cluster performance with profiles](how-to-optimize-cluster-performance).
 ```
-````
-
-````{tab-item} K8s
-:sync: k8s
-
-```{caution}
-Charmed OpenSearch supports performance profiles with different RAM consumption:
-
-* `production`: JVM heap set to 50% of the available RAM, capped at 31 GB
-* `testing`: JVM heap fixed at ~1 GB of RAM
-
-See [How to optimize cluster performance with profiles](how-to-optimize-cluster-performance).
-```
-````
-
-`````
-
-Use the `juju refresh` command to trigger the charm upgrade process.
-You have control over what upgrade you want to apply:
-
-`````{tab-set}
-:sync-group: substrate
-
-````{tab-item} VM
-:sync: vm
 
 - You can upgrade the charm to the latest revision available in the charm store for a specific channel,
   in this case, the stable channel:
@@ -414,7 +392,7 @@ juju remove-unit opensearch/<highest unit number>
 :sync: k8s
 
 ```shell
-juju remove-unit opensearch-k8s --num-units 1
+juju scale-application opensearch-k8s <original number of units>
 ```
 ````
 
@@ -755,6 +733,11 @@ The response should look similar to the following example:
 
 (how-to-recover-rollback)=
 ## Recovering from a rollback
+
+```{warning}
+This procedure applies to machine deployments. On Kubernetes, restore from backup to a
+new deployment as described in [How to back up and restore](how-to-migrate-a-cluster).
+```
 
 OpenSearch does not support downgrades.
 Running `juju refresh` to a previous revision may cause OpenSearch to fail to start.
