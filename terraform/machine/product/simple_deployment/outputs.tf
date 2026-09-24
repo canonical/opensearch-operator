@@ -1,6 +1,11 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+output "app_names" {
+  description = "Output of all deployed application names."
+  value       = { for key, app in local.components : key => app.name }
+}
+
 output "metadata" {
   description = "Product deployment metadata."
   value = {
@@ -19,32 +24,6 @@ output "models" {
   }
 }
 
-output "requires" {
-  description = "Map of all 'requires' endpoints"
-  value = {
-    opensearch_certificates      = module.opensearch.requires.certificates
-    opensearch_s3_credentials    = module.opensearch.requires.s3_credentials
-    opensearch_azure_credentials = module.opensearch.requires.azure_credentials
-    opensearch_gcs_credentials   = module.opensearch.requires.gcs_credentials
-    opensearch_jwt_configuration = module.opensearch.requires.jwt_configuration
-    opensearch_oauth             = module.opensearch.requires.oauth
-    opensearch_smtp              = module.opensearch.requires.smtp
-  }
-}
-
-output "provides" {
-  description = "Map of all 'provides' endpoints"
-  value = {
-    opensearch_client    = module.opensearch.provides.opensearch_client
-    opensearch_cos_agent = module.opensearch.provides.cos_agent
-  }
-}
-
-output "app_names" {
-  description = "Output of all deployed application names."
-  value       = { for key, app in local.components : key => app.name }
-}
-
 output "offers" {
   description = "List of offers URLs."
   value = {
@@ -58,5 +37,26 @@ output "offers" {
       name = juju_application.backups-integrator[0].name
       url  = juju_offer.backups_credentials[0].url
     }, null)
+  }
+}
+
+output "provides" {
+  description = "Map of all 'provides' endpoints"
+  value = {
+    opensearch_client    = module.opensearch.provides.opensearch_client
+    opensearch_cos_agent = module.opensearch.provides.cos_agent
+  }
+}
+
+output "requires" {
+  description = "Map of all 'requires' endpoints"
+  value = {
+    opensearch_certificates      = module.opensearch.requires.certificates
+    opensearch_s3_credentials    = module.opensearch.requires.s3_credentials
+    opensearch_azure_credentials = module.opensearch.requires.azure_credentials
+    opensearch_gcs_credentials   = module.opensearch.requires.gcs_credentials
+    opensearch_jwt_configuration = module.opensearch.requires.jwt_configuration
+    opensearch_oauth             = module.opensearch.requires.oauth
+    opensearch_smtp              = module.opensearch.requires.smtp
   }
 }
