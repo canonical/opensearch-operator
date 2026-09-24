@@ -135,10 +135,9 @@ resource "juju_integration" "opensearch-tls-integration" {
   }
 
   application {
-    name                = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.name : null
-    endpoint            = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.endpoint : null
-    offer_url           = local.certificates_provider.kind == "offer" ? local.certificates_provider.url : null
-    offering_controller = local.certificates_provider.kind == "offer" ? local.certificates_provider.controller : null
+    name      = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.name : null
+    endpoint  = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.endpoint : null
+    offer_url = local.certificates_provider.kind == "offer" ? local.certificates_provider.url : null
   }
 }
 
@@ -152,10 +151,9 @@ resource "juju_integration" "opensearch_dashboards-tls-integration" {
   }
 
   application {
-    name                = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.name : null
-    endpoint            = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.endpoint : null
-    offer_url           = local.certificates_provider.kind == "offer" ? local.certificates_provider.url : null
-    offering_controller = local.certificates_provider.kind == "offer" ? local.certificates_provider.controller : null
+    name      = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.name : null
+    endpoint  = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.endpoint : null
+    offer_url = local.certificates_provider.kind == "offer" ? local.certificates_provider.url : null
   }
 }
 

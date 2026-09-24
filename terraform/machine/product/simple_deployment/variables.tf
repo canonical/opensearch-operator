@@ -30,11 +30,10 @@ variable "backups-integrator" {
 variable "certificates_integration" {
   description = "External TLS endpoint or offer."
   type = object({
-    kind       = string
-    name       = optional(string)
-    endpoint   = optional(string)
-    url        = optional(string)
-    controller = optional(string)
+    kind     = string
+    name     = optional(string)
+    endpoint = optional(string)
+    url      = optional(string)
   })
   default = null
 
@@ -79,7 +78,7 @@ variable "data-integrator" {
   type = object({
     model_uuid  = optional(string)
     config      = optional(map(string), { "index-name" : "test", "extra-user-roles" : "admin" })
-    channel     = optional(string, "latest/edge")
+    channel     = optional(string, "latest/stable")
     base        = optional(string, "ubuntu@22.04")
     revision    = optional(number)
     constraints = optional(string, "arch=amd64")

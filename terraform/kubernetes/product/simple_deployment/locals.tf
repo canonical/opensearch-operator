@@ -14,25 +14,23 @@ locals {
   backups_is_cross_model = local.backups_enabled && local.backups_model_uuid != var.opensearch.model_uuid
 
   backups_settings = {
-    s3            = { base = "ubuntu@22.04", channel = "latest/edge", endpoint = "s3-credentials" }
+    s3            = { base = "ubuntu@22.04", channel = "1/stable", endpoint = "s3-credentials" }
     azure-storage = { base = "ubuntu@22.04", channel = "latest/edge", endpoint = "azure-credentials" }
     gcs           = { base = "ubuntu@24.04", channel = "1/edge", endpoint = "gcs-credentials" }
   }
 
   ingress_provider = var.ingress_integration != null ? var.ingress_integration : try({
-    kind       = "endpoint"
-    name       = juju_application.traefik-k8s[0].name
-    endpoint   = "ingress"
-    url        = null
-    controller = null
+    kind     = "endpoint"
+    name     = juju_application.traefik-k8s[0].name
+    endpoint = "ingress"
+    url      = null
   }, null)
 
   certificates_provider = var.certificates_integration != null ? var.certificates_integration : {
-    kind       = "endpoint"
-    name       = juju_application.self-signed-certificates[0].name
-    endpoint   = "certificates"
-    url        = null
-    controller = null
+    kind     = "endpoint"
+    name     = juju_application.self-signed-certificates[0].name
+    endpoint = "certificates"
+    url      = null
   }
 
   components = merge(

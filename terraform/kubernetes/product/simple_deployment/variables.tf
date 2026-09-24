@@ -24,11 +24,10 @@ variable "backups-integrator" {
 variable "certificates_integration" {
   description = "External TLS endpoint or offer."
   type = object({
-    kind       = string
-    name       = optional(string)
-    endpoint   = optional(string)
-    url        = optional(string)
-    controller = optional(string)
+    kind     = string
+    name     = optional(string)
+    endpoint = optional(string)
+    url      = optional(string)
   })
   default = null
 
@@ -64,7 +63,7 @@ variable "data-integrator" {
   type = object({
     model_uuid  = optional(string)
     config      = optional(map(string), { "index-name" : "test", "extra-user-roles" : "admin" })
-    channel     = optional(string, "latest/edge")
+    channel     = optional(string, "latest/stable")
     base        = optional(string, "ubuntu@22.04")
     revision    = optional(number)
     constraints = optional(string, "arch=amd64")
@@ -83,11 +82,10 @@ variable "data-integrator" {
 variable "grafana_dashboard_integration" {
   description = "Optional COS Grafana dashboard endpoint or offer."
   type = object({
-    kind       = string
-    name       = optional(string)
-    endpoint   = optional(string)
-    url        = optional(string)
-    controller = optional(string)
+    kind     = string
+    name     = optional(string)
+    endpoint = optional(string)
+    url      = optional(string)
   })
   default = null
 
@@ -121,11 +119,10 @@ variable "grafana_dashboard_integration" {
 variable "ingress_integration" {
   description = "External ingress endpoint or offer for OpenSearch Dashboards, used instead of the bundled traefik-k8s."
   type = object({
-    kind       = string
-    name       = optional(string)
-    endpoint   = optional(string)
-    url        = optional(string)
-    controller = optional(string)
+    kind     = string
+    name     = optional(string)
+    endpoint = optional(string)
+    url      = optional(string)
   })
   default = null
 
@@ -159,11 +156,10 @@ variable "ingress_integration" {
 variable "logging_integration" {
   description = "Optional COS logging endpoint or offer."
   type = object({
-    kind       = string
-    name       = optional(string)
-    endpoint   = optional(string)
-    url        = optional(string)
-    controller = optional(string)
+    kind     = string
+    name     = optional(string)
+    endpoint = optional(string)
+    url      = optional(string)
   })
   default = null
 
@@ -197,11 +193,10 @@ variable "logging_integration" {
 variable "metrics_endpoint_integration" {
   description = "Optional COS metrics endpoint or offer."
   type = object({
-    kind       = string
-    name       = optional(string)
-    endpoint   = optional(string)
-    url        = optional(string)
-    controller = optional(string)
+    kind     = string
+    name     = optional(string)
+    endpoint = optional(string)
+    url      = optional(string)
   })
   default = null
 

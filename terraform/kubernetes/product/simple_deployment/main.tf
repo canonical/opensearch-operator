@@ -153,10 +153,9 @@ resource "juju_integration" "opensearch-tls-integration" {
   }
 
   application {
-    name                = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.name : null
-    endpoint            = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.endpoint : null
-    offer_url           = local.certificates_provider.kind == "offer" ? local.certificates_provider.url : null
-    offering_controller = local.certificates_provider.kind == "offer" ? local.certificates_provider.controller : null
+    name      = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.name : null
+    endpoint  = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.endpoint : null
+    offer_url = local.certificates_provider.kind == "offer" ? local.certificates_provider.url : null
   }
 }
 
@@ -170,10 +169,9 @@ resource "juju_integration" "opensearch_dashboards-tls-integration" {
   }
 
   application {
-    name                = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.name : null
-    endpoint            = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.endpoint : null
-    offer_url           = local.certificates_provider.kind == "offer" ? local.certificates_provider.url : null
-    offering_controller = local.certificates_provider.kind == "offer" ? local.certificates_provider.controller : null
+    name      = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.name : null
+    endpoint  = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.endpoint : null
+    offer_url = local.certificates_provider.kind == "offer" ? local.certificates_provider.url : null
   }
 }
 
@@ -202,10 +200,25 @@ resource "juju_integration" "opensearch_dashboards-ingress-integration" {
   }
 
   application {
-    name                = local.ingress_provider.kind == "endpoint" ? local.ingress_provider.name : null
-    endpoint            = local.ingress_provider.kind == "endpoint" ? local.ingress_provider.endpoint : null
-    offer_url           = local.ingress_provider.kind == "offer" ? local.ingress_provider.url : null
-    offering_controller = local.ingress_provider.kind == "offer" ? local.ingress_provider.controller : null
+    name      = local.ingress_provider.kind == "endpoint" ? local.ingress_provider.name : null
+    endpoint  = local.ingress_provider.kind == "endpoint" ? local.ingress_provider.endpoint : null
+    offer_url = local.ingress_provider.kind == "offer" ? local.ingress_provider.url : null
+  }
+}
+
+resource "juju_integration" "traefik_k8s-tls-integration" {
+  count      = length(juju_application.traefik-k8s) > 0 ? 1 : 0
+  model_uuid = var.opensearch.model_uuid
+
+  application {
+    name     = juju_application.traefik-k8s[0].name
+    endpoint = "certificates"
+  }
+
+  application {
+    name      = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.name : null
+    endpoint  = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.endpoint : null
+    offer_url = local.certificates_provider.kind == "offer" ? local.certificates_provider.url : null
   }
 }
 
@@ -246,10 +259,9 @@ resource "juju_integration" "grafana_dashboard-opensearch-integration" {
   model_uuid = var.opensearch.model_uuid
 
   application {
-    name                = var.grafana_dashboard_integration.kind == "endpoint" ? var.grafana_dashboard_integration.name : null
-    endpoint            = var.grafana_dashboard_integration.kind == "endpoint" ? var.grafana_dashboard_integration.endpoint : null
-    offer_url           = var.grafana_dashboard_integration.kind == "offer" ? var.grafana_dashboard_integration.url : null
-    offering_controller = var.grafana_dashboard_integration.kind == "offer" ? var.grafana_dashboard_integration.controller : null
+    name      = var.grafana_dashboard_integration.kind == "endpoint" ? var.grafana_dashboard_integration.name : null
+    endpoint  = var.grafana_dashboard_integration.kind == "endpoint" ? var.grafana_dashboard_integration.endpoint : null
+    offer_url = var.grafana_dashboard_integration.kind == "offer" ? var.grafana_dashboard_integration.url : null
   }
 
   application {
@@ -263,10 +275,9 @@ resource "juju_integration" "grafana_dashboard-opensearch_dashboards-integration
   model_uuid = var.opensearch.model_uuid
 
   application {
-    name                = var.grafana_dashboard_integration.kind == "endpoint" ? var.grafana_dashboard_integration.name : null
-    endpoint            = var.grafana_dashboard_integration.kind == "endpoint" ? var.grafana_dashboard_integration.endpoint : null
-    offer_url           = var.grafana_dashboard_integration.kind == "offer" ? var.grafana_dashboard_integration.url : null
-    offering_controller = var.grafana_dashboard_integration.kind == "offer" ? var.grafana_dashboard_integration.controller : null
+    name      = var.grafana_dashboard_integration.kind == "endpoint" ? var.grafana_dashboard_integration.name : null
+    endpoint  = var.grafana_dashboard_integration.kind == "endpoint" ? var.grafana_dashboard_integration.endpoint : null
+    offer_url = var.grafana_dashboard_integration.kind == "offer" ? var.grafana_dashboard_integration.url : null
   }
 
   application {
@@ -280,10 +291,9 @@ resource "juju_integration" "logging-opensearch-integration" {
   model_uuid = var.opensearch.model_uuid
 
   application {
-    name                = var.logging_integration.kind == "endpoint" ? var.logging_integration.name : null
-    endpoint            = var.logging_integration.kind == "endpoint" ? var.logging_integration.endpoint : null
-    offer_url           = var.logging_integration.kind == "offer" ? var.logging_integration.url : null
-    offering_controller = var.logging_integration.kind == "offer" ? var.logging_integration.controller : null
+    name      = var.logging_integration.kind == "endpoint" ? var.logging_integration.name : null
+    endpoint  = var.logging_integration.kind == "endpoint" ? var.logging_integration.endpoint : null
+    offer_url = var.logging_integration.kind == "offer" ? var.logging_integration.url : null
   }
 
   application {
@@ -297,10 +307,9 @@ resource "juju_integration" "logging-opensearch_dashboards-integration" {
   model_uuid = var.opensearch.model_uuid
 
   application {
-    name                = var.logging_integration.kind == "endpoint" ? var.logging_integration.name : null
-    endpoint            = var.logging_integration.kind == "endpoint" ? var.logging_integration.endpoint : null
-    offer_url           = var.logging_integration.kind == "offer" ? var.logging_integration.url : null
-    offering_controller = var.logging_integration.kind == "offer" ? var.logging_integration.controller : null
+    name      = var.logging_integration.kind == "endpoint" ? var.logging_integration.name : null
+    endpoint  = var.logging_integration.kind == "endpoint" ? var.logging_integration.endpoint : null
+    offer_url = var.logging_integration.kind == "offer" ? var.logging_integration.url : null
   }
 
   application {
@@ -314,10 +323,9 @@ resource "juju_integration" "metrics_endpoint-opensearch-integration" {
   model_uuid = var.opensearch.model_uuid
 
   application {
-    name                = var.metrics_endpoint_integration.kind == "endpoint" ? var.metrics_endpoint_integration.name : null
-    endpoint            = var.metrics_endpoint_integration.kind == "endpoint" ? var.metrics_endpoint_integration.endpoint : null
-    offer_url           = var.metrics_endpoint_integration.kind == "offer" ? var.metrics_endpoint_integration.url : null
-    offering_controller = var.metrics_endpoint_integration.kind == "offer" ? var.metrics_endpoint_integration.controller : null
+    name      = var.metrics_endpoint_integration.kind == "endpoint" ? var.metrics_endpoint_integration.name : null
+    endpoint  = var.metrics_endpoint_integration.kind == "endpoint" ? var.metrics_endpoint_integration.endpoint : null
+    offer_url = var.metrics_endpoint_integration.kind == "offer" ? var.metrics_endpoint_integration.url : null
   }
 
   application {
@@ -331,10 +339,9 @@ resource "juju_integration" "metrics_endpoint-opensearch_dashboards-integration"
   model_uuid = var.opensearch.model_uuid
 
   application {
-    name                = var.metrics_endpoint_integration.kind == "endpoint" ? var.metrics_endpoint_integration.name : null
-    endpoint            = var.metrics_endpoint_integration.kind == "endpoint" ? var.metrics_endpoint_integration.endpoint : null
-    offer_url           = var.metrics_endpoint_integration.kind == "offer" ? var.metrics_endpoint_integration.url : null
-    offering_controller = var.metrics_endpoint_integration.kind == "offer" ? var.metrics_endpoint_integration.controller : null
+    name      = var.metrics_endpoint_integration.kind == "endpoint" ? var.metrics_endpoint_integration.name : null
+    endpoint  = var.metrics_endpoint_integration.kind == "endpoint" ? var.metrics_endpoint_integration.endpoint : null
+    offer_url = var.metrics_endpoint_integration.kind == "offer" ? var.metrics_endpoint_integration.url : null
   }
 
   application {
