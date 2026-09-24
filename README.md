@@ -156,5 +156,22 @@ Security issues in the Charmed OpenSearch Operator can be reported through [Laun
 
 Please see the [Juju SDK docs](https://juju.is/docs/sdk) for guidelines on enhancements to this charm following best practice guidelines, and [CONTRIBUTING.md](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md) for developer guidance.
 
+### Format documentation Markdown
+
+The documentation sources in `docs/` are formatted with [mdformat](https://mdformat.readthedocs.io/) (with the MyST plugin). The formatter runs in its own virtual environment, installed from a hash-pinned lock file, so no global packages are needed.
+
+```shell
+cd docs
+make mdformat        # format all tracked documentation Markdown files in place
+make mdformat-check  # report unformatted files without changing them
+```
+
+To format automatically on each commit, install the pre-commit hook from the repository root:
+
+```shell
+python3 -m pip install pre-commit
+pre-commit install
+```
+
 ## License
 The Charmed OpenSearch Operator is free software, distributed under the Apache Software License, version 2.0. See [LICENSE](https://github.com/canonical/opensearch-operator/blob/main/LICENSE) for more information.
