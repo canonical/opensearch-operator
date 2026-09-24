@@ -81,7 +81,7 @@ jobs:
       - name: Lint / format / validate TF modules
         run: |
           pushd ./terraform
-          for dir in machine/charm/opensearch charm/large_deployment machine/product/simple_deployment product/large_deployment kubernetes/charm/opensearch kubernetes/product/simple_deployment; do
+          for dir in machine/charm/opensearch machine/product/simple_deployment machine/product/large_deployment kubernetes/charm/opensearch kubernetes/product/simple_deployment kubernetes/product/large_deployment; do
             (cd "${dir}" && terraform init && terraform fmt && terraform validate)
           done
           popd
