@@ -1,31 +1,30 @@
 ---
 myst:
   html_meta:
-    description: "Optimize Charmed OpenSearch performance using testing and production profiles to configure resources and JVM heap size."
+    description: Optimize Charmed OpenSearch performance using testing and production profiles to configure resources and JVM heap size.
 ---
 
 (how-to-optimize-cluster-performance)=
+
 # How to optimize cluster performance with profiles
 
-This guide shows how to configure performance profiles for Charmed OpenSearch
-to match your workload requirements.
+This guide shows how to configure performance profiles for Charmed OpenSearch to match your workload
+requirements.
 
 Charmed OpenSearch supports two profiles:
 
-* **`testing`** — lightweight workloads (1 GB heap, minimum 1 node)
-* **`production`** — production workloads (50% RAM heap, minimum 3+3 nodes)
+- **`testing`** — lightweight workloads (1 GB heap, minimum 1 node)
+- **`production`** — production workloads (50% RAM heap, minimum 3+3 nodes)
 
 ## Deploy with the `testing` profile
 
-`testing` is the default profile, so it applies when `profile` is not set.
-To set it explicitly:
+`testing` is the default profile, so it applies when `profile` is not set. To set it explicitly:
 
 ```shell
 juju deploy opensearch --channel=2/stable --config profile=testing
 ```
 
-The `testing` profile allows a single node and sets JVM heap to 1 GB.
-TLS is still required.
+The `testing` profile allows a single node and sets JVM heap to 1 GB. TLS is still required.
 
 ```{note}
 A warning will appear in logs indicating the testing profile is active.
@@ -42,10 +41,10 @@ juju deploy opensearch --channel=2/stable --config profile=production -n 3
 
 The `production` profile enforces:
 
-* Minimum 3 cluster manager nodes
-* Minimum 3 data nodes
-* Minimum memory: 8 GB per node
-* JVM heap: 50% of available RAM (minimum 4 GB, maximum 31 GB)
+- Minimum 3 cluster manager nodes
+- Minimum 3 data nodes
+- Minimum memory: 8 GB per node
+- JVM heap: 50% of available RAM (minimum 4 GB, maximum 31 GB)
 
 If requirements are not met, the charm remains `blocked` until corrected.
 
@@ -57,24 +56,24 @@ The profile can be changed after deployment:
 juju config opensearch profile=<profile>
 ```
 
-Where `<profile>` is `testing` or `production`. The charm automatically reconfigures
-the cluster to match the new profile requirements. Once complete, `juju status` shows
-the OpenSearch application `active`.
+Where `<profile>` is `testing` or `production`. The charm automatically reconfigures the cluster to
+match the new profile requirements. Once complete, `juju status` shows the OpenSearch application
+`active`.
 
 ## Profile comparison
 
 For a detailed explanation of what profiles are and why they exist, see
 [Performance profiles](explanation-performance-profiles).
 
-| Setting            | `testing`                   | `production`                              |
-| :----------------- | :-------------------------- | :---------------------------------------- |
-| Cluster size       | Minimum 1 node              | Minimum 3 cluster manager + 3 data nodes  |
-| Memory requirement | None enforced               | Minimum 8 GB per node                     |
-| JVM heap           | Fixed 1 GB                  | 50% of RAM (min 4 GB, max 31 GB)          |
-| Use case           | Development / testing       | Production workloads                      |
+| Setting            | `testing`             | `production`                             |
+| :----------------- | :-------------------- | :--------------------------------------- |
+| Cluster size       | Minimum 1 node        | Minimum 3 cluster manager + 3 data nodes |
+| Memory requirement | None enforced         | Minimum 8 GB per node                    |
+| JVM heap           | Fixed 1 GB            | 50% of RAM (min 4 GB, max 31 GB)         |
+| Use case           | Development / testing | Production workloads                     |
 
 ## Next steps
 
-* [Standard deployment](how-to-deploy-standard) — deploy a cluster with a specific profile.
-* [Scale a cluster horizontally](how-to-scale-horizontally) — adjust cluster size after changing the profile.
-
+- [Standard deployment](how-to-deploy-standard) — deploy a cluster with a specific profile.
+- [Scale a cluster horizontally](how-to-scale-horizontally) — adjust cluster size after changing the
+  profile.

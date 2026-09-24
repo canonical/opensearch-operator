@@ -1,10 +1,11 @@
 ---
 myst:
   html_meta:
-    description: "Manage TLS encryption for Charmed OpenSearch, including enabling TLS, updating private keys, and rotating TLS and CA certificates."
+    description: Manage TLS encryption for Charmed OpenSearch, including enabling TLS, updating private keys, and rotating TLS and CA certificates.
 ---
 
 (how-to-guides-tls-encryption-index)=
+
 # How to manage TLS encryption
 
 This guide shows how to enable TLS encryption, update private keys, and rotate TLS/CA certificates
@@ -17,6 +18,7 @@ TLS is mandatory for Charmed OpenSearch and cannot be disabled.
 ```
 
 (how-to-enable-tls-encryption)=
+
 ## Enable TLS encryption
 
 The example below uses the
@@ -42,10 +44,11 @@ Integrate it with OpenSearch:
 juju integrate self-signed-certificates opensearch
 ```
 
-Verify the relation with `juju status --relations`. The OpenSearch application turns
-`active` — it is no longer `blocked` with a "Missing TLS relation" message.
+Verify the relation with `juju status --relations`. The OpenSearch application turns `active` — it
+is no longer `blocked` with a "Missing TLS relation" message.
 
 (how-to-check-tls-keys)=
+
 ## Check certificates in use
 
 To inspect the issuer of the certificate currently served by OpenSearch:
@@ -55,22 +58,23 @@ openssl s_client -showcerts -connect <unit-ip>:<port> < /dev/null | grep issuer
 ```
 
 (how-to-update-tls-keys)=
+
 ## Update private keys
 
-Private keys can be updated via the `set-tls-private-key` action.
-Charmed OpenSearch uses three certificate categories:
+Private keys can be updated via the `set-tls-private-key` action. Charmed OpenSearch uses three
+certificate categories:
 
-* `app-admin` — administrative actions (leader unit only)
-* `unit-transport` — internal node-to-node communication
-* `unit-http` — external client-to-node communication
+- `app-admin` — administrative actions (leader unit only)
+- `unit-transport` — internal node-to-node communication
+- `unit-http` — external client-to-node communication
 
 ```{note}
 Each unit has its own node certificate, so `unit-transport` and `unit-http` keys must be
 set on every target unit individually (e.g. `juju run opensearch/<unit-id> ...`).
 ```
 
-For an explanation of why these three categories exist and how rotation works,
-see [TLS certificates](explanation-tls-certificates).
+For an explanation of why these three categories exist and how rotation works, see
+[TLS certificates](explanation-tls-certificates).
 
 ### Auto-generate new keys
 
@@ -80,8 +84,8 @@ Generate the `app-admin` key on the leader:
 juju run opensearch/leader set-tls-private-key category=app-admin
 ```
 
-Then generate the `unit-transport` and `unit-http` keys on **each unit**, replacing
-`<unit-id>` (for example, `opensearch/0`, `opensearch/1`):
+Then generate the `unit-transport` and `unit-http` keys on **each unit**, replacing `<unit-id>` (for
+example, `opensearch/0`, `opensearch/1`):
 
 ```shell
 juju run opensearch/<unit-id> set-tls-private-key category=unit-transport
@@ -104,8 +108,8 @@ Apply the `app-admin` key on the leader:
 juju run opensearch/leader set-tls-private-key category=app-admin key="$(base64 -w0 app-admin.pem)"
 ```
 
-Then apply the `unit-transport` and `unit-http` keys on **each unit**, replacing
-`<unit-id>` (for example, `opensearch/0`, `opensearch/1`):
+Then apply the `unit-transport` and `unit-http` keys on **each unit**, replacing `<unit-id>` (for
+example, `opensearch/0`, `opensearch/1`):
 
 ```shell
 juju run opensearch/<unit-id> set-tls-private-key category=unit-transport key="$(base64 -w0 unit-transport.pem)"
@@ -113,10 +117,11 @@ juju run opensearch/<unit-id> set-tls-private-key category=unit-http key="$(base
 ```
 
 (how-to-rotate-tls-ca-certificates)=
+
 ## Rotate TLS certificates
 
-Certificate rotation is triggered automatically when a certificate expires.
-To rotate manually, regenerate the private key for the desired category:
+Certificate rotation is triggered automatically when a certificate expires. To rotate manually,
+regenerate the private key for the desired category:
 
 (manual-rotate-tls-cert)=
 
@@ -124,17 +129,17 @@ To rotate manually, regenerate the private key for the desired category:
 juju run opensearch/<unit-id> set-tls-private-key category=<category>
 ```
 
-Where `<category>` is `app-admin`, `unit-transport`, or `unit-http`. Use `opensearch/leader`
-for `app-admin`; use `opensearch/<unit-id>` for `unit-transport` and `unit-http`, repeating
-for each unit.
+Where `<category>` is `app-admin`, `unit-transport`, or `unit-http`. Use `opensearch/leader` for
+`app-admin`; use `opensearch/<unit-id>` for `unit-transport` and `unit-http`, repeating for each
+unit.
 
 This generates a new private key and CSR, which is sent to the certificate provider for signing.
 Once signed, the new certificate is automatically applied to the cluster.
 
 ## Rotate CA certificates
 
-The CA certificate is provided by the TLS operator you are using.
-The rotation process differs depending on the operator.
+The CA certificate is provided by the TLS operator you are using. The rotation process differs
+depending on the operator.
 
 ### With `self-signed-certificates`
 
@@ -161,8 +166,8 @@ openssl s_client -showcerts -connect <unit-ip>:<port> < /dev/null | grep issuer
 
 ### With `manual-tls-certificates`
 
-To rotate the CA with the `manual-tls` operator, sign CSRs with the new CA certificate
-and provide them to the cluster. If you no longer have the original CSR files,
+To rotate the CA with the `manual-tls` operator, sign CSRs with the new CA certificate and provide
+them to the cluster. If you no longer have the original CSR files,
 [regenerate them](#manual-rotate-tls-cert) first.
 
 Provide the new certificate to each unit, **starting with the leader**:
@@ -181,11 +186,11 @@ juju run manual-tls-certificates/leader provide-certificate \
 Always distribute certificates to the leader unit first, then to the remaining nodes.
 ```
 
-After receiving the new CA, each node generates new CSRs that must be signed with the new CA
-and provided back. Repeat for every unit in the cluster.
+After receiving the new CA, each node generates new CSRs that must be signed with the new CA and
+provided back. Repeat for every unit in the cluster.
 
-Once all units have the new CA, OpenSearch reloads certificates (or triggers a rolling restart
-if the issuer, subject, or SANs have changed).
+Once all units have the new CA, OpenSearch reloads certificates (or triggers a rolling restart if
+the issuer, subject, or SANs have changed).
 
 Verify the rotation:
 
@@ -195,5 +200,5 @@ openssl s_client -showcerts -connect <unit-ip>:<port> < /dev/null | grep issuer
 
 ## Next steps
 
-* [Enable monitoring (COS)](how-to-monitoring) — observe the cluster with TLS in place.
-* [Security explanation](explanation-security-index) — background on TLS and authentication.
+- [Enable monitoring (COS)](how-to-monitoring) — observe the cluster with TLS in place.
+- [Security explanation](explanation-security-index) — background on TLS and authentication.

@@ -1,7 +1,7 @@
 ---
 myst:
   html_meta:
-    description: "Learn how to retrieve and rotate admin passwords in Charmed OpenSearch for enhanced security and credential management."
+    description: Learn how to retrieve and rotate admin passwords in Charmed OpenSearch for enhanced security and credential management.
 ---
 
 <!-- test:spread
@@ -10,19 +10,20 @@ kill-timeout: 30m
 -->
 
 (tutorial-5-manage-passwords)=
+
 # 5. Manage passwords
 
->[Charmed OpenSearch Tutorial](tutorial-index) > 5. Manage passwords
+> [Charmed OpenSearch Tutorial](tutorial-index) > 5. Manage passwords
 
-When we accessed OpenSearch earlier in this tutorial, we needed to include a password
-in the HTTP request. Over time it is a good practice to change the password frequently.
-Here we will go through setting and changing the password for the admin user.
+When we accessed OpenSearch earlier in this tutorial, we needed to include a password in the HTTP
+request. Over time it is a good practice to change the password frequently. Here we will go through
+setting and changing the password for the admin user.
 
 ## Retrieve the admin password
 
-As previously mentioned, the admin credentials (password + the ca chain used to generate
-the admin client certificate) can be retrieved by running the `get-password` action on
-the Charmed OpenSearch application:
+As previously mentioned, the admin credentials (password + the ca chain used to generate the admin
+client certificate) can be retrieved by running the `get-password` action on the Charmed OpenSearch
+application:
 
 ```bash
 juju run opensearch/leader get-password
@@ -74,12 +75,11 @@ Waiting for task 10...
 admin-password: aW1kMu2pO4GGdw52nfrYHAayu8rn4nn9
 ```
 
-The admin password is under the result: `admin-password`.
-It should be different from your previous password.
+The admin password is under the result: `admin-password`. It should be different from your previous
+password.
 
-You can test this password works correctly using the same requests you used during
-the [integrate with a client section](tutorial-4-integrate-with-a-client-application)
-of this tutorial.
+You can test this password works correctly using the same requests you used during the
+[integrate with a client section](tutorial-4-integrate-with-a-client-application) of this tutorial.
 
 ## Set the admin password
 
@@ -99,22 +99,25 @@ Waiting for task 12...
 admin-password: <password>
 ```
 
-The admin password under the result: `admin-password` should match whatever you passed
-in when you entered the command.
+The admin password under the result: `admin-password` should match whatever you passed in when you
+entered the command.
 
 ## Set TLS Private Key
 
-TLS private keys are used for certificate signing requests and should be recycled
-in the same way as passwords.
-There are three types of private keys available to be updated on this charm, and they are as follows:
+TLS private keys are used for certificate signing requests and should be recycled in the same way as
+passwords. There are three types of private keys available to be updated on this charm, and they are
+as follows:
 
-- `"app-admin"` is the key used for requesting a certificate with a CSR for the admin user and cluster administration-related operations.
+- `"app-admin"` is the key used for requesting a certificate with a CSR for the admin user and
+  cluster administration-related operations.
   - Must only be set on the leader unit.
-- `"unit-transport"` is the key used for requesting, for the target unit, a certificate with a CSR for the transport layer (node-to-node communication).
-- `"unit-http"` is the key used for requesting, for the target unit, a certificate with a CSR for the HTTP layer. This is used for client-to-node communication.
+- `"unit-transport"` is the key used for requesting, for the target unit, a certificate with a CSR
+  for the transport layer (node-to-node communication).
+- `"unit-http"` is the key used for requesting, for the target unit, a certificate with a CSR for
+  the HTTP layer. This is used for client-to-node communication.
 
-To change a private key to a random value, run the following command, setting `category`
-equal to your preferred type of private key:
+To change a private key to a random value, run the following command, setting `category` equal to
+your preferred type of private key:
 
 ```bash
 juju run opensearch/leader set-tls-private-key category=<category>

@@ -1,10 +1,11 @@
 ---
 myst:
   html_meta:
-    description: "Configure SMTP credentials for Charmed OpenSearch email notifications using the SMTP integrator charm."
+    description: Configure SMTP credentials for Charmed OpenSearch email notifications using the SMTP integrator charm.
 ---
 
 (how-to-guides-add-smtp-credentials)=
+
 # How to enable email notifications
 
 This guide shows how to configure SMTP credentials so that OpenSearch can send email notifications
@@ -46,9 +47,9 @@ Connect the SMTP integrator to OpenSearch:
 juju integrate smtp-integrator:smtp opensearch:smtp
 ```
 
-Once the integration is established, `juju status --relations` shows both applications
-`active` with an `smtp` relation between them, and OpenSearch can send email notifications
-via the configured SMTP server.
+Once the integration is established, `juju status --relations` shows both applications `active` with
+an `smtp` relation between them, and OpenSearch can send email notifications via the configured SMTP
+server.
 
 ```{note}
 OpenSearch requires a stable identifier for each email sender, notification channel, and
@@ -62,7 +63,8 @@ for details.
 
 ### Large deployments
 
-In large deployments, the SMTP integrator must be integrated with the **main orchestrator** application.
+In large deployments, the SMTP integrator must be integrated with the **main orchestrator**
+application.
 
 Identify the main orchestrator by inspecting `juju status` integrations:
 
@@ -77,10 +79,11 @@ Integrate with the main orchestrator:
 juju integrate smtp-integrator:smtp opensearch-main
 ```
 
-If integrated with the wrong application, the charm shows a `blocked` status.
-Remove the invalid relation and integrate with the correct application.
+If integrated with the wrong application, the charm shows a `blocked` status. Remove the invalid
+relation and integrate with the correct application.
 
 ## Next steps
 
-* [Enable monitoring (COS)](how-to-monitoring) — set up alerting and observability for the cluster.
-* [Access OpenSearch using OAuth](how-to-access-using-oauth) — configure authentication for client access.
+- [Enable monitoring (COS)](how-to-monitoring) — set up alerting and observability for the cluster.
+- [Access OpenSearch using OAuth](how-to-access-using-oauth) — configure authentication for client
+  access.

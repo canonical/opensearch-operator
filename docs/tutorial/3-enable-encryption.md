@@ -1,7 +1,7 @@
 ---
 myst:
   html_meta:
-    description: "Enable TLS encryption in Charmed OpenSearch by integrating with the Self Signed Certificates charm for secure data transmission."
+    description: Enable TLS encryption in Charmed OpenSearch by integrating with the Self Signed Certificates charm for secure data transmission.
 ---
 
 <!-- test:spread
@@ -10,25 +10,26 @@ kill-timeout: 60m
 -->
 
 (tutorial-3-enable-encryption)=
+
 # 3. Enable encryption
 
-> [Charmed OpenSearch Tutorial](tutorial-index) >  3. Enable TLS encryption
+> [Charmed OpenSearch Tutorial](tutorial-index) > 3. Enable TLS encryption
 
-[Transport Layer Security (TLS)](https://en.wikipedia.org/wiki/Transport_Layer_Security)
-is a protocol used to encrypt data exchanged between two applications. Essentially,
-it secures data transmitted over a network.
+[Transport Layer Security (TLS)](https://en.wikipedia.org/wiki/Transport_Layer_Security) is a
+protocol used to encrypt data exchanged between two applications. Essentially, it secures data
+transmitted over a network.
 
 Typically, enabling TLS internally within a highly available database or between a highly available
-database and client/server applications requires a high level of expertise.
-This has all been encoded into Charmed OpenSearch so that configuring TLS
-requires minimal effort on your end.
+database and client/server applications requires a high level of expertise. This has all been
+encoded into Charmed OpenSearch so that configuring TLS requires minimal effort on your end.
 
 TLS is enabled by integrating Charmed OpenSearch with the
-[Self Signed Certificates Charm](https://charmhub.io/self-signed-certificates).
-This charm centralizes TLS certificate management consistently and handles operations
-like providing, requesting, and renewing TLS certificates.
+[Self Signed Certificates Charm](https://charmhub.io/self-signed-certificates). This charm
+centralizes TLS certificate management consistently and handles operations like providing,
+requesting, and renewing TLS certificates.
 
-In this section, you will learn how to enable security in your OpenSearch deployment using TLS encryption.
+In this section, you will learn how to enable security in your OpenSearch deployment using TLS
+encryption.
 
 ```{note}
 **[Self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate)
@@ -47,7 +48,8 @@ juju deploy self-signed-certificates --channel 1/stable --config ca-common-name=
 
 <!-- test:await-idle --timeout 600 --allow-blocked opensearch -->
 
-Wait until `self-signed-certificates` is active. Use `juju status --watch 1s` to monitor the progress.
+Wait until `self-signed-certificates` is active. Use `juju status --watch 1s` to monitor the
+progress.
 
 ```text
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
@@ -72,8 +74,8 @@ Machine  State    Address       Inst id        Base          AZ  Message
 
 ## Integrate with OpenSearch
 
-To enable TLS on Charmed OpenSearch, you must integrate (also known as "relate") the two applications.
-We will go over integrations in more detail in the
+To enable TLS on Charmed OpenSearch, you must integrate (also known as "relate") the two
+applications. We will go over integrations in more detail in the
 [next page](tutorial-4-integrate-with-a-client-application) of this tutorial.
 
 To integrate `self-signed-certificates` with `opensearch`, run the following command:
@@ -95,8 +97,8 @@ for u in units.values():
 "
 -->
 
-The OpenSearch service will start. This might take some time.
-Once done, you can see the new integrations with `juju status --relations`.
+The OpenSearch service will start. This might take some time. Once done, you can see the new
+integrations with `juju status --relations`.
 
 ```text
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
