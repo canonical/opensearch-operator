@@ -4,8 +4,13 @@ output "application" {
 }
 
 output "offers" {
-  description = "No offers are exposed by this charm."
-  value       = {}
+  description = "Map of all offers exposed by this application."
+  value = {
+    for endpoint, offer in juju_offer.offered_endpoints : replace(endpoint, "-", "_") => {
+      kind = "offer"
+      url  = offer.url
+    }
+  }
 }
 
 output "provides" {

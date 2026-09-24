@@ -32,7 +32,7 @@ variable "constraints" {
 }
 
 variable "endpoint_bindings" {
-  description = "Map of endpoint bindings."
+  description = "Set of endpoint bindings."
   type        = set(object({ space = string, endpoint = optional(string) }))
   default     = []
   nullable    = false
@@ -46,7 +46,7 @@ variable "expose" {
 }
 
 variable "machines" {
-  description = "List of machines for placement."
+  description = "List of machines for placement. When set, one unit is deployed on each listed machine."
   type        = set(string)
   default     = []
   nullable    = false
@@ -56,6 +56,18 @@ variable "model_uuid" {
   description = "Model UUID"
   type        = string
   nullable    = false
+}
+
+variable "offered_endpoints" {
+  description = "Endpoints to expose as Juju offers for cross-model integration."
+  type        = list(string)
+  default     = []
+  nullable    = false
+
+  validation {
+    condition     = alltrue([for endpoint in var.offered_endpoints : contains(["opensearch-client", "peer-cluster-orchestrator"], endpoint)])
+    error_message = "offered_endpoints can only contain opensearch-client or peer-cluster-orchestrator."
+  }
 }
 
 variable "revision" {
@@ -72,7 +84,7 @@ variable "storage_directives" {
 }
 
 variable "units" {
-  description = "Charm units"
+  description = "Charm units. Ignored when `machines` is set."
   type        = number
   default     = 1
 }

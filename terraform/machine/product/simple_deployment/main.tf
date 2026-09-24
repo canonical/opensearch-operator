@@ -44,34 +44,21 @@ resource "juju_application" "self-signed-certificates" {
 }
 
 # OpenSearch dashboards
-resource "juju_application" "opensearch-dashboards" {
-  count = local.dashboards_enabled ? 1 : 0
+module "opensearch-dashboards" {
+  count  = local.dashboards_enabled ? 1 : 0
+  source = "git::https://github.com/canonical/opensearch-dashboards-operator.git//terraform/machine/charm/opensearch_dashboards?ref=c2c180d203f95af2a7c22173f3412a0c617ffc7d"
 
-  charm {
-    name     = "opensearch-dashboards"
-    channel  = var.opensearch-dashboards.channel
-    revision = var.opensearch-dashboards.revision
-    base     = var.opensearch-dashboards.base
-  }
-  name       = var.opensearch-dashboards.app_name
-  model_uuid = var.opensearch.model_uuid
-  config     = var.opensearch-dashboards.config
-
+  app_name          = var.opensearch-dashboards.app_name
+  base              = var.opensearch-dashboards.base
+  channel           = var.opensearch-dashboards.channel
+  config            = var.opensearch-dashboards.config
   constraints       = var.opensearch-dashboards.constraints
   endpoint_bindings = var.opensearch-dashboards.endpoint_bindings
-
-  machines = length(var.opensearch-dashboards.machines) > 0 ? var.opensearch-dashboards.machines : null
-  units    = length(var.opensearch-dashboards.machines) > 0 ? null : var.opensearch-dashboards.units
-
-  dynamic "expose" {
-    for_each = var.opensearch-dashboards.expose
-
-    content {
-      cidrs     = expose.value.cidrs
-      endpoints = expose.value.endpoints
-      spaces    = expose.value.spaces
-    }
-  }
+  expose            = var.opensearch-dashboards.expose
+  machines          = var.opensearch-dashboards.machines
+  model_uuid        = var.opensearch.model_uuid
+  revision          = var.opensearch-dashboards.revision
+  units             = var.opensearch-dashboards.units
 }
 
 # Integrator apps
@@ -117,6 +104,23 @@ resource "terraform_data" "deployed_at" {
   }
 }
 
+resource "terraform_data" "updated_at" {
+  input = timestamp()
+  triggers_replace = sha256(jsonencode([
+    var.backups-integrator,
+    var.certificates_integration,
+    var.cos_agent_integration,
+    var.data-integrator,
+    var.opensearch,
+    var.opensearch-dashboards,
+    var.self-signed-certificates,
+  ]))
+
+  lifecycle {
+    ignore_changes = [input]
+  }
+}
+
 #--------------------------------------------------------
 # 2. INTEGRATIONS
 #--------------------------------------------------------
@@ -143,8 +147,8 @@ resource "juju_integration" "opensearch_dashboards-tls-integration" {
   model_uuid = var.opensearch.model_uuid
 
   application {
-    name     = juju_application.opensearch-dashboards[0].name
-    endpoint = "certificates"
+    name     = module.opensearch-dashboards[0].requires.certificates.name
+    endpoint = module.opensearch-dashboards[0].requires.certificates.endpoint
   }
 
   application {
@@ -160,8 +164,8 @@ resource "juju_integration" "opensearch_dashboards-opensearch-integration" {
   model_uuid = var.opensearch.model_uuid
 
   application {
-    name     = juju_application.opensearch-dashboards[0].name
-    endpoint = "opensearch-client"
+    name     = module.opensearch-dashboards[0].requires.opensearch_client.name
+    endpoint = module.opensearch-dashboards[0].requires.opensearch_client.endpoint
   }
 
   application {
@@ -227,7 +231,7 @@ resource "juju_integration" "cos_agent-opensearch_dashboards-integration" {
   }
 
   application {
-    name     = juju_application.opensearch-dashboards[0].name
-    endpoint = "cos-agent"
+    name     = module.opensearch-dashboards[0].provides.cos_agent.name
+    endpoint = module.opensearch-dashboards[0].provides.cos_agent.endpoint
   }
 }

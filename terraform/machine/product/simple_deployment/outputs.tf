@@ -3,7 +3,10 @@
 
 output "metadata" {
   description = "Product deployment metadata."
-  value       = { version = "2.0.0", deployed_at = terraform_data.deployed_at.output, updated_at = timestamp() }
+  value = {
+    deployed_at = terraform_data.deployed_at.output
+    updated_at  = terraform_data.updated_at.output
+  }
 }
 
 output "models" {
