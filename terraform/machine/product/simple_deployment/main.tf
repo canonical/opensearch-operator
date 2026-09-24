@@ -46,7 +46,7 @@ resource "juju_application" "self-signed-certificates" {
 # OpenSearch dashboards
 module "opensearch-dashboards" {
   count  = local.dashboards_enabled ? 1 : 0
-  source = "git::https://github.com/canonical/opensearch-dashboards-operator.git//terraform/machine/charm/opensearch_dashboards?ref=c2c180d203f95af2a7c22173f3412a0c617ffc7d"
+  source = "git::https://github.com/canonical/opensearch-dashboards-operator.git//terraform/machine/charm/opensearch_dashboards?ref=8b93e9fd8c686f6d4cf8617380d5d8c07c2d8786"
 
   app_name          = var.opensearch-dashboards.app_name
   base              = var.opensearch-dashboards.base

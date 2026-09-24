@@ -22,7 +22,7 @@ This module requires a `juju` model to be available. Refer to the [usage section
 | Name | Source | Version |
 |------|--------|---------|
 | `opensearch` | ../../charm/opensearch | n/a |
-| `opensearch-dashboards` | git::https://github.com/canonical/opensearch-dashboards-operator.git//terraform/machine/charm/opensearch_dashboards | c2c180d203f95af2a7c22173f3412a0c617ffc7d |
+| `opensearch-dashboards` | git::https://github.com/canonical/opensearch-dashboards-operator.git//terraform/machine/charm/opensearch_dashboards | 8b93e9fd8c686f6d4cf8617380d5d8c07c2d8786 |
 
 ## Resources
 
