@@ -1,0 +1,20 @@
+# Documentation Markdown formatting.
+#
+# mdformat runs from a hash-pinned lock file rather than as a remote hook, so
+# every transitive dependency is version- and hash-verified. See
+# docs/_dev/mdformat/requirements.in and the `mdformat` target in docs/Makefile.
+#
+# Dependabot can keep the lock file up to date once a .github/dependabot.yml
+# exists, using:
+#
+#     - package-ecosystem: "pip"
+#       directory: "/docs/_dev/mdformat"
+repos:
+  - repo: local
+    hooks:
+      - id: mdformat
+        name: Format documentation Markdown (mdformat)
+        entry: make -C docs mdformat
+        language: system
+        pass_filenames: false
+        files: ^docs/.*\.md$
