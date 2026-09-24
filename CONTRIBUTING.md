@@ -12,6 +12,13 @@ A few quick pointers to get you started:
 - **Before you start coding**, please consider
   [opening an issue](https://github.com/canonical/opensearch-operator/issues)
   explaining your problem with examples and your desired use case.
+- **Where the code lives**: the charm logic is implemented in the shared
+  [`opensearch-single-kernel-library`](https://github.com/canonical/opensearch-single-kernel-library)
+  (and, for the Dashboards charms, the
+  [`opensearch-dashboards-single-kernel-library`](https://github.com/canonical/opensearch-dashboards-single-kernel-library)).
+  This repository contains the charm wrappers, packing metadata, and minimal
+  smoke-level tests; the full unit and integration test suites live in the
+  library repositories.
 - **To chat with us** about your use cases or a proposed implementation, reach
   us on the [Charmhub Mattermost `charm-dev` channel](https://chat.charmhub.io/charmhub/channels/charm-dev),
   the [Discourse forum](https://discourse.charmhub.io/t/charmed-opensearch-documentation/9729), or

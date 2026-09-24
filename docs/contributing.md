@@ -83,6 +83,13 @@ This repository is a monorepo containing two charms:
 * `kubernetes/` — the Kubernetes charm (`opensearch-k8s`), which deploys and
   manages OpenSearch as a container workload on Kubernetes.
 
+Both of these charms are built on top of the shared
+[`opensearch-single-kernel-library`](https://github.com/canonical/opensearch-single-kernel-library).
+The related Charmed OpenSearch Dashboards charms (which live in the separate
+[`opensearch-dashboards-operator`](https://github.com/canonical/opensearch-dashboards-operator)
+repository) are built on their own shared library,
+[`opensearch-dashboards-single-kernel-library`](https://github.com/canonical/opensearch-dashboards-single-kernel-library).
+
 Each charm is a self-contained project: build commands must be run from
 inside the corresponding directory.
 
@@ -167,7 +174,7 @@ juju config \
     root-ca-validity=365
 
 # Deploy the opensearch charm
-juju deploy -n 1 ./opensearch_ubuntu-22.04-amd64.charm --series jammy --show-log --verbose
+juju deploy -n 1 ./opensearch_ubuntu-24.04-amd64.charm --series noble --show-log --verbose
 
 # Relate the opensearch charm with the self-signed-certificates operator
 juju integrate self-signed-certificates opensearch
@@ -193,9 +200,19 @@ Run the test suites with:
 ```bash
 tox run -e format        # update your code according to linting rules
 tox run -e lint          # code style
-tox run -e unit          # unit tests
-tox run -e integration   # integration tests
-tox                      # runs 'format', 'lint', and 'unit' environments
+tox run -e integration   # integration tests (minimal, smoke-level)
+tox                      # runs 'format' and 'lint' environments
+```
+
+```{note}
+The charm logic lives in the single-kernel libraries, so this repository
+contains only minimal integration tests. The full unit and integration test
+suites are in the library repositories:
+[`opensearch-single-kernel-library`](https://github.com/canonical/opensearch-single-kernel-library)
+for the OpenSearch charms and
+[`opensearch-dashboards-single-kernel-library`](https://github.com/canonical/opensearch-dashboards-single-kernel-library)
+for the Dashboards charms. Clone the corresponding library repository and run
+`tox run -e unit` and `tox run -e integration` there.
 ```
 
 Integration tests can also be run with [Charmcraft](https://snapcraft.io/charmcraft)
