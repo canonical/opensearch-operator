@@ -36,25 +36,29 @@ juju add-model opensearch
 Configure the system settings required by [OpenSearch](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/index/),
 we'll do that by creating and setting a [`cloudinit-userdata.yaml` file](https://juju.is/docs/olm/juju-model-config) on the model. 
 As well as setting some kernel settings on the host machine.
+
+On the host machine, create a sysctl configuration file and apply it:
+
+```shell
+sudo tee /etc/sysctl.d/opensearch.conf <<EOF
+vm.swappiness = 0
+vm.max_map_count = 262144
+EOF
+
+sudo sysctl -p /etc/sysctl.d/opensearch.conf
 ```
+
+Create a cloud-init user-data file and set it on the model:
+
+```shell
 cat <<EOF > cloudinit-userdata.yaml
 cloudinit-userdata: |
   postruncmd:
-    - [ 'echo', 'vm.max_map_count=262144', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'vm.swappiness=0', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'net.ipv4.tcp_retries2=5', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'fs.file-max=1048576', '>>', '/etc/sysctl.conf' ]
-    - [ 'sysctl', '-p' ]
+    - echo 'vm.max_map_count=262144' >> /etc/sysctl.conf
+    - echo 'vm.swappiness=0' >> /etc/sysctl.conf
+    - echo 'fs.file-max=1048576' >> /etc/sysctl.conf
+    - sysctl -p
 EOF
-
-sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
-vm.max_map_count=262144
-vm.swappiness=0
-net.ipv4.tcp_retries2=5
-fs.file-max=1048576
-EOT
-
-sudo sysctl -p
 
 juju model-config --file=./cloudinit-userdata.yaml
 ```

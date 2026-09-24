@@ -91,22 +91,37 @@ inside the corresponding directory.
 OpenSearch has a set of
 [system requirements](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/index/)
 to function correctly. Some of those settings must be set using
-`cloudinit-userdata` on the model, while others must be set on the host machine:
+`cloudinit-userdata` on the model, while others must be set on the host machine.
+
+On the host machine, create a sysctl configuration file and apply it:
+
+```bash
+sudo tee /etc/sysctl.d/opensearch.conf <<EOF
+vm.swappiness = 0
+vm.max_map_count = 262144
+EOF
+
+sudo sysctl -p /etc/sysctl.d/opensearch.conf
+```
+
+Create a cloud-init user-data file:
 
 ```bash
 cat <<EOF > cloudinit-userdata.yaml
 cloudinit-userdata: |
   postruncmd:
-    - [ 'echo', 'vm.max_map_count=262144', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'vm.swappiness=0', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'net.ipv4.tcp_retries2=5', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'fs.file-max=1048576', '>>', '/etc/sysctl.conf' ]
-    - [ 'sysctl', '-p' ]
+    - echo 'vm.max_map_count=262144' >> /etc/sysctl.conf
+    - echo 'vm.swappiness=0' >> /etc/sysctl.conf
+    - echo 'fs.file-max=1048576' >> /etc/sysctl.conf
+    - sysctl -p
 EOF
+```
 
-echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
-echo "vm.swappiness=0" | sudo tee -a /etc/sysctl.conf
-sudo sysctl -p
+```{note}
+Keep each `postruncmd` entry as a **string**. Cloud-init runs string entries through a
+shell, so the `>>` redirection works. Entries written as a YAML list are passed straight to
+`execve(3)` with no shell, so `>>` would become a literal argument to `echo` instead of
+appending to the file.
 ```
 
 Then create a new model and set the previously generated file in it:
