@@ -35,25 +35,29 @@ juju add-model opensearch
 Configure the system settings required by [OpenSearch](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/index/),
 we'll do that by creating and setting a [`cloudinit-userdata.yaml` file](https://juju.is/docs/olm/juju-model-config) on the model. 
 As well as setting some kernel settings on the host machine.
+
+On the host machine, create a sysctl configuration file and apply it:
+
+```shell
+sudo tee /etc/sysctl.d/opensearch.conf <<EOF
+vm.swappiness = 0
+vm.max_map_count = 262144
+EOF
+
+sudo sysctl -p /etc/sysctl.d/opensearch.conf
 ```
+
+Create a cloud-init user-data file and set it on the model:
+
+```shell
 cat <<EOF > cloudinit-userdata.yaml
 cloudinit-userdata: |
   postruncmd:
-    - [ 'echo', 'vm.max_map_count=262144', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'vm.swappiness=0', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'net.ipv4.tcp_retries2=5', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'fs.file-max=1048576', '>>', '/etc/sysctl.conf' ]
-    - [ 'sysctl', '-p' ]
+    - echo 'vm.max_map_count=262144' >> /etc/sysctl.conf
+    - echo 'vm.swappiness=0' >> /etc/sysctl.conf
+    - echo 'fs.file-max=1048576' >> /etc/sysctl.conf
+    - sysctl -p
 EOF
-
-sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
-vm.max_map_count=262144
-vm.swappiness=0
-net.ipv4.tcp_retries2=5
-fs.file-max=1048576
-EOT
-
-sudo sysctl -p
 
 juju model-config --file=./cloudinit-userdata.yaml
 ```
@@ -150,11 +154,16 @@ juju remove-relation opensearch self-signed-certificates
 **Note:** The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The Self Signed Certificates Operator offers a variety of configuration options. Read more on the TLS Certificates Operator [here](https://charmhub.io/self-signed-certificates).
 
 ## Security
-Security issues in the Charmed OpenSearch Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.
+
+For the security features overview, see the [security hardening guide](https://canonical.com/data/opensearch/docs/latest/explanation/security/) in the Charmed OpenSearch documentation.
+
+Security issues in the Charmed OpenSearch Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues. See [SECURITY.md](https://github.com/canonical/opensearch-operator/blob/2/edge/SECURITY.md) for the full security policy.
 
 ## Contributing
 
-Please see the [Juju SDK docs](https://juju.is/docs/sdk) for guidelines on enhancements to this charm following best practice guidelines, and [CONTRIBUTING.md](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md) for developer guidance.
+The documentation for Charmed OpenSearch is available at [canonical.com/data/opensearch/docs](https://canonical.com/data/opensearch/docs/).
+
+See the [contributor's guide](https://canonical.com/data/opensearch/docs/) in the documentation for how to report issues, build and test the charm, and contribute code and documentation.
 
 ## License
-The Charmed OpenSearch Operator is free software, distributed under the Apache Software License, version 2.0. See [LICENSE](https://github.com/canonical/opensearch-operator/blob/main/LICENSE) for more information.
+The Charmed OpenSearch Operator is free software, distributed under the Apache Software License, version 2.0. See [LICENSE](https://github.com/canonical/opensearch-operator/blob/2/edge/LICENSE) for more information.
