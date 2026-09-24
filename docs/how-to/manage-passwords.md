@@ -1,19 +1,20 @@
 ---
 myst:
   html_meta:
-    description: "Retrieve and rotate the admin password in Charmed OpenSearch, and rotate the credentials issued to integrated client applications."
+    description: Retrieve and rotate the admin password in Charmed OpenSearch, and rotate the credentials issued to integrated client applications.
 ---
 
 (how-to-manage-passwords)=
+
 # How to manage passwords
 
-This guide shows how to retrieve and rotate the admin password and how to rotate the
-credentials Charmed OpenSearch issues to integrated client applications.
+This guide shows how to retrieve and rotate the admin password and how to rotate the credentials
+Charmed OpenSearch issues to integrated client applications.
 
 ## Manage the admin password
 
-The `admin` user is an internal charm user. Use its credentials for cluster administration
-only — client applications must obtain their own credentials through an integration.
+The `admin` user is an internal charm user. Use its credentials for cluster administration only —
+client applications must obtain their own credentials through an integration.
 
 ```{note}
 The `get-password` and `set-password` actions take an optional `username` parameter.
@@ -30,9 +31,9 @@ To get admin password:
 juju run opensearch/leader get-password
 ```
 
-The action returns the `admin` password and the CA certificate chain used to generate the
-admin client certificate. To retrieve the password of another internal user, pass its
-username: `juju run opensearch/leader get-password username=<username>`.
+The action returns the `admin` password and the CA certificate chain used to generate the admin
+client certificate. To retrieve the password of another internal user, pass its username:
+`juju run opensearch/leader get-password username=<username>`.
 
 ### Rotate the admin password
 
@@ -48,8 +49,8 @@ To set a specific password:
 juju run opensearch/leader set-password password=<new-password>
 ```
 
-Both commands return the new password as `admin-password`.
-The previous password stops working immediately.
+Both commands return the new password as `admin-password`. The previous password stops working
+immediately.
 
 To rotate the password of another internal user, pass its username:
 
@@ -59,9 +60,9 @@ juju run opensearch/leader set-password username=<username> password=<new-passwo
 
 ## Manage client credentials
 
-Charmed OpenSearch generates a dedicated user and password for each client integration.
-These credentials are passed to the client application over the relation, so you do not
-retrieve or set them directly.
+Charmed OpenSearch generates a dedicated user and password for each client integration. These
+credentials are passed to the client application over the relation, so you do not retrieve or set
+them directly.
 
 ### Rotate client credentials
 
@@ -76,5 +77,5 @@ The client application receives the new credentials over the relation.
 
 ## Next steps
 
-* [Manage TLS encryption](how-to-enable-tls-encryption) to rotate certificates and private keys.
-* [Integrate with an application](how-to-integrate-with-an-application) to connect a client.
+- [Manage TLS encryption](how-to-enable-tls-encryption) to rotate certificates and private keys.
+- [Integrate with an application](how-to-integrate-with-an-application) to connect a client.

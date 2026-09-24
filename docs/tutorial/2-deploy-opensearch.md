@@ -1,7 +1,7 @@
 ---
 myst:
   html_meta:
-    description: "Deploy a three-unit Charmed OpenSearch cluster with Juju using performance profiles for optimal resource usage."
+    description: Deploy a three-unit Charmed OpenSearch cluster with Juju using performance profiles for optimal resource usage.
 ---
 
 <!-- test:spread
@@ -10,13 +10,13 @@ kill-timeout: 60m
 -->
 
 (tutorial-2-deploy-opensearch)=
+
 # 2. Deploy OpenSearch
 
-> [Charmed OpenSearch Tutorial](tutorial-index) >  2. Deploy OpenSearch
+> [Charmed OpenSearch Tutorial](tutorial-index) > 2. Deploy OpenSearch
 
-Charmed OpenSearch supports performance profiles.
-It is recommended in a single host deployment with LXD to use the `testing` profile,
-which will only consume 1G RAM per container.
+Charmed OpenSearch supports performance profiles. It is recommended in a single host deployment with
+LXD to use the `testing` profile, which will only consume 1G RAM per container.
 
 To deploy Charmed OpenSearch, run the following command:
 
@@ -43,9 +43,8 @@ In this case, we are deploying three units of Charmed OpenSearch.
 We recommend deploying at least three units for high availability.
 ```
 
-This command will fetch the charm from
-[Charmhub](https://charmhub.io/opensearch) and deploy 3 units to the LXD cloud.
-This process can take several minutes depending on your machine.
+This command will fetch the charm from [Charmhub](https://charmhub.io/opensearch) and deploy 3 units
+to the LXD cloud. This process can take several minutes depending on your machine.
 
 You can track the progress by running:
 
@@ -82,9 +81,9 @@ Machine  State    Address       Inst id        Base          AZ  Message
 
 To exit the `juju status` screen, enter `Ctrl + C`.
 
-The status message `Missing TLS relation with this cluster.` is displayed because
-Charmed OpenSearch requires TLS to be configured before use, to ensure data is encrypted in transit
-for the HTTP and Transport layers. We will do this in the next step.
+The status message `Missing TLS relation with this cluster.` is displayed because Charmed OpenSearch
+requires TLS to be configured before use, to ensure data is encrypted in transit for the HTTP and
+Transport layers. We will do this in the next step.
 
 If you see the following status message:
 

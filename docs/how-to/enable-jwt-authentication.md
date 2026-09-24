@@ -1,25 +1,27 @@
 ---
 myst:
   html_meta:
-    description: "Enable JSON Web Token (JWT) authentication in Charmed OpenSearch using the JWT integrator charm for secure token-based access."
+    description: Enable JSON Web Token (JWT) authentication in Charmed OpenSearch using the JWT integrator charm for secure token-based access.
 ---
 
 (how-to-guides-enable-jwt-authentication)=
+
 # How to enable JWT authentication
 
-This guide shows how to enable JSON Web Token (JWT) authentication for Charmed OpenSearch
-using the JWT integrator charm. To enable JWT authentication, you need to:
+This guide shows how to enable JSON Web Token (JWT) authentication for Charmed OpenSearch using the
+JWT integrator charm. To enable JWT authentication, you need to:
 
 1. [Deploy and configure the JWT integrator](jwt-deploy-and-configure).
 2. [Integrate it with OpenSearch](jwt-integrate-with-opensearch).
 
 ## Prerequisites
 
-* A running Charmed OpenSearch deployment (revision 275+ on 22.04, or 276+ on 24.04)
-* A valid JWT for testing, issued by your JWT provider
-* The signing key used to sign the JWT
+- A running Charmed OpenSearch deployment (revision 275+ on 22.04, or 276+ on 24.04)
+- A valid JWT for testing, issued by your JWT provider
+- The signing key used to sign the JWT
 
 (jwt-deploy-and-configure)=
+
 ## Deploy and configure the JWT integrator
 
 Deploy the charm:
@@ -43,16 +45,16 @@ juju grant-secret jwt-key jwt-integrator
 juju config jwt-integrator signing-key=<secret-uri>
 ```
 
-The `roles-key` option is **required** — the charm remains `blocked` until it is set.
-It specifies the JWT claim key from which OpenSearch extracts the user's roles.
-Set it together with any additional options for your JWT provider
-(e.g. `subject-key`, `jwt-url-parameter`):
+The `roles-key` option is **required** — the charm remains `blocked` until it is set. It specifies
+the JWT claim key from which OpenSearch extracts the user's roles. Set it together with any
+additional options for your JWT provider (e.g. `subject-key`, `jwt-url-parameter`):
 
 ```shell
 juju config jwt-integrator roles-key=<roles-key> subject-key=<subject-key> jwt-url-parameter=<parameter>
 ```
 
 (jwt-integrate-with-opensearch)=
+
 ## Integrate with OpenSearch to enable JWT authentication
 
 Connect the JWT integrator to OpenSearch:
@@ -61,11 +63,11 @@ Connect the JWT integrator to OpenSearch:
 juju integrate jwt-integrator opensearch
 ```
 
-After integration, both applications show `active` in `juju status`, and OpenSearch updates
-its security plugin.
+After integration, both applications show `active` in `juju status`, and OpenSearch updates its
+security plugin.
 
-To verify, first save the cluster's CA certificate chain to a file so that `curl` can verify
-the TLS certificate OpenSearch serves:
+To verify, first save the cluster's CA certificate chain to a file so that `curl` can verify the TLS
+certificate OpenSearch serves:
 
 ```shell
 juju run opensearch/leader get-password --format=json \
@@ -100,8 +102,8 @@ Integrate:
 juju integrate jwt-integrator opensearch-main
 ```
 
-If integrated with the wrong application, the charm shows `blocked` status.
-Remove the invalid relation and integrate with the main orchestrator.
+If integrated with the wrong application, the charm shows `blocked` status. Remove the invalid
+relation and integrate with the main orchestrator.
 
 ## Use with OpenSearch Dashboards
 
@@ -120,5 +122,6 @@ http://<dashboards-ip>:5601?jwt=<jwt>
 
 ## Next steps
 
-* [Access OpenSearch using OAuth](how-to-access-using-oauth) — an alternative token-based authentication method.
-* [Security explanation](explanation-security-index) — background on authentication and TLS.
+- [Access OpenSearch using OAuth](how-to-access-using-oauth) — an alternative token-based
+  authentication method.
+- [Security explanation](explanation-security-index) — background on authentication and TLS.

@@ -1,14 +1,15 @@
 ---
 myst:
   html_meta:
-    description: "Set up Google Cloud Storage for Charmed OpenSearch backups using the GCS Integrator charm and configure integration."
+    description: Set up Google Cloud Storage for Charmed OpenSearch backups using the GCS Integrator charm and configure integration.
 ---
 
 (how-to-back-up-configure-gcs-storage)=
+
 # How to configure Google Cloud Storage
 
-This guide shows how to configure the
-[GCS Integrator charm](https://charmhub.io/gcs-integrator) for OpenSearch backups.
+This guide shows how to configure the [GCS Integrator charm](https://charmhub.io/gcs-integrator) for
+OpenSearch backups.
 
 ## Prepare the Google Cloud service account
 
@@ -43,8 +44,8 @@ juju deploy gcs-integrator --channel 1/stable
 ```
 
 Store the service-account key in a
-[Juju secret](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/secret/)
-and grant access to the integrator:
+[Juju secret](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/secret/) and
+grant access to the integrator:
 
 ```shell
 juju add-secret gcs-secret secret-key#file=service-account.json
@@ -80,8 +81,8 @@ juju integrate gcs-integrator opensearch
 ```
 
 Once the integration is established, `juju status --relations` shows the `gcs-integrator`
-application `active` with a `gcs-credentials` relation to `opensearch`. The OpenSearch
-application remains `active`.
+application `active` with a `gcs-credentials` relation to `opensearch`. The OpenSearch application
+remains `active`.
 
 ```{caution}
 Only one object storage integrator can be related at a time. Relating both the GCS
@@ -92,6 +93,7 @@ remove the extra relations.
 
 ## Next steps
 
-* [Create and restore backups](how-to-create-a-backup) — create a backup using the configured Google Cloud Storage.
-* [Configure S3 storage](how-to-back-up-configure-s3) — alternative storage backend.
-* [Configure Azure storage](how-to-back-up-configure-azure-storage) — alternative storage backend.
+- [Create and restore backups](how-to-create-a-backup) — create a backup using the configured Google
+  Cloud Storage.
+- [Configure S3 storage](how-to-back-up-configure-s3) — alternative storage backend.
+- [Configure Azure storage](how-to-back-up-configure-azure-storage) — alternative storage backend.

@@ -1,23 +1,23 @@
 ---
 myst:
   html_meta:
-    description: "Deploy large-scale Charmed OpenSearch clusters with node roles, data tiers, and production configurations for high-performance workloads."
+    description: Deploy large-scale Charmed OpenSearch clusters with node roles, data tiers, and production configurations for high-performance workloads.
 ---
 
 (how-to-deploy-large)=
+
 # How to launch a large deployment
 
-This guide shows how to deploy a multi-application OpenSearch cluster using Juju,
-with dedicated node roles for scalability and fault tolerance.
+This guide shows how to deploy a multi-application OpenSearch cluster using Juju, with dedicated
+node roles for scalability and fault tolerance.
 
 For background on node roles, data tiers, and the main orchestrator pattern, see
 [Node roles and cluster topology](explanation-node-roles).
 
 ## Node roles
 
-Roles are assigned at the Juju application level (all units in an application share
-the same roles). If no roles are configured, the charm auto-assigns:
-`data`, `ingest`, `ml`, `cluster_manager`.
+Roles are assigned at the Juju application level (all units in an application share the same roles).
+If no roles are configured, the charm auto-assigns: `data`, `ingest`, `ml`, `cluster_manager`.
 
 To set roles at deploy time:
 
@@ -37,10 +37,9 @@ Removal of the `cluster_manager` or `data` roles is not supported.
 
 ## Deploy the cluster applications
 
-A large deployment consists of multiple Juju applications integrated together,
-each configured with specific node roles. See
-[Node roles and cluster topology](explanation-node-roles) for an explanation of the
-main orchestrator, failover, and data-node pattern.
+A large deployment consists of multiple Juju applications integrated together, each configured with
+specific node roles. See [Node roles and cluster topology](explanation-node-roles) for an
+explanation of the main orchestrator, failover, and data-node pattern.
 
 ```{caution}
 The examples below use the `testing` profile (sets the JVM heap size to 1 GB per node) for a single-host LXD environment.
@@ -58,8 +57,8 @@ for details on the available profiles.
    This prevents non-orchestrator applications from starting before integration.
 ```
 
-See [Node roles and cluster topology](explanation-node-roles) for details on why
-these rules are required.
+See [Node roles and cluster topology](explanation-node-roles) for details on why these rules are
+required.
 
 ### 1. Deploy the main orchestrator
 
@@ -114,12 +113,13 @@ Track deployment progress:
 juju status --watch 1s
 ```
 
-At this point, `main` will show `blocked` (missing TLS), while `failover` and `data-hot`
-will show `blocked` (waiting for peer cluster relation).
+At this point, `main` will show `blocked` (missing TLS), while `failover` and `data-hot` will show
+`blocked` (waiting for peer cluster relation).
 
 ## Configure TLS encryption
 
-Charmed OpenSearch requires TLS. Integrate `self-signed-certificates` with all OpenSearch applications:
+Charmed OpenSearch requires TLS. Integrate `self-signed-certificates` with all OpenSearch
+applications:
 
 ```shell
 juju integrate self-signed-certificates main
@@ -127,8 +127,8 @@ juju integrate self-signed-certificates failover
 juju integrate self-signed-certificates data-hot
 ```
 
-The `main` app will become `active` once TLS is configured.
-The other apps remain `blocked` until the peer-cluster relations are added in the next step.
+The `main` app will become `active` once TLS is configured. The other apps remain `blocked` until
+the peer-cluster relations are added in the next step.
 
 ## Form the OpenSearch cluster
 
@@ -155,6 +155,6 @@ Ensure `data` nodes are deployed and ready before forming the cluster.
 
 ## Next steps
 
-* [Manage TLS encryption](how-to-enable-tls-encryption) — configure and rotate TLS certificates.
-* [Enable monitoring (COS)](how-to-monitoring) — observe the cluster.
-* [Scale a cluster horizontally](how-to-scale-horizontally) — adjust cluster size.
+- [Manage TLS encryption](how-to-enable-tls-encryption) — configure and rotate TLS certificates.
+- [Enable monitoring (COS)](how-to-monitoring) — observe the cluster.
+- [Scale a cluster horizontally](how-to-scale-horizontally) — adjust cluster size.

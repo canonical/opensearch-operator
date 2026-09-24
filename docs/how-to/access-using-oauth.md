@@ -1,21 +1,23 @@
 ---
 myst:
   html_meta:
-    description: "Secure Charmed OpenSearch with OAuth authentication using Canonical Identity Platform (Hydra) and query with OAuth tokens."
+    description: Secure Charmed OpenSearch with OAuth authentication using Canonical Identity Platform (Hydra) and query with OAuth tokens.
 ---
 
 (how-to-access-using-oauth)=
+
 # How to access OpenSearch using OAuth
 
-This guide shows how to authenticate OpenSearch requests with OAuth tokens
-issued by the Canonical Identity Platform (Hydra).
+This guide shows how to authenticate OpenSearch requests with OAuth tokens issued by the Canonical
+Identity Platform (Hydra).
 
 ## Prerequisites
 
-* Minimum 4 CPUs, 16 GB RAM
-* Network access between the host and LXD containers
-* MicroK8s installed locally (for the Identity Platform)
-* A working LXD cloud with Juju bootstrapped (see the [Environment setup](tutorial-1-set-up-the-environment) stage of our tutorial for more details)
+- Minimum 4 CPUs, 16 GB RAM
+- Network access between the host and LXD containers
+- MicroK8s installed locally (for the Identity Platform)
+- A working LXD cloud with Juju bootstrapped (see the
+  [Environment setup](tutorial-1-set-up-the-environment) stage of our tutorial for more details)
 
 ## Deploy OpenSearch on LXD
 
@@ -37,8 +39,8 @@ juju status --watch 5s
 
 ## Deploy the Identity Platform on MicroK8s
 
-The Identity Platform runs on Kubernetes. The steps below use MicroK8s, but any
-Juju-supported K8s cluster will work.
+The Identity Platform runs on Kubernetes. The steps below use MicroK8s, but any Juju-supported K8s
+cluster will work.
 
 ### Prepare MicroK8s
 
@@ -74,13 +76,13 @@ juju add-model -c <controller-name> oauth microk8s-cluster/localhost
 juju deploy identity-platform --channel edge --trust true
 ```
 
-Wait until all units become active. The `kratos-external-idp-integrator` will remain
-`blocked` — this is expected and does not affect OAuth functionality.
+Wait until all units become active. The `kratos-external-idp-integrator` will remain `blocked` —
+this is expected and does not affect OAuth functionality.
 
 ## Create cross-model integrations
 
-The Identity Platform and OpenSearch run in separate models (and potentially on
-different clouds). Use Juju cross-model offers to connect them.
+The Identity Platform and OpenSearch run in separate models (and potentially on different clouds).
+Use Juju cross-model offers to connect them.
 
 ### Offer certificates and OAuth from the Identity Platform model
 
@@ -106,8 +108,8 @@ juju integrate opensearch admin/oauth.hydra
 
 ## Create an OAuth client and obtain a token
 
-With the Identity Platform running, create an OAuth client in Hydra and use it
-to request an access token.
+With the Identity Platform running, create an OAuth client in Hydra and use it to request an access
+token.
 
 ### Create a client in Hydra
 
@@ -143,8 +145,8 @@ export HYDRA_URL=<hydra-url>
 
 ### Retrieve the CA certificate
 
-Both Hydra and OpenSearch serve TLS certificates issued by the
-`self-signed-certificates` charm, so the same CA verifies both. Save it to a file:
+Both Hydra and OpenSearch serve TLS certificates issued by the `self-signed-certificates` charm, so
+the same CA verifies both. Save it to a file:
 
 ```shell
 juju run self-signed-certificates/leader get-ca-certificate --format=json \
@@ -243,5 +245,7 @@ green  open .charm_node_lock             8KbPHHy3QneIW8uWbTuBhQ 1 0  1 0 4.1kb 4
 
 ## Next steps
 
-* [Enable JWT authentication](how-to-guides-enable-jwt-authentication) — an alternative token-based authentication method.
-* [Integrate with an application](how-to-integrate-with-an-application) — connect client applications using the `data-integrator` charm.
+- [Enable JWT authentication](how-to-guides-enable-jwt-authentication) — an alternative token-based
+  authentication method.
+- [Integrate with an application](how-to-integrate-with-an-application) — connect client
+  applications using the `data-integrator` charm.

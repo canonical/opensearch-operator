@@ -1,18 +1,20 @@
 ---
 myst:
   html_meta:
-    description: "Integrate client applications with Charmed OpenSearch using the opensearch_client interface or data-integrator charm."
+    description: Integrate client applications with Charmed OpenSearch using the opensearch_client interface or data-integrator charm.
 ---
 
 (how-to-integrate-with-an-application)=
+
 # How to integrate with an application
 
-This guide shows how to connect applications to Charmed OpenSearch, either through
-a Juju charm integration or via the `data-integrator` charm for non-Juju applications.
+This guide shows how to connect applications to Charmed OpenSearch, either through a Juju charm
+integration or via the `data-integrator` charm for non-Juju applications.
 
 ## Integrate a Juju charm with OpenSearch
 
-If you are developing a charm that needs to connect to OpenSearch, use the `opensearch_client` interface.
+If you are developing a charm that needs to connect to OpenSearch, use the `opensearch_client`
+interface.
 
 ### Define the interface
 
@@ -50,13 +52,14 @@ class MyCharm(CharmBase):
 
 The `OpenSearchRequires` constructor accepts:
 
-* `charm` — the charm instance
-* `relation_name` — must match the name in `metadata.yaml`
-* `index` — the index name to connect to
-* `extra_user_roles` (optional) — additional roles for the user
-* `additional_secret_fields` (optional) — extra secret fields to share
+- `charm` — the charm instance
+- `relation_name` — must match the name in `metadata.yaml`
+- `index` — the index name to connect to
+- `extra_user_roles` (optional) — additional roles for the user
+- `additional_secret_fields` (optional) — extra secret fields to share
 
-See the [`OpenSearchRequires` class](https://github.com/canonical/data-platform-libs/blob/main/lib/charms/data_platform_libs/v0/data_interfaces.py)
+See the
+[`OpenSearchRequires` class](https://github.com/canonical/data-platform-libs/blob/main/lib/charms/data_platform_libs/v0/data_interfaces.py)
 in the `data_interfaces` library source for the full list of optional parameters.
 
 ### Create the integration
@@ -75,8 +78,8 @@ juju remove-relation opensearch <application>
 
 ## Integrate a non-Juju application with OpenSearch
 
-Use the [`data-integrator`](https://charmhub.io/data-integrator) charm to provide
-credentials and connection details to applications outside the Juju ecosystem.
+Use the [`data-integrator`](https://charmhub.io/data-integrator) charm to provide credentials and
+connection details to applications outside the Juju ecosystem.
 
 Deploy it:
 
@@ -127,11 +130,11 @@ opensearch:
 
 </details>
 
-Use these credentials to connect your application to OpenSearch. For an example of connecting
-with `curl`, see the [Tutorial](tutorial-4-integrate-with-a-client-application).
+Use these credentials to connect your application to OpenSearch. For an example of connecting with
+`curl`, see the [Tutorial](tutorial-4-integrate-with-a-client-application).
 
 ## Next steps
 
-* [Manage passwords](how-to-manage-passwords) to rotate the credentials issued to the client.
-* [Enable monitoring (COS)](how-to-monitoring) to observe the integrated workload.
-* [Manage TLS encryption](how-to-enable-tls-encryption) to secure client-to-node traffic.
+- [Manage passwords](how-to-manage-passwords) to rotate the credentials issued to the client.
+- [Enable monitoring (COS)](how-to-monitoring) to observe the integrated workload.
+- [Manage TLS encryption](how-to-enable-tls-encryption) to secure client-to-node traffic.

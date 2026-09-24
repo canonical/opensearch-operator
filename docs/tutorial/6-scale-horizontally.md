@@ -1,7 +1,7 @@
 ---
 myst:
   html_meta:
-    description: "Scale your Charmed OpenSearch cluster horizontally by adding or removing Juju units to handle growing data and traffic demands."
+    description: Scale your Charmed OpenSearch cluster horizontally by adding or removing Juju units to handle growing data and traffic demands.
 ---
 
 <!-- test:spread
@@ -10,11 +10,13 @@ kill-timeout: 60m
 -->
 
 (tutorial-6-scale-horizontally)=
+
 # 6. Scale horizontally
 
->[Charmed OpenSearch Tutorial](tutorial-index) > 6. Scale horizontally
+> [Charmed OpenSearch Tutorial](tutorial-index) > 6. Scale horizontally
 
-After having indexed some data in our previous section, let's take a look at the status of our charm:
+After having indexed some data in our previous section, let's take a look at the status of our
+charm:
 
 ```shell
 juju status
@@ -75,13 +77,12 @@ assert len(units) == 4, f'Expected 4 units after scale-up, got {len(units)}'
 
 <!-- test:wait --seconds 60 -->
 
-Where `-n 1` specifies the number of units to add.
-In this case, we are adding one unit to the OpenSearch application.
-You can add more units by changing the number after `-n`.
+Where `-n 1` specifies the number of units to add. In this case, we are adding one unit to the
+OpenSearch application. You can add more units by changing the number after `-n`.
 
-You can now watch the new units join the cluster with: `juju status --watch 1s`.
-It usually takes a few minutes for the new nodes to be added to the cluster formation.
-You'll know that all four nodes are ready when `juju status --watch 1s` reports:
+You can now watch the new units join the cluster with: `juju status --watch 1s`. It usually takes a
+few minutes for the new nodes to be added to the cluster formation. You'll know that all four nodes
+are ready when `juju status --watch 1s` reports:
 
 ```text
 Model     Controller       Cloud/Region         Version  SLA          Timestamp
@@ -109,10 +110,9 @@ Machine  State    Address       Inst id        Base          AZ  Message
 5        started  10.95.38.39   juju-be3883-5  ubuntu@24.04      Running
 ```
 
-You can trust that Charmed OpenSearch added these nodes correctly,
-and that your replica shards are all assigned.
-But if you want to verify that your data is correctly replicated,
-you can also query the shards with the following command:
+You can trust that Charmed OpenSearch added these nodes correctly, and that your replica shards are
+all assigned. But if you want to verify that your data is correctly replicated, you can also query
+the shards with the following command:
 
 ```bash
 curl --cacert demo-ca.pem -XGET https://username:password@opensearch_node_ip:9200/_cat/shards
@@ -157,10 +157,10 @@ If only 2 nodes are online, neither can be unavailable nor removed.
 The service will become **unavailable** and **data may be lost** if scaling below 2 nodes.
 ```
 
-Removing a unit from the Juju application scales down your OpenSearch cluster by one node.
-Before we scale down the nodes we no longer need, list all the units with `juju status`.
-Here you will see four units / nodes: `opensearch/0`, `opensearch/1`, `opensearch/2`, `opensearch/3`.
-To remove the unit `opensearch/3` run:
+Removing a unit from the Juju application scales down your OpenSearch cluster by one node. Before we
+scale down the nodes we no longer need, list all the units with `juju status`. Here you will see
+four units / nodes: `opensearch/0`, `opensearch/1`, `opensearch/2`, `opensearch/3`. To remove the
+unit `opensearch/3` run:
 
 <!-- test:run
 juju remove-unit opensearch/3 --no-prompt

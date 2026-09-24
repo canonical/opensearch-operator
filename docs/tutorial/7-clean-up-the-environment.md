@@ -1,7 +1,7 @@
 ---
 myst:
   html_meta:
-    description: "Remove your Charmed OpenSearch deployment and clean up Juju resources to free up system resources after completing the tutorial."
+    description: Remove your Charmed OpenSearch deployment and clean up Juju resources to free up system resources after completing the tutorial.
 ---
 
 <!-- test:spread
@@ -10,17 +10,18 @@ kill-timeout: 30m
 -->
 
 (tutorial-7-clean-up-the-environment)=
+
 # 7. Clean up the environment
 
 > [Charmed OpenSearch Tutorial](tutorial-index) > 7. Clean up the environment
 
 In this tutorial, we’ve successfully:
 
-* Deployed OpenSearch on LXD
-* Enabled TLS
-* Integrated with a client application
-* Rotated user credentials
-* Scaled our deployment
+- Deployed OpenSearch on LXD
+- Enabled TLS
+- Integrated with a client application
+- Rotated user credentials
+- Scaled our deployment
 
 You may now keep your OpenSearch deployment running to continue experimenting or remove it entirely
 to free up resources on your machine.
@@ -52,8 +53,8 @@ assert 'tutorial' not in models, f'Model tutorial still exists: {models}'
 "
 -->
 
-The next step is to remove the Juju controller.
-You can see all of the available controllers by entering `juju controllers`.
+The next step is to remove the Juju controller. You can see all of the available controllers by
+entering `juju controllers`.
 
 To remove the controller created for this tutorial, enter:
 
@@ -113,13 +114,13 @@ In the following command, use the values you saved during step 1 -> Get default 
 
 If you did not save those values, use the second reset option.
 
-Leaving the custom kernel parameters outside of this tutorial scope can impact
-the host machine's performance.
+Leaving the custom kernel parameters outside of this tutorial scope can impact the host machine's
+performance.
 
 To reset them, you can either:
 
-* Reboot your computer
-* Set your original parameters with the following command:
+- Reboot your computer
+- Set your original parameters with the following command:
 
 ```shell
 sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
@@ -143,8 +144,9 @@ echo "$_output" | grep -q 'fs.file-max = 1048576'      || { echo "FAIL: expected
 
 ## What next?
 
-* Check out other charms on [charmhub.io](https://charmhub.io/)
-* Read about [High Availability Best Practices](https://canonical.com/blog/database-high-availability)
-* [Report](https://github.com/canonical/opensearch-operator/issues) any problems you encountered
-* [Give us your feedback](https://matrix.to/#/#charmhub-data-platform:ubuntu.com)
-* [Contribute to the code base](https://github.com/canonical/opensearch-operator)
+- Check out other charms on [charmhub.io](https://charmhub.io/)
+- Read about
+  [High Availability Best Practices](https://canonical.com/blog/database-high-availability)
+- [Report](https://github.com/canonical/opensearch-operator/issues) any problems you encountered
+- [Give us your feedback](https://matrix.to/#/#charmhub-data-platform:ubuntu.com)
+- [Contribute to the code base](https://github.com/canonical/opensearch-operator)
