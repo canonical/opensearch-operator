@@ -15,7 +15,7 @@ module "opensearch" {
 
   app_name           = var.opensearch.app_name
   units              = var.opensearch.units
-  config             = merge(var.opensearch.config, { "init_hold" : "false" })
+  config             = merge({ "cluster_name" : "opensearch" }, var.opensearch.config)
   model_uuid         = var.opensearch.model_uuid
   constraints        = var.opensearch.constraints
   resources          = var.opensearch.resources

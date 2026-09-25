@@ -105,7 +105,7 @@ variable "opensearch" {
   type = object({
     app_name           = optional(string, "opensearch")
     model_uuid         = string
-    config             = optional(map(string), { "cluster_name" : "opensearch" })
+    config             = optional(map(string), {})
     channel            = optional(string, "2/edge")
     base               = optional(string, "ubuntu@24.04")
     revision           = optional(number)
