@@ -2,7 +2,7 @@
 
 This is a Terraform module facilitating the deployment of the OpenSearch charm with [Terraform juju provider](https://github.com/juju/terraform-provider-juju/). For more information, refer to the provider [documentation](https://registry.terraform.io/providers/juju/juju/latest/docs).
 
-This module requires a `juju` Kubernetes model to be available. Refer to the [usage section](#usage) below for more details.
+This module requires a `juju` model to be available. Refer to the [usage section](#usage) below for more details.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
@@ -23,13 +23,13 @@ This module requires a `juju` Kubernetes model to be available. Refer to the [us
 
 | Name | Description | Default | Required |
 | ---- | ----------- | ------- | :------: |
-| backups-integrator | Configuration for the optional backup integrator | `null` | no |
+| backups-integrator | Configuration for the optional backup integrator. | `null` | no |
 | certificates_integration | External TLS endpoint or offer. | `null` | no |
 | cos_agent_integration | COS agent endpoint. | `null` | no |
-| data-integrator | Configuration for the optional data-integrator | `null` | no |
-| opensearch | OpenSearch app definition | n/a | yes |
-| opensearch-dashboards | Optional OpenSearch Dashboards app definition | `null` | no |
-| self-signed-certificates | Configuration for the self-signed-certificates app | `{}` | no |
+| data-integrator | Configuration for the optional data-integrator. | `null` | no |
+| opensearch | OpenSearch app definition. | n/a | yes |
+| opensearch-dashboards | Optional OpenSearch Dashboards app definition. | `null` | no |
+| self-signed-certificates | Configuration for the self-signed-certificates app. | `{}` | no |
 
 ## Outputs
 
@@ -37,10 +37,10 @@ This module requires a `juju` Kubernetes model to be available. Refer to the [us
 | ---- | ----------- |
 | app_names | Output of all deployed application names. |
 | metadata | Product deployment metadata. |
-| models | Deployed applications |
-| offers | Map of offers URLs. |
-| provides | Map of all 'provides' endpoints |
-| requires | Map of all 'requires' endpoints |
+| models | Deployed applications. |
+| offers | Map of offer URLs. |
+| provides | Map of all 'provides' endpoints. |
+| requires | Map of all 'requires' endpoints. |
 <!-- END_TF_DOCS -->
 
 ## Usage

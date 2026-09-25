@@ -15,7 +15,7 @@ output "metadata" {
 }
 
 output "models" {
-  description = "Deployed applications"
+  description = "Deployed applications."
   value = {
     for uuid in distinct([for app in local.components : app.model_uuid]) : uuid => {
       model_uuid = uuid
@@ -25,7 +25,7 @@ output "models" {
 }
 
 output "offers" {
-  description = "Map of offers URLs."
+  description = "Map of offer URLs."
   value = {
     opensearch_client = try({
       kind = "offer"
@@ -41,7 +41,7 @@ output "offers" {
 }
 
 output "provides" {
-  description = "Map of all 'provides' endpoints"
+  description = "Map of all 'provides' endpoints."
   value = {
     opensearch_client    = module.opensearch.provides.opensearch_client
     opensearch_cos_agent = module.opensearch.provides.cos_agent
@@ -49,7 +49,7 @@ output "provides" {
 }
 
 output "requires" {
-  description = "Map of all 'requires' endpoints"
+  description = "Map of all 'requires' endpoints."
   value = {
     opensearch_certificates      = module.opensearch.requires.certificates
     opensearch_s3_credentials    = module.opensearch.requires.s3_credentials
