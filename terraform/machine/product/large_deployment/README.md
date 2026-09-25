@@ -2,7 +2,7 @@
 
 This is a Terraform module facilitating the deployment of the OpenSearch charm with [Terraform juju provider](https://github.com/juju/terraform-provider-juju/). For more information, refer to the provider [documentation](https://registry.terraform.io/providers/juju/juju/latest/docs).
 
-This module requires a `juju` Kubernetes model to be available. Refer to the [usage section](#usage) below for more details.
+This module requires a `juju` model to be available. Refer to the [usage section](#usage) below for more details.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
