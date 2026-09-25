@@ -73,8 +73,8 @@ resource "juju_integration" "data_integrator-opensearch-integration" {
   model_uuid = local.data_integrator_model_uuid
 
   application {
-    name     = juju_application.data-integrator[0].name
-    endpoint = "opensearch"
+    name     = module.data-integrator[0].requires.opensearch.name
+    endpoint = module.data-integrator[0].requires.opensearch.endpoint
   }
 
   application {

@@ -21,6 +21,7 @@ This module requires a `juju` Kubernetes model to be available. Refer to the [us
 
 | Name | Source | Version |
 |------|--------|---------|
+| `data-integrator` | git::https://github.com/canonical/data-integrator.git//terraform/charm/data_integrator | rev519 |
 | `opensearch` | ../../charm/opensearch | n/a |
 | `opensearch-dashboards` | git::https://github.com/canonical/opensearch-dashboards-operator.git//terraform/kubernetes/charm/opensearch_dashboards | 8b93e9fd8c686f6d4cf8617380d5d8c07c2d8786 |
 
@@ -30,7 +31,6 @@ This module requires a `juju` Kubernetes model to be available. Refer to the [us
 |------|------|-------------|
 | `juju_application.self-signed-certificates` | [Juju application](https://registry.terraform.io/providers/juju/juju/latest/docs/resources/application) | Deploys self-signed-certificates in the OpenSearch model, unless `certificates_integration` is set. |
 | `juju_application.traefik-k8s` | [Juju application](https://registry.terraform.io/providers/juju/juju/latest/docs/resources/application) | Deploys traefik-k8s as the ingress for OpenSearch Dashboards, unless `ingress_integration` is set. |
-| `juju_application.data-integrator` | [Juju application](https://registry.terraform.io/providers/juju/juju/latest/docs/resources/application) | Deploys the optional data-integrator application. |
 | `juju_application.backups-integrator` | [Juju application](https://registry.terraform.io/providers/juju/juju/latest/docs/resources/application) | Deploys the optional S3, Azure storage or GCS integrator. |
 | `juju_integration.opensearch-tls-integration` | [Juju integration](https://registry.terraform.io/providers/juju/juju/latest/docs/resources/integration) | Relates OpenSearch to self-signed-certificates, or to the `certificates_integration` target. |
 | `juju_integration.opensearch_dashboards-tls-integration` | [Juju integration](https://registry.terraform.io/providers/juju/juju/latest/docs/resources/integration) | Relates OpenSearch Dashboards to the same TLS provider as OpenSearch if `opensearch-dashboards.tls` is set to `true`. |

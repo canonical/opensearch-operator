@@ -23,7 +23,7 @@ locals {
     {
       "opensearch" = module.opensearch.application
     },
-    local.data_integrator_enabled ? { "data-integrator" = juju_application.data-integrator[0] } : {},
+    local.data_integrator_enabled ? { "data-integrator" = module.data-integrator[0].application } : {},
     local.dashboards_enabled ? { "opensearch-dashboards" = module.opensearch-dashboards[0].application } : {},
     length(juju_application.traefik-k8s) > 0 ? { "traefik-k8s" = juju_application.traefik-k8s[0] } : {},
     var.certificates_integration == null ? { "self-signed-certificates" = juju_application.self-signed-certificates[0] } : {},

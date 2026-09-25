@@ -62,21 +62,17 @@ module "opensearch-dashboards" {
 }
 
 # Integrator apps
-resource "juju_application" "data-integrator" {
-  count = local.data_integrator_enabled ? 1 : 0
+module "data-integrator" {
+  count  = local.data_integrator_enabled ? 1 : 0
+  source = "git::https://github.com/canonical/data-integrator.git//terraform/charm/data_integrator?ref=rev519"
 
-  charm {
-    name     = "data-integrator"
-    channel  = var.data-integrator.channel
-    revision = var.data-integrator.revision
-    base     = var.data-integrator.base
-  }
-  model_uuid = local.data_integrator_model_uuid
-  config     = var.data-integrator.config
-
+  base        = var.data-integrator.base
+  channel     = var.data-integrator.channel
+  config      = var.data-integrator.config
   constraints = var.data-integrator.constraints
-  machines    = length(var.data-integrator.machines) > 0 ? var.data-integrator.machines : null
-  units       = length(var.data-integrator.machines) > 0 ? null : 1
+  machines    = var.data-integrator.machines
+  model_uuid  = local.data_integrator_model_uuid
+  revision    = var.data-integrator.revision
 }
 
 resource "juju_application" "backups-integrator" {
