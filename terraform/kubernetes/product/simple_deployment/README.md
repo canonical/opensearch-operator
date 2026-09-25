@@ -21,19 +21,19 @@ This module requires a `juju` Kubernetes model to be available. Refer to the [us
 
 ## Inputs
 
-| Name | Description | Type | Default | Required |
-| ---- | ----------- | ---- | ------- | :------: |
-| backups-integrator | Configuration for the optional backup integrator | <pre>object({<br/>    model_uuid   = optional(string)<br/>    storage_type = optional(string, "s3")<br/>    config       = optional(map(string), {})<br/>    channel      = optional(string)<br/>    base         = optional(string)<br/>    revision     = optional(number)<br/>    constraints  = optional(string, "arch=amd64")<br/>  })</pre> | `null` | no |
-| certificates_integration | External TLS endpoint or offer. | <pre>object({<br/>    kind     = string<br/>    name     = optional(string)<br/>    endpoint = optional(string)<br/>    url      = optional(string)<br/>  })</pre> | `null` | no |
-| data-integrator | Configuration for the optional data-integrator | <pre>object({<br/>    model_uuid  = optional(string)<br/>    config      = optional(map(string), { "index-name" : "test", "extra-user-roles" : "admin" })<br/>    channel     = optional(string, "latest/stable")<br/>    base        = optional(string, "ubuntu@22.04")<br/>    revision    = optional(number)<br/>    constraints = optional(string, "arch=amd64")<br/>  })</pre> | `null` | no |
-| grafana_dashboard_integration | Optional COS Grafana dashboard endpoint or offer. | <pre>object({<br/>    kind     = string<br/>    name     = optional(string)<br/>    endpoint = optional(string)<br/>    url      = optional(string)<br/>  })</pre> | `null` | no |
-| ingress_integration | External ingress endpoint or offer for OpenSearch Dashboards, used instead of the bundled traefik-k8s. | <pre>object({<br/>    kind     = string<br/>    name     = optional(string)<br/>    endpoint = optional(string)<br/>    url      = optional(string)<br/>  })</pre> | `null` | no |
-| logging_integration | Optional COS logging endpoint or offer. | <pre>object({<br/>    kind     = string<br/>    name     = optional(string)<br/>    endpoint = optional(string)<br/>    url      = optional(string)<br/>  })</pre> | `null` | no |
-| metrics_endpoint_integration | Optional COS metrics endpoint or offer. | <pre>object({<br/>    kind     = string<br/>    name     = optional(string)<br/>    endpoint = optional(string)<br/>    url      = optional(string)<br/>  })</pre> | `null` | no |
-| opensearch | OpenSearch app definition | <pre>object({<br/>    app_name           = optional(string, "opensearch-k8s")<br/>    model_uuid         = string<br/>    config             = optional(map(string), {})<br/>    channel            = optional(string, "2/edge")<br/>    base               = optional(string, "ubuntu@24.04")<br/>    revision           = optional(number)<br/>    units              = optional(number, 3)<br/>    constraints        = optional(string, "arch=amd64")<br/>    resources          = optional(map(string), {})<br/>    storage_directives = optional(map(string), {})<br/>    expose = optional(list(object({<br/>      cidrs     = optional(string)<br/>      endpoints = optional(string)<br/>      spaces    = optional(string)<br/>    })), [])<br/>  })</pre> | n/a | yes |
-| opensearch-dashboards | Optional OpenSearch Dashboards app definition | <pre>object({<br/>    app_name    = optional(string, "opensearch-dashboards-k8s")<br/>    config      = optional(map(string), {})<br/>    channel     = optional(string, "2/edge")<br/>    base        = optional(string, "ubuntu@24.04")<br/>    revision    = optional(number)<br/>    units       = optional(number, 1)<br/>    constraints = optional(string, "arch=amd64")<br/>    resources   = optional(map(string), {})<br/>    tls         = optional(bool, false)<br/>    expose = optional(list(object({<br/>      cidrs     = optional(string)<br/>      endpoints = optional(string)<br/>      spaces    = optional(string)<br/>    })), [])<br/>  })</pre> | `null` | no |
-| self-signed-certificates | Configuration for the self-signed-certificates app | <pre>object({<br/>    channel     = optional(string, "1/stable")<br/>    revision    = optional(number)<br/>    base        = optional(string, "ubuntu@24.04")<br/>    units       = optional(number, 1)<br/>    constraints = optional(string, "arch=amd64")<br/>    config      = optional(map(string), { "ca-common-name" : "CA" })<br/>  })</pre> | `{}` | no |
-| traefik-k8s | Configuration for the traefik-k8s app, deployed with OpenSearch Dashboards unless ingress_integration is set | <pre>object({<br/>    channel     = optional(string, "latest/stable")<br/>    revision    = optional(number)<br/>    base        = optional(string)<br/>    units       = optional(number, 1)<br/>    constraints = optional(string, "arch=amd64")<br/>    config      = optional(map(string), {})<br/>  })</pre> | `{}` | no |
+| Name | Description | Default | Required |
+| ---- | ----------- | ------- | :------: |
+| backups-integrator | Configuration for the optional backup integrator | `null` | no |
+| certificates_integration | External TLS endpoint or offer. | `null` | no |
+| data-integrator | Configuration for the optional data-integrator | `null` | no |
+| grafana_dashboard_integration | Optional COS Grafana dashboard endpoint or offer. | `null` | no |
+| ingress_integration | External ingress endpoint or offer for OpenSearch Dashboards, used instead of the bundled traefik-k8s. | `null` | no |
+| logging_integration | Optional COS logging endpoint or offer. | `null` | no |
+| metrics_endpoint_integration | Optional COS metrics endpoint or offer. | `null` | no |
+| opensearch | OpenSearch app definition | n/a | yes |
+| opensearch-dashboards | Optional OpenSearch Dashboards app definition | `null` | no |
+| self-signed-certificates | Configuration for the self-signed-certificates app | `{}` | no |
+| traefik-k8s | Configuration for the traefik-k8s app, deployed with OpenSearch Dashboards unless ingress_integration is set | `{}` | no |
 
 ## Outputs
 

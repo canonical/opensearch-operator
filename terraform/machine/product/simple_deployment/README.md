@@ -21,15 +21,15 @@ This module requires a `juju` Kubernetes model to be available. Refer to the [us
 
 ## Inputs
 
-| Name | Description | Type | Default | Required |
-| ---- | ----------- | ---- | ------- | :------: |
-| backups-integrator | Configuration for the optional backup integrator | <pre>object({<br/>    model_uuid   = optional(string)<br/>    storage_type = optional(string, "s3")<br/>    config       = optional(map(string), {})<br/>    channel      = optional(string)<br/>    base         = optional(string)<br/>    revision     = optional(number)<br/>    constraints  = optional(string, "arch=amd64")<br/>    machines     = optional(list(string), [])<br/>  })</pre> | `null` | no |
-| certificates_integration | External TLS endpoint or offer. | <pre>object({<br/>    kind     = string<br/>    name     = optional(string)<br/>    endpoint = optional(string)<br/>    url      = optional(string)<br/>  })</pre> | `null` | no |
-| cos_agent_integration | COS agent endpoint. | <pre>object({<br/>    name     = string<br/>    endpoint = string<br/>  })</pre> | `null` | no |
-| data-integrator | Configuration for the optional data-integrator | <pre>object({<br/>    model_uuid  = optional(string)<br/>    config      = optional(map(string), { "index-name" : "test", "extra-user-roles" : "admin" })<br/>    channel     = optional(string, "latest/stable")<br/>    base        = optional(string, "ubuntu@22.04")<br/>    revision    = optional(number)<br/>    constraints = optional(string, "arch=amd64")<br/>    machines    = optional(list(string), [])<br/>  })</pre> | `null` | no |
-| opensearch | OpenSearch app definition | <pre>object({<br/>    app_name           = optional(string, "opensearch")<br/>    model_uuid         = string<br/>    config             = optional(map(string), {})<br/>    channel            = optional(string, "2/edge")<br/>    base               = optional(string, "ubuntu@24.04")<br/>    revision           = optional(number)<br/>    units              = optional(number, 3)<br/>    constraints        = optional(string, "arch=amd64")<br/>    machines           = optional(set(string), [])<br/>    storage_directives = optional(map(string), {})<br/>    endpoint_bindings = optional(set(object({<br/>      space    = string<br/>      endpoint = optional(string)<br/>    })), [])<br/>    expose = optional(list(object({<br/>      cidrs     = optional(string)<br/>      endpoints = optional(string)<br/>      spaces    = optional(string)<br/>    })), [])<br/>  })</pre> | n/a | yes |
-| opensearch-dashboards | Optional OpenSearch Dashboards app definition | <pre>object({<br/>    app_name    = optional(string, "opensearch-dashboards")<br/>    config      = optional(map(string), {})<br/>    channel     = optional(string, "2/edge")<br/>    base        = optional(string, "ubuntu@24.04")<br/>    revision    = optional(number)<br/>    units       = optional(number, 1)<br/>    constraints = optional(string, "arch=amd64")<br/>    machines    = optional(set(string), [])<br/>    endpoint_bindings = optional(set(object({<br/>      space    = string<br/>      endpoint = optional(string)<br/>    })), [])<br/>    tls = optional(bool, false)<br/>    expose = optional(list(object({<br/>      cidrs     = optional(string)<br/>      endpoints = optional(string)<br/>      spaces    = optional(string)<br/>    })), [])<br/>  })</pre> | `null` | no |
-| self-signed-certificates | Configuration for the self-signed-certificates app | <pre>object({<br/>    channel     = optional(string, "1/stable")<br/>    revision    = optional(number)<br/>    base        = optional(string, "ubuntu@24.04")<br/>    units       = optional(number, 1)<br/>    constraints = optional(string, "arch=amd64")<br/>    machines    = optional(list(string), [])<br/>    config      = optional(map(string), { "ca-common-name" : "CA" })<br/>  })</pre> | `{}` | no |
+| Name | Description | Default | Required |
+| ---- | ----------- | ------- | :------: |
+| backups-integrator | Configuration for the optional backup integrator | `null` | no |
+| certificates_integration | External TLS endpoint or offer. | `null` | no |
+| cos_agent_integration | COS agent endpoint. | `null` | no |
+| data-integrator | Configuration for the optional data-integrator | `null` | no |
+| opensearch | OpenSearch app definition | n/a | yes |
+| opensearch-dashboards | Optional OpenSearch Dashboards app definition | `null` | no |
+| self-signed-certificates | Configuration for the self-signed-certificates app | `{}` | no |
 
 ## Outputs
 
@@ -38,7 +38,7 @@ This module requires a `juju` Kubernetes model to be available. Refer to the [us
 | app_names | Output of all deployed application names. |
 | metadata | Product deployment metadata. |
 | models | Deployed applications |
-| offers | List of offers URLs. |
+| offers | Map of offers URLs. |
 | provides | Map of all 'provides' endpoints |
 | requires | Map of all 'requires' endpoints |
 <!-- END_TF_DOCS -->

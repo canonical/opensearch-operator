@@ -25,7 +25,7 @@ output "models" {
 }
 
 output "offers" {
-  description = "List of offers URLs."
+  description = "Map of offers URLs."
   value = {
     opensearch_client = try({
       kind = "offer"
