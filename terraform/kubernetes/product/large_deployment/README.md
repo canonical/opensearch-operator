@@ -24,19 +24,19 @@ This module requires a `juju` Kubernetes model to be available. Refer to the [us
 | Name | Description | Default | Required |
 | ---- | ----------- | ------- | :------: |
 | apps | Non-orchestrator OpenSearch apps. Defaults to one app with 'data' role. | <pre>[<br/>  {<br/>    "app_name": "data",<br/>    "config": {<br/>      "roles": "data"<br/>    }<br/>  }<br/>]</pre> | no |
-| backups-integrator | Configuration for the optional backup integrator | `null` | no |
+| backups-integrator | Configuration for the optional backup integrator. | `null` | no |
 | certificates_integration | External TLS endpoint or offer. | `null` | no |
 | cluster_name | The cluster name of the fleet. | `"opensearch"` | no |
-| data-integrator | Configuration for the optional data-integrator | `null` | no |
-| failover | Optional failover orchestrator | `null` | no |
+| data-integrator | Configuration for the optional data-integrator. | `null` | no |
+| failover | Optional failover orchestrator. | `null` | no |
 | grafana_dashboard_integration | Optional COS Grafana dashboard endpoint or offer. | `null` | no |
 | ingress_integration | External ingress endpoint or offer for OpenSearch Dashboards, used instead of the bundled traefik-k8s. | `null` | no |
 | logging_integration | Optional COS logging endpoint or offer. | `null` | no |
 | main | Main orchestrator app definition. Default role is cluster_manager. | n/a | yes |
 | metrics_endpoint_integration | Optional COS metrics endpoint or offer. | `null` | no |
-| opensearch-dashboards | Optional OpenSearch Dashboards app definition | `null` | no |
-| self-signed-certificates | Configuration for the self-signed-certificates app | `{}` | no |
-| traefik-k8s | Configuration for the traefik-k8s app. Deployed when OpenSearch Dashboards is deployed, unless ingress_integration is set | `{}` | no |
+| opensearch-dashboards | Optional OpenSearch Dashboards app definition. | `null` | no |
+| self-signed-certificates | Configuration for the self-signed-certificates app. | `{}` | no |
+| traefik-k8s | Configuration for the traefik-k8s app. Deployed when OpenSearch Dashboards is deployed, unless ingress_integration is set. | `{}` | no |
 
 ## Outputs
 
@@ -44,10 +44,10 @@ This module requires a `juju` Kubernetes model to be available. Refer to the [us
 | ---- | ----------- |
 | app_names | Output of all deployed application names. |
 | metadata | Product deployment metadata. |
-| models | Deployed applications |
-| offers | List of offers URLs. |
-| provides | Map of all 'provides' endpoints of the main orchestrator |
-| requires | Map of all 'requires' endpoints of the main orchestrator |
+| models | Deployed applications. |
+| offers | Map of offer URLs. |
+| provides | Map of all 'provides' endpoints of the main orchestrator. |
+| requires | Map of all 'requires' endpoints of the main orchestrator. |
 <!-- END_TF_DOCS -->
 
 ## Usage

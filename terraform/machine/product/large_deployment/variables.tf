@@ -48,7 +48,7 @@ variable "apps" {
 }
 
 variable "backups-integrator" {
-  description = "Configuration for the optional backup integrator"
+  description = "Configuration for the optional backup integrator."
   type = object({
     model_uuid   = optional(string)
     storage_type = optional(string, "s3")
@@ -128,7 +128,7 @@ variable "cos_agent_integrations" {
 }
 
 variable "data-integrator" {
-  description = "Configuration for the optional data-integrator"
+  description = "Configuration for the optional data-integrator."
   type = object({
     model_uuid  = optional(string)
     config      = optional(map(string), { "index-name" : "test", "extra-user-roles" : "admin" })
@@ -155,7 +155,7 @@ variable "data-integrator" {
 }
 
 variable "failover" {
-  description = "Optional failover orchestrator"
+  description = "Optional failover orchestrator."
   type = object({
     app_name           = optional(string, "failover")
     model_uuid         = optional(string)
@@ -226,7 +226,7 @@ variable "main" {
 }
 
 variable "opensearch-dashboards" {
-  description = "Optional OpenSearch Dashboards app definition"
+  description = "Optional OpenSearch Dashboards app definition."
   type = object({
     app_name    = optional(string, "opensearch-dashboards")
     config      = optional(map(string), {})
@@ -251,7 +251,7 @@ variable "opensearch-dashboards" {
 }
 
 variable "self-signed-certificates" {
-  description = "Configuration for the self-signed-certificates app"
+  description = "Configuration for the self-signed-certificates app."
   type = object({
     channel     = optional(string, "1/stable")
     revision    = optional(number)

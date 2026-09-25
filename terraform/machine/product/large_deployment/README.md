@@ -24,15 +24,15 @@ This module requires a `juju` model to be available. Refer to the [usage section
 | Name | Description | Default | Required |
 | ---- | ----------- | ------- | :------: |
 | apps | Non-orchestrator OpenSearch apps. Defaults to one app with 'data' role. | <pre>[<br/>  {<br/>    "app_name": "data",<br/>    "config": {<br/>      "roles": "data"<br/>    }<br/>  }<br/>]</pre> | no |
-| backups-integrator | Configuration for the optional backup integrator | `null` | no |
+| backups-integrator | Configuration for the optional backup integrator. | `null` | no |
 | certificates_integration | External TLS endpoint or offer. | `null` | no |
 | cluster_name | The cluster name of the fleet. | `"opensearch"` | no |
 | cos_agent_integrations | Optional same-model COS agent endpoints, keyed by the name of the OpenSearch or OpenSearch Dashboards app to integrate. | `{}` | no |
-| data-integrator | Configuration for the optional data-integrator | `null` | no |
-| failover | Optional failover orchestrator | `null` | no |
+| data-integrator | Configuration for the optional data-integrator. | `null` | no |
+| failover | Optional failover orchestrator. | `null` | no |
 | main | Main orchestrator app definition. Default role is cluster_manager. | n/a | yes |
-| opensearch-dashboards | Optional OpenSearch Dashboards app definition | `null` | no |
-| self-signed-certificates | Configuration for the self-signed-certificates app | `{}` | no |
+| opensearch-dashboards | Optional OpenSearch Dashboards app definition. | `null` | no |
+| self-signed-certificates | Configuration for the self-signed-certificates app. | `{}` | no |
 
 ## Outputs
 
@@ -40,10 +40,10 @@ This module requires a `juju` model to be available. Refer to the [usage section
 | ---- | ----------- |
 | app_names | Output of all deployed application names. |
 | metadata | Product deployment metadata. |
-| models | Deployed applications |
-| offers | List of offers URLs. |
-| provides | Map of all 'provides' endpoints of the main orchestrator |
-| requires | Map of all 'requires' endpoints of the main orchestrator |
+| models | Deployed applications. |
+| offers | Map of offer URLs. |
+| provides | Map of all 'provides' endpoints of the main orchestrator. |
+| requires | Map of all 'requires' endpoints of the main orchestrator. |
 <!-- END_TF_DOCS -->
 
 ## Usage
