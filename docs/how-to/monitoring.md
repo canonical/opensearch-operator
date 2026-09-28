@@ -8,8 +8,8 @@ myst:
 
 # How to enable monitoring (COS)
 
-This guide shows how to integrate Charmed OpenSearch with the Canonical Observability Stack (COS)
-for metrics, dashboards, alerts, and logs.
+This guide shows how to integrate Charmed OpenSearch with the Canonical Observability Stack (COS) for metrics,
+dashboards, alerts, and logs.
 
 For background on monitoring features, see the [Monitoring explanation](explanation-monitoring).
 
@@ -21,11 +21,9 @@ For background on monitoring features, see the [Monitoring explanation](explanat
 
 ## Offer COS interfaces
 
-Switch to the COS K8s controller and offer the required interfaces. The easiest way is to deploy COS
-Lite with the
-[offers overlay](https://github.com/canonical/cos-lite-bundle/blob/main/overlays/offers-overlay.yaml),
-which creates cross-model offers named `grafana-dashboards`, `loki-logging`, and
-`prometheus-receive-remote-write`:
+Switch to the COS K8s controller and offer the required interfaces. The easiest way is to deploy COS Lite with the
+[offers overlay](https://github.com/canonical/cos-lite-bundle/blob/main/overlays/offers-overlay.yaml), which creates
+cross-model offers named `grafana-dashboards`, `loki-logging`, and `prometheus-receive-remote-write`:
 
 ```shell
 juju switch <k8s-controller>:<cos-model>
@@ -74,18 +72,16 @@ Integrate it with OpenSearch:
 juju integrate grafana-agent opensearch:cos-agent
 ```
 
-After integration, Grafana will display the **Charmed OpenSearch** dashboard and Loki will receive
-OpenSearch logs.
+After integration, Grafana will display the **Charmed OpenSearch** dashboard and Loki will receive OpenSearch logs.
 
 ### Large deployments
 
-For multi-application clusters, integrate `grafana-agent` with each OpenSearch application. The
-dashboard aggregates data from all connected units.
+For multi-application clusters, integrate `grafana-agent` with each OpenSearch application. The dashboard aggregates
+data from all connected units.
 
 ### Multiple clusters
 
-Multiple deployments can share the same COS instance. The dashboard provides selectors to filter by
-cluster.
+Multiple deployments can share the same COS instance. The dashboard provides selectors to filter by cluster.
 
 ## Access the Grafana web interface
 
@@ -99,8 +95,8 @@ For detailed instructions, see
 [Browse dashboards](https://documentation.ubuntu.com/observability/track-3.0/tutorial/cos-lite-microk8s-sandbox/#browse-dashboards)
 in the COS tutorial.
 
-In Grafana, select the **Charmed OpenSearch** dashboard. You can filter by Juju model, application,
-unit, cluster, and node role.
+In Grafana, select the **Charmed OpenSearch** dashboard. You can filter by Juju model, application, unit, cluster, and
+node role.
 
 ```{note}
 For exploring and visualising your indexed data (as opposed to cluster health metrics),
@@ -109,6 +105,5 @@ deploy [Charmed OpenSearch Dashboards](https://canonical-charmed-opensearch-dash
 
 ## Next steps
 
-- [Perform load testing](how-to-perform-load-testing) — benchmark the cluster under load with COS
-  monitoring.
+- [Perform load testing](how-to-perform-load-testing) — benchmark the cluster under load with COS monitoring.
 - [Monitoring explanation](explanation-monitoring) — background on monitoring features.

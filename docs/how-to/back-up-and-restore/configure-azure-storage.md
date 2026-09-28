@@ -8,9 +8,8 @@ myst:
 
 # How to configure Azure storage
 
-This guide shows how to configure the
-[Azure Storage Integrator charm](https://charmhub.io/azure-storage-integrator) for OpenSearch
-backups.
+This guide shows how to configure the [Azure Storage Integrator charm](https://charmhub.io/azure-storage-integrator) for
+OpenSearch backups.
 
 ## Deploy and configure the integrator
 
@@ -31,8 +30,7 @@ juju grant-secret azure-secret azure-storage-integrator
 juju config azure-storage-integrator credentials=<secret-id>
 ```
 
-See the
-[azure-storage-integrator configuration reference](https://charmhub.io/azure-storage-integrator/configuration)
+See the [azure-storage-integrator configuration reference](https://charmhub.io/azure-storage-integrator/configuration)
 for all available options.
 
 ## Integrate with Charmed OpenSearch
@@ -43,11 +41,10 @@ Connect the integrator to OpenSearch:
 juju integrate azure-storage-integrator opensearch
 ```
 
-Once the integration is established, `juju status --relations` shows the `azure-storage-integrator`
-application `active` with a relation to `opensearch`. The OpenSearch application remains `active`.
+Once the integration is established, `juju status --relations` shows the `azure-storage-integrator` application `active`
+with a relation to `opensearch`. The OpenSearch application remains `active`.
 
 ## Next steps
 
-- [Create and restore backups](how-to-create-a-backup) — create a backup using the configured Azure
-  storage.
+- [Create and restore backups](how-to-create-a-backup) — create a backup using the configured Azure storage.
 - [Configure S3 storage](how-to-back-up-configure-s3) — alternative storage backend.

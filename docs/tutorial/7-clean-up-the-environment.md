@@ -23,8 +23,8 @@ In this tutorial, we’ve successfully:
 - Rotated user credentials
 - Scaled our deployment
 
-You may now keep your OpenSearch deployment running to continue experimenting or remove it entirely
-to free up resources on your machine.
+You may now keep your OpenSearch deployment running to continue experimenting or remove it entirely to free up resources
+on your machine.
 
 ## Remove Charmed OpenSearch
 
@@ -53,8 +53,8 @@ assert 'tutorial' not in models, f'Model tutorial still exists: {models}'
 "
 -->
 
-The next step is to remove the Juju controller. You can see all of the available controllers by
-entering `juju controllers`.
+The next step is to remove the Juju controller. You can see all of the available controllers by entering
+`juju controllers`.
 
 To remove the controller created for this tutorial, enter:
 
@@ -114,8 +114,7 @@ In the following command, use the values you saved during step 1 -> Get default 
 
 If you did not save those values, use the second reset option.
 
-Leaving the custom kernel parameters outside of this tutorial scope can impact the host machine's
-performance.
+Leaving the custom kernel parameters outside of this tutorial scope can impact the host machine's performance.
 
 To reset them, you can either:
 
@@ -145,8 +144,7 @@ echo "$_output" | grep -q 'fs.file-max = 1048576'      || { echo "FAIL: expected
 ## What next?
 
 - Check out other charms on [charmhub.io](https://charmhub.io/)
-- Read about
-  [High Availability Best Practices](https://canonical.com/blog/database-high-availability)
+- Read about [High Availability Best Practices](https://canonical.com/blog/database-high-availability)
 - [Report](https://github.com/canonical/opensearch-operator/issues) any problems you encountered
 - [Give us your feedback](https://matrix.to/#/#charmhub-data-platform:ubuntu.com)
 - [Contribute to the code base](https://github.com/canonical/opensearch-operator)

@@ -12,8 +12,8 @@ myst:
 
 # How to deploy Charmed OpenSearch
 
-This guide shows how to deploy Charmed OpenSearch on
-[LXD](https://ubuntu.com/server/docs/lxd-containers), Canonical's lightweight container hypervisor.
+This guide shows how to deploy Charmed OpenSearch on [LXD](https://ubuntu.com/server/docs/lxd-containers), Canonical's
+lightweight container hypervisor.
 
 ## Prerequisites
 
@@ -24,9 +24,8 @@ To deploy Charmed OpenSearch on LXD using Juju, you need:
 - A Juju controller bootstrapped on LXD and a Juju model for OpenSearch
 - Hardware that meets the [system requirements](reference-system-requirements)
 
-For additional guidance, see the [Environment setup](tutorial-1-set-up-the-environment) stage of our
-tutorial or the documentation for
-[LXD](https://canonical.com/lxd/docs/latest/tutorial/first_steps/#install-lxd-using-snap) and
+For additional guidance, see the [Environment setup](tutorial-1-set-up-the-environment) stage of our tutorial or the
+documentation for [LXD](https://canonical.com/lxd/docs/latest/tutorial/first_steps/#install-lxd-using-snap) and
 [Juju](https://canonical.com/juju/docs/juju-cli/3.6/howto/manage-juju/#install-juju) respectively.
 
 ## Prepare the environment
@@ -52,17 +51,15 @@ for more information.
 
 ### Configure kernel parameters on the host
 
-OpenSearch requires specific kernel parameters to be set on the host and propagated to every new LXD
-container:
+OpenSearch requires specific kernel parameters to be set on the host and propagated to every new LXD container:
 
 - `vm.swappiness = 0`
 - `vm.max_map_count = 262144`
 
-The `net.ipv4.tcp_retries2` parameter is set automatically by the charm and does not need to be
-configured manually.
+The `net.ipv4.tcp_retries2` parameter is set automatically by the charm and does not need to be configured manually.
 
-See [System requirements](reference-system-requirements) for the full list of required kernel
-parameters and their purpose.
+See [System requirements](reference-system-requirements) for the full list of required kernel parameters and their
+purpose.
 
 To see the current kernel parameter values before making changes:
 
@@ -129,8 +126,8 @@ To deploy a single unit of Charmed OpenSearch for testing:
 juju deploy opensearch
 ```
 
-By default, the charm uses the `testing` profile, which is optimized for development and testing
-with lightweight workloads.
+By default, the charm uses the `testing` profile, which is optimized for development and testing with lightweight
+workloads.
 
 To deploy a multi-unit application with the `production` profile:
 
@@ -138,8 +135,8 @@ To deploy a multi-unit application with the `production` profile:
 juju deploy opensearch -n 3 --config profile=production
 ```
 
-See [How to optimize cluster performance with profiles](how-to-optimize-cluster-performance) for
-details on the available profiles.
+See [How to optimize cluster performance with profiles](how-to-optimize-cluster-performance) for details on the
+available profiles.
 
 Check the deployment status:
 
@@ -148,5 +145,5 @@ juju status
 ```
 
 You should see the `opensearch` application in a blocked state with the message
-`Missing TLS relation with this cluster`. Charmed OpenSearch requires TLS encryption. To complete
-the setup, continue with [How to manage TLS encryption](how-to-enable-tls-encryption).
+`Missing TLS relation with this cluster`. Charmed OpenSearch requires TLS encryption. To complete the setup, continue
+with [How to manage TLS encryption](how-to-enable-tls-encryption).

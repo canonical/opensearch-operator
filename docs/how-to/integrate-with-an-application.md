@@ -8,13 +8,12 @@ myst:
 
 # How to integrate with an application
 
-This guide shows how to connect applications to Charmed OpenSearch, either through a Juju charm
-integration or via the `data-integrator` charm for non-Juju applications.
+This guide shows how to connect applications to Charmed OpenSearch, either through a Juju charm integration or via the
+`data-integrator` charm for non-Juju applications.
 
 ## Integrate a Juju charm with OpenSearch
 
-If you are developing a charm that needs to connect to OpenSearch, use the `opensearch_client`
-interface.
+If you are developing a charm that needs to connect to OpenSearch, use the `opensearch_client` interface.
 
 ### Define the interface
 
@@ -78,8 +77,8 @@ juju remove-relation opensearch <application>
 
 ## Integrate a non-Juju application with OpenSearch
 
-Use the [`data-integrator`](https://charmhub.io/data-integrator) charm to provide credentials and
-connection details to applications outside the Juju ecosystem.
+Use the [`data-integrator`](https://charmhub.io/data-integrator) charm to provide credentials and connection details to
+applications outside the Juju ecosystem.
 
 Deploy it:
 
@@ -103,8 +102,8 @@ juju remove-relation data-integrator opensearch
 
 ### Retrieve the credentials
 
-Once the integration is established, retrieve the connection credentials (username, password,
-endpoints, and CA certificate) by running the `get-credentials` action:
+Once the integration is established, retrieve the connection credentials (username, password, endpoints, and CA
+certificate) by running the `get-credentials` action:
 
 ```shell
 juju run data-integrator/leader get-credentials
@@ -130,8 +129,8 @@ opensearch:
 
 </details>
 
-Use these credentials to connect your application to OpenSearch. For an example of connecting with
-`curl`, see the [Tutorial](tutorial-4-integrate-with-a-client-application).
+Use these credentials to connect your application to OpenSearch. For an example of connecting with `curl`, see the
+[Tutorial](tutorial-4-integrate-with-a-client-application).
 
 ## Next steps
 

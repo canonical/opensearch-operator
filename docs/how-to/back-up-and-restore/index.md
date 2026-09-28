@@ -8,14 +8,13 @@ myst:
 
 # How to back up and restore
 
-This guide shows how to create backups (snapshots) of a Charmed OpenSearch cluster, restore from a
-backup, and migrate data to a new cluster.
+This guide shows how to create backups (snapshots) of a Charmed OpenSearch cluster, restore from a backup, and migrate
+data to a new cluster.
 
 ## Prerequisites
 
 - A cluster with at least three nodes deployed and `active`
-- Access to S3-compatible, Azure, or Google Cloud Storage (see
-  [Configure S3](how-to-back-up-configure-s3),
+- Access to S3-compatible, Azure, or Google Cloud Storage (see [Configure S3](how-to-back-up-configure-s3),
   [Configure Azure storage](how-to-back-up-configure-azure-storage), or
   [Configure Google Cloud Storage](how-to-back-up-configure-gcs-storage))
 - Storage integration already established with OpenSearch
@@ -27,9 +26,9 @@ places OpenSearch in a `blocked` state until you remove the extra relations.
 
 ## Save cluster credentials
 
-Backups exclude the security configuration, so the source cluster's users, passwords, and role
-mappings cannot be restored. Before you run a restore or migrate to a new cluster, save the admin
-password and the CA certificates of the target cluster:
+Backups exclude the security configuration, so the source cluster's users, passwords, and role mappings cannot be
+restored. Before you run a restore or migrate to a new cluster, save the admin password and the CA certificates of the
+target cluster:
 
 ```shell
 juju run opensearch/leader get-password
@@ -69,8 +68,8 @@ The action only *initiates* the snapshot; it does not wait for it to finish. To 
 2. Run [`list-backups`](#how-to-list-backups).
 3. Repeat until that `backup-id` shows a `success` status.
 
-Track the backup by its `backup-id`, not by position in the list: other snapshots can be created
-directly through the OpenSearch API, so the newest entry is not necessarily yours.
+Track the backup by its `backup-id`, not by position in the list: other snapshots can be created directly through the
+OpenSearch API, so the newest entry is not necessarily yours.
 
 ```{caution}
 Never restore or migrate a backup that is `in_progress` or `failed`. Only a `success`
@@ -113,8 +112,8 @@ To restore from the same cluster, pass the `backup-id` from `list-backups`:
 juju run opensearch/leader restore backup-id=<backup-id>
 ```
 
-After the restore completes, `juju status` shows the OpenSearch application `active` and the cluster
-health API returns `green`.
+After the restore completes, `juju status` shows the OpenSearch application `active` and the cluster health API returns
+`green`.
 
 ```{note}
 If the restore takes longer than the Juju CLI timeout, it continues in the background.
@@ -125,8 +124,8 @@ Monitor progress with `juju status`.
 
 ## Migrate to a new cluster
 
-To migrate data from one cluster to another, configure the new cluster to use the same storage
-backend where the old cluster's backups reside, then restore:
+To migrate data from one cluster to another, configure the new cluster to use the same storage backend where the old
+cluster's backups reside, then restore:
 
 ```shell
 juju run opensearch/leader restore backup-id=<backup-id>
@@ -137,8 +136,7 @@ The `<backup-id>` must reference a backup created by the previous cluster.
 ## Next steps
 
 - [Upgrade, rollback, and recover](how-to-minor-upgrade) — upgrade the cluster after restoring.
-- [Manage persistent storage](how-to-persistent-storage) — reuse disks when no viable snapshot
-  exists.
+- [Manage persistent storage](how-to-persistent-storage) — reuse disks when no viable snapshot exists.
 
 ```{toctree}
 ---

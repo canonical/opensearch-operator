@@ -8,8 +8,7 @@ myst:
 
 # How to optimize cluster performance with profiles
 
-This guide shows how to configure performance profiles for Charmed OpenSearch to match your workload
-requirements.
+This guide shows how to configure performance profiles for Charmed OpenSearch to match your workload requirements.
 
 Charmed OpenSearch supports two profiles:
 
@@ -56,9 +55,8 @@ The profile can be changed after deployment:
 juju config opensearch profile=<profile>
 ```
 
-Where `<profile>` is `testing` or `production`. The charm automatically reconfigures the cluster to
-match the new profile requirements. Once complete, `juju status` shows the OpenSearch application
-`active`.
+Where `<profile>` is `testing` or `production`. The charm automatically reconfigures the cluster to match the new
+profile requirements. Once complete, `juju status` shows the OpenSearch application `active`.
 
 ## Profile comparison
 
@@ -75,5 +73,4 @@ For a detailed explanation of what profiles are and why they exist, see
 ## Next steps
 
 - [Standard deployment](how-to-deploy-standard) — deploy a cluster with a specific profile.
-- [Scale a cluster horizontally](how-to-scale-horizontally) — adjust cluster size after changing the
-  profile.
+- [Scale a cluster horizontally](how-to-scale-horizontally) — adjust cluster size after changing the profile.

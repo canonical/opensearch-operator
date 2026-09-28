@@ -8,8 +8,8 @@ myst:
 
 # How to deploy
 
-These guides cover deploying Charmed OpenSearch in different environments. For a step-by-step
-introduction, see the [Tutorial](tutorial-index).
+These guides cover deploying Charmed OpenSearch in different environments. For a step-by-step introduction, see the
+[Tutorial](tutorial-index).
 
 ```{toctree}
 ---

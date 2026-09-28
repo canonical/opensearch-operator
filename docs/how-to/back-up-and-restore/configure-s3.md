@@ -8,8 +8,8 @@ myst:
 
 # How to configure S3 storage
 
-This guide shows how to configure the [S3 Integrator charm](https://charmhub.io/s3-integrator) for
-OpenSearch backups, using either AWS S3 or Ceph RadosGW.
+This guide shows how to configure the [S3 Integrator charm](https://charmhub.io/s3-integrator) for OpenSearch backups,
+using either AWS S3 or Ceph RadosGW.
 
 ## Configure S3 for AWS
 
@@ -36,8 +36,8 @@ of creating the bucket. For older buckets, `s3.amazonaws.com` can be used.
 See [this AWS knowledge centre article](https://repost.aws/knowledge-center/s3-http-307-response).
 ```
 
-See the [s3-integrator configuration reference](https://charmhub.io/s3-integrator/configuration) for
-all available options.
+See the [s3-integrator configuration reference](https://charmhub.io/s3-integrator/configuration) for all available
+options.
 
 ## Configure S3 for Ceph RadosGW
 
@@ -76,12 +76,10 @@ Connect the s3-integrator to OpenSearch:
 juju integrate s3-integrator opensearch
 ```
 
-Once the integration is established, `juju status --relations` shows the `s3-integrator` application
-`active` with an `s3-credentials` relation to `opensearch`. The OpenSearch application remains
-`active`.
+Once the integration is established, `juju status --relations` shows the `s3-integrator` application `active` with an
+`s3-credentials` relation to `opensearch`. The OpenSearch application remains `active`.
 
 ## Next steps
 
-- [Create and restore backups](how-to-create-a-backup) — create a backup using the configured S3
-  storage.
+- [Create and restore backups](how-to-create-a-backup) — create a backup using the configured S3 storage.
 - [Configure Azure storage](how-to-back-up-configure-azure-storage) — alternative storage backend.

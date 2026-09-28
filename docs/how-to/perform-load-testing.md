@@ -9,8 +9,8 @@ myst:
 # How to perform load testing
 
 This guide shows how to run load tests against a Charmed OpenSearch deployment using
-[opensearch-benchmark](https://github.com/opensearch-project/opensearch-benchmark). The example uses
-AWS, but the approach applies to any [Juju-supported cloud](https://juju.is/docs/juju/cloud).
+[opensearch-benchmark](https://github.com/opensearch-project/opensearch-benchmark). The example uses AWS, but the
+approach applies to any [Juju-supported cloud](https://juju.is/docs/juju/cloud).
 
 ## Prerequisites
 
@@ -18,8 +18,7 @@ AWS, but the approach applies to any [Juju-supported cloud](https://juju.is/docs
 - [`jq`](https://jqlang.github.io/jq/)
 - A VPC on AWS (or equivalent in your cloud)
 - AWS `ACCESS_KEY` and `SECRET_KEY`
-- Optional, for the COS monitoring sections: a Kubernetes cluster (e.g. MicroK8s) with `kubectl`
-  configured
+- Optional, for the COS monitoring sections: a Kubernetes cluster (e.g. MicroK8s) with `kubectl` configured
 
 ## Set up the environment
 
@@ -132,8 +131,8 @@ juju integrate grafana-agent prometheus-receive-remote-write
 
 ## Run the benchmark
 
-Retrieve the admin password and save the CA certificate chain so that the benchmark client can
-verify the TLS certificates OpenSearch serves:
+Retrieve the admin password and save the CA certificate chain so that the benchmark client can verify the TLS
+certificates OpenSearch serves:
 
 ```shell
 juju run opensearch/leader get-password
@@ -161,15 +160,14 @@ opensearch-benchmark run \
     --client-options basic_auth_user:admin,basic_auth_password:$OPENSEARCH_PWD,verify_certs:false
 ```
 
-See the [opensearch-benchmark documentation](https://opensearch.org/docs/2.19/benchmark/) for
-additional workloads and options.
+See the [opensearch-benchmark documentation](https://opensearch.org/docs/2.19/benchmark/) for additional workloads and
+options.
 
-When the benchmark completes, it prints a summary report with throughput, latency, and error
-metrics. If COS is integrated, the Grafana **Charmed OpenSearch** dashboard shows the load spike
-during the test.
+When the benchmark completes, it prints a summary report with throughput, latency, and error metrics. If COS is
+integrated, the Grafana **Charmed OpenSearch** dashboard shows the load spike during the test.
 
 ## Next steps
 
-- [Optimize cluster performance with profiles](how-to-optimize-cluster-performance) — tune resource
-  allocation based on benchmark results.
+- [Optimize cluster performance with profiles](how-to-optimize-cluster-performance) — tune resource allocation based on
+  benchmark results.
 - [Enable monitoring (COS)](how-to-monitoring) — set up ongoing observability.
