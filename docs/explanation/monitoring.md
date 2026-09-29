@@ -8,6 +8,14 @@ Grafana for visualization, Loki for log aggregation, and Alertmanager for alerti
 OpenSearch cluster performance, resource utilization (CPU, memory, disk I/O), cluster statistics (node health, shard
 allocation, indexing rates), and operational health.
 
+The way telemetry reaches COS depends on the charm variant:
+
+- On **VMs**, the `opensearch` machine charm exposes a `cos-agent` endpoint, and a machine `grafana-agent` charm
+  collects the telemetry and forwards it to the COS applications (which typically run in a separate Kubernetes model).
+- On **Kubernetes**, the `opensearch-k8s` charm exposes native COS endpoints (`metrics-endpoint`, `grafana-dashboard`,
+  and `logging`) and integrates directly with the Prometheus, Grafana, and Loki applications — no `grafana-agent` is
+  needed.
+
 ```{note}
 See: [How to enable monitoring](how-to-monitoring) via COS and Grafana.
 ```
@@ -40,16 +48,23 @@ The meaning of the metrics collected can be found in the upstream documentation:
 The charm deploys a pre-configured set of Prometheus alert rules by default.
 
 To ensure you are referencing the latest default alert rules, check the source file of alert definitions in the
-repository’s
-[prometheus_alerts.yaml](https://github.com/canonical/opensearch-operator/blob/2/edge/machine/src/alert_rules/prometheus/prometheus_alerts.yaml)
-file.
+repository:
+
+- VM:
+  [machine prometheus_alerts.yaml](https://github.com/canonical/opensearch-operator/blob/2/edge/machine/src/alert_rules/prometheus/prometheus_alerts.yaml)
+- K8s:
+  [kubernetes prometheus_alerts.yaml](https://github.com/canonical/opensearch-operator/blob/2/edge/kubernetes/src/alert_rules/prometheus/prometheus_alerts.yaml)
+
+The K8s charm additionally ships a set of Loki log-based alert rules, see
+[opensearch.rules](https://github.com/canonical/opensearch-operator/blob/2/edge/kubernetes/src/loki_alert_rules/opensearch.rules).
 
 ## Logs
 
 All the logs from the OpenSearch payload are available in the Grafana GUI at `Home > Explore`
 
-To get OpenSearch logs, go to the `Label filters` field and set to `juju_application = opensearch`, select one
-operation, e.g. `Line contains` and run the query.
+To get OpenSearch logs, go to the `Label filters` field and set `juju_application` to the name of your OpenSearch
+application (for example, `opensearch` on VMs or `opensearch-k8s` on Kubernetes), select one operation, e.g.
+`Line contains` and run the query.
 
 ## Grafana dashboard
 
@@ -68,5 +83,8 @@ You can filter the displayed data using the selectors at the top of the dashboar
 ![Charmed OpenSearch Grafana dashboard — overview panel](../how-to/img/dash1.png)
 
 ![Charmed OpenSearch Grafana dashboard — node detail panel](../how-to/img/dash2.png)
+
+The topology below shows the VM integration path, where a machine `grafana-agent` collects the telemetry and forwards it
+to the COS applications. On Kubernetes, `opensearch-k8s` integrates directly with the COS applications instead.
 
 ![COS integration topology showing OpenSearch, Grafana Agent, and COS components](../how-to/img/cos-1.png)
