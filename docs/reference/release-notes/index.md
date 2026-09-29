@@ -18,6 +18,7 @@ Stable releases are published in the `2/stable` channel of CharmHub, where `2` i
 
 * [Revision 168](reference-release-notes-revision-168) - September 2024
 * [Revision 315](reference-release-notes-revision-315) - December 2025
+* [Revision 366](reference-release-notes-revision-366) - September 2026
 
 ## Release policy and schedule
 
@@ -34,4 +35,5 @@ as they become available.
 
 Revision 168 <revision-168>
 Revision 315 <revision-315>
+Revision 366 <revision-366>
 ```
