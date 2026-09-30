@@ -288,24 +288,32 @@ mechanism (for example, a node bootstrap script or a machine image) so the setti
 survive node replacement.
 ```
 
-<!--**Configure `net.ipv4.tcp_retries2`**
+**Configure `net.ipv4.tcp_retries2` (optional)**
 
-Unlike the parameters above, `net.ipv4.tcp_retries2` is scoped to the **pod's network
-namespace** rather than the host, so setting it on the node has no effect on the
-workload.
-
-To configure it, deploy the
+This setting belongs to each pod's network namespace, so the node settings above do not
+change it. The Kubernetes-only
 [`data-platform-k8s-mutator`](https://github.com/canonical/data-platform-k8s-mutator)
-charm alongside OpenSearch in the same Kubernetes cluster. The mutator applies the
-required sysctl value to the OpenSearch workload pods.
+is a containerized admission webhook, not a Juju charm. It sets
+`net.ipv4.tcp_retries2=5` on newly created OpenSearch workloads.
 
-```{note}
-This step is optional but recommended for production deployments. Without it, OpenSearch
-nodes take longer to detect and recover from network partitions.
-``` -->
+For this optional tuning, [allow the unsafe sysctl](https://github.com/canonical/data-platform-k8s-mutator#prerequisites)
+on every node that may run OpenSearch pods (`--allowed-unsafe-sysctls=net.ipv4.tcp_retries2`)
+and restart its kubelet. Ensure the cluster supports admission webhooks. Follow the
+[mutator quick start](https://github.com/canonical/data-platform-k8s-mutator#quick-start)
+to build the rock with Rockcraft and publish its image to a registry reachable by the
+cluster. Then, from the mutator repository root, run **before deploying OpenSearch**:
 
-<!-- TODO: Add the concrete `juju deploy data-platform-k8s-mutator` invocation and any
-required configuration options once the charm's interface is finalised. -->
+```shell
+uv run python -m scripts.bootstrap_webhook --namespace webhooks \
+  --image <cluster-accessible-image> --target-container-names opensearch \
+  --target-namespaces <model-kubernetes-namespace>
+```
+
+Find the model's Kubernetes namespace with `kubectl get namespaces`; `webhooks` is the
+mutator's own namespace. The script generates and applies the Kubernetes manifests.
+Without the mutator, OpenSearch still deploys, but its pods retain their default
+`tcp_retries2` value and may take longer to detect and recover from network partitions.
+We recommend this tuning for production deployments.
 ````
 
 `````
