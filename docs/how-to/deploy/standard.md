@@ -100,141 +100,6 @@ or pass an explicit storage class at [deploy time](#deploy-opensearch).
 
 `````
 
-## Kernel parameter configuration
-
-OpenSearch relies on a number of kernel parameters that are not set to suitable values by
-default. How and where you apply them depends on the substrate.
-
-````{note}
-The following instructions modify kernel parameters. You can later reset them either
-manually or by rebooting.
-
-To take note of the current values before changing them:
-
-```shell
-sudo sysctl -a | grep -E 'swappiness|max_map_count|file-max'
-```
-````
-
-`````{tab-set}
-:sync-group: substrate
-
-````{tab-item} VM
-:sync: vm
-
-Before bootstrapping Juju controllers, the sysctl settings required by OpenSearch must be
-enforced. This entails modifying some kernel parameters on the host machine, and creating
-a configuration file to apply the same configuration in any new container that gets
-deployed.
-
-The `net.ipv4.tcp_retries2` parameter is set automatically by the charm and does not
-need to be configured manually.
-
-**Configure sysctl on the host machine**
-
-On the **host** machine, run the following command to add the settings to a config file:
-
-```shell
-sudo tee /etc/sysctl.d/opensearch.conf <<EOF
-vm.swappiness = 0
-vm.max_map_count = 262144
-fs.file-max = 1048576
-EOF
-```
-
-Then, apply the new settings:
-
-```shell
-sudo sysctl -p /etc/sysctl.d/opensearch.conf
-```
-
-**Configure sysctl for new containers**
-
-Configure `cloud-init` to set sysctl on each new container that gets deployed.
-
-First, add the configurations to a `cloud-init` user data file:
-
-```shell
-cat <<EOF > cloudinit-userdata.yaml
-cloudinit-userdata: |
-  postruncmd:
-    - [ 'echo', 'vm.max_map_count=262144', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'vm.swappiness=0', '>>', '/etc/sysctl.conf' ]
-    - [ 'echo', 'fs.file-max=1048576', '>>', '/etc/sysctl.conf' ]
-    - [ 'sysctl', '-p' ]
-EOF
-```
-
-There are two ways to apply this `cloud-init` configuration.
-
-To set the `cloud-init` script above as **default for all models**, use the
-[`model-defaults`](https://canonical.com/juju/docs/juju-cli/3.6/reference/juju-cli/list-of-juju-cli-commands/model-defaults/) command:
-
-```shell
-juju model-defaults --file=./cloudinit-userdata.yaml
-```
-
-To set the `cloud-init` script **for a particular model**, use the
-[`model-config`](https://canonical.com/juju/docs/juju-cli/3.6/reference/juju-cli/list-of-juju-cli-commands/model-config/) command:
-
-```shell
-juju model-config --file=./cloudinit-userdata.yaml --model <model-name>
-```
-````
-
-````{tab-item} K8s
-:sync: k8s
-
-On Kubernetes, kernel parameters are applied per **worker node**, not per container:
-`vm.max_map_count`, `vm.swappiness`, and `fs.file-max` are node-wide settings that the
-workload pods inherit from the host they are scheduled on.
-
-**Configure sysctl on each Kubernetes node**
-
-On **each node** that may run OpenSearch pods, run the following command to add the settings to a config file:
-
-```shell
-sudo tee /etc/sysctl.d/opensearch.conf <<EOF
-vm.swappiness = 0
-vm.max_map_count = 262144
-fs.file-max = 1048576
-EOF
-```
-
-Then, apply the new settings:
-
-```shell
-sudo sysctl -p /etc/sysctl.d/opensearch.conf
-```
-
-```{note}
-If your nodes are managed by a cloud provider, prefer the provider's node configuration
-mechanism (for example, a node bootstrap script or a machine image) so the settings
-survive node replacement.
-```
-
-<!--**Configure `net.ipv4.tcp_retries2`**
-
-Unlike the parameters above, `net.ipv4.tcp_retries2` is scoped to the **pod's network
-namespace** rather than the host, so setting it on the node has no effect on the
-workload.
-
-To configure it, deploy the
-[`data-platform-k8s-mutator`](https://github.com/canonical/data-platform-k8s-mutator)
-charm alongside OpenSearch in the same Kubernetes cluster. The mutator applies the
-required sysctl value to the OpenSearch workload pods.
-
-```{note}
-This step is optional but recommended for production deployments. Without it, OpenSearch
-nodes take longer to detect and recover from network partitions.
-``` -->
-
-<!-- TODO: Add the concrete `juju deploy data-platform-k8s-mutator` invocation and any
-required configuration options once the charm's interface is finalised. -->
-````
-
-`````
-
 ## Bootstrap a Juju controller
 
 Make sure your cloud is registered with Juju:
@@ -306,6 +171,141 @@ The type must **not** be `caas`.
 :sync: k8s
 
 The type must be `caas`.
+````
+
+`````
+
+## Kernel parameter configuration
+
+OpenSearch relies on a number of kernel parameters that are not set to suitable values by
+default. Configure them before deploying OpenSearch. How and where you apply them depends
+on the substrate.
+
+````{note}
+To take note of the current values before changing them:
+
+```shell
+sudo sysctl -a | grep -E 'swappiness|max_map_count|file-max'
+```
+
+The settings below are saved in `/etc/sysctl.d/opensearch.conf` and persist across
+reboots. To restore the previous values, remove or update that file and reset the
+parameters manually, or reboot after removing the file.
+````
+
+`````{tab-set}
+:sync-group: substrate
+
+````{tab-item} VM
+:sync: vm
+
+Configure the required kernel settings on the host machine, then configure the workload
+model to apply them to new containers. You can do this after bootstrapping a controller,
+but before deploying OpenSearch.
+
+The `net.ipv4.tcp_retries2` parameter is set automatically by the charm and does not
+need to be configured manually.
+
+**Configure sysctl on the host machine**
+
+On the **host** machine, run the following command to add the settings to a config file:
+
+```shell
+sudo tee /etc/sysctl.d/opensearch.conf <<EOF
+vm.swappiness = 0
+vm.max_map_count = 262144
+fs.file-max = 1048576
+EOF
+```
+
+Then, apply the new settings:
+
+```shell
+sudo sysctl -p /etc/sysctl.d/opensearch.conf
+```
+
+**Configure sysctl for new containers**
+
+Create a `cloud-init` user data file to set sysctl on new containers:
+
+```shell
+cat <<EOF > cloudinit-userdata.yaml
+cloudinit-userdata: |
+  postruncmd:
+    - echo 'vm.max_map_count=262144' >> /etc/sysctl.conf
+    - echo 'vm.swappiness=0' >> /etc/sysctl.conf
+    - echo 'fs.file-max=1048576' >> /etc/sysctl.conf
+    - sysctl -p
+EOF
+```
+
+Apply it to the **existing model** before deploying OpenSearch, so the settings are
+included when Juju provisions its machines. Changing model configuration does not
+retroactively run `cloud-init` on existing machines:
+
+```shell
+juju model-config --file=./cloudinit-userdata.yaml --model <model-name>
+```
+
+For models you create **in the future**, you can instead set this as a default on the
+selected controller using
+[`juju model-defaults`](https://canonical.com/juju/docs/juju-cli/3.6/reference/juju-cli/list-of-juju-cli-commands/model-defaults/)
+*before* creating those models. Defaults do not change the model created above:
+
+```shell
+juju model-defaults --file=./cloudinit-userdata.yaml
+```
+````
+
+````{tab-item} K8s
+:sync: k8s
+
+On Kubernetes, kernel parameters are applied per **worker node**, not per container:
+`vm.max_map_count`, `vm.swappiness`, and `fs.file-max` are node-wide settings that the
+workload pods inherit from the host they are scheduled on.
+
+**Configure sysctl on each Kubernetes node**
+
+On **each node** that may run OpenSearch pods, run the following command to add the settings to a config file:
+
+```shell
+sudo tee /etc/sysctl.d/opensearch.conf <<EOF
+vm.swappiness = 0
+vm.max_map_count = 262144
+fs.file-max = 1048576
+EOF
+```
+
+Then, apply the new settings:
+
+```shell
+sudo sysctl -p /etc/sysctl.d/opensearch.conf
+```
+
+```{note}
+If your nodes are managed by a cloud provider, prefer the provider's node configuration
+mechanism (for example, a node bootstrap script or a machine image) so the settings
+survive node replacement.
+```
+
+<!--**Configure `net.ipv4.tcp_retries2`**
+
+Unlike the parameters above, `net.ipv4.tcp_retries2` is scoped to the **pod's network
+namespace** rather than the host, so setting it on the node has no effect on the
+workload.
+
+To configure it, deploy the
+[`data-platform-k8s-mutator`](https://github.com/canonical/data-platform-k8s-mutator)
+charm alongside OpenSearch in the same Kubernetes cluster. The mutator applies the
+required sysctl value to the OpenSearch workload pods.
+
+```{note}
+This step is optional but recommended for production deployments. Without it, OpenSearch
+nodes take longer to detect and recover from network partitions.
+``` -->
+
+<!-- TODO: Add the concrete `juju deploy data-platform-k8s-mutator` invocation and any
+required configuration options once the charm's interface is finalised. -->
 ````
 
 `````
