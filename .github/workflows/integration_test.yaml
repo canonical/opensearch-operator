@@ -50,7 +50,7 @@ jobs:
               _, runner, task, variant = job.split(":")
               # Example: "test_charm.py"
               task = task.removeprefix("tests/spread/")
-              if runner.endswith("-arm"):
+              if runner.endswith("-arm") or "arm64" in runner:
                   architecture = "arm64"
               else:
                   architecture = "amd64"
