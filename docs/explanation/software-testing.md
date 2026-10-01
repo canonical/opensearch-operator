@@ -40,9 +40,8 @@ The integration test coverage is rather rich in the OpenSearch charm. Most
 of it lives in the
 [`opensearch-single-kernel-library`](https://github.com/canonical/opensearch-single-kernel-library)
 repository (`tox run -e integration` there); the charm repository itself
-carries a minimal smoke-level suite — see the
-[Contributing](contributing-guide)
-guide for how to run it.
+carries a minimal smoke-level suite that runs in
+[CI](https://github.com/canonical/opensearch-operator/blob/2/edge/.github/workflows/integration_test.yaml).
 
 For high availability (HA) related tests, each test serves as an integration as well as a smoke test
 with continuous writes routine being perpetually ran in parallel of whatever operation the test is involved in.

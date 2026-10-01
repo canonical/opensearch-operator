@@ -61,7 +61,7 @@ cover the building and testing for both source code and documentation.
 
 To build the charm locally, you will need to install
 [Charmcraft](https://snapcraft.io/charmcraft) (or [charmcraftcache](https://github.com/canonical/charmcraftcache)),
-as well as [`tox`](https://tox.wiki/) and [Poetry](https://python-poetry.org/).
+as well as [`tox`](https://tox.wiki/en/stable/) and [Poetry](https://python-poetry.org/).
 The easiest way to install the last two is with [pipx](https://pipx.pypa.io/stable/):
 
 ```bash
@@ -70,7 +70,7 @@ pipx install poetry
 pipx install charmcraftcache
 ```
 
-To run the charm locally with Juju, it is recommended to use
+To run the machine charm locally with Juju, it is recommended to use
 [LXD](https://linuxcontainers.org/lxd/introduction/) as your virtual machine
 manager. Instructions for running Juju on LXD can be found
 [here](https://documentation.ubuntu.com/juju/3.6/reference/cloud/list-of-supported-clouds/lxd/).
@@ -95,10 +95,13 @@ inside the corresponding directory.
 
 ### Host and model prerequisites
 
-OpenSearch has a set of
+For the machine charm on LXD, OpenSearch has a set of
 [system requirements](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/index/)
 to function correctly. Some of those settings must be set using
 `cloudinit-userdata` on the model, while others must be set on the host machine.
+For the Kubernetes charm, use a Kubernetes model and follow the
+[Kubernetes setup guidance](https://github.com/canonical/opensearch-operator/blob/2/edge/README.md#kubernetes-charm-opensearch-k8s)
+instead of the LXD steps below.
 
 On the host machine, create a sysctl configuration file and apply it:
 
@@ -160,24 +163,32 @@ cd opensearch-operator/machine   # or: cd opensearch-operator/kubernetes
 charmcraftcache pack
 ```
 
-You can then deploy the charm with a TLS relation:
+In a model for the chosen substrate, deploy the Ubuntu 24.04 artifact with a
+TLS relation (packing also produces a 22.04 artifact):
 
 ```bash
 # Deploy the self-signed-certificates operator
-juju deploy self-signed-certificates --channel=latest/stable --show-log --verbose
+juju deploy self-signed-certificates --channel=1/stable --show-log --verbose
 
 # Generate a CA certificate
-juju config \
-    self-signed-certificates \
-    ca-common-name="CN_CA" \
-    certificate-validity=365 \
-    root-ca-validity=365
+juju config self-signed-certificates ca-common-name="CN_CA"
+```
 
-# Deploy the opensearch charm
-juju deploy -n 1 ./opensearch_ubuntu-24.04-amd64.charm --series noble --show-log --verbose
+From `machine/`, deploy and relate the machine charm:
 
-# Relate the opensearch charm with the self-signed-certificates operator
+```bash
+juju deploy -n 1 ./opensearch_ubuntu@24.04-amd64.charm --show-log --verbose
 juju integrate self-signed-certificates opensearch
+```
+
+Alternatively, from `kubernetes/` in a Kubernetes model, supply the workload
+image declared in `metadata.yaml` when deploying the locally packed charm:
+
+```bash
+juju deploy -n 1 ./opensearch-k8s_ubuntu@24.04-amd64.charm \
+  --resource opensearch-image="$(awk '/upstream-source:/ {print $2}' metadata.yaml)" \
+  --show-log --verbose
+juju integrate self-signed-certificates opensearch-k8s
 ```
 
 ```{note}
@@ -189,46 +200,30 @@ variety of configurations. Read more on the self-signed-certificates Operator
 
 ### Develop and test
 
-You can create an environment for development with Poetry:
+Return to the repository root (`cd ..` after building a charm), then create
+a development environment and check your changes:
 
 ```bash
 poetry install
+tox run -e lint          # check code style
+tox run -e format        # apply formatting fixes, if needed
 ```
 
-Run the test suites with:
-
-```bash
-tox run -e format        # update your code according to linting rules
-tox run -e lint          # code style
-tox run -e integration   # integration tests (minimal, smoke-level)
-tox                      # runs 'format' and 'lint' environments
-```
-
-```{note}
-The charm logic lives in the single-kernel libraries, so this repository
-contains only minimal integration tests. The full unit and integration test
-suites are in the library repositories:
+For charm-logic changes, clone the
 [`opensearch-single-kernel-library`](https://github.com/canonical/opensearch-single-kernel-library)
-for the OpenSearch charms and
-[`opensearch-dashboards-single-kernel-library`](https://github.com/canonical/opensearch-dashboards-single-kernel-library)
-for the Dashboards charms. Clone the corresponding library repository and run
-`tox run -e unit` and `tox run -e integration` there.
-```
-
-Integration tests can also be run with [Charmcraft](https://snapcraft.io/charmcraft)
-and [Spread](https://github.com/canonical/spread) on an LXD VM backend:
-
-```bash
-charmcraft test lxd-vm:
-```
+and run `tox run -e unit` and `tox run -e integration` **there**, not in this
+repository. See [Software testing for charms](explanation-software-testing)
+for details. This repository's smoke-level integration tests run in
+[CI](https://github.com/canonical/opensearch-operator/blob/2/edge/.github/workflows/integration_test.yaml).
 
 The tutorial end-to-end test suite (requires
 [Multipass](https://documentation.ubuntu.com/multipass/) and
-[Spread](https://github.com/canonical/spread)) can be run with:
+[Spread](https://github.com/canonical/spread)) can be run from the repository
+root with:
 
 ```bash
-tox -e tutorial           # extract scripts + run Spread tests
-tox -e tutorial-extract   # generate test scripts only
+tox -e tutorial-extract   # check tutorial commands without starting a VM
+tox -e tutorial           # extract scripts + run the end-to-end tests in a VM
 ```
 
 See [tests/tutorial/](https://github.com/canonical/opensearch-operator/tree/2/edge/tests/tutorial)

@@ -163,7 +163,7 @@ Security issues in the Charmed OpenSearch Operator can be reported through [Laun
 
 The documentation for Charmed OpenSearch is available at [canonical.com/data/opensearch/docs](https://canonical.com/data/opensearch/docs/).
 
-See the [contributor's guide](https://canonical.com/data/opensearch/docs/) in the documentation for how to report issues, build and test the charm, and contribute code and documentation.
+See the [contributor's guide](https://canonical.com/data/opensearch/docs/2/contributing/) in the documentation for how to report issues, build and test the charm, and contribute code and documentation.
 
 ## License
 The Charmed OpenSearch Operator is free software, distributed under the Apache Software License, version 2.0. See [LICENSE](https://github.com/canonical/opensearch-operator/blob/2/edge/LICENSE) for more information.

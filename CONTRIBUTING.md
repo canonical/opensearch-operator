@@ -5,7 +5,7 @@ Thank you for your interest in contributing to Charmed OpenSearch!
 The full contributor guide — covering how to get in touch with the team, how
 to report issues and security issues, how to build and test the charm, and how
 to contribute to the documentation — is published as part of the
-[Charmed OpenSearch documentation](https://canonical.com/data/opensearch/docs/).
+[Charmed OpenSearch documentation](https://canonical.com/data/opensearch/docs/2/contributing/).
 
 A few quick pointers to get you started:
 
@@ -31,6 +31,7 @@ A few quick pointers to get you started:
   are subject to the
   [Ubuntu Code of Conduct](https://ubuntu.com/community/code-of-conduct).
 
-See the [Contribute page](https://canonical.com/data/opensearch/docs/) in the
-documentation for build instructions, test commands, and the documentation
-contribution workflow.
+See the
+[Contribute page](https://canonical.com/data/opensearch/docs/2/contributing/)
+in the documentation for build instructions, test commands, and the
+documentation contribution workflow.
