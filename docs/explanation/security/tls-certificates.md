@@ -96,7 +96,7 @@ Distributing out of order can cause cluster communication failures.
 ```
 
 Once all units have the new CA, OpenSearch reloads certificates. A rolling restart is
-only required if the issuer, subject, or subject alternative names (SANs) of the new
+only required if the issuer, subject, or subject alternative names of the new
 certificate differ from the previous one. If they are the same, certificates can be
 reloaded on the fly without a restart.
 
