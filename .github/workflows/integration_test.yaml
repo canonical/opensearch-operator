@@ -50,7 +50,7 @@ jobs:
               _, runner, task, variant = job.split(":")
               # Example: "test_charm.py"
               task = task.removeprefix("tests/spread/")
-              if runner.endswith("-arm"):
+              if runner.endswith("-arm") or "arm64" in runner:
                   architecture = "arm64"
               else:
                   architecture = "amd64"
@@ -96,9 +96,67 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Disk usage
+      - name: (GitHub hosted) Free up disk space
+        timeout-minutes: 3
+        if: ${{ ! contains(matrix.job.runner, 'self-hosted') }}
+        run: |
+          printf '\nDisk usage before cleanup\n'
+          df --human-readable
+          # Based on https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+          rm -r /opt/hostedtoolcache/
+          printf '\nDisk usage after cleanup\n'
+          df --human-readable
+      - name: (IS hosted) Disk usage
         timeout-minutes: 1
+        if: ${{ contains(matrix.job.runner, 'self-hosted') }}
         run: df --human-readable
+      - name: (GitHub hosted) Purge Docker
+        # GitHub-hosted Azure runners ship Docker pre-installed and active.
+        # Canonical K8s requires "A system with no previous installations
+        # of containerd/docker as this may cause conflicts"
+        # (see https://documentation.ubuntu.com/canonical-kubernetes
+        # /release-1.32/snap/tutorial/getting-started/).
+        # Completely purging Docker requires also
+        # deleting the Docker-specific `iptables-nft` rulesets
+        # created on installation.
+        # Skipped on self-hosted runners: apt/dpkg lock contention there
+        # (from cloud-init/apt-daily/unattended-upgrades on the freshly
+        # provisioned VM) makes this step hang until timeout, and
+        # self-hosted runner images don't ship Docker pre-installed/active
+        # the way GitHub-hosted ones do, so purging isn't needed there.
+        if: ${{ ! contains(matrix.job.runner, 'self-hosted') }}
+        timeout-minutes: 5
+        run: |
+          sudo apt-get remove --purge -y docker-ce docker-ce-cli containerd.io docker.io containerd 2>/dev/null || true
+          sudo nft flush ruleset
+          sudo ip link delete docker0 2>/dev/null || true
+      - name: (IS hosted) Purge Docker
+        if: ${{ contains(matrix.job.runner, 'self-hosted') }}
+        timeout-minutes: 5
+        run: |
+          sudo apt-get purge -y docker.io containerd 2>/dev/null || true
+          sudo apt-get autoremove -y 2>/dev/null || true
+          for chain in DOCKER DOCKER-ISOLATION-STAGE-1 DOCKER-ISOLATION-STAGE-2 DOCKER-USER DOCKER-FORWARD; do
+            sudo iptables -D FORWARD -j $chain 2>/dev/null || true
+            sudo iptables -F $chain 2>/dev/null || true
+            sudo iptables -X $chain 2>/dev/null || true
+            sudo iptables -t nat -F $chain 2>/dev/null || true
+            sudo iptables -t nat -X $chain 2>/dev/null || true
+          done
+          sudo iptables -P FORWARD ACCEPT
+      - name: Remove podman CNI bridge config
+        # Ubuntu 24.04 runners ship podman with a CNI bridge config
+        # (/etc/cni/net.d/87-podman-bridge.conflist) that sorts
+        # lexicographically before Cilium's config (05-cilium.conflist).
+        # When that file is present, containerd picks the podman bridge
+        # as the active CNI before Cilium is ready, bypassing the
+        # node.kubernetes.io/network-unavailable taint and scheduling
+        # pods onto the 10.88.0.0/16 bridge instead of the Cilium pod
+        # CIDR. Removing the file ensures Cilium is the only CNI plugin
+        # from the start.
+        timeout-minutes: 1
+        run: |
+          sudo rm -f /etc/cni/net.d/87-podman-bridge.conflist
       - name: Checkout
         timeout-minutes: 3
         uses: actions/checkout@v4
@@ -118,11 +176,6 @@ jobs:
         with:
           pattern: ${{ inputs.artifact-prefix }}-*
           merge-multiple: true
-      # TODO Remove pinned image when problem is resolved on jammy
-      - name: Pin lxc image for jammy
-        run: |
-          sudo lxc image copy ubuntu:568f69ff1166 local:
-          sudo lxc image alias create "juju/ubuntu@22.04/amd64" 568f69ff1166
       - name: Run spread job
         timeout-minutes: 180
         id: spread
