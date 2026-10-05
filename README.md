@@ -165,5 +165,22 @@ The documentation for Charmed OpenSearch is available at [canonical.com/data/ope
 
 See the [contributor's guide](https://canonical.com/data/opensearch/docs/2/contributing/) in the documentation for how to report issues, build and test the charm, and contribute code and documentation.
 
+### Format documentation Markdown
+
+The documentation sources in `docs/` are formatted with [mdformat](https://mdformat.readthedocs.io/) (with the MyST plugin). The formatter runs in its own virtual environment, installed from a hash-pinned lock file, so no global packages are needed.
+
+```shell
+cd docs
+make mdformat        # format all tracked documentation Markdown files in place
+make mdformat-check  # report unformatted files without changing them
+```
+
+To format automatically on each commit, install the pre-commit hook from the repository root:
+
+```shell
+python3 -m pip install pre-commit
+pre-commit install
+```
+
 ## License
 The Charmed OpenSearch Operator is free software, distributed under the Apache Software License, version 2.0. See [LICENSE](https://github.com/canonical/opensearch-operator/blob/2/edge/LICENSE) for more information.
