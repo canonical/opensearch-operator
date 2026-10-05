@@ -9,29 +9,33 @@ This module requires a `juju` Kubernetes model to be available. Refer to the [us
 
 | Name | Version |
 | ---- | ------- |
-| terraform | >= 1.6 |
-| juju | ~> 2.0 |
+| terraform | >= 1.11 |
+| juju | ~> 2.2 |
 
 ## Providers
 
 | Name | Version |
 | ---- | ------- |
-| juju | ~> 2.0 |
+| juju | ~> 2.2 |
 | terraform | n/a |
 
 ## Inputs
 
 | Name | Description | Default | Required |
 | ---- | ----------- | ------- | :------: |
+| azure_storage_secret_key | Azure Storage account key for the backup integrator. | `null` | no |
 | backups-integrator | Configuration for the optional backup integrator. | `null` | no |
 | certificates_integration | External TLS endpoint or offer. | `null` | no |
 | data-integrator | Configuration for the optional data-integrator. | `null` | no |
+| gcs_secret_key | GCS service-account JSON key for the backup integrator. | `null` | no |
 | grafana_dashboard_integration | Optional COS Grafana dashboard endpoint or offer. | `null` | no |
 | ingress_integration | External ingress endpoint or offer for OpenSearch Dashboards, used instead of the bundled traefik-k8s. | `null` | no |
 | logging_integration | Optional COS logging endpoint or offer. | `null` | no |
 | metrics_endpoint_integration | Optional COS metrics endpoint or offer. | `null` | no |
 | opensearch | OpenSearch app definition. | n/a | yes |
 | opensearch-dashboards | Optional OpenSearch Dashboards app definition. | `null` | no |
+| s3_access_key | S3 access key for the backup integrator. | `null` | no |
+| s3_secret_key | S3 secret key for the backup integrator. | `null` | no |
 | self-signed-certificates | Configuration for the self-signed-certificates app. | `{}` | no |
 | traefik-k8s | Configuration for the traefik-k8s app. Deployed when OpenSearch Dashboards is deployed, unless ingress_integration is set. | `{}` | no |
 

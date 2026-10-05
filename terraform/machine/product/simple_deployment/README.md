@@ -9,26 +9,30 @@ This module requires a `juju` model to be available. Refer to the [usage section
 
 | Name | Version |
 | ---- | ------- |
-| terraform | >= 1.6 |
-| juju | ~> 2.0 |
+| terraform | >= 1.11 |
+| juju | ~> 2.2 |
 
 ## Providers
 
 | Name | Version |
 | ---- | ------- |
-| juju | ~> 2.0 |
+| juju | ~> 2.2 |
 | terraform | n/a |
 
 ## Inputs
 
 | Name | Description | Default | Required |
 | ---- | ----------- | ------- | :------: |
+| azure_storage_secret_key | Azure Storage account key for the backup integrator. | `null` | no |
 | backups-integrator | Configuration for the optional backup integrator. | `null` | no |
 | certificates_integration | External TLS endpoint or offer. | `null` | no |
 | cos_agent_integration | COS agent endpoint. | `null` | no |
 | data-integrator | Configuration for the optional data-integrator. | `null` | no |
+| gcs_secret_key | GCS service-account JSON key for the backup integrator. | `null` | no |
 | opensearch | OpenSearch app definition. | n/a | yes |
 | opensearch-dashboards | Optional OpenSearch Dashboards app definition. | `null` | no |
+| s3_access_key | S3 access key for the backup integrator. | `null` | no |
+| s3_secret_key | S3 secret key for the backup integrator. | `null` | no |
 | self-signed-certificates | Configuration for the self-signed-certificates app. | `{}` | no |
 
 ## Outputs

@@ -1,16 +1,24 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+variable "azure_storage_secret_key" {
+  description = "Azure Storage account key for the backup integrator."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
 variable "backups-integrator" {
   description = "Configuration for the optional backup integrator."
   type = object({
-    model_uuid   = optional(string)
-    storage_type = optional(string, "s3")
-    config       = optional(map(string), {})
-    channel      = optional(string)
-    base         = optional(string)
-    revision     = optional(number)
-    constraints  = optional(string, "arch=amd64")
+    model_uuid             = optional(string)
+    storage_type           = optional(string, "s3")
+    config                 = optional(map(string), {})
+    channel                = optional(string)
+    credentials_secret_uri = optional(string)
+    base                   = optional(string)
+    revision               = optional(number)
+    constraints            = optional(string, "arch=amd64")
   })
 
   default = null
@@ -18,6 +26,16 @@ variable "backups-integrator" {
   validation {
     condition     = var.backups-integrator == null ? true : contains(["s3", "azure-storage", "gcs"], var.backups-integrator.storage_type)
     error_message = "storage_type must be 's3', 'azure-storage' or 'gcs'."
+  }
+
+  validation {
+    condition     = var.backups-integrator == null ? true : !contains(keys(var.backups-integrator.config), "credentials")
+    error_message = "Set backups-integrator.credentials_secret_uri instead of config.credentials."
+  }
+
+  validation {
+    condition     = try(startswith(var.backups-integrator.credentials_secret_uri, "secret:"), true)
+    error_message = "credentials_secret_uri must be a Juju secret URI starting with \"secret:\"."
   }
 }
 
@@ -227,6 +245,13 @@ variable "metrics_endpoint_integration" {
   }
 }
 
+variable "gcs_secret_key" {
+  description = "GCS service-account JSON key for the backup integrator."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
 variable "opensearch" {
   description = "OpenSearch app definition."
   type = object({
@@ -267,6 +292,25 @@ variable "opensearch-dashboards" {
     })), [])
   })
   default = null
+}
+
+variable "s3_access_key" {
+  description = "S3 access key for the backup integrator."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "s3_secret_key" {
+  description = "S3 secret key for the backup integrator."
+  type        = string
+  sensitive   = true
+  default     = null
+
+  validation {
+    condition     = (var.s3_access_key == null) == (var.s3_secret_key == null)
+    error_message = "Set s3_access_key and s3_secret_key together."
+  }
 }
 
 variable "self-signed-certificates" {

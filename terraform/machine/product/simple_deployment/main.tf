@@ -85,11 +85,39 @@ resource "juju_application" "backups-integrator" {
     base     = coalesce(var.backups-integrator.base, local.backups_settings[var.backups-integrator.storage_type].base)
   }
   model_uuid = local.backups_model_uuid
-  config     = var.backups-integrator.config
+  config = merge(
+    var.backups-integrator.config,
+    local.backups_secret_uri != null ? { credentials = local.backups_secret_uri } : {},
+    local.backups_secret_create ? { credentials = juju_secret.backups_credentials[0].secret_uri } : {},
+  )
 
   constraints = var.backups-integrator.constraints
   machines    = length(var.backups-integrator.machines) > 0 ? var.backups-integrator.machines : null
   units       = length(var.backups-integrator.machines) > 0 ? null : 1
+}
+
+resource "juju_secret" "backups_credentials" {
+  count      = local.backups_secret_create ? 1 : 0
+  model_uuid = local.backups_model_uuid
+  name       = "${var.backups-integrator.storage_type}-integrator-credentials"
+  info       = "Credentials for ${var.backups-integrator.storage_type}-integrator"
+
+  value_wo         = local.backups_secret_value
+  value_wo_version = parseint(substr(sha256(jsonencode(local.backups_secret_value)), 0, 15), 16)
+}
+
+resource "juju_access_secret" "backups_credentials" {
+  count        = local.backups_secret_create ? 1 : 0
+  model_uuid   = local.backups_model_uuid
+  applications = [juju_application.backups-integrator[0].name]
+  secret_id    = juju_secret.backups_credentials[0].secret_id
+}
+
+check "backups_credentials_source" {
+  assert {
+    condition     = !(local.backups_secret_uri != null && local.backups_keys_set)
+    error_message = "user provided backups-integrator.credentials_secret_uri, backup keys will be ignored."
+  }
 }
 
 resource "terraform_data" "deployed_at" {

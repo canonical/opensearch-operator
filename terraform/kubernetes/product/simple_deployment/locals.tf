@@ -6,8 +6,23 @@ locals {
   backups_is_cross_model = local.backups_enabled && local.backups_model_uuid != var.opensearch.model_uuid
   backups_model_uuid     = local.backups_enabled ? coalesce(var.backups-integrator.model_uuid, var.opensearch.model_uuid) : null
 
+  # user-provided secret takes priority
+  backups_secret_uri = local.backups_enabled ? var.backups-integrator.credentials_secret_uri : null
+  backups_keys_set = local.backups_enabled ? (
+    var.backups-integrator.storage_type == "s3" ? nonsensitive(var.s3_access_key != null && var.s3_secret_key != null) :
+    var.backups-integrator.storage_type == "gcs" ? nonsensitive(var.gcs_secret_key != null) :
+    nonsensitive(var.azure_storage_secret_key != null)
+  ) : false
+  backups_secret_create = local.backups_secret_uri == null && local.backups_keys_set
+
+  backups_secret_value = local.backups_secret_create ? (
+    var.backups-integrator.storage_type == "s3" ? tomap({ access-key = var.s3_access_key, secret-key = var.s3_secret_key }) :
+    var.backups-integrator.storage_type == "gcs" ? tomap({ secret-key = var.gcs_secret_key }) :
+    tomap({ secret-key = var.azure_storage_secret_key })
+  ) : null
+
   backups_settings = {
-    s3            = { base = "ubuntu@22.04", channel = "1/stable", endpoint = "s3-credentials" }
+    s3            = { base = "ubuntu@24.04", channel = "2/stable", endpoint = "s3-credentials" }
     azure-storage = { base = "ubuntu@22.04", channel = "latest/edge", endpoint = "azure-credentials" }
     gcs           = { base = "ubuntu@24.04", channel = "1/edge", endpoint = "gcs-credentials" }
   }
