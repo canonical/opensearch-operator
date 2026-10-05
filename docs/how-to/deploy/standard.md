@@ -89,14 +89,18 @@ for more information.
 **Check the storage class**
 
 Charmed OpenSearch K8s requests two persistent volumes per unit. Confirm that your
-cluster has a default storage class that can satisfy them:
+cluster has a storage class that can satisfy them:
 
 ```shell
 kubectl get storageclass
 ```
 
-At least one entry must be marked as `(default)`. If none is, either mark one as default
-or pass an explicit storage class at [deploy time](#deploy-opensearch).
+The bootstrap and model-creation commands below assume a suitable class is marked `(default)`.
+If there is none, configure storage for the Juju controller before bootstrapping and
+[operator storage](https://canonical.com/juju/docs/juju-cli/3.6/reference/cloud/list-of-supported-clouds/microk8s/#models)
+for the workload model before creating it. For OpenSearch volumes, you can use an existing
+Juju storage pool at [deploy time](#deploy-opensearch), but a workload pool alone does not
+provide storage for the controller or Juju operators.
 ````
 
 `````
@@ -152,13 +156,19 @@ Create a model if you haven't already:
 juju add-model <model-name>
 ```
 
+If you are reusing an existing model, select it before running the remaining commands:
+
+```shell
+juju switch <controller-name>:<model-name>
+```
+
 Check that the model is of the expected type:
 
 ```shell
-juju show-model
+juju show-model <model-name>
 ```
 
-The output includes a `type` field.
+The output includes a `model-type` field (distinct from the cloud's `type` field).
 
 `````{tab-set}
 ---
@@ -167,13 +177,13 @@ sync-group: substrate
 ````{tab-item} VM
 :sync: vm
 
-The type must **not** be `caas`.
+The `model-type` must **not** be `caas`.
 ````
 
 ````{tab-item} K8s
 :sync: k8s
 
-The type must be `caas`.
+The `model-type` must be `caas`.
 ````
 
 `````
@@ -340,50 +350,58 @@ sync-group: substrate
 :sync: vm
 
 In a single-host deployment with LXD, we recommend using the default `testing`
-[profile](how-to-optimize-cluster-performance), which only consumes 1 GB of RAM per
+[profile](how-to-optimize-cluster-performance), which sets the JVM heap size to 1 GB per
 container.
 
-To deploy OpenSearch:
+To deploy OpenSearch, choose one of the following commands:
 
 ```shell
-juju deploy opensearch -n 3
+juju deploy opensearch --channel=2/stable -n 3
 ```
 
-For production deployments, set the `production` profile explicitly:
+For production deployments, meet the [profile's resource and node-role requirements](how-to-optimize-cluster-performance)
+before setting `production` explicitly. Three units can cover both cluster-manager and data
+roles when the roles are combined, but each node still needs sufficient resources.
 
 ```shell
-juju deploy opensearch -n 3 --config profile=production
+juju deploy opensearch --channel=2/stable -n 3 --config profile=production
 ```
 ````
 
 ````{tab-item} K8s
 :sync: k8s
 
-The Kubernetes charm requires the `--trust` flag, which grants it the permissions it needs
-to manage Kubernetes resources such as Services and StatefulSets on your behalf.
+The Kubernetes charm requires the `--trust` flag to access the model's cloud credentials
+and manage Kubernetes resources such as Services and StatefulSets on your behalf.
 
 In a single-host K8s cluster, we recommend using the default `testing`
-[profile](how-to-optimize-cluster-performance), which only consumes 1 GB of RAM per pod.
+[profile](how-to-optimize-cluster-performance), which sets the JVM heap size to 1 GB per pod.
 
-To deploy OpenSearch:
+To deploy OpenSearch, choose one of the following commands. Each deploys the
+`opensearch-k8s` charm as an application named `opensearch`, the same name used by
+the VM charm:
 
 ```shell
-juju deploy opensearch-k8s -n 3 --trust
+juju deploy opensearch-k8s opensearch --channel=2/edge -n 3 --trust
 ```
 
-If your cluster has no default storage class, or you want to pin the charm to a specific
-one, pass the storage constraints explicitly:
+To use a specific Kubernetes storage class for both OpenSearch volumes, first ensure
+an existing Juju `kubernetes` storage pool in this model selects that class and can
+provision both volumes. Find available pools with `juju storage-pools`. Pass the **pool
+name**, not the Kubernetes storage class, to `--storage`:
 
 ```shell
-juju deploy opensearch-k8s -n 3 --trust \
-  --storage opensearch-data=<storage_class>,10G \
-  --storage opensearch-logs=<storage_class>,2G
+juju deploy opensearch-k8s opensearch --channel=2/edge -n 3 --trust \
+  --storage opensearch-data=<juju-storage-pool>,10G \
+  --storage opensearch-logs=<juju-storage-pool>,2G
 ```
 
-For production deployments, set the `production` profile explicitly:
+For production deployments, meet the [profile's resource and node-role requirements](how-to-optimize-cluster-performance)
+before setting `production` explicitly. Three pods can cover both cluster-manager and data
+roles when the roles are combined, but each pod still needs sufficient resources.
 
 ```shell
-juju deploy opensearch-k8s -n 3 --trust --config profile=production
+juju deploy opensearch-k8s opensearch --channel=2/edge -n 3 --trust --config profile=production
 ```
 
 ```{note}
@@ -405,8 +423,10 @@ To check the current status of the application:
 juju status
 ```
 
-You should see the OpenSearch application in a blocked state with the message `Missing TLS relation with this cluster`.
-Charmed OpenSearch requires TLS encryption to start, on both the HTTP and Transport layers.
+Once the units have been provisioned and the other prerequisites are met, the `opensearch` application should become
+`blocked` with a `Missing TLS relation with this cluster` message. If provisioning or storage is still pending,
+`juju status` may show a different state first. Charmed OpenSearch requires TLS encryption to start, on both the HTTP
+and Transport layers.
 
 ## Next steps
 
