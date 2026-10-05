@@ -58,25 +58,6 @@ module "opensearch-dashboards" {
   units       = var.opensearch-dashboards.units
 }
 
-# Ingress provider for OpenSearch dashboards
-resource "juju_application" "traefik-k8s" {
-  count = local.dashboards_enabled && var.ingress_integration == null ? 1 : 0
-
-  charm {
-    name     = "traefik-k8s"
-    channel  = var.traefik-k8s.channel
-    revision = var.traefik-k8s.revision
-    base     = var.traefik-k8s.base
-  }
-  name       = "traefik-k8s"
-  model_uuid = var.opensearch.model_uuid
-  config     = var.traefik-k8s.config
-
-  constraints = var.traefik-k8s.constraints
-  trust       = true
-  units       = var.traefik-k8s.units
-}
-
 # Integrator apps
 module "data-integrator" {
   count  = local.data_integrator_enabled ? 1 : 0
@@ -155,7 +136,6 @@ resource "terraform_data" "updated_at" {
     var.opensearch,
     var.opensearch-dashboards,
     var.self-signed-certificates,
-    var.traefik-k8s,
   ]))
 
   lifecycle {

@@ -135,7 +135,7 @@ variable "grafana_dashboard_integration" {
 }
 
 variable "ingress_integration" {
-  description = "External ingress endpoint or offer for OpenSearch Dashboards, used instead of the bundled traefik-k8s."
+  description = "Ingress endpoint or offer for OpenSearch Dashboards. Required when Dashboards is deployed."
   type = object({
     kind     = string
     name     = optional(string)
@@ -322,19 +322,6 @@ variable "self-signed-certificates" {
     units       = optional(number, 1)
     constraints = optional(string, "arch=amd64")
     config      = optional(map(string), { "ca-common-name" : "CA" })
-  })
-  default = {}
-}
-
-variable "traefik-k8s" {
-  description = "Configuration for the traefik-k8s app. Deployed when OpenSearch Dashboards is deployed, unless ingress_integration is set."
-  type = object({
-    channel     = optional(string, "latest/stable")
-    revision    = optional(number)
-    base        = optional(string)
-    units       = optional(number, 1)
-    constraints = optional(string, "arch=amd64")
-    config      = optional(map(string), {})
   })
   default = {}
 }

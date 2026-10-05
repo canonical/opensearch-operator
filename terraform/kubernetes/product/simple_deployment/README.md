@@ -29,7 +29,7 @@ This module requires a `juju` Kubernetes model to be available. Refer to the [us
 | data-integrator | Configuration for the optional data-integrator. | `null` | no |
 | gcs_secret_key | GCS service-account JSON key for the backup integrator. | `null` | no |
 | grafana_dashboard_integration | Optional COS Grafana dashboard endpoint or offer. | `null` | no |
-| ingress_integration | External ingress endpoint or offer for OpenSearch Dashboards, used instead of the bundled traefik-k8s. | `null` | no |
+| ingress_integration | Ingress endpoint or offer for OpenSearch Dashboards. Required when Dashboards is deployed. | `null` | no |
 | logging_integration | Optional COS logging endpoint or offer. | `null` | no |
 | metrics_endpoint_integration | Optional COS metrics endpoint or offer. | `null` | no |
 | opensearch | OpenSearch app definition. | n/a | yes |
@@ -37,7 +37,6 @@ This module requires a `juju` Kubernetes model to be available. Refer to the [us
 | s3_access_key | S3 access key for the backup integrator. | `null` | no |
 | s3_secret_key | S3 secret key for the backup integrator. | `null` | no |
 | self-signed-certificates | Configuration for the self-signed-certificates app. | `{}` | no |
-| traefik-k8s | Configuration for the traefik-k8s app. Deployed when OpenSearch Dashboards is deployed, unless ingress_integration is set. | `{}` | no |
 
 ## Outputs
 

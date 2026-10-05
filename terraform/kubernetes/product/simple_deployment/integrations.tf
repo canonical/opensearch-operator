@@ -62,25 +62,16 @@ resource "juju_integration" "opensearch_dashboards-ingress-integration" {
   }
 
   application {
-    name      = local.ingress_provider.kind == "endpoint" ? local.ingress_provider.name : null
-    endpoint  = local.ingress_provider.kind == "endpoint" ? local.ingress_provider.endpoint : null
-    offer_url = local.ingress_provider.kind == "offer" ? local.ingress_provider.url : null
-  }
-}
-
-resource "juju_integration" "traefik_k8s-tls-integration" {
-  count      = length(juju_application.traefik-k8s) > 0 ? 1 : 0
-  model_uuid = var.opensearch.model_uuid
-
-  application {
-    name     = juju_application.traefik-k8s[0].name
-    endpoint = "certificates"
+    name      = var.ingress_integration.kind == "endpoint" ? var.ingress_integration.name : null
+    endpoint  = var.ingress_integration.kind == "endpoint" ? var.ingress_integration.endpoint : null
+    offer_url = var.ingress_integration.kind == "offer" ? var.ingress_integration.url : null
   }
 
-  application {
-    name      = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.name : null
-    endpoint  = local.certificates_provider.kind == "endpoint" ? local.certificates_provider.endpoint : null
-    offer_url = local.certificates_provider.kind == "offer" ? local.certificates_provider.url : null
+  lifecycle {
+    precondition {
+      condition     = var.ingress_integration != null
+      error_message = "ingress_integration is unset. OpenSearch Dashboards requires an ingress provider."
+    }
   }
 }
 

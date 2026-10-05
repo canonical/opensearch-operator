@@ -40,7 +40,6 @@ locals {
     },
     local.data_integrator_enabled ? { "data-integrator" = module.data-integrator[0].application } : {},
     local.dashboards_enabled ? { "opensearch-dashboards" = module.opensearch-dashboards[0].application } : {},
-    length(juju_application.traefik-k8s) > 0 ? { "traefik-k8s" = juju_application.traefik-k8s[0] } : {},
     var.certificates_integration == null ? { "self-signed-certificates" = juju_application.self-signed-certificates[0] } : {},
     local.backups_enabled ? { "backups-integrator" = juju_application.backups-integrator[0] } : {},
   )
@@ -49,11 +48,4 @@ locals {
   data_integrator_enabled        = var.data-integrator != null
   data_integrator_is_cross_model = local.data_integrator_enabled && local.data_integrator_model_uuid != var.opensearch.model_uuid
   data_integrator_model_uuid     = local.data_integrator_enabled ? coalesce(var.data-integrator.model_uuid, var.opensearch.model_uuid) : null
-
-  ingress_provider = var.ingress_integration != null ? var.ingress_integration : try({
-    kind     = "endpoint"
-    name     = juju_application.traefik-k8s[0].name
-    endpoint = "ingress"
-    url      = null
-  }, null)
 }
