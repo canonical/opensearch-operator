@@ -1,36 +1,36 @@
 ---
 myst:
   html_meta:
-    description: "Deploy Charmed OpenSearch on LXD virtual machines or on Kubernetes with Juju, including prerequisites, kernel tuning, and bootstrap steps."
+    description: Deploy Charmed OpenSearch on LXD virtual machines or on Kubernetes with Juju, including prerequisites, kernel tuning, and bootstrap steps.
 ---
 
 <!-- vale off -->
+
 (how-to-deploy-standard)=
+
 <!-- vale on -->
 
 # How to deploy Charmed OpenSearch
 
-This guide walks you through deploying Charmed OpenSearch,
-covering both the **IAAS/VM** charm (`opensearch`) and the **Kubernetes** charm (`opensearch-k8s`).
+This guide walks you through deploying Charmed OpenSearch, covering both the **IAAS/VM** charm (`opensearch`) and the
+**Kubernetes** charm (`opensearch-k8s`).
 
-If you are new to OpenSearch or Juju and are looking for a more comprehensive
-walkthrough of these steps, see the [Tutorial](tutorial-index).
+If you are new to OpenSearch or Juju and are looking for a more comprehensive walkthrough of these steps, see the
+[Tutorial](tutorial-index).
 
-For large, multi-application deployments, see the
-the [Launch a large deployment](how-to-deploy-large) guide instead.
+For large, multi-application deployments, see the [Launch a large deployment](how-to-deploy-large) guide instead.
 
 ## Prerequisites
 
-Check that you fulfill the hardware requirements in the
-[system requirements page](reference-system-requirements).
+Check that you fulfill the hardware requirements in the [system requirements page](reference-system-requirements).
 
-Before continuing, decide whether you are going to use a machine (VM)-based or
-a Kubernetes environment for this deployment. Use the tabs below to switch between the two substrates.
-The instructions will update accordingly.
+Before continuing, decide whether you are going to use a machine (VM)-based or a Kubernetes environment for this
+deployment. Use the tabs below to switch between the two substrates. The instructions will update accordingly.
 
 `````{tab-set}
-:sync-group: substrate
-
+---
+sync-group: substrate
+---
 ````{tab-item} VM
 :sync: vm
 
@@ -64,8 +64,9 @@ To deploy Charmed OpenSearch using Juju in K8s environment, you need:
 Prepare the environment for Charmed OpenSearch deployment:
 
 `````{tab-set}
-:sync-group: substrate
-
+---
+sync-group: substrate
+---
 ````{tab-item} VM
 :sync: vm
 
@@ -126,8 +127,9 @@ juju switch <controller-name>
 ```
 
 `````{tab-set}
-:sync-group: substrate
-
+---
+sync-group: substrate
+---
 ````{tab-item} VM
 :sync: vm
 
@@ -159,8 +161,9 @@ juju show-model
 The output includes a `type` field.
 
 `````{tab-set}
-:sync-group: substrate
-
+---
+sync-group: substrate
+---
 ````{tab-item} VM
 :sync: vm
 
@@ -177,9 +180,8 @@ The type must be `caas`.
 
 ## Kernel parameter configuration
 
-OpenSearch relies on a number of kernel parameters that are not set to suitable values by
-default. Configure them before deploying OpenSearch. How and where you apply them depends
-on the substrate.
+OpenSearch relies on a number of kernel parameters that are not set to suitable values by default. Configure them before
+deploying OpenSearch. How and where you apply them depends on the substrate.
 
 ````{note}
 To take note of the current values before changing them:
@@ -194,8 +196,9 @@ parameters manually, or reboot after removing the file.
 ````
 
 `````{tab-set}
-:sync-group: substrate
-
+---
+sync-group: substrate
+---
 ````{tab-item} VM
 :sync: vm
 
@@ -237,6 +240,13 @@ cloudinit-userdata: |
     - echo 'fs.file-max=1048576' >> /etc/sysctl.conf
     - sysctl -p
 EOF
+```
+
+```{note}
+Keep each `postruncmd` entry as a **string**. Cloud-init runs string entries through a
+shell, so the `>>` redirection works. Entries written as a YAML list are passed straight to
+`execve(3)` with no shell, so `>>` would become a literal argument to `echo` instead of
+appending to the file.
 ```
 
 Apply it to the **existing model** before deploying OpenSearch, so the settings are
@@ -319,11 +329,13 @@ We recommend this tuning for production deployments.
 `````
 
 (deploy-opensearch)=
+
 ## Deploy OpenSearch
 
 `````{tab-set}
-:sync-group: substrate
-
+---
+sync-group: substrate
+---
 ````{tab-item} VM
 :sync: vm
 
@@ -393,14 +405,13 @@ To check the current status of the application:
 juju status
 ```
 
-You should see the OpenSearch application in a blocked state with the message
-`Missing TLS relation with this cluster`. Charmed OpenSearch requires TLS encryption
-to start, on both the HTTP and Transport layers.
+You should see the OpenSearch application in a blocked state with the message `Missing TLS relation with this cluster`.
+Charmed OpenSearch requires TLS encryption to start, on both the HTTP and Transport layers.
 
 ## Next steps
 
-* [Enable TLS encryption](how-to-enable-tls-encryption)
-* [Launch a large deployment](how-to-deploy-large)
-* [Integrate with an application](how-to-integrate-with-an-application)
-* [Scale horizontally](how-to-scale-horizontally)
-* [Enable monitoring](how-to-monitoring)
+- [Enable TLS encryption](how-to-enable-tls-encryption)
+- [Launch a large deployment](how-to-deploy-large)
+- [Integrate with an application](how-to-integrate-with-an-application)
+- [Scale horizontally](how-to-scale-horizontally)
+- [Enable monitoring](how-to-monitoring)

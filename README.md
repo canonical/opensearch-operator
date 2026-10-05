@@ -1,8 +1,7 @@
 # OpenSearch Operator
 [![Charmhub](https://charmhub.io/opensearch/badge.svg)](https://charmhub.io/opensearch)
 [![Release](https://github.com/canonical/opensearch-operator/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/opensearch-operator/actions/workflows/release.yaml)
-[![Tests](https://github.com/canonical/opensearch-operator/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/canonical/opensearch-operator/actions/workflows/ci.yaml)
-[![Docs](https://github.com/canonical/opensearch-operator/actions/workflows/sync_docs.yaml/badge.svg)](https://github.com/canonical/opensearch-operator/actions/workflows/sync_docs.yaml)
+[![Tests](https://github.com/canonical/opensearch-operator/actions/workflows/ci.yaml/badge.svg?branch=2/edge)](https://github.com/canonical/opensearch-operator/actions/workflows/ci.yaml)
 
 ## Description
 
@@ -156,6 +155,23 @@ Security issues in the Charmed OpenSearch Operator can be reported through [Laun
 ## Contributing
 
 Please see the [Juju SDK docs](https://juju.is/docs/sdk) for guidelines on enhancements to this charm following best practice guidelines, and [CONTRIBUTING.md](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md) for developer guidance.
+
+### Format documentation Markdown
+
+The documentation sources in `docs/` are formatted with [mdformat](https://mdformat.readthedocs.io/) (with the MyST plugin). The formatter runs in its own virtual environment, installed from a hash-pinned lock file, so no global packages are needed.
+
+```shell
+cd docs
+make mdformat        # format all tracked documentation Markdown files in place
+make mdformat-check  # report unformatted files without changing them
+```
+
+To format automatically on each commit, install the pre-commit hook from the repository root:
+
+```shell
+python3 -m pip install pre-commit
+pre-commit install
+```
 
 ## License
 The Charmed OpenSearch Operator is free software, distributed under the Apache Software License, version 2.0. See [LICENSE](https://github.com/canonical/opensearch-operator/blob/main/LICENSE) for more information.

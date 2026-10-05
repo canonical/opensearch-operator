@@ -46,7 +46,7 @@ backends:
       lxc delete --force "${VM_NAME}"
     environment:
       CONCIERGE_EXTRA_SNAPS: charmcraft
-      CONCIERGE_EXTRA_DEBS: pipx
+      CONCIERGE_EXTRA_DEBS: pipx,build-essential,python3-dev,libldap-dev,libsasl2-dev
     systems:
       - ubuntu-24.04:
           username: runner
@@ -88,7 +88,14 @@ backends:
       sudo systemctl daemon-reload
       sudo systemctl start ssh
 
-      sudo passwd -d ubuntu
+      if [[ $SPREAD_SYSTEM == "self-hosted"* ]]
+      then
+        sudo passwd -d ubuntu
+      else
+        sudo passwd -d runner
+      fi
+
+      sudo systemctl reload ssh || sudo systemctl restart ssh
 
       ADDRESS localhost
     # HACK: spread does not pass environment variables set on runner
@@ -104,14 +111,24 @@ backends:
       AZURE_STORAGE_ACCOUNT: "$(HOST: echo $AZURE_STORAGE_ACCOUNT)"
       AZURE_SECRET_KEY: "$(HOST: echo $AZURE_SECRET_KEY)"
       DOCKERHUB_MIRROR: "$(HOST: echo $DOCKERHUB_MIRROR)"
-      CONCIERGE_EXTRA_DEBS: pipx
+      CONCIERGE_EXTRA_DEBS: pipx,build-essential,python3-dev,libldap-dev,libsasl2-dev
     systems:
+      - self-hosted-linux-arm64-noble-medium:
+          username: ubuntu
+      - self-hosted-linux-arm64-noble-large:
+          username: ubuntu
+      - self-hosted-linux-arm64-noble-xlarge:
+          username: ubuntu
       - self-hosted-linux-amd64-noble-medium:
           username: ubuntu
       - self-hosted-linux-amd64-noble-large:
           username: ubuntu
       - self-hosted-linux-amd64-noble-xlarge:
           username: ubuntu
+      - ubuntu-24.04:
+          username: runner
+      - ubuntu-24.04-arm:
+          username: runner
 suites:
   tests/spread/vm/:
     summary: Spread tests for OpenSearch VM
