@@ -125,5 +125,5 @@ contributions, suggestions, fixes and constructive feedback.
 - Meet the community and chat with us in our [Matrix channel](https://matrix.to/#/#charmhub-data-platform:ubuntu.com) or
   [leave a comment](https://discourse.charmhub.io/t/charmed-opensearch-documentation/9729).
 - See the Charmed OpenSearch
-  [contribution guidelines](https://github.com/canonical/opensearch-operator/blob/main/CONTRIBUTING.md) on GitHub and
+  [contribution guidelines](https://github.com/canonical/opensearch-operator/blob/2/edge/CONTRIBUTING.md) on GitHub and
   read the Ubuntu Community's [Code of Conduct](https://ubuntu.com/community/code-of-conduct).
