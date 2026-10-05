@@ -16,7 +16,9 @@ The integration workflow depends on the charm variant:
 - On **VMs**, the `opensearch` machine charm exposes a single `cos-agent` endpoint, and a machine `grafana-agent` charm
   collects and forwards the telemetry to COS.
 - On **Kubernetes**, the `opensearch-k8s` charm exposes native COS endpoints (`metrics-endpoint`, `grafana-dashboard`,
-  and `logging`), so it integrates directly with the COS applications — no `grafana-agent` is needed.
+  and `logging`). If COS Lite runs in the same model, OpenSearch integrates with the COS applications directly. If COS
+  Lite runs in a separate model, an `opentelemetry-collector-k8s` charm in the OpenSearch model forwards the telemetry
+  to COS.
 
 For background on monitoring features, see the [Monitoring explanation](explanation-monitoring).
 
@@ -37,36 +39,23 @@ sync-group: substrate
 ````{tab-item} K8s
 :sync: k8s
 
-* A deployed `opensearch-k8s` application with TLS configured
-* A deployed [`cos-lite` bundle](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s)
-  in the **same Kubernetes model** as the `opensearch-k8s` application.
-  If COS Lite is not deployed yet, deploy it from the OpenSearch model:
+* A deployed [`opensearch-k8s`](https://charmhub.io/opensearch-k8s) application with TLS configured
+* A deployed [`cos-lite` bundle](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s),
+  either in the same Kubernetes model as `opensearch-k8s` or in a separate model
 
-  ```shell
-  juju deploy cos-lite --trust
-  ```
-
-  ```{note}
-  The K8s workflow integrates OpenSearch directly with the COS applications in the
-  same model, so the cross-model offers overlay used in the VM workflow is not needed.
-  ```
+```{tip}
+The COS documentation recommends a dedicated model for COS Lite.
+If you deploy COS Lite in the OpenSearch model instead (`juju deploy cos-lite --trust`),
+skip the offer and consume steps below and [integrate the applications directly](integrate-with-cos).
+```
 ````
 `````
 
 ## Offer COS interfaces
 
-`````{tab-set}
----
-sync-group: substrate
----
-````{tab-item} VM
-:sync: vm
-
-Switch to the COS K8s controller and offer the required interfaces.
-The easiest way is to deploy COS Lite with the
-[offers overlay](https://github.com/canonical/cos-lite-bundle/blob/main/overlays/offers-overlay.yaml),
-which creates cross-model offers named `grafana-dashboards`, `loki-logging`, and
-`prometheus-receive-remote-write`:
+Switch to the COS K8s controller and offer the required interfaces. The easiest way is to deploy COS Lite with the
+[offers overlay](https://github.com/canonical/cos-lite-bundle/blob/main/overlays/offers-overlay.yaml), which creates
+cross-model offers named `grafana-dashboards`, `loki-logging`, and `prometheus-receive-remote-write`:
 
 ```shell
 juju switch <k8s-controller>:<cos-model>
@@ -81,24 +70,8 @@ juju offer grafana:grafana-dashboard grafana-dashboards
 juju offer loki:logging loki-logging
 juju offer prometheus:receive-remote-write prometheus-receive-remote-write
 ```
-````
-
-````{tab-item} K8s
-:sync: k8s
-
-This step is not required. The `opensearch-k8s` charm integrates directly with the
-COS applications in the same model, so no cross-model offers are needed.
-````
-`````
 
 ## Consume offers from the OpenSearch model
-
-`````{tab-set}
----
-sync-group: substrate
----
-````{tab-item} VM
-:sync: vm
 
 Switch to the OpenSearch model and consume the COS offers:
 
@@ -108,15 +81,6 @@ juju consume <k8s-controller>:admin/<cos-model>.grafana-dashboards
 juju consume <k8s-controller>:admin/<cos-model>.loki-logging
 juju consume <k8s-controller>:admin/<cos-model>.prometheus-receive-remote-write
 ```
-````
-
-````{tab-item} K8s
-:sync: k8s
-
-This step is not required. Skip ahead to
-[Integrate with COS](integrate-with-cos).
-````
-`````
 
 (integrate-with-cos)=
 
@@ -153,17 +117,41 @@ juju integrate grafana-agent opensearch:cos-agent
 ````{tab-item} K8s
 :sync: k8s
 
-Integrate `opensearch-k8s` directly with the COS applications:
+Deploy [`opentelemetry-collector-k8s`](https://charmhub.io/opentelemetry-collector-k8s)
+in the OpenSearch model:
+
+```shell
+juju deploy opentelemetry-collector-k8s otelcol
+```
+
+Integrate it with OpenSearch:
+
+```shell
+juju integrate opensearch-k8s:metrics-endpoint otelcol:metrics-endpoint
+juju integrate opensearch-k8s:grafana-dashboard otelcol:grafana-dashboards-consumer
+juju integrate opensearch-k8s:logging otelcol:receive-loki-logs
+```
+
+* `metrics-endpoint` lets the collector scrape the OpenSearch metrics endpoint.
+* `grafana-dashboard` transfers the **Charmed OpenSearch** dashboard.
+* `logging` sends the OpenSearch logs.
+
+Integrate the collector with the consumed COS offers:
+
+```shell
+juju integrate otelcol:send-remote-write prometheus-receive-remote-write
+juju integrate otelcol:grafana-dashboards-provider grafana-dashboards
+juju integrate otelcol:send-loki-logs loki-logging
+```
+
+If COS Lite is deployed in the **same model** as `opensearch-k8s`, skip the collector
+and the offers, and integrate OpenSearch with the COS applications directly:
 
 ```shell
 juju integrate opensearch-k8s:metrics-endpoint prometheus:metrics-endpoint
 juju integrate opensearch-k8s:grafana-dashboard grafana:grafana-dashboard
 juju integrate opensearch-k8s:logging loki:logging
 ```
-
-* `metrics-endpoint` lets Prometheus scrape the OpenSearch metrics endpoint.
-* `grafana-dashboard` transfers the **Charmed OpenSearch** dashboard to Grafana.
-* `logging` sends the OpenSearch logs to Loki.
 ````
 `````
 
@@ -185,7 +173,8 @@ The dashboard aggregates data from all connected units.
 ````{tab-item} K8s
 :sync: k8s
 
-For multi-application clusters, repeat the three integrations for each OpenSearch application.
+For multi-application clusters, repeat the three OpenSearch integrations
+(`metrics-endpoint`, `grafana-dashboard`, and `logging`) for each OpenSearch application.
 The dashboard aggregates data from all connected units.
 ````
 `````
@@ -198,26 +187,9 @@ Multiple deployments can share the same COS instance. The dashboard provides sel
 
 Retrieve the Grafana admin password:
 
-`````{tab-set}
----
-sync-group: substrate
----
-````{tab-item} VM
-:sync: vm
-
 ```shell
 juju run grafana/leader get-admin-password --model <k8s-controller>:<cos-model>
 ```
-````
-
-````{tab-item} K8s
-:sync: k8s
-
-```shell
-juju run grafana/leader get-admin-password
-```
-````
-`````
 
 For detailed instructions, see
 [Browse dashboards](https://documentation.ubuntu.com/observability/track-3.0/tutorial/cos-lite-microk8s-sandbox/#browse-dashboards)
