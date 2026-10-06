@@ -67,6 +67,10 @@ To get OpenSearch logs, go to the `Label filters` field and set `juju_applicatio
 application (for example, `opensearch` on VMs or `opensearch-k8s` on Kubernetes), select one operation, e.g.
 `Line contains` and run the query.
 
+The following Grafana Explore screenshot shows OpenSearch logs from a VM deployment:
+
+![Grafana Explore showing OpenSearch logs filtered by Juju application](../how-to/img/cos-1.png)
+
 ## Grafana dashboard
 
 The **Charmed OpenSearch** Grafana dashboard provides an at-a-glance view of cluster health, node resource utilization,
@@ -84,9 +88,3 @@ You can filter the displayed data using the selectors at the top of the dashboar
 ![Charmed OpenSearch Grafana dashboard — overview panel](../how-to/img/dash1.png)
 
 ![Charmed OpenSearch Grafana dashboard — node detail panel](../how-to/img/dash2.png)
-
-The topology below shows the VM integration path, where a machine `grafana-agent` collects the telemetry and forwards it
-to the COS applications. On Kubernetes, `opentelemetry-collector-k8s` takes the place of `grafana-agent`, or
-`opensearch-k8s` integrates directly with COS when both run in the same model.
-
-![COS integration topology showing OpenSearch, Grafana Agent, and COS components](../how-to/img/cos-1.png)

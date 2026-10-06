@@ -198,6 +198,15 @@ in the COS tutorial.
 In Grafana, select the **Charmed OpenSearch** dashboard. You can filter by Juju model, application, unit, cluster, and
 node role.
 
+![Charmed OpenSearch Grafana dashboard showing cluster health and shard counts](img/dash1.png)
+
+![Charmed OpenSearch Grafana dashboard showing system usage and indexing metrics](img/dash2.png)
+
+To inspect OpenSearch logs, open **Explore** in Grafana, select the Loki data source, filter by `juju_application`, and
+run the query:
+
+![Grafana Explore showing OpenSearch logs filtered by Juju application](img/cos-1.png)
+
 ```{note}
 For exploring and visualising your indexed data (as opposed to cluster health metrics),
 deploy [Charmed OpenSearch Dashboards](https://canonical-charmed-opensearch-dashboards.readthedocs-hosted.com/).
