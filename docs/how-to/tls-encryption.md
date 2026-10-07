@@ -187,7 +187,7 @@ After receiving the new CA, each node generates new CSRs that must be signed wit
 for every unit in the cluster.
 
 Once all units have the new CA, OpenSearch reloads certificates (or triggers a rolling restart if the issuer, subject,
-or SANs have changed).
+or subject alternative names (SANs) have changed).
 
 Verify the rotation:
 
