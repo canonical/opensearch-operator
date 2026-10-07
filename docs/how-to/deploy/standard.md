@@ -340,7 +340,7 @@ The K8s charm does not set the pod-scoped `net.ipv4.tcp_retries2`. For optional
   Allow the unsafe sysctl on **every eligible worker node** and restart each kubelet after
   changing its configuration. On the Canonical Kubernetes `k8s`
   snap, add `--allowed-unsafe-sysctls=net.ipv4.tcp_retries2` to
-  `/var/snap/k8s/common/args/kubelet`, then run `sudo systemctl restart snap.k8s.kubelet`
+  `/var/snap/k8s/common/args/kubelet`, then run `sudo snap restart k8s.kubelet`
   on those nodes. Use your distribution's method elsewhere.
 2. With `uv`, `openssl`, and cluster-admin `kubectl` available, use the
   [mutator's bootstrap script](https://github.com/canonical/data-platform-k8s-mutator#quick-start)
