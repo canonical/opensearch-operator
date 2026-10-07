@@ -92,7 +92,7 @@ rather than the host, so it cannot be set on the node. To configure it, deploy
 the [data-platform-k8s-mutator](https://github.com/canonical/data-platform-k8s-mutator)
 admission webhook before OpenSearch, which sets this sysctl value on newly created
 workload pods. It is optional but recommended for production setups; see the
-[Kubernetes deployment guide](docs/how-to/deploy/standard.md#kernel-parameter-configuration)
+[Kubernetes deployment guide](docs/how-to/deploy/standard.md#configure-tcp-retries-optional)
 for the setup steps.
 
 To deploy a single unit of OpenSearch using its default configuration:

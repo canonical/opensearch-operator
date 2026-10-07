@@ -523,8 +523,8 @@ Rollbacks in Charmed OpenSearch are a best-effort process. It is recommended to 
 #### Rollback a charm revision with the same workload version
 
 Only use this procedure if the target revision runs the same OpenSearch version as the current revision on every unit.
-In the Kubernetes example above, the upgraded unit runs `2.19.6` and the other units run `2.19.5`, so that example belongs
-to the different-version rollback procedure below instead. For a same-version rollback, run `refresh` with the
+In the Kubernetes example above, the upgraded unit runs `2.19.6` and the other units run `2.19.5`, so that example
+belongs to the different-version rollback procedure below instead. For a same-version rollback, run `refresh` with the
 compatible previous charm revision.
 
 `````{tab-set}

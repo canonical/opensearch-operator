@@ -57,7 +57,8 @@ See [Performance profiles](explanation-performance-profiles) for details on how 
 | `vm.max_map_count` | `262144`       | Required by OpenSearch for mmap-based file access to index segments.                                                                                   |
 | `fs.file-max`      | `1048576`      | Ensures sufficient file descriptors for large deployments with many shards and indices. Strongly recommended, but not currently enforced by the charm. |
 
-The `net.ipv4.tcp_retries2` parameter is set automatically by the charm and does not need to be configured manually.
+The VM charm sets `net.ipv4.tcp_retries2` automatically. The K8s charm does not; for optional pod-level tuning, see
+[Configure TCP retries](how-to-deploy-tcp-retries).
 
 ```{note}
 On VM (machine) deployments, the charm applies all required `sysctl` settings automatically.

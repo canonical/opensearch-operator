@@ -216,9 +216,6 @@ Configure the required kernel settings on the host machine, then configure the w
 model to apply them to new containers. You can do this after bootstrapping a controller,
 but before deploying OpenSearch.
 
-The `net.ipv4.tcp_retries2` parameter is set automatically by the charm and does not
-need to be configured manually.
-
 **Configure sysctl on the host machine**
 
 On the **host** machine, run the following command to add the settings to a config file:
@@ -307,40 +304,13 @@ If your nodes are managed by a cloud provider, prefer the provider's node config
 mechanism (for example, a node bootstrap script or a machine image) so the settings
 survive node replacement.
 ```
-
-**Configure `net.ipv4.tcp_retries2` (optional)**
-
-This setting belongs to each pod's network namespace, so the node settings above do not
-change it. The Kubernetes-only
-[`data-platform-k8s-mutator`](https://github.com/canonical/data-platform-k8s-mutator)
-is a containerized admission webhook, not a Juju charm. It sets
-`net.ipv4.tcp_retries2=5` on newly created OpenSearch workloads.
-
-For this optional tuning, [allow the unsafe sysctl](https://github.com/canonical/data-platform-k8s-mutator#prerequisites)
-on every node that may run OpenSearch pods (`--allowed-unsafe-sysctls=net.ipv4.tcp_retries2`)
-and restart its kubelet. Ensure the cluster supports admission webhooks. Follow the
-[mutator quick start](https://github.com/canonical/data-platform-k8s-mutator#quick-start)
-to build the rock with Rockcraft and publish its image to a registry reachable by the
-cluster. Then, from the mutator repository root, run **before deploying OpenSearch**:
-
-```shell
-uv run python -m scripts.bootstrap_webhook --namespace webhooks \
-  --image <cluster-accessible-image> --target-container-names opensearch \
-  --target-namespaces <model-kubernetes-namespace>
-```
-
-Find the model's Kubernetes namespace with `kubectl get namespaces`; `webhooks` is the
-mutator's own namespace. The script generates and applies the Kubernetes manifests.
-Without the mutator, OpenSearch still deploys, but its pods retain their default
-`tcp_retries2` value and may take longer to detect and recover from network partitions.
-We recommend this tuning for production deployments.
 ````
 
 `````
 
-(deploy-opensearch)=
+(how-to-deploy-tcp-retries)=
 
-## Deploy OpenSearch
+### Configure TCP retries (optional)
 
 `````{tab-set}
 ---
@@ -349,19 +319,95 @@ sync-group: substrate
 ````{tab-item} VM
 :sync: vm
 
-In a single-host deployment with LXD, we recommend using the default `testing`
-[profile](how-to-optimize-cluster-performance), which sets the JVM heap size to 1 GB per
-container.
+The VM charm sets `net.ipv4.tcp_retries2` automatically; no separate configuration is needed.
+````
 
-To deploy OpenSearch, choose one of the following commands:
+````{tab-item} K8s
+:sync: k8s
+
+The K8s charm does not set the pod-scoped `net.ipv4.tcp_retries2`. For optional
+`net.ipv4.tcp_retries2=5` tuning, install the
+[`data-platform-k8s-mutator`](https://github.com/canonical/data-platform-k8s-mutator)
+**before deploying OpenSearch**; it does not update existing workloads.
+
+1. Follow the [mutator prerequisites](https://github.com/canonical/data-platform-k8s-mutator#prerequisites):
+  check admission registration:
+
+  ```shell
+  kubectl api-versions | grep admissionregistration.k8s.io/v1
+  ```
+
+  Allow the unsafe sysctl on **every eligible worker node** and restart each kubelet after
+  changing its configuration. On the Canonical Kubernetes `k8s`
+  snap, add `--allowed-unsafe-sysctls=net.ipv4.tcp_retries2` to
+  `/var/snap/k8s/common/args/kubelet`, then run `sudo systemctl restart snap.k8s.kubelet`
+  on those nodes. Use your distribution's method elsewhere.
+2. With `uv`, `openssl`, and cluster-admin `kubectl` available, use the
+  [mutator's bootstrap script](https://github.com/canonical/data-platform-k8s-mutator#quick-start)
+  from its own repository (not this one):
+
+  ```shell
+  git clone https://github.com/canonical/data-platform-k8s-mutator.git
+  cd data-platform-k8s-mutator
+  uv run python -m scripts.bootstrap_webhook --namespace webhooks \
+    --image ghcr.io/canonical/data-platform-k8s-mutator:1.0-24.04_edge \
+    --target-container-names opensearch \
+    --target-namespaces <model-kubernetes-namespace> --dry-run
+  ```
+
+  Replace `<model-kubernetes-namespace>` with the selected Juju model's Kubernetes namespace
+  (usually its short name; check with `kubectl get namespaces`). `webhooks` hosts the mutator.
+  The [image](https://github.com/canonical/data-platform-k8s-mutator/pkgs/container/data-platform-k8s-mutator)
+  is an edge example; use a cluster-accessible image. Review the generated YAML in `deploy/`.
+  Dry-run also writes TLS private keys there; keep them private. Then run the same command
+  **without** `--dry-run` to deploy:
+
+  ```shell
+  uv run python -m scripts.bootstrap_webhook --namespace webhooks \
+    --image ghcr.io/canonical/data-platform-k8s-mutator:1.0-24.04_edge \
+    --target-container-names opensearch \
+    --target-namespaces <model-kubernetes-namespace>
+  ```
+
+3. Check the webhook before deploying OpenSearch:
+
+  ```shell
+  kubectl -n webhooks get deployment,pods
+  kubectl get mutatingwebhookconfiguration sysctl-webhook
+  ```
+
+  The webhook has one replica by default and can block controller creation cluster-wide when
+  unavailable; review the [HA guidance](https://github.com/canonical/data-platform-k8s-mutator#high-availability-ha)
+  before production use.
+````
+
+`````
+
+(deploy-opensearch)=
+
+## Deploy OpenSearch
+
+For a single-host deployment, we recommend the default `testing` [profile](how-to-optimize-cluster-performance), which
+sets a 1 GB JVM heap per unit. For production, meet the
+[profile's resource and node-role requirements](how-to-optimize-cluster-performance) before setting `production`: three
+units can cover both cluster-manager and data roles when the roles are combined, but each needs sufficient resources.
+
+Choose a command for your substrate. All examples deploy three units of an application named `opensearch`.
+
+`````{tab-set}
+---
+sync-group: substrate
+---
+````{tab-item} VM
+:sync: vm
+
+Deploy with the default `testing` profile:
 
 ```shell
 juju deploy opensearch --channel=2/stable -n 3
 ```
 
-For production deployments, meet the [profile's resource and node-role requirements](how-to-optimize-cluster-performance)
-before setting `production` explicitly. Three units can cover both cluster-manager and data
-roles when the roles are combined, but each node still needs sufficient resources.
+Or deploy with the `production` profile:
 
 ```shell
 juju deploy opensearch --channel=2/stable -n 3 --config profile=production
@@ -374,12 +420,7 @@ juju deploy opensearch --channel=2/stable -n 3 --config profile=production
 The Kubernetes charm requires the `--trust` flag to access the model's cloud credentials
 and manage Kubernetes resources such as Services and StatefulSets on your behalf.
 
-In a single-host K8s cluster, we recommend using the default `testing`
-[profile](how-to-optimize-cluster-performance), which sets the JVM heap size to 1 GB per pod.
-
-To deploy OpenSearch, choose one of the following commands. Each deploys the
-`opensearch-k8s` charm as an application named `opensearch`, the same name used by
-the VM charm:
+Deploy the `opensearch-k8s` charm with the default `testing` profile:
 
 ```shell
 juju deploy opensearch-k8s opensearch --channel=2/edge -n 3 --trust
@@ -396,9 +437,7 @@ juju deploy opensearch-k8s opensearch --channel=2/edge -n 3 --trust \
   --storage opensearch-logs=<juju-storage-pool>,2G
 ```
 
-For production deployments, meet the [profile's resource and node-role requirements](how-to-optimize-cluster-performance)
-before setting `production` explicitly. Three pods can cover both cluster-manager and data
-roles when the roles are combined, but each pod still needs sufficient resources.
+Or deploy with the `production` profile:
 
 ```shell
 juju deploy opensearch-k8s opensearch --channel=2/edge -n 3 --trust --config profile=production
@@ -411,6 +450,22 @@ OCI image rather than from a snap.
 The image is published together with the charm revision,
 so no additional resource needs to be specified at deploy time.
 ```
+
+If you installed the optional [mutator](how-to-deploy-tcp-retries), inspect a new pod:
+
+```shell
+kubectl -n <model-kubernetes-namespace> get pod opensearch-0 -o yaml
+```
+
+Under `securityContext.sysctls`, look for `name: net.ipv4.tcp_retries2` and `value: "5"`.
+If absent, check the target namespace and `kubectl -n webhooks logs deployment/sysctl-webhook`.
+If the `opensearch` container is running, check the effective value:
+
+```shell
+kubectl -n <model-kubernetes-namespace> exec opensearch-0 -c opensearch -- sysctl net.ipv4.tcp_retries2
+```
+
+The container might not run until TLS is configured.
 ````
 
 `````
