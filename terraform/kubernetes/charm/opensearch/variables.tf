@@ -43,6 +43,11 @@ variable "expose" {
   }))
   default  = []
   nullable = false
+
+  validation {
+    condition     = length(var.expose) <= 1
+    error_message = "`expose` takes at most one entry. To expose several endpoints, list them comma-separated in the entry's `endpoints` attribute."
+  }
 }
 
 variable "model_uuid" {
@@ -59,7 +64,7 @@ variable "offered_endpoints" {
 
   validation {
     condition     = alltrue([for endpoint in var.offered_endpoints : contains(["grafana-dashboard", "metrics-endpoint", "opensearch-client", "peer-cluster-orchestrator"], endpoint)])
-    error_message = "offered_endpoints may only contain grafana-dashboard, metrics-endpoint, opensearch-client or peer-cluster-orchestrator."
+    error_message = "`offered_endpoints` may only contain `grafana-dashboard`, `metrics-endpoint`, `opensearch-client` or `peer-cluster-orchestrator`."
   }
 }
 

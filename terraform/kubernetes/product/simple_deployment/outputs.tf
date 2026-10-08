@@ -41,7 +41,7 @@ output "offers" {
 }
 
 output "provides" {
-  description = "Map of all 'provides' endpoints."
+  description = "Map of all `provides` endpoints."
   value = {
     opensearch_client            = module.opensearch.provides.opensearch_client
     opensearch_grafana_dashboard = module.opensearch.provides.grafana_dashboard
@@ -50,7 +50,7 @@ output "provides" {
 }
 
 output "requires" {
-  description = "Map of all 'requires' endpoints."
+  description = "Map of all `requires` endpoints."
   value = {
     opensearch_certificates      = module.opensearch.requires.certificates
     opensearch_s3_credentials    = module.opensearch.requires.s3_credentials

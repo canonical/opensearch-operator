@@ -1,3 +1,6 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
 variable "app_name" {
   description = "Application name."
   type        = string
@@ -43,6 +46,11 @@ variable "expose" {
   type        = list(object({ cidrs = optional(string), endpoints = optional(string), spaces = optional(string) }))
   default     = []
   nullable    = false
+
+  validation {
+    condition     = length(var.expose) <= 1
+    error_message = "`expose` takes at most one entry. To expose several endpoints, list them comma-separated in the entry's `endpoints` attribute."
+  }
 }
 
 variable "machines" {
@@ -66,7 +74,7 @@ variable "offered_endpoints" {
 
   validation {
     condition     = alltrue([for endpoint in var.offered_endpoints : contains(["opensearch-client", "peer-cluster-orchestrator"], endpoint)])
-    error_message = "offered_endpoints can only contain opensearch-client or peer-cluster-orchestrator."
+    error_message = "`offered_endpoints` may only contain `opensearch-client` or `peer-cluster-orchestrator`."
   }
 }
 

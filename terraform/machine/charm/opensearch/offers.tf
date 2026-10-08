@@ -1,3 +1,6 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
 resource "juju_offer" "offered_endpoints" {
   for_each = toset(var.offered_endpoints)
 

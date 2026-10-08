@@ -1,3 +1,6 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
 output "application" {
   description = "The deployed OpenSearch application object."
   value       = juju_application.opensearch
@@ -14,7 +17,7 @@ output "offers" {
 }
 
 output "provides" {
-  description = "Map of all 'provides' endpoints."
+  description = "Map of all `provides` endpoints."
   value = {
     cos_agent = {
       kind     = "endpoint"
@@ -35,7 +38,7 @@ output "provides" {
 }
 
 output "requires" {
-  description = "Map of all 'requires' endpoints."
+  description = "Map of all `requires` endpoints."
   value = {
     azure_credentials = {
       kind     = "endpoint"
