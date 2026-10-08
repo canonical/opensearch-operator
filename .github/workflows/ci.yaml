@@ -82,7 +82,7 @@ jobs:
         run: |
           pushd ./terraform
           for dir in machine/charm/opensearch charm/large_deployment machine/product/simple_deployment product/large_deployment kubernetes/charm/opensearch kubernetes/product/simple_deployment; do
-            (cd "${dir}" && terraform init && terraform fmt && terraform validate)
+            (cd "${dir}" && terraform init && terraform fmt -check && terraform validate)
           done
           popd
 
