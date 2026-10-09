@@ -13,9 +13,9 @@ The way telemetry reaches COS depends on the charm variant:
 - On **VMs**, the `opensearch` machine charm exposes a `cos-agent` endpoint, and a machine `grafana-agent` charm
   collects the telemetry and forwards it to the COS applications (which typically run in a separate Kubernetes model).
 - On **Kubernetes**, the `opensearch-k8s` charm exposes native COS endpoints (`metrics-endpoint`, `grafana-dashboard`,
-  and `logging`). When COS runs in a separate model, an `opentelemetry-collector-k8s` charm in the OpenSearch model
-  forwards the telemetry to COS. When COS runs in the same model, OpenSearch integrates directly with the Prometheus,
-  Grafana, and Loki applications.
+  and `logging`), and a `grafana-agent-k8s` charm in the OpenSearch model collects the telemetry and forwards it to the
+  COS applications. When COS runs in the same model, OpenSearch can integrate directly with the Prometheus, Grafana, and
+  Loki applications instead.
 
 ```{note}
 See: [How to enable monitoring](how-to-monitoring) via COS and Grafana.

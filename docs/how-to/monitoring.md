@@ -16,9 +16,8 @@ The integration workflow depends on the charm variant:
 - On **VMs**, the `opensearch` machine charm exposes a single `cos-agent` endpoint, and a machine `grafana-agent` charm
   collects and forwards the telemetry to COS.
 - On **Kubernetes**, the `opensearch-k8s` charm exposes native COS endpoints (`metrics-endpoint`, `grafana-dashboard`,
-  and `logging`). If COS Lite runs in the same model, OpenSearch integrates with the COS applications directly. If COS
-  Lite runs in a separate model, an `opentelemetry-collector-k8s` charm in the OpenSearch model forwards the telemetry
-  to COS.
+  and `logging`), and a `grafana-agent-k8s` charm in the OpenSearch model collects and forwards the telemetry to COS. If
+  COS Lite runs in the same model, OpenSearch can integrate with the COS applications directly instead.
 
 For background on monitoring features, see the [Monitoring explanation](explanation-monitoring).
 
@@ -117,34 +116,33 @@ juju integrate grafana-agent opensearch:cos-agent
 ````{tab-item} K8s
 :sync: k8s
 
-Deploy [`opentelemetry-collector-k8s`](https://charmhub.io/opentelemetry-collector-k8s)
-in the OpenSearch model:
+Deploy [`grafana-agent-k8s`](https://charmhub.io/grafana-agent-k8s) in the OpenSearch model:
 
 ```shell
-juju deploy opentelemetry-collector-k8s otelcol
+juju deploy grafana-agent-k8s --trust
+```
+
+Integrate it with the consumed COS offers:
+
+```shell
+juju integrate grafana-agent-k8s:grafana-dashboards-provider grafana-dashboards
+juju integrate grafana-agent-k8s:logging-consumer loki-logging
+juju integrate grafana-agent-k8s:send-remote-write prometheus-receive-remote-write
 ```
 
 Integrate it with OpenSearch:
 
 ```shell
-juju integrate opensearch-k8s:metrics-endpoint otelcol:metrics-endpoint
-juju integrate opensearch-k8s:grafana-dashboard otelcol:grafana-dashboards-consumer
-juju integrate opensearch-k8s:logging otelcol:receive-loki-logs
+juju integrate opensearch-k8s:metrics-endpoint grafana-agent-k8s:metrics-endpoint
+juju integrate opensearch-k8s:grafana-dashboard grafana-agent-k8s:grafana-dashboards-consumer
+juju integrate opensearch-k8s:logging grafana-agent-k8s:logging-provider
 ```
 
-* `metrics-endpoint` lets the collector scrape the OpenSearch metrics endpoint.
+* `metrics-endpoint` lets the agent scrape the OpenSearch metrics endpoint.
 * `grafana-dashboard` transfers the **Charmed OpenSearch** dashboard.
 * `logging` sends the OpenSearch logs.
 
-Integrate the collector with the consumed COS offers:
-
-```shell
-juju integrate otelcol:send-remote-write prometheus-receive-remote-write
-juju integrate otelcol:grafana-dashboards-provider grafana-dashboards
-juju integrate otelcol:send-loki-logs loki-logging
-```
-
-If COS Lite is deployed in the **same model** as `opensearch-k8s`, skip the collector
+If COS Lite is deployed in the **same model** as `opensearch-k8s`, skip the agent
 and the offers, and integrate OpenSearch with the COS applications directly:
 
 ```shell
