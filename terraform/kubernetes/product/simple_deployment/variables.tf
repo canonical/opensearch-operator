@@ -266,6 +266,11 @@ variable "ingress_integration" {
     )
     error_message = "`ingress_integration` with kind `offer` needs `url`."
   }
+
+  validation {
+    condition     = var.opensearch_dashboards == null || var.ingress_integration != null
+    error_message = "`ingress_integration` is unset. OpenSearch Dashboards requires an ingress provider."
+  }
 }
 
 variable "logging_integration" {
