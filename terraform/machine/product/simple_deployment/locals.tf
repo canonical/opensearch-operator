@@ -2,9 +2,14 @@
 # See LICENSE file for licensing details.
 
 locals {
-  backups_enabled        = var.backups-integrator != null
-  backups_is_cross_model = local.backups_enabled && local.backups_model_uuid != var.opensearch.model_uuid
-  backups_model_uuid     = local.backups_enabled ? coalesce(var.backups-integrator.model_uuid, var.opensearch.model_uuid) : null
+  backups_enabled = var.backups-integrator != null
+  backups_provider = var.backups_integration != null ? var.backups_integration : local.backups_enabled ? {
+    storage_type = var.backups-integrator.storage_type
+    kind         = "endpoint"
+    name         = juju_application.backups-integrator[0].name
+    endpoint     = local.backups_settings[var.backups-integrator.storage_type].endpoint
+    url          = null
+  } : null
 
   # user-provided secret takes priority
   backups_secret_uri    = local.backups_enabled ? var.backups-integrator.credentials_secret_uri : null

@@ -53,18 +53,18 @@ resource "juju_integration" "opensearch_dashboards-opensearch-integration" {
 }
 
 resource "juju_integration" "backups_integrator-opensearch-integration" {
-  count      = local.backups_enabled ? 1 : 0
+  count      = local.backups_enabled || var.backups_integration != null ? 1 : 0
   model_uuid = var.opensearch.model_uuid
 
   application {
-    name      = local.backups_is_cross_model ? null : juju_application.backups-integrator[0].name
-    endpoint  = local.backups_is_cross_model ? null : local.backups_settings[var.backups-integrator.storage_type].endpoint
-    offer_url = local.backups_is_cross_model ? juju_offer.backups_credentials[0].url : null
+    name      = local.backups_provider.kind == "endpoint" ? local.backups_provider.name : null
+    endpoint  = local.backups_provider.kind == "endpoint" ? local.backups_provider.endpoint : null
+    offer_url = local.backups_provider.kind == "offer" ? local.backups_provider.url : null
   }
 
   application {
     name     = module.opensearch.application.name
-    endpoint = local.backups_settings[var.backups-integrator.storage_type].endpoint
+    endpoint = local.backups_settings[local.backups_provider.storage_type].endpoint
   }
 }
 

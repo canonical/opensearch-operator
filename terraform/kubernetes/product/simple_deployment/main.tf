@@ -81,7 +81,7 @@ resource "juju_application" "backups-integrator" {
     revision = var.backups-integrator.revision
     base     = coalesce(var.backups-integrator.base, local.backups_settings[var.backups-integrator.storage_type].base)
   }
-  model_uuid = local.backups_model_uuid
+  model_uuid = var.opensearch.model_uuid
   config = merge(
     var.backups-integrator.config,
     local.backups_secret_uri != null ? { credentials = local.backups_secret_uri } : {},
@@ -94,7 +94,7 @@ resource "juju_application" "backups-integrator" {
 
 resource "juju_secret" "backups_credentials" {
   count      = local.backups_secret_create ? 1 : 0
-  model_uuid = local.backups_model_uuid
+  model_uuid = var.opensearch.model_uuid
   name       = "${var.backups-integrator.storage_type}-integrator-credentials"
   info       = "Credentials for ${var.backups-integrator.storage_type}-integrator"
 
@@ -104,7 +104,7 @@ resource "juju_secret" "backups_credentials" {
 
 resource "juju_access_secret" "backups_credentials" {
   count        = local.backups_secret_create ? 1 : 0
-  model_uuid   = local.backups_model_uuid
+  model_uuid   = var.opensearch.model_uuid
   applications = [juju_application.backups-integrator[0].name]
   secret_id    = juju_secret.backups_credentials[0].secret_id
 }
@@ -127,15 +127,20 @@ resource "terraform_data" "deployed_at" {
 resource "terraform_data" "updated_at" {
   input = timestamp()
   triggers_replace = sha256(jsonencode([
+    var.azure_storage_secret_version,
     var.backups-integrator,
+    var.backups_integration,
     var.certificates_integration,
     var.data-integrator,
+    var.gcs_secret_version,
     var.grafana_dashboard_integration,
     var.ingress_integration,
     var.logging_integration,
     var.metrics_endpoint_integration,
+    var.offered_endpoints,
     var.opensearch,
     var.opensearch-dashboards,
+    var.s3_secret_version,
     var.self-signed-certificates,
   ]))
 

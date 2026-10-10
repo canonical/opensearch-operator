@@ -15,8 +15,13 @@ variable "azure_storage_secret_version" {
   default     = 0
 
   validation {
-    condition     = var.azure_storage_secret_version == 0 || try(var.backups-integrator.storage_type, null) == "azure-storage"
+    condition     = var.azure_storage_secret_version == 0 || var.backups_integration != null || try(var.backups-integrator.storage_type, null) == "azure-storage"
     error_message = "`azure_storage_secret_version` needs an Azure Storage integrator. Set `backups-integrator.storage_type` to `azure-storage`."
+  }
+
+  validation {
+    condition     = var.azure_storage_secret_version == 0 || var.backups_integration == null
+    error_message = "`azure_storage_secret_version` can't be used with `backups_integration`."
   }
 
   validation {
@@ -28,7 +33,6 @@ variable "azure_storage_secret_version" {
 variable "backups-integrator" {
   description = "Configuration for the optional backup integrator."
   type = object({
-    model_uuid             = optional(string)
     storage_type           = optional(string, "s3")
     config                 = optional(map(string), {})
     channel                = optional(string)
@@ -53,6 +57,54 @@ variable "backups-integrator" {
   validation {
     condition     = try(startswith(var.backups-integrator.credentials_secret_uri, "secret:"), true)
     error_message = "credentials_secret_uri must be a Juju secret URI starting with \"secret:\"."
+  }
+}
+
+variable "backups_integration" {
+  description = "External backup storage endpoint or offer."
+  type = object({
+    storage_type = optional(string, "s3")
+    kind         = string
+    name         = optional(string)
+    endpoint     = optional(string)
+    url          = optional(string)
+  })
+  default = null
+
+  validation {
+    condition     = var.backups_integration == null ? true : contains(["s3", "azure-storage", "gcs"], var.backups_integration.storage_type)
+    error_message = "`backups_integration.storage_type` must be `s3`, `azure-storage` or `gcs`."
+  }
+
+  validation {
+    condition     = var.backups_integration == null ? true : contains(["endpoint", "offer"], var.backups_integration.kind)
+    error_message = "`backups_integration.kind` must be `endpoint` or `offer`."
+  }
+
+  validation {
+    condition = (
+      var.backups_integration == null ? true :
+      var.backups_integration.kind == "endpoint" ? (
+        var.backups_integration.name != null && var.backups_integration.name != "" &&
+        var.backups_integration.endpoint != null && var.backups_integration.endpoint != ""
+      ) : true
+    )
+    error_message = "`backups_integration` with kind `endpoint` needs `name` and `endpoint`."
+  }
+
+  validation {
+    condition = (
+      var.backups_integration == null ? true :
+      var.backups_integration.kind == "offer" ? (
+        var.backups_integration.url != null && var.backups_integration.url != ""
+      ) : true
+    )
+    error_message = "`backups_integration` with kind `offer` needs `url`."
+  }
+
+  validation {
+    condition     = var.backups_integration == null || var.backups-integrator == null
+    error_message = "Set `backups-integrator` or `backups_integration`, not both."
   }
 }
 
@@ -275,8 +327,13 @@ variable "gcs_secret_version" {
   default     = 0
 
   validation {
-    condition     = var.gcs_secret_version == 0 || try(var.backups-integrator.storage_type, null) == "gcs"
+    condition     = var.gcs_secret_version == 0 || var.backups_integration != null || try(var.backups-integrator.storage_type, null) == "gcs"
     error_message = "`gcs_secret_version` needs a GCS integrator. Set `backups-integrator.storage_type` to `gcs`."
+  }
+
+  validation {
+    condition     = var.gcs_secret_version == 0 || var.backups_integration == null
+    error_message = "`gcs_secret_version` can't be used with `backups_integration`."
   }
 
   validation {
@@ -366,8 +423,13 @@ variable "s3_secret_version" {
   default     = 0
 
   validation {
-    condition     = var.s3_secret_version == 0 || try(var.backups-integrator.storage_type, null) == "s3"
+    condition     = var.s3_secret_version == 0 || var.backups_integration != null || try(var.backups-integrator.storage_type, null) == "s3"
     error_message = "`s3_secret_version` needs an S3 integrator. Set `backups-integrator.storage_type` to `s3`."
+  }
+
+  validation {
+    condition     = var.s3_secret_version == 0 || var.backups_integration == null
+    error_message = "`s3_secret_version` can't be used with `backups_integration`."
   }
 
   validation {
