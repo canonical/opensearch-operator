@@ -26,82 +26,82 @@ module "opensearch" {
 }
 
 # TLS provider
-resource "juju_application" "self-signed-certificates" {
+resource "juju_application" "self_signed_certificates" {
   count = var.certificates_integration == null ? 1 : 0
 
   charm {
     name     = "self-signed-certificates"
-    channel  = var.self-signed-certificates.channel
-    revision = var.self-signed-certificates.revision
-    base     = var.self-signed-certificates.base
+    channel  = var.self_signed_certificates.channel
+    revision = var.self_signed_certificates.revision
+    base     = var.self_signed_certificates.base
   }
   name       = "self-signed-certificates"
   model_uuid = var.opensearch.model_uuid
-  config     = var.self-signed-certificates.config
+  config     = var.self_signed_certificates.config
 
-  constraints = var.self-signed-certificates.constraints
-  machines    = length(var.self-signed-certificates.machines) > 0 ? var.self-signed-certificates.machines : null
-  units       = length(var.self-signed-certificates.machines) > 0 ? null : var.self-signed-certificates.units
+  constraints = var.self_signed_certificates.constraints
+  machines    = length(var.self_signed_certificates.machines) > 0 ? var.self_signed_certificates.machines : null
+  units       = length(var.self_signed_certificates.machines) > 0 ? null : var.self_signed_certificates.units
 }
 
 # OpenSearch dashboards
-module "opensearch-dashboards" {
+module "opensearch_dashboards" {
   count  = local.dashboards_enabled ? 1 : 0
-  source = "git::https://github.com/canonical/opensearch-dashboards-operator.git//terraform/machine/charm/opensearch_dashboards?ref=8b93e9fd8c686f6d4cf8617380d5d8c07c2d8786"
+  source = "git::https://github.com/canonical/opensearch-dashboards-operator.git//terraform/machine/charm/opensearch_dashboards?ref=74bd9b434a906dfb57e9baf371df71a5a3695645"
 
-  app_name          = var.opensearch-dashboards.app_name
-  base              = var.opensearch-dashboards.base
-  channel           = var.opensearch-dashboards.channel
-  config            = var.opensearch-dashboards.config
-  constraints       = var.opensearch-dashboards.constraints
-  endpoint_bindings = var.opensearch-dashboards.endpoint_bindings
-  expose            = var.opensearch-dashboards.expose
-  machines          = var.opensearch-dashboards.machines
+  app_name          = var.opensearch_dashboards.app_name
+  base              = var.opensearch_dashboards.base
+  channel           = var.opensearch_dashboards.channel
+  config            = var.opensearch_dashboards.config
+  constraints       = var.opensearch_dashboards.constraints
+  endpoint_bindings = var.opensearch_dashboards.endpoint_bindings
+  expose            = var.opensearch_dashboards.expose
+  machines          = var.opensearch_dashboards.machines
   model_uuid        = var.opensearch.model_uuid
-  revision          = var.opensearch-dashboards.revision
-  units             = var.opensearch-dashboards.units
+  revision          = var.opensearch_dashboards.revision
+  units             = var.opensearch_dashboards.units
 }
 
 # Integrator apps
-module "data-integrator" {
+module "data_integrator" {
   count  = local.data_integrator_enabled ? 1 : 0
   source = "git::https://github.com/canonical/data-integrator.git//terraform/charm/data_integrator?ref=rev519"
 
-  base        = var.data-integrator.base
-  channel     = var.data-integrator.channel
-  config      = var.data-integrator.config
-  constraints = var.data-integrator.constraints
-  machines    = var.data-integrator.machines
+  base        = var.data_integrator.base
+  channel     = var.data_integrator.channel
+  config      = var.data_integrator.config
+  constraints = var.data_integrator.constraints
+  machines    = var.data_integrator.machines
   model_uuid  = var.opensearch.model_uuid
-  revision    = var.data-integrator.revision
+  revision    = var.data_integrator.revision
 }
 
-resource "juju_application" "backups-integrator" {
+resource "juju_application" "backups" {
   count = local.backups_enabled ? 1 : 0
 
   charm {
-    name     = "${var.backups-integrator.storage_type}-integrator"
-    channel  = coalesce(var.backups-integrator.channel, local.backups_settings[var.backups-integrator.storage_type].channel)
-    revision = var.backups-integrator.revision
-    base     = coalesce(var.backups-integrator.base, local.backups_settings[var.backups-integrator.storage_type].base)
+    name     = "${var.backups.storage_type}-integrator"
+    channel  = coalesce(var.backups.channel, local.backups_settings[var.backups.storage_type].channel)
+    revision = var.backups.revision
+    base     = coalesce(var.backups.base, local.backups_settings[var.backups.storage_type].base)
   }
   model_uuid = var.opensearch.model_uuid
   config = merge(
-    var.backups-integrator.config,
+    var.backups.config,
     local.backups_secret_uri != null ? { credentials = local.backups_secret_uri } : {},
     local.backups_secret_create ? { credentials = juju_secret.backups_credentials[0].secret_uri } : {},
   )
 
-  constraints = var.backups-integrator.constraints
-  machines    = length(var.backups-integrator.machines) > 0 ? var.backups-integrator.machines : null
-  units       = length(var.backups-integrator.machines) > 0 ? null : 1
+  constraints = var.backups.constraints
+  machines    = length(var.backups.machines) > 0 ? var.backups.machines : null
+  units       = length(var.backups.machines) > 0 ? null : 1
 }
 
 resource "juju_secret" "backups_credentials" {
   count      = local.backups_secret_create ? 1 : 0
   model_uuid = var.opensearch.model_uuid
-  name       = "${var.backups-integrator.storage_type}-integrator-credentials"
-  info       = "Credentials for ${var.backups-integrator.storage_type}-integrator"
+  name       = "${var.backups.storage_type}-integrator-credentials"
+  info       = "Credentials for ${var.backups.storage_type}-integrator"
 
   value_wo         = local.backups_secret_value
   value_wo_version = local.backups_secret_version
@@ -110,14 +110,14 @@ resource "juju_secret" "backups_credentials" {
 resource "juju_access_secret" "backups_credentials" {
   count        = local.backups_secret_create ? 1 : 0
   model_uuid   = var.opensearch.model_uuid
-  applications = [juju_application.backups-integrator[0].name]
+  applications = [juju_application.backups[0].name]
   secret_id    = juju_secret.backups_credentials[0].secret_id
 }
 
 check "backups_credentials_source" {
   assert {
     condition     = !(local.backups_secret_uri != null && local.backups_secret_version > 0)
-    error_message = "`${local.backups_secret_version_name}` will be ignored because `backups-integrator.credentials_secret_uri` is set. Set `${local.backups_secret_version_name}` to `0`."
+    error_message = "`${local.backups_secret_version_name}` will be ignored because `backups.credentials_secret_uri` is set. Set `${local.backups_secret_version_name}` to `0`."
   }
 }
 
@@ -133,17 +133,17 @@ resource "terraform_data" "updated_at" {
   input = timestamp()
   triggers_replace = sha256(jsonencode([
     var.azure_storage_secret_version,
-    var.backups-integrator,
+    var.backups,
     var.backups_integration,
     var.certificates_integration,
     var.cos_agent_integration,
-    var.data-integrator,
+    var.data_integrator,
     var.gcs_secret_version,
     var.offered_endpoints,
     var.opensearch,
-    var.opensearch-dashboards,
+    var.opensearch_dashboards,
     var.s3_secret_version,
-    var.self-signed-certificates,
+    var.self_signed_certificates,
   ]))
 
   lifecycle {

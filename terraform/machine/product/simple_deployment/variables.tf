@@ -15,8 +15,8 @@ variable "azure_storage_secret_version" {
   default     = 0
 
   validation {
-    condition     = var.azure_storage_secret_version == 0 || var.backups_integration != null || try(var.backups-integrator.storage_type, null) == "azure-storage"
-    error_message = "`azure_storage_secret_version` needs an Azure Storage integrator. Set `backups-integrator.storage_type` to `azure-storage`."
+    condition     = var.azure_storage_secret_version == 0 || var.backups_integration != null || try(var.backups.storage_type, null) == "azure-storage"
+    error_message = "`azure_storage_secret_version` needs an Azure Storage integrator. Set `backups.storage_type` to `azure-storage`."
   }
 
   validation {
@@ -30,7 +30,7 @@ variable "azure_storage_secret_version" {
   }
 }
 
-variable "backups-integrator" {
+variable "backups" {
   description = "Configuration for the optional backup integrator."
   type = object({
     storage_type           = optional(string, "s3")
@@ -46,23 +46,23 @@ variable "backups-integrator" {
   default = null
 
   validation {
-    condition     = var.backups-integrator == null ? true : contains(["s3", "azure-storage", "gcs"], var.backups-integrator.storage_type)
-    error_message = "storage_type must be 's3', 'azure-storage' or 'gcs'."
+    condition     = var.backups == null ? true : contains(["s3", "azure-storage", "gcs"], var.backups.storage_type)
+    error_message = "`backups.storage_type` must be `s3`, `azure-storage` or `gcs`."
   }
 
   validation {
-    condition     = var.backups-integrator == null ? true : !contains(keys(var.backups-integrator.config), "credentials")
-    error_message = "Set backups-integrator.credentials_secret_uri instead of config.credentials."
+    condition     = var.backups == null ? true : !contains(keys(var.backups.config), "credentials")
+    error_message = "Set `backups.credentials_secret_uri` instead of `backups.config.credentials`."
   }
 
   validation {
-    condition     = try(startswith(var.backups-integrator.credentials_secret_uri, "secret:"), true)
-    error_message = "credentials_secret_uri must be a Juju secret URI starting with \"secret:\"."
+    condition     = try(startswith(var.backups.credentials_secret_uri, "secret:"), true)
+    error_message = "`backups.credentials_secret_uri` must be a Juju secret URI starting with `secret:`."
   }
 
   validation {
-    condition     = var.backups-integrator == null ? true : length(var.backups-integrator.machines) <= 1
-    error_message = "Machine count should be at most 1"
+    condition     = var.backups == null ? true : length(var.backups.machines) <= 1
+    error_message = "`backups.machines` takes at most one machine."
   }
 }
 
@@ -109,8 +109,8 @@ variable "backups_integration" {
   }
 
   validation {
-    condition     = var.backups_integration == null || var.backups-integrator == null
-    error_message = "Set `backups-integrator` or `backups_integration`, not both."
+    condition     = var.backups_integration == null || var.backups == null
+    error_message = "Set `backups` or `backups_integration`, not both."
   }
 }
 
@@ -126,7 +126,7 @@ variable "certificates_integration" {
 
   validation {
     condition     = var.certificates_integration == null ? true : contains(["endpoint", "offer"], var.certificates_integration.kind)
-    error_message = "certificates_integration.kind must be either 'endpoint' or 'offer'."
+    error_message = "`certificates_integration.kind` must be `endpoint` or `offer`."
   }
 
   validation {
@@ -137,7 +137,7 @@ variable "certificates_integration" {
         var.certificates_integration.endpoint != null && var.certificates_integration.endpoint != ""
       ) : true
     )
-    error_message = "Both 'name' and 'endpoint' attributes must be provided for an in-model integration."
+    error_message = "`certificates_integration` with kind `endpoint` needs `name` and `endpoint`."
   }
 
   validation {
@@ -147,7 +147,7 @@ variable "certificates_integration" {
         var.certificates_integration.url != null && var.certificates_integration.url != ""
       ) : true
     )
-    error_message = "The 'url' attribute must be provided for a cross-model integration."
+    error_message = "`certificates_integration` with kind `offer` needs `url`."
   }
 }
 
@@ -160,8 +160,8 @@ variable "cos_agent_integration" {
   default = null
 }
 
-variable "data-integrator" {
-  description = "Configuration for the optional data-integrator."
+variable "data_integrator" {
+  description = "Configuration for the optional `data-integrator`."
   type = object({
     config      = optional(map(string), { "index-name" : "test", "extra-user-roles" : "admin" })
     channel     = optional(string, "latest/stable")
@@ -173,16 +173,16 @@ variable "data-integrator" {
   default = null
 
   validation {
-    condition = var.data-integrator == null ? true : (
-      lookup(var.data-integrator.config, "index-name", "") != ""
-      && contains(["default", "admin"], lookup(var.data-integrator.config, "extra-user-roles", "admin"))
+    condition = var.data_integrator == null ? true : (
+      lookup(var.data_integrator.config, "index-name", "") != ""
+      && contains(["default", "admin"], lookup(var.data_integrator.config, "extra-user-roles", "admin"))
     )
-    error_message = "data-integrator config must contain a non-empty 'index-name' and 'extra-user-roles' must be either 'default' or 'admin'."
+    error_message = "`data_integrator.config` needs a non-empty `index-name`, and `extra-user-roles` must be `default` or `admin`."
   }
 
   validation {
-    condition     = var.data-integrator == null ? true : length(var.data-integrator.machines) <= 1
-    error_message = "Machine count should be at most 1"
+    condition     = var.data_integrator == null ? true : length(var.data_integrator.machines) <= 1
+    error_message = "`data_integrator.machines` takes at most one machine."
   }
 }
 
@@ -200,8 +200,8 @@ variable "gcs_secret_version" {
   default     = 0
 
   validation {
-    condition     = var.gcs_secret_version == 0 || var.backups_integration != null || try(var.backups-integrator.storage_type, null) == "gcs"
-    error_message = "`gcs_secret_version` needs a GCS integrator. Set `backups-integrator.storage_type` to `gcs`."
+    condition     = var.gcs_secret_version == 0 || var.backups_integration != null || try(var.backups.storage_type, null) == "gcs"
+    error_message = "`gcs_secret_version` needs a GCS integrator. Set `backups.storage_type` to `gcs`."
   }
 
   validation {
@@ -252,7 +252,7 @@ variable "opensearch" {
   })
 }
 
-variable "opensearch-dashboards" {
+variable "opensearch_dashboards" {
   description = "Optional OpenSearch Dashboards app definition."
   type = object({
     app_name    = optional(string, "opensearch-dashboards")
@@ -304,8 +304,8 @@ variable "s3_secret_version" {
   default     = 0
 
   validation {
-    condition     = var.s3_secret_version == 0 || var.backups_integration != null || try(var.backups-integrator.storage_type, null) == "s3"
-    error_message = "`s3_secret_version` needs an S3 integrator. Set `backups-integrator.storage_type` to `s3`."
+    condition     = var.s3_secret_version == 0 || var.backups_integration != null || try(var.backups.storage_type, null) == "s3"
+    error_message = "`s3_secret_version` needs an S3 integrator. Set `backups.storage_type` to `s3`."
   }
 
   validation {
@@ -319,8 +319,8 @@ variable "s3_secret_version" {
   }
 }
 
-variable "self-signed-certificates" {
-  description = "Configuration for the self-signed-certificates app."
+variable "self_signed_certificates" {
+  description = "Configuration for the `self-signed-certificates` app."
   type = object({
     channel     = optional(string, "1/stable")
     revision    = optional(number)
@@ -333,7 +333,7 @@ variable "self-signed-certificates" {
   default = {}
 
   validation {
-    condition     = length(var.self-signed-certificates.machines) <= 1
-    error_message = "Machine count should be at most 1"
+    condition     = length(var.self_signed_certificates.machines) <= 1
+    error_message = "`self_signed_certificates.machines` takes at most one machine."
   }
 }

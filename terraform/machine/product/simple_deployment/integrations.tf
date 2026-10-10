@@ -6,7 +6,7 @@
 #--------------------------------------------------------
 
 # Integrations
-resource "juju_integration" "opensearch-tls-integration" {
+resource "juju_integration" "tls_opensearch" {
   model_uuid = var.opensearch.model_uuid
 
   application {
@@ -21,13 +21,13 @@ resource "juju_integration" "opensearch-tls-integration" {
   }
 }
 
-resource "juju_integration" "opensearch_dashboards-tls-integration" {
-  count      = try(var.opensearch-dashboards.tls, false) ? 1 : 0
+resource "juju_integration" "tls_opensearch_dashboards" {
+  count      = try(var.opensearch_dashboards.tls, false) ? 1 : 0
   model_uuid = var.opensearch.model_uuid
 
   application {
-    name     = module.opensearch-dashboards[0].requires.certificates.name
-    endpoint = module.opensearch-dashboards[0].requires.certificates.endpoint
+    name     = module.opensearch_dashboards[0].requires.certificates.name
+    endpoint = module.opensearch_dashboards[0].requires.certificates.endpoint
   }
 
   application {
@@ -37,13 +37,13 @@ resource "juju_integration" "opensearch_dashboards-tls-integration" {
   }
 }
 
-resource "juju_integration" "opensearch_dashboards-opensearch-integration" {
+resource "juju_integration" "client_opensearch_dashboards" {
   count      = local.dashboards_enabled ? 1 : 0
   model_uuid = var.opensearch.model_uuid
 
   application {
-    name     = module.opensearch-dashboards[0].requires.opensearch_client.name
-    endpoint = module.opensearch-dashboards[0].requires.opensearch_client.endpoint
+    name     = module.opensearch_dashboards[0].requires.opensearch_client.name
+    endpoint = module.opensearch_dashboards[0].requires.opensearch_client.endpoint
   }
 
   application {
@@ -52,7 +52,7 @@ resource "juju_integration" "opensearch_dashboards-opensearch-integration" {
   }
 }
 
-resource "juju_integration" "backups_integrator-opensearch-integration" {
+resource "juju_integration" "backups_opensearch" {
   count      = local.backups_enabled || var.backups_integration != null ? 1 : 0
   model_uuid = var.opensearch.model_uuid
 
@@ -68,13 +68,13 @@ resource "juju_integration" "backups_integrator-opensearch-integration" {
   }
 }
 
-resource "juju_integration" "data_integrator-opensearch-integration" {
+resource "juju_integration" "client_data_integrator" {
   count      = local.data_integrator_enabled ? 1 : 0
   model_uuid = var.opensearch.model_uuid
 
   application {
-    name     = module.data-integrator[0].requires.opensearch.name
-    endpoint = module.data-integrator[0].requires.opensearch.endpoint
+    name     = module.data_integrator[0].requires.opensearch.name
+    endpoint = module.data_integrator[0].requires.opensearch.endpoint
   }
 
   application {
@@ -83,7 +83,7 @@ resource "juju_integration" "data_integrator-opensearch-integration" {
   }
 }
 
-resource "juju_integration" "cos_agent-opensearch-integration" {
+resource "juju_integration" "cos_opensearch" {
   count      = var.cos_agent_integration != null ? 1 : 0
   model_uuid = var.opensearch.model_uuid
 
@@ -98,7 +98,7 @@ resource "juju_integration" "cos_agent-opensearch-integration" {
   }
 }
 
-resource "juju_integration" "cos_agent-opensearch_dashboards-integration" {
+resource "juju_integration" "cos_opensearch_dashboards" {
   count      = local.dashboards_enabled && var.cos_agent_integration != null ? 1 : 0
   model_uuid = var.opensearch.model_uuid
 
@@ -108,7 +108,7 @@ resource "juju_integration" "cos_agent-opensearch_dashboards-integration" {
   }
 
   application {
-    name     = module.opensearch-dashboards[0].provides.cos_agent.name
-    endpoint = module.opensearch-dashboards[0].provides.cos_agent.endpoint
+    name     = module.opensearch_dashboards[0].provides.cos_agent.name
+    endpoint = module.opensearch_dashboards[0].provides.cos_agent.endpoint
   }
 }

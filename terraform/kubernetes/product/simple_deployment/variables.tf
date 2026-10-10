@@ -15,8 +15,8 @@ variable "azure_storage_secret_version" {
   default     = 0
 
   validation {
-    condition     = var.azure_storage_secret_version == 0 || var.backups_integration != null || try(var.backups-integrator.storage_type, null) == "azure-storage"
-    error_message = "`azure_storage_secret_version` needs an Azure Storage integrator. Set `backups-integrator.storage_type` to `azure-storage`."
+    condition     = var.azure_storage_secret_version == 0 || var.backups_integration != null || try(var.backups.storage_type, null) == "azure-storage"
+    error_message = "`azure_storage_secret_version` needs an Azure Storage integrator. Set `backups.storage_type` to `azure-storage`."
   }
 
   validation {
@@ -30,7 +30,7 @@ variable "azure_storage_secret_version" {
   }
 }
 
-variable "backups-integrator" {
+variable "backups" {
   description = "Configuration for the optional backup integrator."
   type = object({
     storage_type           = optional(string, "s3")
@@ -45,18 +45,18 @@ variable "backups-integrator" {
   default = null
 
   validation {
-    condition     = var.backups-integrator == null ? true : contains(["s3", "azure-storage", "gcs"], var.backups-integrator.storage_type)
-    error_message = "storage_type must be 's3', 'azure-storage' or 'gcs'."
+    condition     = var.backups == null ? true : contains(["s3", "azure-storage", "gcs"], var.backups.storage_type)
+    error_message = "`backups.storage_type` must be `s3`, `azure-storage` or `gcs`."
   }
 
   validation {
-    condition     = var.backups-integrator == null ? true : !contains(keys(var.backups-integrator.config), "credentials")
-    error_message = "Set backups-integrator.credentials_secret_uri instead of config.credentials."
+    condition     = var.backups == null ? true : !contains(keys(var.backups.config), "credentials")
+    error_message = "Set `backups.credentials_secret_uri` instead of `backups.config.credentials`."
   }
 
   validation {
-    condition     = try(startswith(var.backups-integrator.credentials_secret_uri, "secret:"), true)
-    error_message = "credentials_secret_uri must be a Juju secret URI starting with \"secret:\"."
+    condition     = try(startswith(var.backups.credentials_secret_uri, "secret:"), true)
+    error_message = "`backups.credentials_secret_uri` must be a Juju secret URI starting with `secret:`."
   }
 }
 
@@ -103,8 +103,8 @@ variable "backups_integration" {
   }
 
   validation {
-    condition     = var.backups_integration == null || var.backups-integrator == null
-    error_message = "Set `backups-integrator` or `backups_integration`, not both."
+    condition     = var.backups_integration == null || var.backups == null
+    error_message = "Set `backups` or `backups_integration`, not both."
   }
 }
 
@@ -120,7 +120,7 @@ variable "certificates_integration" {
 
   validation {
     condition     = var.certificates_integration == null ? true : contains(["endpoint", "offer"], var.certificates_integration.kind)
-    error_message = "certificates_integration.kind must be either 'endpoint' or 'offer'."
+    error_message = "`certificates_integration.kind` must be `endpoint` or `offer`."
   }
 
   validation {
@@ -131,7 +131,7 @@ variable "certificates_integration" {
         var.certificates_integration.endpoint != null && var.certificates_integration.endpoint != ""
       ) : true
     )
-    error_message = "Both 'name' and 'endpoint' attributes must be provided for an in-model integration."
+    error_message = "`certificates_integration` with kind `endpoint` needs `name` and `endpoint`."
   }
 
   validation {
@@ -141,12 +141,12 @@ variable "certificates_integration" {
         var.certificates_integration.url != null && var.certificates_integration.url != ""
       ) : true
     )
-    error_message = "The 'url' attribute must be provided for a cross-model integration."
+    error_message = "`certificates_integration` with kind `offer` needs `url`."
   }
 }
 
-variable "data-integrator" {
-  description = "Configuration for the optional data-integrator."
+variable "data_integrator" {
+  description = "Configuration for the optional `data-integrator`."
   type = object({
     config      = optional(map(string), { "index-name" : "test", "extra-user-roles" : "admin" })
     channel     = optional(string, "latest/stable")
@@ -157,159 +157,11 @@ variable "data-integrator" {
   default = null
 
   validation {
-    condition = var.data-integrator == null ? true : (
-      lookup(var.data-integrator.config, "index-name", "") != ""
-      && contains(["default", "admin"], lookup(var.data-integrator.config, "extra-user-roles", "admin"))
+    condition = var.data_integrator == null ? true : (
+      lookup(var.data_integrator.config, "index-name", "") != ""
+      && contains(["default", "admin"], lookup(var.data_integrator.config, "extra-user-roles", "admin"))
     )
-    error_message = "data-integrator config must contain a non-empty 'index-name' and 'extra-user-roles' must be either 'default' or 'admin'."
-  }
-}
-
-variable "grafana_dashboard_integration" {
-  description = "Optional COS Grafana dashboard endpoint or offer."
-  type = object({
-    kind     = string
-    name     = optional(string)
-    endpoint = optional(string)
-    url      = optional(string)
-  })
-  default = null
-
-  validation {
-    condition     = var.grafana_dashboard_integration == null ? true : contains(["endpoint", "offer"], var.grafana_dashboard_integration.kind)
-    error_message = "grafana_dashboard_integration.kind must be either 'endpoint' or 'offer'."
-  }
-
-  validation {
-    condition = (
-      var.grafana_dashboard_integration == null ? true :
-      var.grafana_dashboard_integration.kind == "endpoint" ? (
-        var.grafana_dashboard_integration.name != null && var.grafana_dashboard_integration.name != "" &&
-        var.grafana_dashboard_integration.endpoint != null && var.grafana_dashboard_integration.endpoint != ""
-      ) : true
-    )
-    error_message = "Both 'name' and 'endpoint' attributes must be provided for an in-model integration."
-  }
-
-  validation {
-    condition = (
-      var.grafana_dashboard_integration == null ? true :
-      var.grafana_dashboard_integration.kind == "offer" ? (
-        var.grafana_dashboard_integration.url != null && var.grafana_dashboard_integration.url != ""
-      ) : true
-    )
-    error_message = "The 'url' attribute must be provided for a cross-model integration."
-  }
-}
-
-variable "ingress_integration" {
-  description = "Ingress endpoint or offer for OpenSearch Dashboards. Required when Dashboards is deployed."
-  type = object({
-    kind     = string
-    name     = optional(string)
-    endpoint = optional(string)
-    url      = optional(string)
-  })
-  default = null
-
-  validation {
-    condition     = var.ingress_integration == null ? true : contains(["endpoint", "offer"], var.ingress_integration.kind)
-    error_message = "ingress_integration.kind must be either 'endpoint' or 'offer'."
-  }
-
-  validation {
-    condition = (
-      var.ingress_integration == null ? true :
-      var.ingress_integration.kind == "endpoint" ? (
-        var.ingress_integration.name != null && var.ingress_integration.name != "" &&
-        var.ingress_integration.endpoint != null && var.ingress_integration.endpoint != ""
-      ) : true
-    )
-    error_message = "Both 'name' and 'endpoint' attributes must be provided for an in-model integration."
-  }
-
-  validation {
-    condition = (
-      var.ingress_integration == null ? true :
-      var.ingress_integration.kind == "offer" ? (
-        var.ingress_integration.url != null && var.ingress_integration.url != ""
-      ) : true
-    )
-    error_message = "The 'url' attribute must be provided for a cross-model integration."
-  }
-}
-
-variable "logging_integration" {
-  description = "Optional COS logging endpoint or offer."
-  type = object({
-    kind     = string
-    name     = optional(string)
-    endpoint = optional(string)
-    url      = optional(string)
-  })
-  default = null
-
-  validation {
-    condition     = var.logging_integration == null ? true : contains(["endpoint", "offer"], var.logging_integration.kind)
-    error_message = "logging_integration.kind must be either 'endpoint' or 'offer'."
-  }
-
-  validation {
-    condition = (
-      var.logging_integration == null ? true :
-      var.logging_integration.kind == "endpoint" ? (
-        var.logging_integration.name != null && var.logging_integration.name != "" &&
-        var.logging_integration.endpoint != null && var.logging_integration.endpoint != ""
-      ) : true
-    )
-    error_message = "Both 'name' and 'endpoint' attributes must be provided for an in-model integration."
-  }
-
-  validation {
-    condition = (
-      var.logging_integration == null ? true :
-      var.logging_integration.kind == "offer" ? (
-        var.logging_integration.url != null && var.logging_integration.url != ""
-      ) : true
-    )
-    error_message = "The 'url' attribute must be provided for a cross-model integration."
-  }
-}
-
-variable "metrics_endpoint_integration" {
-  description = "Optional COS metrics endpoint or offer."
-  type = object({
-    kind     = string
-    name     = optional(string)
-    endpoint = optional(string)
-    url      = optional(string)
-  })
-  default = null
-
-  validation {
-    condition     = var.metrics_endpoint_integration == null ? true : contains(["endpoint", "offer"], var.metrics_endpoint_integration.kind)
-    error_message = "metrics_endpoint_integration.kind must be either 'endpoint' or 'offer'."
-  }
-
-  validation {
-    condition = (
-      var.metrics_endpoint_integration == null ? true :
-      var.metrics_endpoint_integration.kind == "endpoint" ? (
-        var.metrics_endpoint_integration.name != null && var.metrics_endpoint_integration.name != "" &&
-        var.metrics_endpoint_integration.endpoint != null && var.metrics_endpoint_integration.endpoint != ""
-      ) : true
-    )
-    error_message = "Both 'name' and 'endpoint' attributes must be provided for an in-model integration."
-  }
-
-  validation {
-    condition = (
-      var.metrics_endpoint_integration == null ? true :
-      var.metrics_endpoint_integration.kind == "offer" ? (
-        var.metrics_endpoint_integration.url != null && var.metrics_endpoint_integration.url != ""
-      ) : true
-    )
-    error_message = "The 'url' attribute must be provided for a cross-model integration."
+    error_message = "`data_integrator.config` needs a non-empty `index-name`, and `extra-user-roles` must be `default` or `admin`."
   }
 }
 
@@ -327,8 +179,8 @@ variable "gcs_secret_version" {
   default     = 0
 
   validation {
-    condition     = var.gcs_secret_version == 0 || var.backups_integration != null || try(var.backups-integrator.storage_type, null) == "gcs"
-    error_message = "`gcs_secret_version` needs a GCS integrator. Set `backups-integrator.storage_type` to `gcs`."
+    condition     = var.gcs_secret_version == 0 || var.backups_integration != null || try(var.backups.storage_type, null) == "gcs"
+    error_message = "`gcs_secret_version` needs a GCS integrator. Set `backups.storage_type` to `gcs`."
   }
 
   validation {
@@ -339,6 +191,154 @@ variable "gcs_secret_version" {
   validation {
     condition     = var.gcs_secret_version >= 0 && floor(var.gcs_secret_version) == var.gcs_secret_version
     error_message = "`gcs_secret_version` must be a non-negative integer."
+  }
+}
+
+variable "grafana_dashboard_integration" {
+  description = "Optional COS Grafana dashboard endpoint or offer."
+  type = object({
+    kind     = string
+    name     = optional(string)
+    endpoint = optional(string)
+    url      = optional(string)
+  })
+  default = null
+
+  validation {
+    condition     = var.grafana_dashboard_integration == null ? true : contains(["endpoint", "offer"], var.grafana_dashboard_integration.kind)
+    error_message = "`grafana_dashboard_integration.kind` must be `endpoint` or `offer`."
+  }
+
+  validation {
+    condition = (
+      var.grafana_dashboard_integration == null ? true :
+      var.grafana_dashboard_integration.kind == "endpoint" ? (
+        var.grafana_dashboard_integration.name != null && var.grafana_dashboard_integration.name != "" &&
+        var.grafana_dashboard_integration.endpoint != null && var.grafana_dashboard_integration.endpoint != ""
+      ) : true
+    )
+    error_message = "`grafana_dashboard_integration` with kind `endpoint` needs `name` and `endpoint`."
+  }
+
+  validation {
+    condition = (
+      var.grafana_dashboard_integration == null ? true :
+      var.grafana_dashboard_integration.kind == "offer" ? (
+        var.grafana_dashboard_integration.url != null && var.grafana_dashboard_integration.url != ""
+      ) : true
+    )
+    error_message = "`grafana_dashboard_integration` with kind `offer` needs `url`."
+  }
+}
+
+variable "ingress_integration" {
+  description = "Ingress endpoint or offer for OpenSearch Dashboards. Required when Dashboards is deployed."
+  type = object({
+    kind     = string
+    name     = optional(string)
+    endpoint = optional(string)
+    url      = optional(string)
+  })
+  default = null
+
+  validation {
+    condition     = var.ingress_integration == null ? true : contains(["endpoint", "offer"], var.ingress_integration.kind)
+    error_message = "`ingress_integration.kind` must be `endpoint` or `offer`."
+  }
+
+  validation {
+    condition = (
+      var.ingress_integration == null ? true :
+      var.ingress_integration.kind == "endpoint" ? (
+        var.ingress_integration.name != null && var.ingress_integration.name != "" &&
+        var.ingress_integration.endpoint != null && var.ingress_integration.endpoint != ""
+      ) : true
+    )
+    error_message = "`ingress_integration` with kind `endpoint` needs `name` and `endpoint`."
+  }
+
+  validation {
+    condition = (
+      var.ingress_integration == null ? true :
+      var.ingress_integration.kind == "offer" ? (
+        var.ingress_integration.url != null && var.ingress_integration.url != ""
+      ) : true
+    )
+    error_message = "`ingress_integration` with kind `offer` needs `url`."
+  }
+}
+
+variable "logging_integration" {
+  description = "Optional COS logging endpoint or offer."
+  type = object({
+    kind     = string
+    name     = optional(string)
+    endpoint = optional(string)
+    url      = optional(string)
+  })
+  default = null
+
+  validation {
+    condition     = var.logging_integration == null ? true : contains(["endpoint", "offer"], var.logging_integration.kind)
+    error_message = "`logging_integration.kind` must be `endpoint` or `offer`."
+  }
+
+  validation {
+    condition = (
+      var.logging_integration == null ? true :
+      var.logging_integration.kind == "endpoint" ? (
+        var.logging_integration.name != null && var.logging_integration.name != "" &&
+        var.logging_integration.endpoint != null && var.logging_integration.endpoint != ""
+      ) : true
+    )
+    error_message = "`logging_integration` with kind `endpoint` needs `name` and `endpoint`."
+  }
+
+  validation {
+    condition = (
+      var.logging_integration == null ? true :
+      var.logging_integration.kind == "offer" ? (
+        var.logging_integration.url != null && var.logging_integration.url != ""
+      ) : true
+    )
+    error_message = "`logging_integration` with kind `offer` needs `url`."
+  }
+}
+
+variable "metrics_endpoint_integration" {
+  description = "Optional COS metrics endpoint or offer."
+  type = object({
+    kind     = string
+    name     = optional(string)
+    endpoint = optional(string)
+    url      = optional(string)
+  })
+  default = null
+
+  validation {
+    condition     = var.metrics_endpoint_integration == null ? true : contains(["endpoint", "offer"], var.metrics_endpoint_integration.kind)
+    error_message = "`metrics_endpoint_integration.kind` must be `endpoint` or `offer`."
+  }
+
+  validation {
+    condition = (
+      var.metrics_endpoint_integration == null ? true :
+      var.metrics_endpoint_integration.kind == "endpoint" ? (
+        var.metrics_endpoint_integration.name != null && var.metrics_endpoint_integration.name != "" &&
+        var.metrics_endpoint_integration.endpoint != null && var.metrics_endpoint_integration.endpoint != ""
+      ) : true
+    )
+    error_message = "`metrics_endpoint_integration` with kind `endpoint` needs `name` and `endpoint`."
+  }
+
+  validation {
+    condition = (
+      var.metrics_endpoint_integration == null ? true :
+      var.metrics_endpoint_integration.kind == "offer" ? (
+        var.metrics_endpoint_integration.url != null && var.metrics_endpoint_integration.url != ""
+      ) : true
+    )
+    error_message = "`metrics_endpoint_integration` with kind `offer` needs `url`."
   }
 }
 
@@ -375,7 +375,7 @@ variable "opensearch" {
   })
 }
 
-variable "opensearch-dashboards" {
+variable "opensearch_dashboards" {
   description = "Optional OpenSearch Dashboards app definition."
   type = object({
     app_name    = optional(string, "opensearch-dashboards-k8s")
@@ -423,8 +423,8 @@ variable "s3_secret_version" {
   default     = 0
 
   validation {
-    condition     = var.s3_secret_version == 0 || var.backups_integration != null || try(var.backups-integrator.storage_type, null) == "s3"
-    error_message = "`s3_secret_version` needs an S3 integrator. Set `backups-integrator.storage_type` to `s3`."
+    condition     = var.s3_secret_version == 0 || var.backups_integration != null || try(var.backups.storage_type, null) == "s3"
+    error_message = "`s3_secret_version` needs an S3 integrator. Set `backups.storage_type` to `s3`."
   }
 
   validation {
@@ -438,8 +438,8 @@ variable "s3_secret_version" {
   }
 }
 
-variable "self-signed-certificates" {
-  description = "Configuration for the self-signed-certificates app."
+variable "self_signed_certificates" {
+  description = "Configuration for the `self-signed-certificates` app."
   type = object({
     channel     = optional(string, "1/stable")
     revision    = optional(number)
