@@ -12,28 +12,26 @@ This module requires a `juju` model to be available. Refer to the [usage section
 | terraform | >= 1.11 |
 | juju | ~> 2.2 |
 
-## Providers
-
-| Name | Version |
-| ---- | ------- |
-| juju | ~> 2.2 |
-| terraform | n/a |
-
 ## Inputs
 
 | Name | Description | Default | Required |
 | ---- | ----------- | ------- | :------: |
-| azure_storage_secret_key | Azure Storage account key for the backup integrator. | `null` | no |
-| backups-integrator | Configuration for the optional backup integrator. | `null` | no |
+| azure_storage_secret_key | Azure Storage account key for `azure-storage-integrator`. Supply through `TF_VAR_azure_storage_secret_key` or `-var`, at plan and at apply. | `null` | no |
+| azure_storage_secret_version | Version of the `azure-storage-integrator` credentials secret. Set to `1` to create, increment to rotate, `0` to remove. | `0` | no |
+| backups | Configuration for the optional backup integrator. | `null` | no |
+| backups_integration | External backup storage endpoint or offer. | `null` | no |
 | certificates_integration | External TLS endpoint or offer. | `null` | no |
 | cos_agent_integration | COS agent endpoint. | `null` | no |
-| data-integrator | Configuration for the optional data-integrator. | `null` | no |
-| gcs_secret_key | GCS service-account JSON key for the backup integrator. | `null` | no |
+| data_integrator | Configuration for the optional `data-integrator`. | `null` | no |
+| gcs_secret_key | GCS service-account JSON key for `gcs-integrator`. Supply through `TF_VAR_gcs_secret_key` or `-var`, at plan and at apply. | `null` | no |
+| gcs_secret_version | Version of the `gcs-integrator` credentials secret. Set to `1` to create, increment to rotate, `0` to remove. | `0` | no |
+| offered_endpoints | OpenSearch endpoints to expose as Juju offers. | `[]` | no |
 | opensearch | OpenSearch app definition. | n/a | yes |
-| opensearch-dashboards | Optional OpenSearch Dashboards app definition. | `null` | no |
-| s3_access_key | S3 access key for the backup integrator. | `null` | no |
-| s3_secret_key | S3 secret key for the backup integrator. | `null` | no |
-| self-signed-certificates | Configuration for the self-signed-certificates app. | `{}` | no |
+| opensearch_dashboards | Optional OpenSearch Dashboards app definition. | `null` | no |
+| s3_access_key | S3 access key for `s3-integrator`. Supply through `TF_VAR_s3_access_key` or `-var`, at plan and at apply. | `null` | no |
+| s3_secret_key | S3 secret key for `s3-integrator`. Supply through `TF_VAR_s3_secret_key` or `-var`, at plan and at apply. | `null` | no |
+| s3_secret_version | Version of the `s3-integrator` credentials secret. Set to `1` to create, increment to rotate, `0` to remove. | `0` | no |
+| self_signed_certificates | Configuration for the `self-signed-certificates` app. | `{}` | no |
 
 ## Outputs
 
@@ -43,8 +41,8 @@ This module requires a `juju` model to be available. Refer to the [usage section
 | metadata | Product deployment metadata. |
 | models | Deployed applications. |
 | offers | Map of offer URLs. |
-| provides | Map of all 'provides' endpoints. |
-| requires | Map of all 'requires' endpoints. |
+| provides | Map of all `provides` endpoints. |
+| requires | Map of all `requires` endpoints. |
 <!-- END_TF_DOCS -->
 
 ## Usage

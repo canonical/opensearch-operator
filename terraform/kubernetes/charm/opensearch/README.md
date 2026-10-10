@@ -20,20 +20,20 @@ This module requires a `juju` Kubernetes model to be available. Refer to the [us
 
 ## Inputs
 
-| Name | Description | Type | Default | Required |
-| ---- | ----------- | ---- | ------- | :------: |
-| app_name | Application name. | `string` | `"opensearch-k8s"` | no |
-| base | The operating system on which to deploy. | `string` | `null` | no |
-| channel | Charmhub channel. | `string` | `"2/edge"` | no |
-| config | OpenSearch charm configuration. | `map(string)` | `{}` | no |
-| constraints | Constraints for this application. | `string` | `null` | no |
-| expose | Expose the application for external access. | <pre>list(object({<br/>    cidrs     = optional(string)<br/>    endpoints = optional(string)<br/>    spaces    = optional(string)<br/>  }))</pre> | `[]` | no |
-| model_uuid | Model UUID | `string` | n/a | yes |
-| offered_endpoints | Endpoints to expose as Juju offers for cross-model integration. | `list(string)` | `[]` | no |
-| resources | Map of the charm resources (`opensearch-image`). When not set, the image published with the charm revision is used. | `map(string)` | `{}` | no |
-| revision | Charm revision | `number` | `null` | no |
-| storage_directives | Map of storage directives for the charm. | `map(string)` | `{}` | no |
-| units | Charm units. | `number` | `1` | no |
+| Name | Description | Default | Required |
+| ---- | ----------- | ------- | :------: |
+| app_name | Application name. | `"opensearch-k8s"` | no |
+| base | The operating system on which to deploy. | `null` | no |
+| channel | Charmhub channel. | `"2/edge"` | no |
+| config | OpenSearch charm configuration. | `{}` | no |
+| constraints | Constraints for this application. | `null` | no |
+| expose | Expose the application for external access. | `[]` | no |
+| model_uuid | Model UUID | n/a | yes |
+| offered_endpoints | Endpoints to expose as Juju offers for cross-model integration. | `[]` | no |
+| resources | Map of the charm resources (`opensearch-image`). When not set, the image published with the charm revision is used. | `{}` | no |
+| revision | Charm revision | `null` | no |
+| storage_directives | Map of storage directives for the charm. | `{}` | no |
+| units | Charm units. | `1` | no |
 
 ## Outputs
 
@@ -41,8 +41,8 @@ This module requires a `juju` Kubernetes model to be available. Refer to the [us
 | ---- | ----------- |
 | application | The deployed OpenSearch application object. |
 | offers | Map of all offers exposed by this application. |
-| provides | Map of all 'provides' endpoints. |
-| requires | Map of all 'requires' endpoints. |
+| provides | Map of all `provides` endpoints. |
+| requires | Map of all `requires` endpoints. |
 <!-- END_TF_DOCS -->
 
 ## Usage

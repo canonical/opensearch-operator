@@ -20,21 +20,21 @@ This module requires a `juju` model to be available. Refer to the [usage section
 
 ## Inputs
 
-| Name | Description | Type | Default | Required |
-| ---- | ----------- | ---- | ------- | :------: |
-| app_name | Application name. | `string` | `"opensearch"` | no |
-| base | The operating system on which to deploy. | `string` | `null` | no |
-| channel | Charmhub channel. | `string` | `"2/edge"` | no |
-| config | OpenSearch charm configuration. | `map(string)` | `{}` | no |
-| constraints | Machine constraints. | `string` | `null` | no |
-| endpoint_bindings | Set of endpoint bindings. | `set(object({ space = string, endpoint = optional(string) }))` | `[]` | no |
-| expose | Expose the application for external access. | `list(object({ cidrs = optional(string), endpoints = optional(string), spaces = optional(string) }))` | `[]` | no |
-| machines | List of machines for placement. When set, one unit is deployed on each listed machine. | `set(string)` | `[]` | no |
-| model_uuid | Model UUID | `string` | n/a | yes |
-| offered_endpoints | Endpoints to expose as Juju offers for cross-model integration. | `list(string)` | `[]` | no |
-| revision | Charm revision | `number` | `null` | no |
-| storage_directives | Map of storage directives for the charm. | `map(string)` | `{}` | no |
-| units | Charm units. Ignored when `machines` is set. | `number` | `1` | no |
+| Name | Description | Default | Required |
+| ---- | ----------- | ------- | :------: |
+| app_name | Application name. | `"opensearch"` | no |
+| base | The operating system on which to deploy. | `null` | no |
+| channel | Charmhub channel. | `"2/edge"` | no |
+| config | OpenSearch charm configuration. | `{}` | no |
+| constraints | Machine constraints. | `null` | no |
+| endpoint_bindings | Set of endpoint bindings. | `[]` | no |
+| expose | Expose the application for external access. | `[]` | no |
+| machines | List of machines for placement. When set, one unit is deployed on each listed machine. | `[]` | no |
+| model_uuid | Model UUID | n/a | yes |
+| offered_endpoints | Endpoints to expose as Juju offers for cross-model integration. | `[]` | no |
+| revision | Charm revision | `null` | no |
+| storage_directives | Map of storage directives for the charm. | `{}` | no |
+| units | Charm units. Ignored when `machines` is set. | `1` | no |
 
 ## Outputs
 
@@ -42,8 +42,8 @@ This module requires a `juju` model to be available. Refer to the [usage section
 | ---- | ----------- |
 | application | The deployed OpenSearch application object. |
 | offers | Map of all offers exposed by this application. |
-| provides | Map of all 'provides' endpoints. |
-| requires | Map of all 'requires' endpoints. |
+| provides | Map of all `provides` endpoints. |
+| requires | Map of all `requires` endpoints. |
 <!-- END_TF_DOCS -->
 
 ## Usage
