@@ -7,13 +7,14 @@ locals {
   backups_model_uuid     = local.backups_enabled ? coalesce(var.backups-integrator.model_uuid, var.opensearch.model_uuid) : null
 
   # user-provided secret takes priority
-  backups_secret_uri = local.backups_enabled ? var.backups-integrator.credentials_secret_uri : null
-  backups_keys_set = local.backups_enabled ? (
-    var.backups-integrator.storage_type == "s3" ? nonsensitive(var.s3_access_key != null && var.s3_secret_key != null) :
-    var.backups-integrator.storage_type == "gcs" ? nonsensitive(var.gcs_secret_key != null) :
-    nonsensitive(var.azure_storage_secret_key != null)
-  ) : false
-  backups_secret_create = local.backups_secret_uri == null && local.backups_keys_set
+  backups_secret_uri    = local.backups_enabled ? var.backups-integrator.credentials_secret_uri : null
+  backups_secret_create = local.backups_secret_uri == null && local.backups_secret_version > 0
+  backups_secret_version = local.backups_enabled ? (
+    var.backups-integrator.storage_type == "s3" ? var.s3_secret_version :
+    var.backups-integrator.storage_type == "gcs" ? var.gcs_secret_version :
+    var.azure_storage_secret_version
+  ) : 0
+  backups_secret_version_name = local.backups_enabled ? "${replace(var.backups-integrator.storage_type, "-", "_")}_secret_version" : ""
 
   backups_secret_value = local.backups_secret_create ? (
     var.backups-integrator.storage_type == "s3" ? tomap({ access-key = var.s3_access_key, secret-key = var.s3_secret_key }) :

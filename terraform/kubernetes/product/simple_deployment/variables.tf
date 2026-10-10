@@ -2,10 +2,27 @@
 # See LICENSE file for licensing details.
 
 variable "azure_storage_secret_key" {
-  description = "Azure Storage account key for the backup integrator."
+  description = "Azure Storage account key for `azure-storage-integrator`. Supply through `TF_VAR_azure_storage_secret_key` or `-var`, at plan and at apply."
   type        = string
   sensitive   = true
+  ephemeral   = true
   default     = null
+}
+
+variable "azure_storage_secret_version" {
+  description = "Version of the `azure-storage-integrator` credentials secret. Set to `1` to create, increment to rotate, `0` to remove."
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = var.azure_storage_secret_version == 0 || try(var.backups-integrator.storage_type, null) == "azure-storage"
+    error_message = "`azure_storage_secret_version` needs an Azure Storage integrator. Set `backups-integrator.storage_type` to `azure-storage`."
+  }
+
+  validation {
+    condition     = var.azure_storage_secret_version >= 0 && floor(var.azure_storage_secret_version) == var.azure_storage_secret_version
+    error_message = "`azure_storage_secret_version` must be a non-negative integer."
+  }
 }
 
 variable "backups-integrator" {
@@ -246,10 +263,27 @@ variable "metrics_endpoint_integration" {
 }
 
 variable "gcs_secret_key" {
-  description = "GCS service-account JSON key for the backup integrator."
+  description = "GCS service-account JSON key for `gcs-integrator`. Supply through `TF_VAR_gcs_secret_key` or `-var`, at plan and at apply."
   type        = string
   sensitive   = true
+  ephemeral   = true
   default     = null
+}
+
+variable "gcs_secret_version" {
+  description = "Version of the `gcs-integrator` credentials secret. Set to `1` to create, increment to rotate, `0` to remove."
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = var.gcs_secret_version == 0 || try(var.backups-integrator.storage_type, null) == "gcs"
+    error_message = "`gcs_secret_version` needs a GCS integrator. Set `backups-integrator.storage_type` to `gcs`."
+  }
+
+  validation {
+    condition     = var.gcs_secret_version >= 0 && floor(var.gcs_secret_version) == var.gcs_secret_version
+    error_message = "`gcs_secret_version` must be a non-negative integer."
+  }
 }
 
 variable "opensearch" {
@@ -295,21 +329,39 @@ variable "opensearch-dashboards" {
 }
 
 variable "s3_access_key" {
-  description = "S3 access key for the backup integrator."
+  description = "S3 access key for `s3-integrator`. Supply through `TF_VAR_s3_access_key` or `-var`, at plan and at apply."
   type        = string
   sensitive   = true
+  ephemeral   = true
   default     = null
 }
 
 variable "s3_secret_key" {
-  description = "S3 secret key for the backup integrator."
+  description = "S3 secret key for `s3-integrator`. Supply through `TF_VAR_s3_secret_key` or `-var`, at plan and at apply."
   type        = string
   sensitive   = true
+  ephemeral   = true
   default     = null
 
   validation {
     condition     = (var.s3_access_key == null) == (var.s3_secret_key == null)
-    error_message = "Set s3_access_key and s3_secret_key together."
+    error_message = "Set `s3_access_key` and `s3_secret_key` together."
+  }
+}
+
+variable "s3_secret_version" {
+  description = "Version of the `s3-integrator` credentials secret. Set to `1` to create, increment to rotate, `0` to remove."
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = var.s3_secret_version == 0 || try(var.backups-integrator.storage_type, null) == "s3"
+    error_message = "`s3_secret_version` needs an S3 integrator. Set `backups-integrator.storage_type` to `s3`."
+  }
+
+  validation {
+    condition     = var.s3_secret_version >= 0 && floor(var.s3_secret_version) == var.s3_secret_version
+    error_message = "`s3_secret_version` must be a non-negative integer."
   }
 }
 

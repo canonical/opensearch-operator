@@ -98,7 +98,7 @@ resource "juju_secret" "backups_credentials" {
   info       = "Credentials for ${var.backups-integrator.storage_type}-integrator"
 
   value_wo         = local.backups_secret_value
-  value_wo_version = parseint(substr(sha256(jsonencode(local.backups_secret_value)), 0, 15), 16)
+  value_wo_version = local.backups_secret_version
 }
 
 resource "juju_access_secret" "backups_credentials" {
@@ -110,8 +110,8 @@ resource "juju_access_secret" "backups_credentials" {
 
 check "backups_credentials_source" {
   assert {
-    condition     = !(local.backups_secret_uri != null && local.backups_keys_set)
-    error_message = "user provided backups-integrator.credentials_secret_uri, backup keys will be ignored."
+    condition     = !(local.backups_secret_uri != null && local.backups_secret_version > 0)
+    error_message = "`${local.backups_secret_version_name}` will be ignored because `backups-integrator.credentials_secret_uri` is set. Set `${local.backups_secret_version_name}` to `0`."
   }
 }
 
