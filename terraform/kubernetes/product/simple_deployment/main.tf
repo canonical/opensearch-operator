@@ -21,6 +21,7 @@ module "opensearch" {
   resources          = var.opensearch.resources
   storage_directives = var.opensearch.storage_directives
   expose             = var.opensearch.expose
+  offered_endpoints  = var.offered_endpoints
 }
 
 # TLS provider
@@ -67,7 +68,7 @@ module "data-integrator" {
   channel     = var.data-integrator.channel
   config      = var.data-integrator.config
   constraints = var.data-integrator.constraints
-  model_uuid  = local.data_integrator_model_uuid
+  model_uuid  = var.opensearch.model_uuid
   revision    = var.data-integrator.revision
 }
 

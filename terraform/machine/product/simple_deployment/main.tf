@@ -22,6 +22,7 @@ module "opensearch" {
   endpoint_bindings  = var.opensearch.endpoint_bindings
   machines           = var.opensearch.machines
   expose             = var.opensearch.expose
+  offered_endpoints  = var.offered_endpoints
 }
 
 # TLS provider
@@ -71,7 +72,7 @@ module "data-integrator" {
   config      = var.data-integrator.config
   constraints = var.data-integrator.constraints
   machines    = var.data-integrator.machines
-  model_uuid  = local.data_integrator_model_uuid
+  model_uuid  = var.opensearch.model_uuid
   revision    = var.data-integrator.revision
 }
 

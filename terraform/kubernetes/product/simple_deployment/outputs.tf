@@ -26,18 +26,13 @@ output "models" {
 
 output "offers" {
   description = "Map of offer URLs."
-  value = {
-    opensearch_client = try({
-      kind = "offer"
-      name = module.opensearch.application.name
-      url  = juju_offer.opensearch_client[0].url
-    }, null)
+  value = merge(module.opensearch.offers, {
     backups_integrator_credentials = try({
       kind = "offer"
       name = juju_application.backups-integrator[0].name
       url  = juju_offer.backups_credentials[0].url
     }, null)
-  }
+  })
 }
 
 output "provides" {

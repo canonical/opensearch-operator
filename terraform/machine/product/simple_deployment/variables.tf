@@ -111,7 +111,6 @@ variable "cos_agent_integration" {
 variable "data-integrator" {
   description = "Configuration for the optional data-integrator."
   type = object({
-    model_uuid  = optional(string)
     config      = optional(map(string), { "index-name" : "test", "extra-user-roles" : "admin" })
     channel     = optional(string, "latest/stable")
     base        = optional(string, "ubuntu@22.04")
@@ -156,6 +155,18 @@ variable "gcs_secret_version" {
   validation {
     condition     = var.gcs_secret_version >= 0 && floor(var.gcs_secret_version) == var.gcs_secret_version
     error_message = "`gcs_secret_version` must be a non-negative integer."
+  }
+}
+
+variable "offered_endpoints" {
+  description = "OpenSearch endpoints to expose as Juju offers."
+  type        = list(string)
+  default     = []
+  nullable    = false
+
+  validation {
+    condition     = alltrue([for endpoint in var.offered_endpoints : endpoint == "opensearch-client"])
+    error_message = "`offered_endpoints` may only contain `opensearch-client`."
   }
 }
 

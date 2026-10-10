@@ -45,8 +45,6 @@ locals {
     local.backups_enabled ? { "backups-integrator" = juju_application.backups-integrator[0] } : {},
   )
 
-  dashboards_enabled             = var.opensearch-dashboards != null
-  data_integrator_enabled        = var.data-integrator != null
-  data_integrator_is_cross_model = local.data_integrator_enabled && local.data_integrator_model_uuid != var.opensearch.model_uuid
-  data_integrator_model_uuid     = local.data_integrator_enabled ? coalesce(var.data-integrator.model_uuid, var.opensearch.model_uuid) : null
+  dashboards_enabled      = var.opensearch-dashboards != null
+  data_integrator_enabled = var.data-integrator != null
 }

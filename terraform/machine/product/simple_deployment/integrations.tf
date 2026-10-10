@@ -70,7 +70,7 @@ resource "juju_integration" "backups_integrator-opensearch-integration" {
 
 resource "juju_integration" "data_integrator-opensearch-integration" {
   count      = local.data_integrator_enabled ? 1 : 0
-  model_uuid = local.data_integrator_model_uuid
+  model_uuid = var.opensearch.model_uuid
 
   application {
     name     = module.data-integrator[0].requires.opensearch.name
@@ -78,9 +78,8 @@ resource "juju_integration" "data_integrator-opensearch-integration" {
   }
 
   application {
-    name      = local.data_integrator_is_cross_model ? null : module.opensearch.provides.opensearch_client.name
-    endpoint  = local.data_integrator_is_cross_model ? null : module.opensearch.provides.opensearch_client.endpoint
-    offer_url = local.data_integrator_is_cross_model ? juju_offer.opensearch_client[0].url : null
+    name     = module.opensearch.provides.opensearch_client.name
+    endpoint = module.opensearch.provides.opensearch_client.endpoint
   }
 }
 
