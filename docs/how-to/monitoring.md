@@ -116,6 +116,12 @@ juju integrate grafana-agent opensearch:cos-agent
 ````{tab-item} K8s
 :sync: k8s
 
+```{note}
+If `grafana-agent-k8s` is already deployed in this model (for example, while
+monitoring Charmed OpenSearch Dashboards), skip this step (agent deployment) and
+the next step (COS offers integration); only add the OpenSearch integrations below.
+```
+
 Deploy [`grafana-agent-k8s`](https://charmhub.io/grafana-agent-k8s) in the OpenSearch model:
 
 ```shell
