@@ -95,12 +95,11 @@ cluster has a storage class that can satisfy them:
 kubectl get storageclass
 ```
 
-The bootstrap and model-creation commands below assume a suitable class is marked `(default)`.
-If there is none, configure storage for the Juju controller before bootstrapping and
-[operator storage](https://canonical.com/juju/docs/juju-cli/3.6/reference/cloud/list-of-supported-clouds/microk8s/#models)
-for the workload model before creating it. For OpenSearch volumes, you can use an existing
-Juju storage pool at [deploy time](#deploy-opensearch), but a workload pool alone does not
-provide storage for the controller or Juju operators.
+The controller bootstrap and model-creation commands below assume a suitable storage class
+is marked `(default)`. If your cluster has no default, see
+[Juju's Kubernetes storage configuration](https://canonical.com/juju/docs/juju-cli/3.6/reference/cloud/list-of-supported-clouds/microk8s/#models)
+before continuing.
+
 ````
 
 `````
@@ -331,54 +330,60 @@ The K8s charm does not set the pod-scoped `net.ipv4.tcp_retries2`. For optional
 **before deploying OpenSearch**; it does not update existing workloads.
 
 1. Follow the [mutator prerequisites](https://github.com/canonical/data-platform-k8s-mutator#prerequisites):
-  check admission registration:
+   check admission registration:
 
-  ```shell
-  kubectl api-versions | grep admissionregistration.k8s.io/v1
-  ```
+   ```shell
+   kubectl api-versions | grep admissionregistration.k8s.io/v1
+   ```
 
-  Allow the unsafe sysctl on **every eligible worker node** and restart each kubelet after
-  changing its configuration. On the Canonical Kubernetes `k8s`
-  snap, add `--allowed-unsafe-sysctls=net.ipv4.tcp_retries2` to
-  `/var/snap/k8s/common/args/kubelet`, then run `sudo snap restart k8s.kubelet`
-  on those nodes. Use your distribution's method elsewhere.
+   Allow the unsafe sysctl on **every eligible worker node** and restart each kubelet after
+   changing its configuration. On the Canonical Kubernetes `k8s` snap, run the following on
+   each of those nodes:
+
+   ```shell
+   echo '--allowed-unsafe-sysctls=net.ipv4.tcp_retries2' | sudo tee -a /var/snap/k8s/common/args/kubelet
+   sudo snap restart k8s.kubelet
+   ```
+
+   Use your distribution's method elsewhere.
+
 2. With `uv`, `openssl`, and cluster-admin `kubectl` available, use the
-  [mutator's bootstrap script](https://github.com/canonical/data-platform-k8s-mutator#quick-start)
-  from its own repository (not this one):
+   [mutator's bootstrap script](https://github.com/canonical/data-platform-k8s-mutator#quick-start)
+   from its own repository (not this one):
 
-  ```shell
-  git clone https://github.com/canonical/data-platform-k8s-mutator.git
-  cd data-platform-k8s-mutator
-  uv run python -m scripts.bootstrap_webhook --namespace webhooks \
-    --image ghcr.io/canonical/data-platform-k8s-mutator:1.0-24.04_edge \
-    --target-container-names opensearch \
-    --target-namespaces <model-kubernetes-namespace> --dry-run
-  ```
+   ```shell
+   git clone https://github.com/canonical/data-platform-k8s-mutator.git
+   cd data-platform-k8s-mutator
+   uv run python -m scripts.bootstrap_webhook --namespace webhooks \
+     --image ghcr.io/canonical/data-platform-k8s-mutator:1.0-24.04_edge \
+     --target-container-names opensearch \
+     --target-namespaces <model-kubernetes-namespace> --dry-run
+   ```
 
-  Replace `<model-kubernetes-namespace>` with the selected Juju model's Kubernetes namespace
-  (usually its short name; check with `kubectl get namespaces`). `webhooks` hosts the mutator.
-  The [image](https://github.com/canonical/data-platform-k8s-mutator/pkgs/container/data-platform-k8s-mutator)
-  is an edge example; use a cluster-accessible image. Review the generated YAML in `deploy/`.
-  Dry-run also writes TLS private keys there; keep them private. Then run the same command
-  **without** `--dry-run` to deploy:
+   Replace `<model-kubernetes-namespace>` with the selected Juju model's Kubernetes namespace
+   (usually its short name; check with `kubectl get namespaces`). `webhooks` hosts the mutator.
+   The [image](https://github.com/canonical/data-platform-k8s-mutator/pkgs/container/data-platform-k8s-mutator)
+   is an edge example; use a cluster-accessible image. Review the generated YAML in `deploy/`.
+   Dry-run also writes TLS private keys there; keep them private. Then run the same command
+   **without** `--dry-run` to deploy:
 
-  ```shell
-  uv run python -m scripts.bootstrap_webhook --namespace webhooks \
-    --image ghcr.io/canonical/data-platform-k8s-mutator:1.0-24.04_edge \
-    --target-container-names opensearch \
-    --target-namespaces <model-kubernetes-namespace>
-  ```
+   ```shell
+   uv run python -m scripts.bootstrap_webhook --namespace webhooks \
+     --image ghcr.io/canonical/data-platform-k8s-mutator:1.0-24.04_edge \
+     --target-container-names opensearch \
+     --target-namespaces <model-kubernetes-namespace>
+   ```
 
 3. Check the webhook before deploying OpenSearch:
 
-  ```shell
-  kubectl -n webhooks get deployment,pods
-  kubectl get mutatingwebhookconfiguration sysctl-webhook
-  ```
+   ```shell
+   kubectl -n webhooks get deployment,pods
+   kubectl get mutatingwebhookconfiguration sysctl-webhook
+   ```
 
-  The webhook has one replica by default and can block controller creation cluster-wide when
-  unavailable; review the [HA guidance](https://github.com/canonical/data-platform-k8s-mutator#high-availability-ha)
-  before production use.
+   The webhook has one replica by default and can block controller creation cluster-wide when
+   unavailable; review the [HA guidance](https://github.com/canonical/data-platform-k8s-mutator#high-availability-ha)
+   before production use.
 ````
 
 `````
