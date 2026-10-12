@@ -94,19 +94,20 @@ sudo sysctl -p
 Note that `net.ipv4.tcp_retries2` is scoped to the pod's network namespace
 rather than the host, so it cannot be set on the node. To configure it, deploy
 the [data-platform-k8s-mutator](https://github.com/canonical/data-platform-k8s-mutator)
-charm alongside OpenSearch on the Kubernetes cluster, which sets this sysctl
-value on the workload pods. This is likewise not required, but recommended for
-production setups.
+admission webhook before OpenSearch, which sets this sysctl value on newly created
+workload pods. It is optional but recommended for production setups; see the
+[Kubernetes deployment guide](docs/how-to/deploy/standard.md#configure-tcp-retries-optional)
+for the setup steps.
 
 To deploy a single unit of OpenSearch using its default configuration:
 
 ```shell
-juju deploy opensearch-k8s --channel=2/edge
+juju deploy opensearch-k8s opensearch --channel=2/edge --trust
 ```
 
 ## Relations / Integrations
 
-The relevant provided [relations](https://juju.is/docs/olm/relations) of Charmed OpenSearch are shown below. The examples use the machine charm's application name (`opensearch`); substitute `opensearch-k8s` when using the Kubernetes charm.
+The relevant provided [relations](https://juju.is/docs/olm/relations) of Charmed OpenSearch are shown below. Both deployment examples name the Juju application `opensearch`; on Kubernetes, the charm itself is named `opensearch-k8s`.
 
 ### Client interface
 

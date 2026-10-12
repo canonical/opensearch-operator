@@ -63,8 +63,8 @@ To upgrade your OpenSearch cluster, follow these steps:
 #### Collect all necessary pre-upgrade information
 
 The first step is to record the revision of the running application, as a safety measure for a rollback action. To
-accomplish this, run the `juju status` command and look for the deployed Charmed OpenSearch revision in the command
-output, e.g.:
+accomplish this, run the `juju status` command and look for the deployed Charmed OpenSearch revision. The illustrative
+outputs below use `opensearch` as the application name on both substrates; the Kubernetes charm is `opensearch-k8s`.
 
 `````{tab-set}
 ---
@@ -105,13 +105,13 @@ Model  Controller      Cloud/Region  Version  SLA          Timestamp
 dev    opensearch-k8s  ck8s          3.6.28   unsupported  16:13:42+01:00
 
 App                       Version  Status  Scale  Charm                     Channel   Rev  Address         Exposed  Message
-opensearch-k8s                     active      3  opensearch-k8s            2/edge      8  10.152.183.239  no
+opensearch                         active      3  opensearch-k8s            2/edge      8  10.152.183.239  no
 self-signed-certificates           active      1  self-signed-certificates  1/stable  586  10.152.183.56   no
 
 Unit                         Workload  Agent  Address     Ports  Message
-opensearch-k8s/0             active    idle   10.1.0.134
-opensearch-k8s/1*            active    idle   10.1.0.203
-opensearch-k8s/2             active    idle   10.1.0.181
+opensearch/0                 active    idle   10.1.0.134
+opensearch/1*                active    idle   10.1.0.203
+opensearch/2                 active    idle   10.1.0.181
 self-signed-certificates/0*  active    idle   10.1.0.84
 ```
 
@@ -148,7 +148,7 @@ juju add-unit opensearch
 :sync: k8s
 
 ```shell
-juju scale-application opensearch-k8s <current number of units + 1>
+juju scale-application opensearch <current number of units + 1>
 ```
 ````
 
@@ -192,13 +192,13 @@ result: Charm is ready for upgrade
 :sync: k8s
 
 ```shell
-juju run opensearch-k8s/leader pre-upgrade-check
+juju run opensearch/leader pre-upgrade-check
 ```
 
 The output should be similar to the following:
 ```text
 Running operation 1 with 1 task
-  - task 2 on unit-opensearch-k8s-2
+  - task 2 on unit-opensearch-1
 
 Waiting for task 2...
 result: Charm is ready for upgrade
@@ -264,26 +264,26 @@ See [How to optimize cluster performance with profiles](how-to-optimize-cluster-
   in this case, the edge channel:
 
     ```shell
-    juju refresh opensearch-k8s --channel 2/edge
+    juju refresh opensearch --channel 2/edge
     ```
 
 - You can also upgrade the charm to a specific revision:
 
     ```shell
-    juju refresh opensearch-k8s --revision 14
+    juju refresh opensearch --revision 14
     ```
 
 - Or you can upgrade the charm using a local charm file:
 
     ```shell
-    juju refresh opensearch-k8s --path /path/to/your/charm/file.charm \
+    juju refresh opensearch --path /path/to/your/charm/file.charm \
         --resource opensearch-image=<image-reference>
     ```
 ````
 `````
 
-The OpenSearch upgrade will execute only on the highest ordinal unit. For the running example, the `juju status` output
-will look similar to:
+The OpenSearch upgrade will execute only on the highest ordinal unit. For the running example, the illustrative
+`juju status` output will look similar to:
 
 `````{tab-set}
 ---
@@ -320,18 +320,18 @@ Model  Controller      Cloud/Region  Version  SLA          Timestamp
 dev    opensearch-k8s  ck8s          3.6.28   unsupported  16:35:33+01:00
 
 App                       Version  Status   Scale  Charm                     Channel   Rev  Address         Exposed  Message
-opensearch-k8s                     blocked      4  opensearch-k8s            2/edge     14  10.152.183.239  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+opensearch                         blocked      4  opensearch-k8s            2/edge     14  10.152.183.239  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
 self-signed-certificates           active       1  self-signed-certificates  1/stable  586  10.152.183.56   no
 
 Unit                         Workload  Agent  Address     Ports  Message
-opensearch-k8s/0             active    idle   10.1.0.134         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
-opensearch-k8s/1*            active    idle   10.1.0.203         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
-opensearch-k8s/2             active    idle   10.1.0.181         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
-opensearch-k8s/3             active    idle   10.1.0.100         OpenSearch 2.19.6 running; Charmed operator 1
+opensearch/0                 active    idle   10.1.0.134         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch/1*                active    idle   10.1.0.203         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch/2                 active    idle   10.1.0.181         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch/3                 active    idle   10.1.0.100         OpenSearch 2.19.6 running; Charmed operator 1
 self-signed-certificates/0*  active    idle   10.1.0.84
 ```
 
-The highest unit (`opensearch-k8s/3`) is upgraded first. The application shows `blocked` with a message
+The highest unit (`opensearch/3`) is upgraded first. The application shows `blocked` with a message
 instructing you to verify the upgraded unit and run `resume-upgrade`.
 ````
 `````
@@ -363,7 +363,7 @@ juju run opensearch/leader resume-upgrade
 :sync: k8s
 
 ```shell
-juju run opensearch-k8s/leader resume-upgrade
+juju run opensearch/leader resume-upgrade
 ```
 ````
 `````
@@ -399,7 +399,7 @@ juju remove-unit opensearch/<highest unit number>
 :sync: k8s
 
 ```shell
-juju scale-application opensearch-k8s <original number of units>
+juju scale-application opensearch <original number of units>
 ```
 ````
 
@@ -433,7 +433,7 @@ juju run opensearch/leader get-password
 
 
 ```shell
-juju run opensearch-k8s/leader get-password
+juju run opensearch/leader get-password
 ```
 ````
 
@@ -504,11 +504,10 @@ The charm runs the equivalent checks itself: after `juju refresh`, it detects th
 and re-enables shard allocation without requiring the action.
 ```
 
-Before rolling back, check `juju status`. The application will show `blocked` with a message like
-`` Upgrading. Verify highest unit is healthy & run `resume-upgrade` action. To rollback, `juju refresh` to last revision ``.
-The unit messages will show which units have already been upgraded (newer OpenSearch version) and which are still on the
-old version (marked `(outdated)`). Note the current charm revision from the `Rev` column — in this example, it is
-**145**.
+Before rolling back, check `juju status`. The application will show `blocked` with a message asking you to verify the
+highest unit and run `resume-upgrade`. Unit messages help identify which units have already been upgraded and which are
+still on the older workload. Note the current charm revision from the `Rev` column: **145** in the VM example above, or
+**14** in the Kubernetes example. The exact messages vary by charm and substrate.
 
 ### Rollback the charm
 
@@ -523,7 +522,10 @@ Rollbacks in Charmed OpenSearch are a best-effort process. It is recommended to 
 
 #### Rollback a charm revision with the same workload version
 
-You can initiate the rollback by running the `refresh` command with the revision of the charm you want to rollback to.
+Only use this procedure if the target revision runs the same OpenSearch version as the current revision on every unit.
+In the Kubernetes example above, the upgraded unit runs `2.19.6` and the other units run `2.19.5`, so that example
+belongs to the different-version rollback procedure below instead. For a same-version rollback, run `refresh` with the
+compatible previous charm revision.
 
 `````{tab-set}
 ---
@@ -553,17 +555,17 @@ back in sync with the running OpenSearch revision. `juju status` will show the a
 ````{tab-item} K8s
 :sync: k8s
 
-For example, to rollback to revision **8**, run:
+To roll back to a previous revision with the **same** OpenSearch workload version, run:
 
 ```shell
-juju refresh opensearch-k8s --revision=8 \
+juju refresh opensearch --revision=<previous-compatible-revision> \
     --resource opensearch-image=<resource-revision>
 ```
 
 To deploy the previous revision's `.charm` file:
 
 ```shell
-juju refresh opensearch-k8s --path=<path-to-charm-file> \
+juju refresh opensearch --path=<path-to-charm-file> \
     --resource opensearch-image=<image-reference>
 ```
 
@@ -571,12 +573,12 @@ The highest unit is rolled back first. Once it is `active`, resume the rollback 
 remaining units:
 
 ```shell
-juju run opensearch-k8s/leader resume-upgrade
+juju run opensearch/leader resume-upgrade
 ```
 
 After the resume-upgrade action, the Juju controller revision for the application will be
 back in sync with the running OpenSearch revision. `juju status` will show the application
-`active` with the previous revision number in the `Rev` column (e.g. **8**), and all units
+`active` with the previous revision number in the `Rev` column, and all units
 `active`/`idle` with no messages.
 ````
 
@@ -636,32 +638,32 @@ Model  Controller      Cloud/Region  Version  SLA          Timestamp
 dev    opensearch-k8s  ck8s          3.6.28   unsupported  10:22:45+01:00
 
 App                       Version  Status   Scale  Charm                     Channel   Rev  Address         Exposed  Message
-opensearch-k8s                     blocked      4  opensearch-k8s            2/edge      8  10.152.183.50   no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+opensearch                         blocked      4  opensearch-k8s            2/edge      8  10.152.183.50   no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
 self-signed-certificates           active       1  self-signed-certificates  1/stable  586  10.152.183.237  no
 
 Unit                         Workload  Agent      Address     Ports  Message
-opensearch-k8s/0             active    idle       10.1.0.232         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
-opensearch-k8s/1             active    idle       10.1.0.242         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
-opensearch-k8s/2*            active    idle       10.1.0.239         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
-opensearch-k8s/3             blocked   idle       10.1.0.73          Rollback incompatible. Run 'juju run <unit> force-refresh-start' with `check-compatibility` set to false to override ...
+opensearch/0                 active    idle       10.1.0.232         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch/1                 active    idle       10.1.0.242         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch/2*                active    idle       10.1.0.239         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch/3                 blocked   idle       10.1.0.73          Rollback incompatible. Run 'juju run <unit> force-refresh-start' with `check-compatibility` set to false to override ...
 self-signed-certificates/0*  active    idle       10.1.0.165
 ```
 
-Units that had not yet upgraded their workload before the rollback (`opensearch-k8s/0`,
-`opensearch-k8s/1` and `opensearch-k8s/2` above) simply run revision **8** normally. Only the unit that already
-advanced to the newer workload (`opensearch-k8s/3`) needs to roll that workload back and is
+Units that had not yet upgraded their workload before the rollback (`opensearch/0`,
+`opensearch/1` and `opensearch/2` above) simply run revision **8** normally. Only the unit that already
+advanced to the newer workload (`opensearch/3`) needs to roll that workload back and is
 blocked until you do.
 
 Run the action on the blocked unit:
 
 ```shell
-juju run opensearch-k8s/<unit-id> force-refresh-start check-compatibility=false
+juju run opensearch/<unit-id> force-refresh-start check-compatibility=false
 ```
 
 Once it is `active`, run the `resume-upgrade` action:
 
 ```shell
-juju run opensearch-k8s/leader resume-upgrade
+juju run opensearch/leader resume-upgrade
 ```
 ````
 
@@ -704,14 +706,14 @@ Model  Controller      Cloud/Region  Version  SLA          Timestamp
 dev    opensearch-k8s  ck8s          3.6.28   unsupported  20:12:33+01:00
 
 App                       Version  Status   Scale  Charm                     Channel   Rev  Address         Exposed  Message
-opensearch-k8s                     blocked      4  opensearch-k8s            2/edge      8  10.152.183.109  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
+opensearch                         blocked      4  opensearch-k8s            2/edge      8  10.152.183.109  no       Upgrading. Verify highest unit is healthy & run `resume-upgrade` action.
 self-signed-certificates           active       1  self-signed-certificates  1/stable  586  10.152.183.241  no
 
 Unit                         Workload  Agent  Address     Ports  Message
-opensearch-k8s/0*            active    idle   10.1.0.66          OpenSearch 2.19.5 running (restart pending); Charmed operator 1
-opensearch-k8s/1             active    idle   10.1.0.129         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
-opensearch-k8s/2             active    idle   10.1.0.232         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
-opensearch-k8s/3             blocked   idle   10.1.0.168         Rollback unsupported. Refresh to a newer revision or consult the recovery documentation
+opensearch/0*                active    idle   10.1.0.66          OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch/1                 active    idle   10.1.0.129         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch/2                 active    idle   10.1.0.232         OpenSearch 2.19.5 running (restart pending); Charmed operator 1
+opensearch/3                 blocked   idle   10.1.0.168         Rollback unsupported. Refresh to a newer revision or consult the recovery documentation
 self-signed-certificates/0*  active    idle   10.1.0.251
 ```
 ````

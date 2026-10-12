@@ -62,7 +62,8 @@ Both profiles enforce the same system-level prerequisites:
 Setting `fs.file-max = 1048576` is strongly recommended to ensure sufficient file descriptors for large deployments, but
 it is not currently enforced by either profile.
 
-The `net.ipv4.tcp_retries2` parameter is set automatically by the charm and does not need to be configured manually.
+The VM charm sets `net.ipv4.tcp_retries2` automatically. The K8s charm does not; for optional pod-level tuning, see
+[Configure TCP retries](how-to-deploy-tcp-retries).
 
 For instructions on how to apply these settings, see [How to deploy](how-to-deploy-standard). For the full list of
 required kernel parameters, see [System requirements](reference-system-requirements).
