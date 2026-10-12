@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 output "app_names" {
-  description = "Output of all deployed application names."
+  description = "Names of the deployed apps."
   value       = { for key, app in local.components : key => app.name }
 }
 
@@ -15,7 +15,7 @@ output "metadata" {
 }
 
 output "models" {
-  description = "Deployed applications."
+  description = "The model and the apps deployed in it."
   value = {
     for uuid in distinct([for app in local.components : app.model_uuid]) : uuid => {
       model_uuid = uuid

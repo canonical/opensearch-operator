@@ -1,8 +1,15 @@
-# Terraform module for opensearch-operator
+# OpenSearch Kubernetes product module
 
 This is a Terraform module facilitating the deployment of the OpenSearch K8s charm with [Terraform juju provider](https://github.com/juju/terraform-provider-juju/). For more information, refer to the provider [documentation](https://registry.terraform.io/providers/juju/juju/latest/docs).
 
-This module requires a `juju` Kubernetes model to be available. Refer to the [usage section](#usage) below for more details.
+Pass the UUID of an existing Kubernetes model as `opensearch.model_uuid`. All apps are deployed in that model.
+
+## Deployed stack
+
+- OpenSearch, 3 units by default, in an existing model.
+- `self-signed-certificates`, unless `certificates_integration` is set.
+- Optional: OpenSearch Dashboards (`opensearch_dashboards`, needs `ingress_integration`), `data-integrator` (`data_integrator`), a backup integrator (`backups`, or an existing one through `backups_integration`).
+- Optional: COS through `metrics_endpoint_integration`, `logging_integration` and `grafana_dashboard_integration`.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
@@ -40,9 +47,9 @@ This module requires a `juju` Kubernetes model to be available. Refer to the [us
 
 | Name | Description |
 | ---- | ----------- |
-| app_names | Output of all deployed application names. |
+| app_names | Names of the deployed apps. |
 | metadata | Product deployment metadata. |
-| models | Deployed applications. |
+| models | The model and the apps deployed in it. |
 | offers | Map of offer URLs. |
 | provides | Map of all `provides` endpoints. |
 | requires | Map of all `requires` endpoints. |
@@ -50,26 +57,74 @@ This module requires a `juju` Kubernetes model to be available. Refer to the [us
 
 ## Usage
 
-This module is intended to be a product module, deploying all components for a proper yet simple opensearch deployment on Kubernetes.
+### Basic deployment
 
-It may be used as-is and directly as follows:
-```
-terraform plan \
-  -var='opensearch={"model_uuid": "<model-uuid>"}' \
-  -var='backups-integrator={"config": {"bucket": "mybucket"}}' \
-  -out terraform.out
+```hcl
+module "opensearch" {
+  source = "git::https://github.com/canonical/opensearch-operator//terraform/kubernetes/product/simple_deployment?ref=<commit>"
 
-terraform apply terraform.out
+  opensearch = { model_uuid = juju_model.opensearch.uuid }
+}
 ```
 
-### Configure backups
+### Backups
 
-To set credentials for the backups integrator, wait until it reaches `blocked` status and, for S3, run:
+To deploy a backup integrator with the module, set `backups` with the storage type (`s3`, `azure-storage` or `gcs`) and its settings.
+
+```hcl
+backups = {
+  storage_type = "s3"
+  config       = { bucket = "my-bucket", path = "opensearch", region = "eu-central-1" }
+}
+s3_access_key     = var.s3_access_key
+s3_secret_key     = var.s3_secret_key
+s3_secret_version = 1
+```
+
+Supply credentials through environment variables or command-line flags at plan and apply. The module stores them in a Juju secret through the provider's write-only `value_wo`, so they aren't stored in the Terraform state.
 
 ```shell
-juju run s3-integrator/leader sync-s3-credentials \
-    access-key=<access-key> \
-    secret-key=<secret-key>
+export TF_VAR_s3_access_key="..."
+export TF_VAR_s3_secret_key="..."
 ```
 
-For Azure storage and GCS, set `backups-integrator.config.credentials` to a Juju secret URI and grant the secret to the integrator. See [How to back up and restore](https://canonical.com/data/opensearch/docs/latest/how-to/back-up-and-restore/).
+The `s3_secret_version` variable controls the secret: `0` none, `1` create, increment to rotate, back to `0` to remove.
+
+For Azure Storage, use `azure_storage_secret_key` and `azure_storage_secret_version`. For GCS, use `gcs_secret_key` and `gcs_secret_version`.
+
+Alternatively, set `backups.credentials_secret_uri` to a Juju secret you created and granted to the integrator. The secret version must then be `0`.
+
+To use your own integrator, set `backups_integration` instead of `backups`:
+
+```hcl
+backups_integration = { storage_type = "s3", kind = "offer", url = "admin/storage.s3-integrator" }
+```
+
+### COS
+
+The module doesn't deploy COS. To enable monitoring, deploy a collector, such as `opentelemetry-collector-k8s`, in the same model, relate it to COS, and pass its endpoints. OpenSearch and Dashboards then send metrics, logs and dashboards through it.
+
+```hcl
+metrics_endpoint_integration  = { kind = "endpoint", name = "opentelemetry-collector-k8s", endpoint = "metrics-endpoint" }
+logging_integration           = { kind = "endpoint", name = "opentelemetry-collector-k8s", endpoint = "receive-loki-logs" }
+grafana_dashboard_integration = { kind = "endpoint", name = "opentelemetry-collector-k8s", endpoint = "grafana-dashboards-consumer" }
+```
+
+### Ingress for OpenSearch Dashboards
+
+On Kubernetes, OpenSearch Dashboards is reached through an ingress, so the module requires one when Dashboards is deployed. Deploy an ingress provider, such as `traefik-k8s` and pass its `ingress` endpoint:
+
+```hcl
+opensearch_dashboards = {}
+ingress_integration   = { kind = "endpoint", name = "traefik-k8s", endpoint = "ingress" }
+```
+
+Set `opensearch_dashboards.tls = true` to give Dashboards its own certificate from the TLS provider. Dashboards then serves `https` to the ingress provider.
+
+### TLS
+
+The module requires a TLS provider. By default, it deploys `self-signed-certificates`. To use your own provider, set `certificates_integration`:
+
+```hcl
+certificates_integration = { kind = "offer", url = "admin/pki.vault" }
+```
