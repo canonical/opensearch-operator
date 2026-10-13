@@ -1,0 +1,77 @@
+[32mINFO    [0m tests.integration.helpers:helpers.py:445 Calling: PUT -- https://10.78.124.185:9200/_plugins/_security/api/internalusers/my_user
+[32mINFO    [0m tests.integration.helpers:helpers.py:445 Calling: GET -- https://10.78.124.185:9200/_plugins/_security/api/internalusers/my_user
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.29   unsupported  02:55:28Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      2  opensearch                            1  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/1*                active    idle   2        10.78.124.185   9200/tcp  
+opensearch/2                 active    idle   3        10.78.124.90    9200/tcp  
+self-signed-certificates/1*  active    idle   4        10.78.124.99              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+2        started  10.78.124.185  juju-efed68-2  ubuntu@24.04  runnervmmprz5  Running
+3        started  10.78.124.90   juju-efed68-3  ubuntu@24.04  runnervmmprz5  Running
+4        started  10.78.124.99   juju-efed68-4  ubuntu@24.04  runnervmmprz5  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+machine-0: 02:37:17 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:37:17 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:37:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:37:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 02:41:17 ERROR unit.opensearch/0.juju-log certificates:4: Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 02:41:18 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 02:41:24 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.78.124.26:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 02:41:24 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 02:41:24 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.78.124.26:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 02:41:26 ERROR unit.opensearch/0.juju-log certificates:4: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.78.124.26:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 02:41:26 ERROR unit.opensearch/0.juju-log certificates:4: Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 02:41:26 ERROR unit.opensearch/0.juju-log certificates:4: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.78.124.26:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 02:41:27 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.78.124.26:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 02:41:27 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 02:41:27 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.78.124.26:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 02:41:28 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.78.124.26:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 02:41:29 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 02:41:29 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.78.124.26:9200 and alternative_hosts: [] not reachable.'
+machine-2: 02:42:32 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:42:32 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:42:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:42:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 02:44:25 ERROR unit.opensearch/1.juju-log opensearch-peers:8: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.78.124.185:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:44:27 ERROR unit.opensearch/2.juju-log opensearch-peers:8: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.78.124.90:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:44:31 ERROR unit.opensearch/2.juju-log opensearch-peers:8: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.78.124.90:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:44:38 ERROR unit.opensearch/1.juju-log opensearch-peers:8: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.78.124.185:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:45:32 ERROR unit.opensearch/1.juju-log opensearch-peers:8: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.78.124.185:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:45:33 ERROR unit.opensearch/2.juju-log opensearch-peers:8: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.78.124.90:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:45:35 ERROR unit.opensearch/2.juju-log opensearch-peers:8: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.78.124.90:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 02:45:35 ERROR unit.opensearch/1.juju-log opensearch-peers:8: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.78.124.185:9200 and alternative_hosts: [] not reachable.'
+machine-4: 02:46:07 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:46:07 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 02:46:34 ERROR unit.opensearch/2.juju-log opensearch-peers:8: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.78.124.90:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 02:48:57 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.78.124.90:9200 and alternative_hosts: [] not reachable.'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
