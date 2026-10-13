@@ -7,7 +7,7 @@
 
 resource "juju_integration" "this" {
   for_each   = local.integrations
-  model_uuid = var.main.model_uuid
+  model_uuid = each.value.model_uuid
 
   application {
     name     = each.value.app.name
@@ -41,7 +41,7 @@ resource "terraform_data" "failover_elected" {
 
 resource "juju_integration" "manager_apps" {
   for_each   = local.manager_integrations
-  model_uuid = var.main.model_uuid
+  model_uuid = each.value.model_uuid
 
   application {
     name     = each.value.app.name
@@ -49,8 +49,9 @@ resource "juju_integration" "manager_apps" {
   }
 
   application {
-    name     = each.value.target.name
-    endpoint = each.value.target.endpoint
+    name      = each.value.target.kind == "endpoint" ? each.value.target.name : null
+    endpoint  = each.value.target.kind == "endpoint" ? each.value.target.endpoint : null
+    offer_url = each.value.target.kind == "offer" ? each.value.target.url : null
   }
 
   depends_on = [terraform_data.failover_elected]

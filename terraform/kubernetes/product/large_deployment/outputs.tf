@@ -29,6 +29,7 @@ output "offers" {
   value = merge(
     local.main_app.offers,
     local.failover_enabled ? { for key, offer in local.failover_app.offers : "failover_${key}" => offer } : {},
+    var.certificates_integration == null ? { certificates = { kind = "offer", url = juju_offer.certificates[0].url } } : {},
   )
 }
 

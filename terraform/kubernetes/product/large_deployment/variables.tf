@@ -5,6 +5,7 @@ variable "apps" {
   description = "Non-orchestrator OpenSearch apps. Defaults to one `data` app."
   type = list(object({
     app_name           = string
+    model_uuid         = optional(string)
     config             = optional(map(string), {})
     channel            = optional(string, "2/edge")
     base               = optional(string, "ubuntu@24.04")
@@ -199,6 +200,11 @@ variable "certificates_integration" {
     )
     error_message = "`certificates_integration` with kind `offer` needs `url`."
   }
+
+  validation {
+    condition     = var.certificates_integration == null ? true : var.certificates_integration.kind == "offer" || local.single_model
+    error_message = "`certificates_integration` must be an offer when apps are in other models."
+  }
 }
 
 variable "cluster_name" {
@@ -243,6 +249,7 @@ variable "failover" {
   description = "Optional failover orchestrator app definition."
   type = object({
     app_name           = optional(string, "failover")
+    model_uuid         = optional(string)
     config             = optional(map(string), {})
     channel            = optional(string, "2/edge")
     base               = optional(string, "ubuntu@24.04")
@@ -340,6 +347,11 @@ variable "grafana_dashboard_integration" {
     )
     error_message = "`grafana_dashboard_integration` with kind `offer` needs `url`."
   }
+
+  validation {
+    condition     = var.grafana_dashboard_integration == null ? true : var.grafana_dashboard_integration.kind == "offer" || local.single_model
+    error_message = "`grafana_dashboard_integration` must be an offer when apps are in other models."
+  }
 }
 
 variable "ingress_integration" {
@@ -419,6 +431,11 @@ variable "logging_integration" {
     )
     error_message = "`logging_integration` with kind `offer` needs `url`."
   }
+
+  validation {
+    condition     = var.logging_integration == null ? true : var.logging_integration.kind == "offer" || local.single_model
+    error_message = "`logging_integration` must be an offer when apps are in other models."
+  }
 }
 
 variable "main" {
@@ -487,6 +504,11 @@ variable "metrics_endpoint_integration" {
     )
     error_message = "`metrics_endpoint_integration` with kind `offer` needs `url`."
   }
+
+  validation {
+    condition     = var.metrics_endpoint_integration == null ? true : var.metrics_endpoint_integration.kind == "offer" || local.single_model
+    error_message = "`metrics_endpoint_integration` must be an offer when apps are in other models."
+  }
 }
 
 variable "offered_endpoints" {
@@ -496,8 +518,8 @@ variable "offered_endpoints" {
   nullable    = false
 
   validation {
-    condition     = alltrue([for endpoint in var.offered_endpoints : contains(["grafana-dashboard", "metrics-endpoint", "opensearch-client", "peer-cluster-orchestrator"], endpoint)])
-    error_message = "`offered_endpoints` may only contain `grafana-dashboard`, `metrics-endpoint`, `opensearch-client` or `peer-cluster-orchestrator`."
+    condition     = alltrue([for endpoint in var.offered_endpoints : contains(["grafana-dashboard", "metrics-endpoint", "opensearch-client"], endpoint)])
+    error_message = "`offered_endpoints` may only contain `grafana-dashboard`, `metrics-endpoint` or `opensearch-client`."
   }
 }
 

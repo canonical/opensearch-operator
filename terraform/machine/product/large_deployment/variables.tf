@@ -5,6 +5,7 @@ variable "apps" {
   description = "Non-orchestrator OpenSearch apps. Defaults to one `data` app."
   type = list(object({
     app_name           = string
+    model_uuid         = optional(string)
     config             = optional(map(string), {})
     channel            = optional(string, "2/edge")
     base               = optional(string, "ubuntu@24.04")
@@ -22,6 +23,10 @@ variable "apps" {
       endpoints = optional(string)
       spaces    = optional(string)
     })), [])
+    cos_agent_integration = optional(object({
+      name     = string
+      endpoint = string
+    }))
   }))
   default = [
     { app_name = "data", config = { roles = "data" } },
@@ -47,6 +52,13 @@ variable "apps" {
   validation {
     condition     = alltrue([for app in var.apps : lookup(app.config, "init_hold", "true") == "true"])
     error_message = "`config.init_hold` in `apps` must be unset or `true`."
+  }
+
+  validation {
+    condition = var.cos_agent_integration == null || alltrue([
+      for app in var.apps : app.cos_agent_integration != null || (app.model_uuid == null ? true : app.model_uuid == var.main.model_uuid)
+    ])
+    error_message = "`apps` outside `main`'s model need their own `cos_agent_integration`."
   }
 
   validation {
@@ -209,6 +221,11 @@ variable "certificates_integration" {
     )
     error_message = "`certificates_integration` with kind `offer` needs `url`."
   }
+
+  validation {
+    condition     = var.certificates_integration == null ? true : var.certificates_integration.kind == "offer" || local.single_model
+    error_message = "`certificates_integration` must be an offer when apps are in other models."
+  }
 }
 
 variable "cluster_name" {
@@ -268,6 +285,7 @@ variable "failover" {
   description = "Optional failover orchestrator app definition."
   type = object({
     app_name           = optional(string, "failover")
+    model_uuid         = optional(string)
     config             = optional(map(string), {})
     channel            = optional(string, "2/edge")
     base               = optional(string, "ubuntu@24.04")
@@ -285,6 +303,10 @@ variable "failover" {
       endpoints = optional(string)
       spaces    = optional(string)
     })), [])
+    cos_agent_integration = optional(object({
+      name     = string
+      endpoint = string
+    }))
   })
   default = null
 
@@ -296,6 +318,11 @@ variable "failover" {
   validation {
     condition     = var.failover == null ? true : lookup(var.failover.config, "init_hold", "true") == "true"
     error_message = "`failover.config.init_hold` must be unset or `true`."
+  }
+
+  validation {
+    condition     = var.failover == null || var.cos_agent_integration == null ? true : var.failover.cos_agent_integration != null || (var.failover.model_uuid == null ? true : var.failover.model_uuid == var.main.model_uuid)
+    error_message = "`failover` outside `main`'s model needs its own `cos_agent_integration`."
   }
 }
 
@@ -376,8 +403,8 @@ variable "offered_endpoints" {
   nullable    = false
 
   validation {
-    condition     = alltrue([for endpoint in var.offered_endpoints : contains(["opensearch-client", "peer-cluster-orchestrator"], endpoint)])
-    error_message = "`offered_endpoints` may only contain `opensearch-client` or `peer-cluster-orchestrator`."
+    condition     = alltrue([for endpoint in var.offered_endpoints : endpoint == "opensearch-client"])
+    error_message = "`offered_endpoints` may only contain `opensearch-client`."
   }
 }
 

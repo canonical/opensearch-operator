@@ -16,7 +16,7 @@ module "opensearch" {
   config             = each.value.config
   constraints        = each.value.constraints
   expose             = each.value.expose
-  model_uuid         = var.main.model_uuid
+  model_uuid         = each.value.model_uuid
   offered_endpoints  = each.value.offered_endpoints
   resources          = each.value.resources
   revision           = each.value.revision
@@ -40,6 +40,15 @@ resource "juju_application" "self_signed_certificates" {
 
   constraints = var.self_signed_certificates.constraints
   units       = var.self_signed_certificates.units
+}
+
+resource "juju_offer" "certificates" {
+  count = var.certificates_integration == null ? 1 : 0
+
+  name             = "${juju_application.self_signed_certificates[0].name}-certificates"
+  application_name = juju_application.self_signed_certificates[0].name
+  endpoints        = ["certificates"]
+  model_uuid       = var.main.model_uuid
 }
 
 # OpenSearch dashboards
