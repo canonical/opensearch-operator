@@ -5,152 +5,119 @@
 # 1. DEPLOYMENTS
 #--------------------------------------------------------
 
-# main orchestrator
-module "opensearch_main" {
-  source = "../../charm/opensearch"
-
-  app_name           = var.main.app_name
-  base               = var.main.base
-  channel            = var.main.channel
-  config             = merge({ "roles" : "cluster_manager" }, var.main.config, { "cluster_name" : var.cluster_name, "init_hold" : "false" })
-  constraints        = var.main.constraints
-  endpoint_bindings  = var.main.endpoint_bindings
-  expose             = var.main.expose
-  machines           = var.main.machines
-  model_uuid         = local.main_model_uuid
-  revision           = var.main.revision
-  storage_directives = var.main.storage_directives
-  units              = var.main.units
-}
-
-# failover orchestrator
-module "opensearch_failover" {
-  count  = local.failover_enabled ? 1 : 0
-  source = "../../charm/opensearch"
-
-  app_name           = var.failover.app_name
-  base               = var.failover.base
-  channel            = var.failover.channel
-  config             = merge({ "roles" : "cluster_manager" }, var.failover.config, { "cluster_name" : var.cluster_name, "init_hold" : "true" })
-  constraints        = var.failover.constraints
-  endpoint_bindings  = var.failover.endpoint_bindings
-  expose             = var.failover.expose
-  machines           = var.failover.machines
-  model_uuid         = local.failover_model_uuid
-  revision           = var.failover.revision
-  storage_directives = var.failover.storage_directives
-  units              = var.failover.units
-}
-
-# non-orchestrator apps
-module "opensearch_apps" {
-  for_each = local.apps
+# OpenSearch apps: main, failover and `apps`
+module "opensearch" {
+  for_each = local.opensearch_apps
   source   = "../../charm/opensearch"
 
-  app_name           = each.value.app_name
+  app_name           = each.key
   base               = each.value.base
   channel            = each.value.channel
-  config             = merge(each.value.config, { "cluster_name" : var.cluster_name, "init_hold" : "true" })
+  config             = each.value.config
   constraints        = each.value.constraints
   endpoint_bindings  = each.value.endpoint_bindings
   expose             = each.value.expose
   machines           = each.value.machines
-  model_uuid         = each.value.model_uuid
+  model_uuid         = var.main.model_uuid
+  offered_endpoints  = each.value.offered_endpoints
   revision           = each.value.revision
   storage_directives = each.value.storage_directives
   units              = each.value.units
 }
 
 # TLS provider
-resource "juju_application" "self-signed-certificates" {
+resource "juju_application" "self_signed_certificates" {
   count = var.certificates_integration == null ? 1 : 0
 
   charm {
     name     = "self-signed-certificates"
-    channel  = var.self-signed-certificates.channel
-    revision = var.self-signed-certificates.revision
-    base     = var.self-signed-certificates.base
+    channel  = var.self_signed_certificates.channel
+    revision = var.self_signed_certificates.revision
+    base     = var.self_signed_certificates.base
   }
   name       = "self-signed-certificates"
-  model_uuid = local.main_model_uuid
-  config     = var.self-signed-certificates.config
+  model_uuid = var.main.model_uuid
+  config     = var.self_signed_certificates.config
 
-  constraints = var.self-signed-certificates.constraints
-  machines    = length(var.self-signed-certificates.machines) > 0 ? var.self-signed-certificates.machines : null
-  units       = length(var.self-signed-certificates.machines) > 0 ? null : var.self-signed-certificates.units
+  constraints = var.self_signed_certificates.constraints
+  machines    = length(var.self_signed_certificates.machines) > 0 ? var.self_signed_certificates.machines : null
+  units       = length(var.self_signed_certificates.machines) > 0 ? null : var.self_signed_certificates.units
 }
 
 # OpenSearch dashboards
-module "opensearch-dashboards" {
+module "opensearch_dashboards" {
   count  = local.dashboards_enabled ? 1 : 0
-  source = "git::https://github.com/canonical/opensearch-dashboards-operator.git//terraform/machine/charm/opensearch_dashboards?ref=8b93e9fd8c686f6d4cf8617380d5d8c07c2d8786"
+  source = "git::https://github.com/canonical/opensearch-dashboards-operator.git//terraform/machine/charm/opensearch_dashboards?ref=74bd9b434a906dfb57e9baf371df71a5a3695645"
 
-  app_name          = var.opensearch-dashboards.app_name
-  base              = var.opensearch-dashboards.base
-  channel           = var.opensearch-dashboards.channel
-  config            = var.opensearch-dashboards.config
-  constraints       = var.opensearch-dashboards.constraints
-  endpoint_bindings = var.opensearch-dashboards.endpoint_bindings
-  expose            = var.opensearch-dashboards.expose
-  machines          = var.opensearch-dashboards.machines
-  model_uuid        = local.main_model_uuid
-  revision          = var.opensearch-dashboards.revision
-  units             = var.opensearch-dashboards.units
+  app_name          = var.opensearch_dashboards.app_name
+  base              = var.opensearch_dashboards.base
+  channel           = var.opensearch_dashboards.channel
+  config            = var.opensearch_dashboards.config
+  constraints       = var.opensearch_dashboards.constraints
+  endpoint_bindings = var.opensearch_dashboards.endpoint_bindings
+  expose            = var.opensearch_dashboards.expose
+  machines          = var.opensearch_dashboards.machines
+  model_uuid        = var.main.model_uuid
+  revision          = var.opensearch_dashboards.revision
+  units             = var.opensearch_dashboards.units
 }
 
 # Integrator apps
-module "data-integrator" {
+module "data_integrator" {
   count  = local.data_integrator_enabled ? 1 : 0
   source = "git::https://github.com/canonical/data-integrator.git//terraform/charm/data_integrator?ref=rev519"
 
-  base        = var.data-integrator.base
-  channel     = var.data-integrator.channel
-  config      = var.data-integrator.config
-  constraints = var.data-integrator.constraints
-  machines    = var.data-integrator.machines
-  model_uuid  = local.data_integrator_model_uuid
-  revision    = var.data-integrator.revision
+  base        = var.data_integrator.base
+  channel     = var.data_integrator.channel
+  config      = var.data_integrator.config
+  constraints = var.data_integrator.constraints
+  machines    = var.data_integrator.machines
+  model_uuid  = var.main.model_uuid
+  revision    = var.data_integrator.revision
 }
 
-resource "juju_application" "backups-integrator" {
+resource "juju_application" "backups" {
   count = local.backups_enabled ? 1 : 0
 
   charm {
-    name     = "${var.backups-integrator.storage_type}-integrator"
-    channel  = coalesce(var.backups-integrator.channel, local.backups_settings[var.backups-integrator.storage_type].channel)
-    revision = var.backups-integrator.revision
-    base     = coalesce(var.backups-integrator.base, local.backups_settings[var.backups-integrator.storage_type].base)
+    name     = "${var.backups.storage_type}-integrator"
+    channel  = coalesce(var.backups.channel, local.backups_settings[var.backups.storage_type].channel)
+    revision = var.backups.revision
+    base     = coalesce(var.backups.base, local.backups_settings[var.backups.storage_type].base)
   }
-  model_uuid = local.backups_model_uuid
-  config     = var.backups-integrator.config
+  model_uuid = var.main.model_uuid
+  config = merge(
+    var.backups.config,
+    local.backups_secret_uri != null ? { credentials = local.backups_secret_uri } : {},
+    local.backups_secret_create ? { credentials = juju_secret.backups_credentials[0].secret_uri } : {},
+  )
 
-  constraints = var.backups-integrator.constraints
-  machines    = length(var.backups-integrator.machines) > 0 ? var.backups-integrator.machines : null
-  units       = length(var.backups-integrator.machines) > 0 ? null : 1
+  constraints = var.backups.constraints
+  machines    = length(var.backups.machines) > 0 ? var.backups.machines : null
+  units       = length(var.backups.machines) > 0 ? null : 1
 }
 
-resource "terraform_data" "validate_data_nodes" {
-  input = local.fleet_roles
+resource "juju_secret" "backups_credentials" {
+  count      = local.backups_secret_create ? 1 : 0
+  model_uuid = var.main.model_uuid
+  name       = "${var.backups.storage_type}-integrator-credentials"
+  info       = "Credentials for ${var.backups.storage_type}-integrator"
 
-  lifecycle {
-    precondition {
-      condition     = anytrue([for roles in local.fleet_roles : roles == "" || anytrue([for role in split(",", roles) : startswith(trimspace(role), "data")])])
-      error_message = "At least one OpenSearch app needs a data role."
-    }
-  }
+  value_wo         = local.backups_secret_value
+  value_wo_version = local.backups_secret_version
 }
 
-resource "terraform_data" "validate_cluster_name" {
-  input = var.cluster_name
+resource "juju_access_secret" "backups_credentials" {
+  count        = local.backups_secret_create ? 1 : 0
+  model_uuid   = var.main.model_uuid
+  applications = [juju_application.backups[0].name]
+  secret_id    = juju_secret.backups_credentials[0].secret_id
+}
 
-  lifecycle {
-    precondition {
-      condition = alltrue([
-        for config in concat([var.main.config], local.failover_enabled ? [var.failover.config] : [], [for app in var.apps : app.config]) :
-        lookup(config, "cluster_name", var.cluster_name) == var.cluster_name
-      ])
-      error_message = "Set the cluster name with cluster_name. An app's config.cluster_name must be unset or equal to it."
-    }
+check "backups_credentials_source" {
+  assert {
+    condition     = !(local.backups_secret_uri != null && local.backups_secret_version > 0)
+    error_message = "`${local.backups_secret_version_name}` will be ignored because `backups.credentials_secret_uri` is set. Set `${local.backups_secret_version_name}` to `0`."
   }
 }
 
@@ -166,29 +133,23 @@ resource "terraform_data" "updated_at" {
   input = timestamp()
   triggers_replace = sha256(jsonencode([
     var.apps,
-    var.backups-integrator,
+    var.azure_storage_secret_version,
+    var.backups,
+    var.backups_integration,
     var.certificates_integration,
     var.cluster_name,
-    var.cos_agent_integrations,
-    var.data-integrator,
+    var.cos_agent_integration,
+    var.data_integrator,
     var.failover,
+    var.gcs_secret_version,
     var.main,
-    var.opensearch-dashboards,
-    var.self-signed-certificates,
+    var.offered_endpoints,
+    var.opensearch_dashboards,
+    var.s3_secret_version,
+    var.self_signed_certificates,
   ]))
 
   lifecycle {
     ignore_changes = [input]
-  }
-}
-
-resource "terraform_data" "validate_cos_agent_integrations" {
-  input = keys(var.cos_agent_integrations)
-
-  lifecycle {
-    precondition {
-      condition     = alltrue([for key in keys(var.cos_agent_integrations) : contains(keys(local.cos_agent_targets), key)])
-      error_message = "Each cos_agent_integrations key must be the name of a deployed OpenSearch or OpenSearch Dashboards app."
-    }
   }
 }

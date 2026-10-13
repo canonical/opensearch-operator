@@ -2,10 +2,9 @@
 # See LICENSE file for licensing details.
 
 variable "apps" {
-  description = "Non-orchestrator OpenSearch apps. Defaults to one app with 'data' role."
+  description = "Non-orchestrator OpenSearch apps. Defaults to one `data` app."
   type = list(object({
     app_name           = string
-    model_uuid         = optional(string)
     config             = optional(map(string), {})
     channel            = optional(string, "2/edge")
     base               = optional(string, "ubuntu@24.04")
@@ -26,40 +25,142 @@ variable "apps" {
   nullable = false
 
   validation {
-    condition     = length(distinct([for app in var.apps : app.app_name])) == length(var.apps)
-    error_message = "App names must be unique."
+    condition = length(distinct(concat(
+      [var.main.app_name],
+      var.failover == null ? [] : [var.failover.app_name],
+      [for app in var.apps : app.app_name],
+    ))) == length(var.apps) + (var.failover == null ? 1 : 2)
+    error_message = "OpenSearch app names must be unique."
   }
 
   validation {
-    condition = alltrue([
+    condition = var.failover != null || alltrue([
       for app in var.apps : lookup(app.config, "roles", "") != "" && !contains([for role in split(",", lookup(app.config, "roles", "")) : trimspace(role)], "cluster_manager")
     ])
-    error_message = "Apps cannot have a cluster_manager role. Use the optional failover variable to set a failover orchestrator."
+    error_message = "`apps` containing `cluster_manager` role requires `failover` to be set."
   }
 
   validation {
     condition     = alltrue([for app in var.apps : lookup(app.config, "init_hold", "true") == "true"])
-    error_message = "Each app's config.init_hold must be unset or true."
+    error_message = "`config.init_hold` in `apps` must be unset or `true`."
+  }
+
+  validation {
+    condition = anytrue([
+      for roles in concat(
+        [lookup(var.main.config, "roles", "cluster_manager")],
+        var.failover == null ? [] : [lookup(var.failover.config, "roles", "cluster_manager")],
+        [for app in var.apps : lookup(app.config, "roles", "")],
+      ) : roles == "" || anytrue([for role in split(",", roles) : startswith(trimspace(role), "data")])
+    ])
+    error_message = "At least one OpenSearch app needs a `data` role."
   }
 }
 
-variable "backups-integrator" {
+variable "azure_storage_secret_key" {
+  description = "Azure Storage account key for `azure-storage-integrator`. Supply through `TF_VAR_azure_storage_secret_key` or `-var`, at plan and at apply."
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+  default     = null
+}
+
+variable "azure_storage_secret_version" {
+  description = "Version of the `azure-storage-integrator` credentials secret. Set to `1` to create, increment to rotate, `0` to remove."
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = var.azure_storage_secret_version == 0 || var.backups_integration != null || try(var.backups.storage_type, null) == "azure-storage"
+    error_message = "`azure_storage_secret_version` needs an Azure Storage integrator. Set `backups.storage_type` to `azure-storage`."
+  }
+
+  validation {
+    condition     = var.azure_storage_secret_version == 0 || var.backups_integration == null
+    error_message = "`azure_storage_secret_version` can't be used with `backups_integration`."
+  }
+
+  validation {
+    condition     = var.azure_storage_secret_version >= 0 && floor(var.azure_storage_secret_version) == var.azure_storage_secret_version
+    error_message = "`azure_storage_secret_version` must be a non-negative integer."
+  }
+}
+
+variable "backups" {
   description = "Configuration for the optional backup integrator."
   type = object({
-    model_uuid   = optional(string)
-    storage_type = optional(string, "s3")
-    config       = optional(map(string), {})
-    channel      = optional(string)
-    base         = optional(string)
-    revision     = optional(number)
-    constraints  = optional(string, "arch=amd64")
+    storage_type           = optional(string, "s3")
+    config                 = optional(map(string), {})
+    channel                = optional(string)
+    credentials_secret_uri = optional(string)
+    base                   = optional(string)
+    revision               = optional(number)
+    constraints            = optional(string, "arch=amd64")
   })
 
   default = null
 
   validation {
-    condition     = var.backups-integrator == null ? true : contains(["s3", "azure-storage", "gcs"], var.backups-integrator.storage_type)
-    error_message = "storage_type must be 's3', 'azure-storage' or 'gcs'."
+    condition     = var.backups == null ? true : contains(["s3", "azure-storage", "gcs"], var.backups.storage_type)
+    error_message = "`backups.storage_type` must be `s3`, `azure-storage` or `gcs`."
+  }
+
+  validation {
+    condition     = var.backups == null ? true : !contains(keys(var.backups.config), "credentials")
+    error_message = "Set `backups.credentials_secret_uri` instead of `backups.config.credentials`."
+  }
+
+  validation {
+    condition     = try(startswith(var.backups.credentials_secret_uri, "secret:"), true)
+    error_message = "`backups.credentials_secret_uri` must be a Juju secret URI starting with `secret:`."
+  }
+}
+
+variable "backups_integration" {
+  description = "External backup storage endpoint or offer."
+  type = object({
+    storage_type = optional(string, "s3")
+    kind         = string
+    name         = optional(string)
+    endpoint     = optional(string)
+    url          = optional(string)
+  })
+  default = null
+
+  validation {
+    condition     = var.backups_integration == null ? true : contains(["s3", "azure-storage", "gcs"], var.backups_integration.storage_type)
+    error_message = "`backups_integration.storage_type` must be `s3`, `azure-storage` or `gcs`."
+  }
+
+  validation {
+    condition     = var.backups_integration == null ? true : contains(["endpoint", "offer"], var.backups_integration.kind)
+    error_message = "`backups_integration.kind` must be `endpoint` or `offer`."
+  }
+
+  validation {
+    condition = (
+      var.backups_integration == null ? true :
+      var.backups_integration.kind == "endpoint" ? (
+        var.backups_integration.name != null && var.backups_integration.name != "" &&
+        var.backups_integration.endpoint != null && var.backups_integration.endpoint != ""
+      ) : true
+    )
+    error_message = "`backups_integration` with kind `endpoint` needs `name` and `endpoint`."
+  }
+
+  validation {
+    condition = (
+      var.backups_integration == null ? true :
+      var.backups_integration.kind == "offer" ? (
+        var.backups_integration.url != null && var.backups_integration.url != ""
+      ) : true
+    )
+    error_message = "`backups_integration` with kind `offer` needs `url`."
+  }
+
+  validation {
+    condition     = var.backups_integration == null || var.backups == null
+    error_message = "Set `backups` or `backups_integration`, not both."
   }
 }
 
@@ -75,7 +176,7 @@ variable "certificates_integration" {
 
   validation {
     condition     = var.certificates_integration == null ? true : contains(["endpoint", "offer"], var.certificates_integration.kind)
-    error_message = "certificates_integration.kind must be either 'endpoint' or 'offer'."
+    error_message = "`certificates_integration.kind` must be `endpoint` or `offer`."
   }
 
   validation {
@@ -86,7 +187,7 @@ variable "certificates_integration" {
         var.certificates_integration.endpoint != null && var.certificates_integration.endpoint != ""
       ) : true
     )
-    error_message = "Both 'name' and 'endpoint' attributes must be provided for an in-model integration."
+    error_message = "`certificates_integration` with kind `endpoint` needs `name` and `endpoint`."
   }
 
   validation {
@@ -96,21 +197,31 @@ variable "certificates_integration" {
         var.certificates_integration.url != null && var.certificates_integration.url != ""
       ) : true
     )
-    error_message = "The 'url' attribute must be provided for a cross-model integration."
+    error_message = "`certificates_integration` with kind `offer` needs `url`."
   }
 }
 
 variable "cluster_name" {
-  description = "The cluster name of the fleet."
+  description = "Cluster name for all OpenSearch apps."
   type        = string
   default     = "opensearch"
   nullable    = false
+
+  validation {
+    condition = alltrue([
+      for config in concat(
+        [var.main.config],
+        var.failover == null ? [] : [var.failover.config],
+        [for app in var.apps : app.config],
+      ) : lookup(config, "cluster_name", var.cluster_name) == var.cluster_name
+    ])
+    error_message = "`config.cluster_name` must be unset or equal to `cluster_name`."
+  }
 }
 
-variable "data-integrator" {
-  description = "Configuration for the optional data-integrator."
+variable "data_integrator" {
+  description = "Configuration for the optional `data-integrator`."
   type = object({
-    model_uuid  = optional(string)
     config      = optional(map(string), { "index-name" : "test", "extra-user-roles" : "admin" })
     channel     = optional(string, "latest/stable")
     base        = optional(string, "ubuntu@22.04")
@@ -120,19 +231,18 @@ variable "data-integrator" {
   default = null
 
   validation {
-    condition = var.data-integrator == null ? true : (
-      lookup(var.data-integrator.config, "index-name", "") != ""
-      && contains(["default", "admin"], lookup(var.data-integrator.config, "extra-user-roles", "admin"))
+    condition = var.data_integrator == null ? true : (
+      lookup(var.data_integrator.config, "index-name", "") != ""
+      && contains(["default", "admin"], lookup(var.data_integrator.config, "extra-user-roles", "admin"))
     )
-    error_message = "data-integrator config must contain a non-empty 'index-name' and 'extra-user-roles' must be either 'default' or 'admin'."
+    error_message = "`data_integrator.config` needs a non-empty `index-name`, and `extra-user-roles` must be `default` or `admin`."
   }
 }
 
 variable "failover" {
-  description = "Optional failover orchestrator."
+  description = "Optional failover orchestrator app definition."
   type = object({
     app_name           = optional(string, "failover")
-    model_uuid         = optional(string)
     config             = optional(map(string), {})
     channel            = optional(string, "2/edge")
     base               = optional(string, "ubuntu@24.04")
@@ -151,12 +261,47 @@ variable "failover" {
 
   validation {
     condition     = var.failover == null ? true : lookup(var.failover.config, "roles", "") == "" || contains([for role in split(",", lookup(var.failover.config, "roles", "")) : trimspace(role)], "cluster_manager")
-    error_message = "The failover roles must be either empty or include cluster_manager."
+    error_message = "`failover.config.roles` must be empty or include `cluster_manager`."
   }
 
   validation {
     condition     = var.failover == null ? true : lookup(var.failover.config, "init_hold", "true") == "true"
-    error_message = "failover.config.init_hold must be unset or true."
+    error_message = "`failover.config.init_hold` must be unset or `true`."
+  }
+}
+
+variable "failover_election_timeout" {
+  description = "Wait time in seconds for the main orchestrator to elect `failover`, before relating other cluster-manager apps."
+  type        = number
+  default     = 1800
+}
+
+variable "gcs_secret_key" {
+  description = "GCS service-account JSON key for `gcs-integrator`. Supply through `TF_VAR_gcs_secret_key` or `-var`, at plan and at apply."
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+  default     = null
+}
+
+variable "gcs_secret_version" {
+  description = "Version of the `gcs-integrator` credentials secret. Set to `1` to create, increment to rotate, `0` to remove."
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = var.gcs_secret_version == 0 || var.backups_integration != null || try(var.backups.storage_type, null) == "gcs"
+    error_message = "`gcs_secret_version` needs a GCS integrator. Set `backups.storage_type` to `gcs`."
+  }
+
+  validation {
+    condition     = var.gcs_secret_version == 0 || var.backups_integration == null
+    error_message = "`gcs_secret_version` can't be used with `backups_integration`."
+  }
+
+  validation {
+    condition     = var.gcs_secret_version >= 0 && floor(var.gcs_secret_version) == var.gcs_secret_version
+    error_message = "`gcs_secret_version` must be a non-negative integer."
   }
 }
 
@@ -172,7 +317,7 @@ variable "grafana_dashboard_integration" {
 
   validation {
     condition     = var.grafana_dashboard_integration == null ? true : contains(["endpoint", "offer"], var.grafana_dashboard_integration.kind)
-    error_message = "grafana_dashboard_integration.kind must be either 'endpoint' or 'offer'."
+    error_message = "`grafana_dashboard_integration.kind` must be `endpoint` or `offer`."
   }
 
   validation {
@@ -183,7 +328,7 @@ variable "grafana_dashboard_integration" {
         var.grafana_dashboard_integration.endpoint != null && var.grafana_dashboard_integration.endpoint != ""
       ) : true
     )
-    error_message = "Both 'name' and 'endpoint' attributes must be provided for an in-model integration."
+    error_message = "`grafana_dashboard_integration` with kind `endpoint` needs `name` and `endpoint`."
   }
 
   validation {
@@ -193,12 +338,12 @@ variable "grafana_dashboard_integration" {
         var.grafana_dashboard_integration.url != null && var.grafana_dashboard_integration.url != ""
       ) : true
     )
-    error_message = "The 'url' attribute must be provided for a cross-model integration."
+    error_message = "`grafana_dashboard_integration` with kind `offer` needs `url`."
   }
 }
 
 variable "ingress_integration" {
-  description = "External ingress endpoint or offer for OpenSearch Dashboards, used instead of the bundled traefik-k8s."
+  description = "Ingress endpoint or offer for OpenSearch Dashboards. Required when Dashboards is deployed."
   type = object({
     kind     = string
     name     = optional(string)
@@ -209,7 +354,7 @@ variable "ingress_integration" {
 
   validation {
     condition     = var.ingress_integration == null ? true : contains(["endpoint", "offer"], var.ingress_integration.kind)
-    error_message = "ingress_integration.kind must be either 'endpoint' or 'offer'."
+    error_message = "`ingress_integration.kind` must be `endpoint` or `offer`."
   }
 
   validation {
@@ -220,7 +365,7 @@ variable "ingress_integration" {
         var.ingress_integration.endpoint != null && var.ingress_integration.endpoint != ""
       ) : true
     )
-    error_message = "Both 'name' and 'endpoint' attributes must be provided for an in-model integration."
+    error_message = "`ingress_integration` with kind `endpoint` needs `name` and `endpoint`."
   }
 
   validation {
@@ -230,7 +375,12 @@ variable "ingress_integration" {
         var.ingress_integration.url != null && var.ingress_integration.url != ""
       ) : true
     )
-    error_message = "The 'url' attribute must be provided for a cross-model integration."
+    error_message = "`ingress_integration` with kind `offer` needs `url`."
+  }
+
+  validation {
+    condition     = var.opensearch_dashboards == null || var.ingress_integration != null
+    error_message = "`ingress_integration` is unset. OpenSearch Dashboards requires an ingress provider."
   }
 }
 
@@ -246,7 +396,7 @@ variable "logging_integration" {
 
   validation {
     condition     = var.logging_integration == null ? true : contains(["endpoint", "offer"], var.logging_integration.kind)
-    error_message = "logging_integration.kind must be either 'endpoint' or 'offer'."
+    error_message = "`logging_integration.kind` must be `endpoint` or `offer`."
   }
 
   validation {
@@ -257,7 +407,7 @@ variable "logging_integration" {
         var.logging_integration.endpoint != null && var.logging_integration.endpoint != ""
       ) : true
     )
-    error_message = "Both 'name' and 'endpoint' attributes must be provided for an in-model integration."
+    error_message = "`logging_integration` with kind `endpoint` needs `name` and `endpoint`."
   }
 
   validation {
@@ -267,12 +417,12 @@ variable "logging_integration" {
         var.logging_integration.url != null && var.logging_integration.url != ""
       ) : true
     )
-    error_message = "The 'url' attribute must be provided for a cross-model integration."
+    error_message = "`logging_integration` with kind `offer` needs `url`."
   }
 }
 
 variable "main" {
-  description = "Main orchestrator app definition. Default role is cluster_manager."
+  description = "Main orchestrator app definition."
   type = object({
     app_name           = optional(string, "main")
     model_uuid         = string
@@ -293,12 +443,12 @@ variable "main" {
 
   validation {
     condition     = lookup(var.main.config, "roles", "") == "" || contains([for role in split(",", lookup(var.main.config, "roles", "")) : trimspace(role)], "cluster_manager")
-    error_message = "The main roles must be either empty or include cluster_manager."
+    error_message = "`main.config.roles` must be empty or include `cluster_manager`."
   }
 
   validation {
     condition     = lookup(var.main.config, "init_hold", "false") == "false"
-    error_message = "main.config.init_hold must be unset or false."
+    error_message = "`main.config.init_hold` must be unset or `false`."
   }
 }
 
@@ -314,7 +464,7 @@ variable "metrics_endpoint_integration" {
 
   validation {
     condition     = var.metrics_endpoint_integration == null ? true : contains(["endpoint", "offer"], var.metrics_endpoint_integration.kind)
-    error_message = "metrics_endpoint_integration.kind must be either 'endpoint' or 'offer'."
+    error_message = "`metrics_endpoint_integration.kind` must be `endpoint` or `offer`."
   }
 
   validation {
@@ -325,7 +475,7 @@ variable "metrics_endpoint_integration" {
         var.metrics_endpoint_integration.endpoint != null && var.metrics_endpoint_integration.endpoint != ""
       ) : true
     )
-    error_message = "Both 'name' and 'endpoint' attributes must be provided for an in-model integration."
+    error_message = "`metrics_endpoint_integration` with kind `endpoint` needs `name` and `endpoint`."
   }
 
   validation {
@@ -335,11 +485,23 @@ variable "metrics_endpoint_integration" {
         var.metrics_endpoint_integration.url != null && var.metrics_endpoint_integration.url != ""
       ) : true
     )
-    error_message = "The 'url' attribute must be provided for a cross-model integration."
+    error_message = "`metrics_endpoint_integration` with kind `offer` needs `url`."
   }
 }
 
-variable "opensearch-dashboards" {
+variable "offered_endpoints" {
+  description = "OpenSearch endpoints to expose as Juju offers."
+  type        = list(string)
+  default     = []
+  nullable    = false
+
+  validation {
+    condition     = alltrue([for endpoint in var.offered_endpoints : contains(["grafana-dashboard", "metrics-endpoint", "opensearch-client", "peer-cluster-orchestrator"], endpoint)])
+    error_message = "`offered_endpoints` may only contain `grafana-dashboard`, `metrics-endpoint`, `opensearch-client` or `peer-cluster-orchestrator`."
+  }
+}
+
+variable "opensearch_dashboards" {
   description = "Optional OpenSearch Dashboards app definition."
   type = object({
     app_name    = optional(string, "opensearch-dashboards-k8s")
@@ -360,8 +522,50 @@ variable "opensearch-dashboards" {
   default = null
 }
 
-variable "self-signed-certificates" {
-  description = "Configuration for the self-signed-certificates app."
+variable "s3_access_key" {
+  description = "S3 access key for `s3-integrator`. Supply through `TF_VAR_s3_access_key` or `-var`, at plan and at apply."
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+  default     = null
+}
+
+variable "s3_secret_key" {
+  description = "S3 secret key for `s3-integrator`. Supply through `TF_VAR_s3_secret_key` or `-var`, at plan and at apply."
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+  default     = null
+
+  validation {
+    condition     = (var.s3_access_key == null) == (var.s3_secret_key == null)
+    error_message = "Set `s3_access_key` and `s3_secret_key` together."
+  }
+}
+
+variable "s3_secret_version" {
+  description = "Version of the `s3-integrator` credentials secret. Set to `1` to create, increment to rotate, `0` to remove."
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = var.s3_secret_version == 0 || var.backups_integration != null || try(var.backups.storage_type, null) == "s3"
+    error_message = "`s3_secret_version` needs an S3 integrator. Set `backups.storage_type` to `s3`."
+  }
+
+  validation {
+    condition     = var.s3_secret_version == 0 || var.backups_integration == null
+    error_message = "`s3_secret_version` can't be used with `backups_integration`."
+  }
+
+  validation {
+    condition     = var.s3_secret_version >= 0 && floor(var.s3_secret_version) == var.s3_secret_version
+    error_message = "`s3_secret_version` must be a non-negative integer."
+  }
+}
+
+variable "self_signed_certificates" {
+  description = "Configuration for the `self-signed-certificates` app."
   type = object({
     channel     = optional(string, "1/stable")
     revision    = optional(number)
@@ -369,19 +573,6 @@ variable "self-signed-certificates" {
     units       = optional(number, 1)
     constraints = optional(string, "arch=amd64")
     config      = optional(map(string), { "ca-common-name" : "CA" })
-  })
-  default = {}
-}
-
-variable "traefik-k8s" {
-  description = "Configuration for the traefik-k8s app. Deployed when OpenSearch Dashboards is deployed, unless ingress_integration is set."
-  type = object({
-    channel     = optional(string, "latest/stable")
-    revision    = optional(number)
-    base        = optional(string)
-    units       = optional(number, 1)
-    constraints = optional(string, "arch=amd64")
-    config      = optional(map(string), {})
   })
   default = {}
 }
