@@ -67,6 +67,12 @@ locals {
     offer    = merge(local.failover_app.offers.peer_cluster_orchestrator, { name = null, endpoint = null })
   } : null
 
+  grafana_dashboard_targets = merge(
+    { for app in var.apps : app.app_name => app.grafana_dashboard_integration != null ? app.grafana_dashboard_integration : var.grafana_dashboard_integration },
+    local.failover_enabled ? { (var.failover.app_name) = var.failover.grafana_dashboard_integration != null ? var.failover.grafana_dashboard_integration : var.grafana_dashboard_integration } : {},
+    { (var.main.app_name) = var.grafana_dashboard_integration },
+  )
+
   integrations = { for key, value in merge(
     {
       backups_opensearch = local.backups_provider == null ? null : {
@@ -107,9 +113,21 @@ locals {
         target = local.certificates_provider
       } : null
     },
-    { for name, app in local.opensearch_apps : "grafana_${name}" => { model_uuid = app.model_uuid, app = module.opensearch[name].provides.grafana_dashboard, target = var.grafana_dashboard_integration } if var.grafana_dashboard_integration != null },
-    { for name, app in local.opensearch_apps : "logging_${name}" => { model_uuid = app.model_uuid, app = module.opensearch[name].requires.logging, target = var.logging_integration } if var.logging_integration != null },
-    { for name, app in local.opensearch_apps : "metrics_${name}" => { model_uuid = app.model_uuid, app = module.opensearch[name].provides.metrics_endpoint, target = var.metrics_endpoint_integration } if var.metrics_endpoint_integration != null },
+    { for name, app in local.opensearch_apps : "grafana_${name}" => {
+      model_uuid = app.model_uuid
+      app        = module.opensearch[name].provides.grafana_dashboard
+      target     = local.grafana_dashboard_targets[name]
+    } if local.grafana_dashboard_targets[name] != null },
+    { for name, app in local.opensearch_apps : "logging_${name}" => {
+      model_uuid = app.model_uuid
+      app        = module.opensearch[name].requires.logging
+      target     = local.logging_targets[name]
+    } if local.logging_targets[name] != null },
+    { for name, app in local.opensearch_apps : "metrics_${name}" => {
+      model_uuid = app.model_uuid
+      app        = module.opensearch[name].provides.metrics_endpoint
+      target     = local.metrics_endpoint_targets[name]
+    } if local.metrics_endpoint_targets[name] != null },
     { for name in local.non_manager_apps : "peer_cluster_failover_${name}" => {
       model_uuid = local.opensearch_apps[name].model_uuid
       app        = module.opensearch[name].requires.peer_cluster
@@ -130,6 +148,12 @@ locals {
     app        = { name = value.app.name, endpoint = value.app.endpoint }
     target     = { kind = value.target.kind, name = value.target.name, endpoint = value.target.endpoint, url = try(value.target.url, null) }
   } if value != null }
+
+  logging_targets = merge(
+    { for app in var.apps : app.app_name => app.logging_integration != null ? app.logging_integration : var.logging_integration },
+    local.failover_enabled ? { (var.failover.app_name) = var.failover.logging_integration != null ? var.failover.logging_integration : var.logging_integration } : {},
+    { (var.main.app_name) = var.logging_integration },
+  )
 
   main_app = module.opensearch[var.main.app_name]
 
@@ -153,6 +177,12 @@ locals {
       app        = module.opensearch[name].requires.peer_cluster
       target     = local.opensearch_apps[name].in_main_model ? local.main_orchestrator.endpoint : local.main_orchestrator.offer
     } },
+  )
+
+  metrics_endpoint_targets = merge(
+    { for app in var.apps : app.app_name => app.metrics_endpoint_integration != null ? app.metrics_endpoint_integration : var.metrics_endpoint_integration },
+    local.failover_enabled ? { (var.failover.app_name) = var.failover.metrics_endpoint_integration != null ? var.failover.metrics_endpoint_integration : var.metrics_endpoint_integration } : {},
+    { (var.main.app_name) = var.metrics_endpoint_integration },
   )
 
   non_manager_apps = [for app in var.apps : app.app_name if !contains(local.manager_apps, app.app_name)]

@@ -19,6 +19,24 @@ variable "apps" {
       endpoints = optional(string)
       spaces    = optional(string)
     })), [])
+    grafana_dashboard_integration = optional(object({
+      kind     = string
+      name     = optional(string)
+      endpoint = optional(string)
+      url      = optional(string)
+    }))
+    logging_integration = optional(object({
+      kind     = string
+      name     = optional(string)
+      endpoint = optional(string)
+      url      = optional(string)
+    }))
+    metrics_endpoint_integration = optional(object({
+      kind     = string
+      name     = optional(string)
+      endpoint = optional(string)
+      url      = optional(string)
+    }))
   }))
   default = [
     { app_name = "data", config = { roles = "data" } },
@@ -55,6 +73,18 @@ variable "apps" {
       ) : roles == "" || anytrue([for role in split(",", roles) : startswith(trimspace(role), "data")])
     ])
     error_message = "At least one OpenSearch app needs a `data` role."
+  }
+
+  validation {
+    condition = alltrue(flatten([
+      for app in var.apps : [
+        for cos in [app.grafana_dashboard_integration, app.logging_integration, app.metrics_endpoint_integration] :
+        cos == null ? true :
+        cos.kind == "endpoint" ? cos.name != null && cos.name != "" && cos.endpoint != null && cos.endpoint != "" :
+        cos.kind == "offer" && cos.url != null && cos.url != ""
+      ]
+    ]))
+    error_message = "COS integrations in `apps` need `name` and `endpoint`, or kind `offer` and `url`."
   }
 }
 
@@ -263,6 +293,24 @@ variable "failover" {
       endpoints = optional(string)
       spaces    = optional(string)
     })), [])
+    grafana_dashboard_integration = optional(object({
+      kind     = string
+      name     = optional(string)
+      endpoint = optional(string)
+      url      = optional(string)
+    }))
+    logging_integration = optional(object({
+      kind     = string
+      name     = optional(string)
+      endpoint = optional(string)
+      url      = optional(string)
+    }))
+    metrics_endpoint_integration = optional(object({
+      kind     = string
+      name     = optional(string)
+      endpoint = optional(string)
+      url      = optional(string)
+    }))
   })
   default = null
 
@@ -274,6 +322,16 @@ variable "failover" {
   validation {
     condition     = var.failover == null ? true : lookup(var.failover.config, "init_hold", "true") == "true"
     error_message = "`failover.config.init_hold` must be unset or `true`."
+  }
+
+  validation {
+    condition = var.failover == null ? true : alltrue([
+      for cos in [var.failover.grafana_dashboard_integration, var.failover.logging_integration, var.failover.metrics_endpoint_integration] :
+      cos == null ? true :
+      cos.kind == "endpoint" ? cos.name != null && cos.name != "" && cos.endpoint != null && cos.endpoint != "" :
+      cos.kind == "offer" && cos.url != null && cos.url != ""
+    ])
+    error_message = "COS integrations in `failover` need `name` and `endpoint`, or kind `offer` and `url`."
   }
 }
 
@@ -349,8 +407,10 @@ variable "grafana_dashboard_integration" {
   }
 
   validation {
-    condition     = var.grafana_dashboard_integration == null ? true : var.grafana_dashboard_integration.kind == "offer" || local.single_model
-    error_message = "`grafana_dashboard_integration` must be an offer when apps are in other models."
+    condition = var.grafana_dashboard_integration == null ? true : var.grafana_dashboard_integration.kind == "offer" || alltrue([
+      for app in local.opensearch_apps : app.grafana_dashboard_integration != null if !app.in_main_model
+    ])
+    error_message = "OpenSearch apps outside `main`'s model need their own `grafana_dashboard_integration`."
   }
 }
 
@@ -433,8 +493,10 @@ variable "logging_integration" {
   }
 
   validation {
-    condition     = var.logging_integration == null ? true : var.logging_integration.kind == "offer" || local.single_model
-    error_message = "`logging_integration` must be an offer when apps are in other models."
+    condition = var.logging_integration == null ? true : var.logging_integration.kind == "offer" || alltrue([
+      for app in local.opensearch_apps : app.logging_integration != null if !app.in_main_model
+    ])
+    error_message = "OpenSearch apps outside `main`'s model need their own `logging_integration`."
   }
 }
 
@@ -506,8 +568,10 @@ variable "metrics_endpoint_integration" {
   }
 
   validation {
-    condition     = var.metrics_endpoint_integration == null ? true : var.metrics_endpoint_integration.kind == "offer" || local.single_model
-    error_message = "`metrics_endpoint_integration` must be an offer when apps are in other models."
+    condition = var.metrics_endpoint_integration == null ? true : var.metrics_endpoint_integration.kind == "offer" || alltrue([
+      for app in local.opensearch_apps : app.metrics_endpoint_integration != null if !app.in_main_model
+    ])
+    error_message = "OpenSearch apps outside `main`'s model need their own `metrics_endpoint_integration`."
   }
 }
 
