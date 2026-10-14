@@ -74,6 +74,8 @@ locals {
     offer    = merge(local.failover_app.offers.peer_cluster_orchestrator, { name = null, endpoint = null })
   } : null
 
+  failover_targets = { for app in var.apps : app.app_name => local.opensearch_apps[app.app_name].in_failover_model ? local.failover_orchestrator.endpoint : local.failover_orchestrator.offer if local.failover_enabled }
+
   grafana_dashboard_targets = { for name, collector in local.cos_collectors : name => collector == null ? var.grafana_dashboard_integration : { kind = "endpoint", name = collector, endpoint = "grafana-dashboards-consumer", url = null } }
 
   integrations = { for key, value in merge(
@@ -109,7 +111,7 @@ locals {
       peer_cluster_orchestrators = local.failover_enabled ? {
         model_uuid = local.opensearch_apps[var.failover.app_name].model_uuid
         app        = local.failover_app.requires.peer_cluster
-        target     = local.opensearch_apps[var.failover.app_name].in_main_model ? local.main_orchestrator.endpoint : local.main_orchestrator.offer
+        target     = local.main_targets[var.failover.app_name]
       } : null
       tls_opensearch_dashboards = try(var.opensearch_dashboards.tls, false) ? {
         app    = module.opensearch_dashboards[0].requires.certificates
@@ -131,16 +133,7 @@ locals {
       app        = module.opensearch[name].provides.metrics_endpoint
       target     = local.metrics_endpoint_targets[name]
     } if local.metrics_endpoint_targets[name] != null },
-    { for name in local.non_manager_apps : "peer_cluster_failover_${name}" => {
-      model_uuid = local.opensearch_apps[name].model_uuid
-      app        = module.opensearch[name].requires.peer_cluster
-      target     = local.opensearch_apps[name].in_failover_model ? local.failover_orchestrator.endpoint : local.failover_orchestrator.offer
-    } if local.failover_enabled },
-    { for name in local.non_manager_apps : "peer_cluster_main_${name}" => {
-      model_uuid = local.opensearch_apps[name].model_uuid
-      app        = module.opensearch[name].requires.peer_cluster
-      target     = local.opensearch_apps[name].in_main_model ? local.main_orchestrator.endpoint : local.main_orchestrator.offer
-    } },
+    { for key, relation in local.peer_cluster_relations : key => relation if !relation.wait_for_election },
     { for name, app in local.opensearch_apps : "tls_${name}" => {
       model_uuid = app.model_uuid
       app        = module.opensearch[name].requires.certificates
@@ -161,42 +154,28 @@ locals {
     offer    = merge(local.main_app.offers.peer_cluster_orchestrator, { name = null, endpoint = null })
   }
 
+  main_targets = { for name, app in local.opensearch_apps : name => app.in_main_model ? local.main_orchestrator.endpoint : local.main_orchestrator.offer }
+
   manager_apps = [
     for app in var.apps : app.app_name if lookup(app.config, "roles", "") == "" || contains([for role in split(",", lookup(app.config, "roles", "")) : trimspace(role)], "cluster_manager")
   ]
 
-  manager_integrations = merge(
-    { for name in local.manager_apps : "peer_cluster_failover_${name}" => {
-      model_uuid = local.opensearch_apps[name].model_uuid
-      app        = module.opensearch[name].requires.peer_cluster
-      target     = local.opensearch_apps[name].in_failover_model ? local.failover_orchestrator.endpoint : local.failover_orchestrator.offer
-    } },
-    { for name in local.manager_apps : "peer_cluster_main_${name}" => {
-      model_uuid = local.opensearch_apps[name].model_uuid
-      app        = module.opensearch[name].requires.peer_cluster
-      target     = local.opensearch_apps[name].in_main_model ? local.main_orchestrator.endpoint : local.main_orchestrator.offer
-    } },
-  )
+  manager_integrations = { for key, relation in local.peer_cluster_relations : key => relation if relation.wait_for_election }
 
   metrics_endpoint_targets = { for name, collector in local.cos_collectors : name => collector == null ? var.metrics_endpoint_integration : { kind = "endpoint", name = collector, endpoint = "metrics-endpoint", url = null } }
 
-  non_manager_apps = [for app in var.apps : app.app_name if !contains(local.manager_apps, app.app_name)]
-
   opensearch_apps = merge(
     { for app in var.apps : app.app_name => merge(app, {
-      config        = merge(app.config, { "cluster_name" : var.cluster_name, "init_hold" : "true" })
-      model_uuid    = coalesce(app.model_uuid, var.main.model_uuid)
-      in_main_model = app.model_uuid == null ? true : app.model_uuid == var.main.model_uuid
-      in_failover_model = local.failover_enabled ? (
-        app.model_uuid == var.failover.model_uuid ? true :
-        coalesce(app.model_uuid, var.main.model_uuid) == coalesce(var.failover.model_uuid, var.main.model_uuid)
-      ) : false
+      config            = merge(app.config, { "cluster_name" : var.cluster_name, "init_hold" : "true" })
+      model_uuid        = coalesce(app.model_uuid, var.main.model_uuid)
+      in_main_model     = app.model_uuid == null || app.model_uuid == var.main.model_uuid
+      in_failover_model = local.failover_enabled ? coalesce(app.model_uuid, var.main.model_uuid) == coalesce(var.failover.model_uuid, var.main.model_uuid) : false
       offered_endpoints = []
     }) },
     local.failover_enabled ? { (var.failover.app_name) = merge(var.failover, {
       config            = merge({ "roles" : "cluster_manager" }, var.failover.config, { "cluster_name" : var.cluster_name, "init_hold" : "true" })
       model_uuid        = coalesce(var.failover.model_uuid, var.main.model_uuid)
-      in_main_model     = var.failover.model_uuid == null ? true : var.failover.model_uuid == var.main.model_uuid
+      in_main_model     = var.failover.model_uuid == null || var.failover.model_uuid == var.main.model_uuid
       offered_endpoints = ["peer-cluster-orchestrator"]
     }) } : {},
     { (var.main.app_name) = merge(var.main, {
@@ -204,6 +183,21 @@ locals {
       in_main_model     = true
       offered_endpoints = concat(["peer-cluster-orchestrator"], var.offered_endpoints)
     }) },
+  )
+
+  peer_cluster_relations = merge(
+    { for app in var.apps : "peer_cluster_failover_${app.app_name}" => {
+      wait_for_election = contains(local.manager_apps, app.app_name)
+      model_uuid        = local.opensearch_apps[app.app_name].model_uuid
+      app               = module.opensearch[app.app_name].requires.peer_cluster
+      target            = local.failover_targets[app.app_name]
+    } if local.failover_enabled },
+    { for app in var.apps : "peer_cluster_main_${app.app_name}" => {
+      wait_for_election = contains(local.manager_apps, app.app_name)
+      model_uuid        = local.opensearch_apps[app.app_name].model_uuid
+      app               = module.opensearch[app.app_name].requires.peer_cluster
+      target            = local.main_targets[app.app_name]
+    } },
   )
 
   single_model = alltrue([for app in local.opensearch_apps : app.in_main_model])

@@ -68,6 +68,11 @@ variable "apps" {
     ])
     error_message = "At least one OpenSearch app needs a `data` role."
   }
+
+  validation {
+    condition     = alltrue([for app in var.apps : app.model_uuid != ""])
+    error_message = "`apps[*].model_uuid` can't be empty."
+  }
 }
 
 variable "azure_storage_secret_key" {
@@ -306,6 +311,11 @@ variable "failover" {
   validation {
     condition     = var.failover == null || var.cos_agent_integration == null ? true : var.failover.cos_collector != null || (var.failover.model_uuid == null ? true : var.failover.model_uuid == var.main.model_uuid)
     error_message = "`failover` outside `main`'s model needs `cos_collector`."
+  }
+
+  validation {
+    condition     = var.failover == null ? true : var.failover.model_uuid != ""
+    error_message = "`failover.model_uuid` can't be empty."
   }
 }
 
