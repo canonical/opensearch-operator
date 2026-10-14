@@ -32,7 +32,7 @@ resource "terraform_data" "failover_elected" {
       FAILOVER_APP = local.failover_app.application.name
       MAIN_APP     = local.main_app.application.name
       MAIN_MODEL   = var.main.model_uuid
-      TIMEOUT      = var.failover_election_timeout
+      TIMEOUT      = local.failover_election_timeout
     }
   }
 

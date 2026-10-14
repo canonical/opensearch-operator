@@ -57,21 +57,24 @@ locals {
     local.backups_enabled ? { "backups" = juju_application.backups[0] } : {},
   )
 
-  dashboards_enabled      = var.opensearch_dashboards != null
-  data_integrator_enabled = var.data_integrator != null
-  failover_app            = local.failover_enabled ? module.opensearch[var.failover.app_name] : null
-  failover_enabled        = var.failover != null
+  cos_collectors = merge(
+    { for app in var.apps : app.app_name => app.cos_collector },
+    local.failover_enabled ? { (var.failover.app_name) = var.failover.cos_collector } : {},
+    { (var.main.app_name) = null },
+  )
+
+  dashboards_enabled        = var.opensearch_dashboards != null
+  data_integrator_enabled   = var.data_integrator != null
+  failover_app              = local.failover_enabled ? module.opensearch[var.failover.app_name] : null
+  failover_election_timeout = 1800
+  failover_enabled          = var.failover != null
 
   failover_orchestrator = local.failover_enabled ? {
     endpoint = merge(local.failover_app.provides.peer_cluster_orchestrator, { url = null })
     offer    = merge(local.failover_app.offers.peer_cluster_orchestrator, { name = null, endpoint = null })
   } : null
 
-  grafana_dashboard_targets = merge(
-    { for app in var.apps : app.app_name => app.grafana_dashboard_integration != null ? app.grafana_dashboard_integration : var.grafana_dashboard_integration },
-    local.failover_enabled ? { (var.failover.app_name) = var.failover.grafana_dashboard_integration != null ? var.failover.grafana_dashboard_integration : var.grafana_dashboard_integration } : {},
-    { (var.main.app_name) = var.grafana_dashboard_integration },
-  )
+  grafana_dashboard_targets = { for name, collector in local.cos_collectors : name => collector == null ? var.grafana_dashboard_integration : { kind = "endpoint", name = collector, endpoint = "grafana-dashboards-consumer", url = null } }
 
   integrations = { for key, value in merge(
     {
@@ -149,11 +152,7 @@ locals {
     target     = { kind = value.target.kind, name = value.target.name, endpoint = value.target.endpoint, url = try(value.target.url, null) }
   } if value != null }
 
-  logging_targets = merge(
-    { for app in var.apps : app.app_name => app.logging_integration != null ? app.logging_integration : var.logging_integration },
-    local.failover_enabled ? { (var.failover.app_name) = var.failover.logging_integration != null ? var.failover.logging_integration : var.logging_integration } : {},
-    { (var.main.app_name) = var.logging_integration },
-  )
+  logging_targets = { for name, collector in local.cos_collectors : name => collector == null ? var.logging_integration : { kind = "endpoint", name = collector, endpoint = "receive-loki-logs", url = null } }
 
   main_app = module.opensearch[var.main.app_name]
 
@@ -179,11 +178,7 @@ locals {
     } },
   )
 
-  metrics_endpoint_targets = merge(
-    { for app in var.apps : app.app_name => app.metrics_endpoint_integration != null ? app.metrics_endpoint_integration : var.metrics_endpoint_integration },
-    local.failover_enabled ? { (var.failover.app_name) = var.failover.metrics_endpoint_integration != null ? var.failover.metrics_endpoint_integration : var.metrics_endpoint_integration } : {},
-    { (var.main.app_name) = var.metrics_endpoint_integration },
-  )
+  metrics_endpoint_targets = { for name, collector in local.cos_collectors : name => collector == null ? var.metrics_endpoint_integration : { kind = "endpoint", name = collector, endpoint = "metrics-endpoint", url = null } }
 
   non_manager_apps = [for app in var.apps : app.app_name if !contains(local.manager_apps, app.app_name)]
 

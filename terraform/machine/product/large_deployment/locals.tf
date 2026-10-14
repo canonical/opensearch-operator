@@ -57,11 +57,19 @@ locals {
     local.backups_enabled ? { "backups" = juju_application.backups[0] } : {},
   )
 
-  cos_agent_provider      = var.cos_agent_integration == null ? null : merge(var.cos_agent_integration, { kind = "endpoint" })
-  dashboards_enabled      = var.opensearch_dashboards != null
-  data_integrator_enabled = var.data_integrator != null
-  failover_app            = local.failover_enabled ? module.opensearch[var.failover.app_name] : null
-  failover_enabled        = var.failover != null
+  cos_agent_provider = var.cos_agent_integration == null ? null : merge(var.cos_agent_integration, { kind = "endpoint" })
+
+  cos_collectors = merge(
+    { for app in var.apps : app.app_name => app.cos_collector },
+    local.failover_enabled ? { (var.failover.app_name) = var.failover.cos_collector } : {},
+    { (var.main.app_name) = null },
+  )
+
+  dashboards_enabled        = var.opensearch_dashboards != null
+  data_integrator_enabled   = var.data_integrator != null
+  failover_app              = local.failover_enabled ? module.opensearch[var.failover.app_name] : null
+  failover_election_timeout = 1800
+  failover_enabled          = var.failover != null
 
   failover_orchestrator = local.failover_enabled ? {
     endpoint = merge(local.failover_app.provides.peer_cluster_orchestrator, { url = null })
@@ -96,11 +104,11 @@ locals {
         target = local.certificates_provider
       } : null
     },
-    { for name, app in local.opensearch_apps : "cos_${name}" => {
-      model_uuid = app.model_uuid
+    { for name, collector in local.cos_collectors : "cos_${name}" => {
+      model_uuid = local.opensearch_apps[name].model_uuid
       app        = module.opensearch[name].provides.cos_agent
-      target     = merge(coalesce(try(app.cos_agent_integration, null), var.cos_agent_integration), { kind = "endpoint" })
-    } if try(app.cos_agent_integration, null) != null || var.cos_agent_integration != null },
+      target     = collector == null ? local.cos_agent_provider : { kind = "endpoint", name = collector, endpoint = "cos-agent" }
+    } if collector != null || local.cos_agent_provider != null },
     { for name in local.non_manager_apps : "peer_cluster_failover_${name}" => {
       model_uuid = local.opensearch_apps[name].model_uuid
       app        = module.opensearch[name].requires.peer_cluster

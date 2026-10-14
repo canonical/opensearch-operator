@@ -11,7 +11,7 @@ variable "apps" {
     base               = optional(string, "ubuntu@24.04")
     revision           = optional(number)
     units              = optional(number, 3)
-    constraints        = optional(string, "arch=amd64")
+    constraints        = optional(string)
     resources          = optional(map(string), {})
     storage_directives = optional(map(string), {})
     expose = optional(list(object({
@@ -19,24 +19,7 @@ variable "apps" {
       endpoints = optional(string)
       spaces    = optional(string)
     })), [])
-    grafana_dashboard_integration = optional(object({
-      kind     = string
-      name     = optional(string)
-      endpoint = optional(string)
-      url      = optional(string)
-    }))
-    logging_integration = optional(object({
-      kind     = string
-      name     = optional(string)
-      endpoint = optional(string)
-      url      = optional(string)
-    }))
-    metrics_endpoint_integration = optional(object({
-      kind     = string
-      name     = optional(string)
-      endpoint = optional(string)
-      url      = optional(string)
-    }))
+    cos_collector = optional(string)
   }))
   default = [
     { app_name = "data", config = { roles = "data" } },
@@ -60,8 +43,8 @@ variable "apps" {
   }
 
   validation {
-    condition     = alltrue([for app in var.apps : lookup(app.config, "init_hold", "true") == "true"])
-    error_message = "`config.init_hold` in `apps` must be unset or `true`."
+    condition     = alltrue([for app in var.apps : length(setintersection(keys(app.config), ["cluster_name", "init_hold"])) == 0])
+    error_message = "`config` in `apps` can't set `cluster_name` or `init_hold`."
   }
 
   validation {
@@ -76,15 +59,10 @@ variable "apps" {
   }
 
   validation {
-    condition = alltrue(flatten([
-      for app in var.apps : [
-        for cos in [app.grafana_dashboard_integration, app.logging_integration, app.metrics_endpoint_integration] :
-        cos == null ? true :
-        cos.kind == "endpoint" ? cos.name != null && cos.name != "" && cos.endpoint != null && cos.endpoint != "" :
-        cos.kind == "offer" && cos.url != null && cos.url != ""
-      ]
-    ]))
-    error_message = "COS integrations in `apps` need `name` and `endpoint`, or kind `offer` and `url`."
+    condition = !anytrue([for cos in [var.grafana_dashboard_integration, var.logging_integration, var.metrics_endpoint_integration] : cos == null ? false : cos.kind == "endpoint"]) || alltrue([
+      for app in var.apps : app.cos_collector != null || (app.model_uuid == null ? true : app.model_uuid == var.main.model_uuid)
+    ])
+    error_message = "`apps` outside `main`'s model need `cos_collector`."
   }
 }
 
@@ -126,7 +104,7 @@ variable "backups" {
     credentials_secret_uri = optional(string)
     base                   = optional(string)
     revision               = optional(number)
-    constraints            = optional(string, "arch=amd64")
+    constraints            = optional(string)
   })
 
   default = null
@@ -242,17 +220,6 @@ variable "cluster_name" {
   type        = string
   default     = "opensearch"
   nullable    = false
-
-  validation {
-    condition = alltrue([
-      for config in concat(
-        [var.main.config],
-        var.failover == null ? [] : [var.failover.config],
-        [for app in var.apps : app.config],
-      ) : lookup(config, "cluster_name", var.cluster_name) == var.cluster_name
-    ])
-    error_message = "`config.cluster_name` must be unset or equal to `cluster_name`."
-  }
 }
 
 variable "data_integrator" {
@@ -262,7 +229,7 @@ variable "data_integrator" {
     channel     = optional(string, "latest/stable")
     base        = optional(string, "ubuntu@22.04")
     revision    = optional(number)
-    constraints = optional(string, "arch=amd64")
+    constraints = optional(string)
   })
   default = null
 
@@ -285,7 +252,7 @@ variable "failover" {
     base               = optional(string, "ubuntu@24.04")
     revision           = optional(number)
     units              = optional(number, 3)
-    constraints        = optional(string, "arch=amd64")
+    constraints        = optional(string)
     resources          = optional(map(string), {})
     storage_directives = optional(map(string), {})
     expose = optional(list(object({
@@ -293,24 +260,7 @@ variable "failover" {
       endpoints = optional(string)
       spaces    = optional(string)
     })), [])
-    grafana_dashboard_integration = optional(object({
-      kind     = string
-      name     = optional(string)
-      endpoint = optional(string)
-      url      = optional(string)
-    }))
-    logging_integration = optional(object({
-      kind     = string
-      name     = optional(string)
-      endpoint = optional(string)
-      url      = optional(string)
-    }))
-    metrics_endpoint_integration = optional(object({
-      kind     = string
-      name     = optional(string)
-      endpoint = optional(string)
-      url      = optional(string)
-    }))
+    cos_collector = optional(string)
   })
   default = null
 
@@ -320,25 +270,14 @@ variable "failover" {
   }
 
   validation {
-    condition     = var.failover == null ? true : lookup(var.failover.config, "init_hold", "true") == "true"
-    error_message = "`failover.config.init_hold` must be unset or `true`."
+    condition     = var.failover == null ? true : length(setintersection(keys(var.failover.config), ["cluster_name", "init_hold"])) == 0
+    error_message = "`failover.config` can't set `cluster_name` or `init_hold`."
   }
 
   validation {
-    condition = var.failover == null ? true : alltrue([
-      for cos in [var.failover.grafana_dashboard_integration, var.failover.logging_integration, var.failover.metrics_endpoint_integration] :
-      cos == null ? true :
-      cos.kind == "endpoint" ? cos.name != null && cos.name != "" && cos.endpoint != null && cos.endpoint != "" :
-      cos.kind == "offer" && cos.url != null && cos.url != ""
-    ])
-    error_message = "COS integrations in `failover` need `name` and `endpoint`, or kind `offer` and `url`."
+    condition     = var.failover == null || !anytrue([for cos in [var.grafana_dashboard_integration, var.logging_integration, var.metrics_endpoint_integration] : cos == null ? false : cos.kind == "endpoint"]) ? true : var.failover.cos_collector != null || (var.failover.model_uuid == null ? true : var.failover.model_uuid == var.main.model_uuid)
+    error_message = "`failover` outside `main`'s model needs `cos_collector`."
   }
-}
-
-variable "failover_election_timeout" {
-  description = "Wait time in seconds for the main orchestrator to elect `failover`, before relating other cluster-manager apps."
-  type        = number
-  default     = 1800
 }
 
 variable "gcs_secret_key" {
@@ -404,13 +343,6 @@ variable "grafana_dashboard_integration" {
       ) : true
     )
     error_message = "`grafana_dashboard_integration` with kind `offer` needs `url`."
-  }
-
-  validation {
-    condition = var.grafana_dashboard_integration == null ? true : var.grafana_dashboard_integration.kind == "offer" || alltrue([
-      for app in local.opensearch_apps : app.grafana_dashboard_integration != null if !app.in_main_model
-    ])
-    error_message = "OpenSearch apps outside `main`'s model need their own `grafana_dashboard_integration`."
   }
 }
 
@@ -491,13 +423,6 @@ variable "logging_integration" {
     )
     error_message = "`logging_integration` with kind `offer` needs `url`."
   }
-
-  validation {
-    condition = var.logging_integration == null ? true : var.logging_integration.kind == "offer" || alltrue([
-      for app in local.opensearch_apps : app.logging_integration != null if !app.in_main_model
-    ])
-    error_message = "OpenSearch apps outside `main`'s model need their own `logging_integration`."
-  }
 }
 
 variable "main" {
@@ -510,7 +435,7 @@ variable "main" {
     base               = optional(string, "ubuntu@24.04")
     revision           = optional(number)
     units              = optional(number, 3)
-    constraints        = optional(string, "arch=amd64")
+    constraints        = optional(string)
     resources          = optional(map(string), {})
     storage_directives = optional(map(string), {})
     expose = optional(list(object({
@@ -526,8 +451,8 @@ variable "main" {
   }
 
   validation {
-    condition     = lookup(var.main.config, "init_hold", "false") == "false"
-    error_message = "`main.config.init_hold` must be unset or `false`."
+    condition     = length(setintersection(keys(var.main.config), ["cluster_name", "init_hold"])) == 0
+    error_message = "`main.config` can't set `cluster_name` or `init_hold`."
   }
 }
 
@@ -566,13 +491,6 @@ variable "metrics_endpoint_integration" {
     )
     error_message = "`metrics_endpoint_integration` with kind `offer` needs `url`."
   }
-
-  validation {
-    condition = var.metrics_endpoint_integration == null ? true : var.metrics_endpoint_integration.kind == "offer" || alltrue([
-      for app in local.opensearch_apps : app.metrics_endpoint_integration != null if !app.in_main_model
-    ])
-    error_message = "OpenSearch apps outside `main`'s model need their own `metrics_endpoint_integration`."
-  }
 }
 
 variable "offered_endpoints" {
@@ -596,7 +514,7 @@ variable "opensearch_dashboards" {
     base        = optional(string, "ubuntu@24.04")
     revision    = optional(number)
     units       = optional(number, 1)
-    constraints = optional(string, "arch=amd64")
+    constraints = optional(string)
     resources   = optional(map(string), {})
     tls         = optional(bool, false)
     expose = optional(list(object({
@@ -657,7 +575,7 @@ variable "self_signed_certificates" {
     revision    = optional(number)
     base        = optional(string, "ubuntu@24.04")
     units       = optional(number, 1)
-    constraints = optional(string, "arch=amd64")
+    constraints = optional(string)
     config      = optional(map(string), { "ca-common-name" : "CA" })
   })
   default = {}

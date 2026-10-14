@@ -11,7 +11,7 @@ variable "apps" {
     base               = optional(string, "ubuntu@24.04")
     revision           = optional(number)
     units              = optional(number, 3)
-    constraints        = optional(string, "arch=amd64")
+    constraints        = optional(string)
     machines           = optional(set(string), [])
     storage_directives = optional(map(string), {})
     endpoint_bindings = optional(set(object({
@@ -23,10 +23,7 @@ variable "apps" {
       endpoints = optional(string)
       spaces    = optional(string)
     })), [])
-    cos_agent_integration = optional(object({
-      name     = string
-      endpoint = string
-    }))
+    cos_collector = optional(string)
   }))
   default = [
     { app_name = "data", config = { roles = "data" } },
@@ -50,15 +47,15 @@ variable "apps" {
   }
 
   validation {
-    condition     = alltrue([for app in var.apps : lookup(app.config, "init_hold", "true") == "true"])
-    error_message = "`config.init_hold` in `apps` must be unset or `true`."
+    condition     = alltrue([for app in var.apps : length(setintersection(keys(app.config), ["cluster_name", "init_hold"])) == 0])
+    error_message = "`config` in `apps` can't set `cluster_name` or `init_hold`."
   }
 
   validation {
     condition = var.cos_agent_integration == null || alltrue([
-      for app in var.apps : app.cos_agent_integration != null || (app.model_uuid == null ? true : app.model_uuid == var.main.model_uuid)
+      for app in var.apps : app.cos_collector != null || (app.model_uuid == null ? true : app.model_uuid == var.main.model_uuid)
     ])
-    error_message = "`apps` outside `main`'s model need their own `cos_agent_integration`."
+    error_message = "`apps` outside `main`'s model need `cos_collector`."
   }
 
   validation {
@@ -111,7 +108,7 @@ variable "backups" {
     credentials_secret_uri = optional(string)
     base                   = optional(string)
     revision               = optional(number)
-    constraints            = optional(string, "arch=amd64")
+    constraints            = optional(string)
     machines               = optional(list(string), [])
   })
 
@@ -233,17 +230,6 @@ variable "cluster_name" {
   type        = string
   default     = "opensearch"
   nullable    = false
-
-  validation {
-    condition = alltrue([
-      for config in concat(
-        [var.main.config],
-        var.failover == null ? [] : [var.failover.config],
-        [for app in var.apps : app.config],
-      ) : lookup(config, "cluster_name", var.cluster_name) == var.cluster_name
-    ])
-    error_message = "`config.cluster_name` must be unset or equal to `cluster_name`."
-  }
 }
 
 variable "cos_agent_integration" {
@@ -262,7 +248,7 @@ variable "data_integrator" {
     channel     = optional(string, "latest/stable")
     base        = optional(string, "ubuntu@22.04")
     revision    = optional(number)
-    constraints = optional(string, "arch=amd64")
+    constraints = optional(string)
     machines    = optional(list(string), [])
   })
   default = null
@@ -291,7 +277,7 @@ variable "failover" {
     base               = optional(string, "ubuntu@24.04")
     revision           = optional(number)
     units              = optional(number, 3)
-    constraints        = optional(string, "arch=amd64")
+    constraints        = optional(string)
     machines           = optional(set(string), [])
     storage_directives = optional(map(string), {})
     endpoint_bindings = optional(set(object({
@@ -303,10 +289,7 @@ variable "failover" {
       endpoints = optional(string)
       spaces    = optional(string)
     })), [])
-    cos_agent_integration = optional(object({
-      name     = string
-      endpoint = string
-    }))
+    cos_collector = optional(string)
   })
   default = null
 
@@ -316,20 +299,14 @@ variable "failover" {
   }
 
   validation {
-    condition     = var.failover == null ? true : lookup(var.failover.config, "init_hold", "true") == "true"
-    error_message = "`failover.config.init_hold` must be unset or `true`."
+    condition     = var.failover == null ? true : length(setintersection(keys(var.failover.config), ["cluster_name", "init_hold"])) == 0
+    error_message = "`failover.config` can't set `cluster_name` or `init_hold`."
   }
 
   validation {
-    condition     = var.failover == null || var.cos_agent_integration == null ? true : var.failover.cos_agent_integration != null || (var.failover.model_uuid == null ? true : var.failover.model_uuid == var.main.model_uuid)
-    error_message = "`failover` outside `main`'s model needs its own `cos_agent_integration`."
+    condition     = var.failover == null || var.cos_agent_integration == null ? true : var.failover.cos_collector != null || (var.failover.model_uuid == null ? true : var.failover.model_uuid == var.main.model_uuid)
+    error_message = "`failover` outside `main`'s model needs `cos_collector`."
   }
-}
-
-variable "failover_election_timeout" {
-  description = "Wait time in seconds for the main orchestrator to elect `failover`, before relating other cluster-manager apps."
-  type        = number
-  default     = 1800
 }
 
 variable "gcs_secret_key" {
@@ -371,7 +348,7 @@ variable "main" {
     base               = optional(string, "ubuntu@24.04")
     revision           = optional(number)
     units              = optional(number, 3)
-    constraints        = optional(string, "arch=amd64")
+    constraints        = optional(string)
     machines           = optional(set(string), [])
     storage_directives = optional(map(string), {})
     endpoint_bindings = optional(set(object({
@@ -391,8 +368,8 @@ variable "main" {
   }
 
   validation {
-    condition     = lookup(var.main.config, "init_hold", "false") == "false"
-    error_message = "`main.config.init_hold` must be unset or `false`."
+    condition     = length(setintersection(keys(var.main.config), ["cluster_name", "init_hold"])) == 0
+    error_message = "`main.config` can't set `cluster_name` or `init_hold`."
   }
 }
 
@@ -417,7 +394,7 @@ variable "opensearch_dashboards" {
     base        = optional(string, "ubuntu@24.04")
     revision    = optional(number)
     units       = optional(number, 1)
-    constraints = optional(string, "arch=amd64")
+    constraints = optional(string)
     machines    = optional(set(string), [])
     endpoint_bindings = optional(set(object({
       space    = string
@@ -482,7 +459,7 @@ variable "self_signed_certificates" {
     revision    = optional(number)
     base        = optional(string, "ubuntu@24.04")
     units       = optional(number, 1)
-    constraints = optional(string, "arch=amd64")
+    constraints = optional(string)
     machines    = optional(list(string), [])
     config      = optional(map(string), { "ca-common-name" : "CA" })
   })
