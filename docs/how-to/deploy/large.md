@@ -25,7 +25,7 @@ controller and model setup, kernel parameter configuration, and the optional TCP
 before deploying OpenSearch.
 
 The Kubernetes charm requires the `--trust` flag to access the Kubernetes API and manage Kubernetes resources for the
-OpenSearch deployment.
+OpenSearch deployment. Unlike on VMs, this does not grant access to the model's cloud credentials.
 
 ## Node roles
 
@@ -85,7 +85,9 @@ for details on the available profiles.
 **Two critical configuration rules for large deployments:**
 
 1. Use the same `cluster_name` value for all applications (`app` in the examples below).
-   Applications with different names cannot join the same OpenSearch cluster.
+   Applications with different `cluster_name` values cannot join the same OpenSearch cluster.
+   See [Large deployment configuration rules](explanation-node-roles-large) for details, including how a cluster name
+   is inherited when it is not explicitly configured.
 2. Set `init_hold=true` on every application **except** the main orchestrator.
    This prevents non-orchestrator applications from starting before integration.
 ```
