@@ -24,8 +24,8 @@ Complete the preparation steps in the [standard deployment guide](how-to-deploy-
 controller and model setup, kernel parameter configuration, and the optional TCP retries tuning — then return here
 before deploying OpenSearch.
 
-The Kubernetes charm requires the `--trust` flag to access the model's cloud credentials and manage Kubernetes resources
-on your behalf.
+The Kubernetes charm requires the `--trust` flag to access the Kubernetes API and manage Kubernetes resources for the
+OpenSearch deployment.
 
 ## Node roles
 
@@ -84,8 +84,8 @@ for details on the available profiles.
 ```{note}
 **Two critical configuration rules for large deployments:**
 
-1. All applications must share the same `cluster_name` value.
-   A mismatch prevents applications from forming a cluster.
+1. Use the same `cluster_name` value for all applications (`app` in the examples below).
+   Applications with different names cannot join the same OpenSearch cluster.
 2. Set `init_hold=true` on every application **except** the main orchestrator.
    This prevents non-orchestrator applications from starting before integration.
 ```
@@ -239,10 +239,6 @@ Integrate the applications via the peer-cluster relations to form a single OpenS
 juju integrate main:peer-cluster-orchestrator failover:peer-cluster
 juju integrate main:peer-cluster-orchestrator data-hot:peer-cluster
 juju integrate failover:peer-cluster-orchestrator data-hot:peer-cluster
-```
-
-```{note}
-On Kubernetes, nodes identify and communicate with each other using their internal service FQDNs, not pod IPs.
 ```
 
 The `main` application orchestrates cluster formation. Track progress with:
