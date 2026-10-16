@@ -19,6 +19,9 @@ DOCS_PDFPACKAGES ?= latexmk fonts-freefont-otf texlive-latex-recommended texlive
 DOCS_VOCAB       ?= $(DEV_DIR)/styles/config/vocabularies/Canonical
 VALE_DIR         ?= $(DOCS_VENVDIR)/lib/python*/site-packages/vale
 VALE_CONFIG      ?= $(DEV_DIR)/vale.ini
+MDFORMAT_DIR     ?= $(DEV_DIR)/mdformat
+MDFORMAT_VENVDIR ?= $(MDFORMAT_DIR)/.venv
+MDFORMAT_CMD     ?= $(MDFORMAT_VENVDIR)/bin/mdformat
 PA11Y_CMD        ?= $(DEV_DIR)/node_modules/pa11y/bin/pa11y.js --config $(DEV_DIR)/pa11y.json
 CONFIRM_SUDO     ?= N
 CHECK_PATH       ?= $(filter-out $(DOCS_VENVDIR) $(DOCS_BUILDDIR) $(DEV_DIR),$(wildcard *))
@@ -37,6 +40,8 @@ help:
 	@echo "* clean full environment:                    make clean"
 	@echo "* check links:                               make linkcheck"
 	@echo "* check markdown:                            make lint-md"
+	@echo "* format markdown:                          make mdformat"
+	@echo "* check markdown formatting:                make mdformat-check"
 	@echo "* check spelling:                            make spelling"
 	@echo "* check spelling (without building again):   make spellcheck"
 	@echo "* check inclusive language:                  make woke"
@@ -50,7 +55,7 @@ help:
 .PHONY: help full-help html epub pdf linkcheck spelling spellcheck woke \
         vale pa11y run serve install pa11y-install \
         vale-install pdf-prep pdf-prep-force clean clean-doc \
-        update lint-md
+        update lint-md mdformat mdformat-check mdformat-install mdformat-lock
 
 full-help: $(DOCS_VENVDIR)
 	@. $(DOCS_VENV); $(SPHINX_BUILD) -M help "$(DOCS_SOURCEDIR)" "$(DOCS_BUILDDIR)" $(SPHINX_OPTS) $(O)
@@ -97,6 +102,7 @@ serve: html
 clean: clean-doc
 	@test ! -e "$(DOCS_VENVDIR)" -o -d "$(DOCS_VENVDIR)" -a "$(abspath $(DOCS_VENVDIR))" != "$(DOCS_VENVDIR)"
 	rm -rf $(DOCS_VENVDIR)
+	rm -rf $(MDFORMAT_VENVDIR)
 	rm -rf $(DEV_DIR)/node_modules/
 	rm -rf $(DEV_DIR)/styles
 	rm -rf $(VALE_CONFIG)
@@ -132,6 +138,48 @@ lint-md: pymarkdownlnt-install
 	fi; \
 	echo "pymarkdownlnt exited with code $$status"; \
 	exit $$status;
+
+# The formatter runs in its own virtualenv, isolated from the Sphinx venv, and
+# is installed from a hash-pinned lock file. --require-hashes pins every
+# transitive dependency, so a tampered or unexpected package fails to install.
+$(MDFORMAT_VENVDIR): $(MDFORMAT_DIR)/requirements.txt
+	@echo "... setting up mdformat virtualenv"
+	@rm -rf $(MDFORMAT_VENVDIR)
+	python3 -m venv $(MDFORMAT_VENVDIR) || { echo "You must install python3-venv before you can format the documentation."; exit 1; }
+	$(MDFORMAT_VENVDIR)/bin/pip install $(PIPOPTS) --require-virtualenv \
+	    --require-hashes --no-deps -r $(MDFORMAT_DIR)/requirements.txt \
+	    --log $(MDFORMAT_VENVDIR)/pip_install.log
+	@touch $(MDFORMAT_VENVDIR)
+
+mdformat-install: $(MDFORMAT_VENVDIR)
+
+# Only tracked Markdown files are formatted. This excludes the virtualenvs,
+# build output, and the dashboards submodule, all of which are ignored by
+# Git. mdformat's own --exclude option requires Python 3.13+, so it is not used.
+MDFORMAT_FILES = git ls-files '*.md' | grep -v '^docs/dashboards/'
+
+# Format all Markdown sources in place. Settings live in .mdformat.toml.
+mdformat: mdformat-install
+	@$(MDFORMAT_FILES) | xargs -r $(MDFORMAT_CMD)
+
+# Report unformatted files without modifying them.
+mdformat-check: mdformat-install
+	@$(MDFORMAT_FILES) | xargs -r $(MDFORMAT_CMD) --check
+
+# Regenerate the hash-pinned lock file from requirements.in. Run this after
+# changing formatter versions, then commit both files.
+mdformat-lock:
+	@echo "... regenerating $(MDFORMAT_DIR)/requirements.txt"
+	@tmpdir=$$(mktemp -d); \
+	python3 -m venv $$tmpdir; \
+	$$tmpdir/bin/pip install --quiet --upgrade pip pip-tools; \
+	$$tmpdir/bin/pip-compile --generate-hashes --strip-extras \
+	    --header --annotation-style line \
+	    --output-file $(MDFORMAT_DIR)/requirements.txt \
+	    $(MDFORMAT_DIR)/requirements.in; \
+	status=$$?; \
+	rm -rf $$tmpdir; \
+	exit $$status
 
 vale-install: install
 	@. $(DOCS_VENV); test -f $(VALE_CONFIG) || python3 $(DEV_DIR)/get_vale_conf.py

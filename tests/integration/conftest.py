@@ -65,11 +65,11 @@ def charm_resources(substrate: Substrate) -> dict[str, str]:
 
 
 @pytest.fixture(autouse=True)
-async def deploy_client_charm(ops_test: OpsTest, substrate: Substrate):
+async def deploy_client_charm(ops_test: OpsTest, substrate: Substrate, architecture: str) -> None:
     """Deploy the client charm."""
     if substrate == "k8s" and CLIENT_CHARM not in ops_test.model.applications:
         await ops_test.model.deploy(
-            "./tests/charms/dummy-client-charm/dummy-client-charm_ubuntu@24.04-amd64.charm",
+            f"./tests/charms/dummy-client-charm/dummy-client-charm_ubuntu@24.04-{architecture}.charm",
             CLIENT_CHARM,
         )
         await ops_test.model.wait_for_idle(apps=[CLIENT_CHARM])
@@ -93,11 +93,11 @@ def series(ubuntu_base):
 
 
 @pytest.fixture
-def charm(ubuntu_base, opensearch_base_path, substrate) -> str:
+def charm(ubuntu_base, opensearch_base_path, substrate, architecture) -> str:
     """Path to the charm file to use for testing."""
     # Return str instead of pathlib.Path since python-libjuju's model.deploy(), juju deploy, and
     # juju bundle files expect local charms to begin with `./` or `/` to distinguish them from
     # Charmhub charms.
     if substrate == "k8s":
-        return str(opensearch_base_path / f"opensearch-k8s_ubuntu@{ubuntu_base}-amd64.charm")
-    return str(opensearch_base_path / f"opensearch_ubuntu@{ubuntu_base}-amd64.charm")
+        return str(opensearch_base_path / f"opensearch-k8s_ubuntu@{ubuntu_base}-{architecture}.charm")
+    return str(opensearch_base_path / f"opensearch_ubuntu@{ubuntu_base}-{architecture}.charm")

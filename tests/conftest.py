@@ -12,6 +12,25 @@ from .helpers import Substrate
 _REPO_ROOT_DIR = Path(__file__).parent.parent.resolve()
 
 
+@pytest.fixture(scope="session")
+def machine_platform() -> str:
+    """Get the machine platform running the tests."""
+    import platform
+
+    return platform.machine()
+
+
+@pytest.fixture(scope="session")
+def architecture(machine_platform) -> str:
+    """Get the architecture of the machine running the tests."""
+    if machine_platform == "x86_64":
+        return "amd64"
+    elif machine_platform == "aarch64":
+        return "arm64"
+    else:
+        raise ValueError(f"Unsupported machine platform: {machine_platform}")
+
+
 def pytest_addoption(parser: Parser):
     parser.addoption(
         "--substrate",
