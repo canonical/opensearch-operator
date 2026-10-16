@@ -1,35 +1,55 @@
 ---
 myst:
   html_meta:
-    description: "Enable LDAP authentication in Charmed OpenSearch on machines or Kubernetes."
+    description: Enable LDAP authentication in Charmed OpenSearch on machines or Kubernetes.
 ---
 
 (how-to-enable-ldap-authentication)=
+
 # How to enable LDAP authentication
 
-LDAP (Lightweight Directory Access Protocol) enables centralized authentication for OpenSearch clusters, 
-reducing the overhead of managing local credentials and access policies.
+LDAP (Lightweight Directory Access Protocol) enables centralized authentication for OpenSearch clusters, reducing the
+overhead of managing local credentials and access policies.
 
 This guide shows how to integrate LDAP as an authentication method with Charmed OpenSearch.
 
 ## Prerequisites
 
-* A running Charmed OpenSearch deployment (revision #todo add revision)
-* A Kubernetes cloud registered with your Juju controller
+`````{tab-set}
+---
+sync-group: substrate
+---
+````{tab-item} VM
+:sync: vm
+
+You'll need:
+
+- Charmed OpenSearch - Revision #todo add revision or higher
+- A Kubernetes cloud registered with your Juju controller
+````
+
+````{tab-item} K8s
+:sync: k8s
+
+You'll need:
+
+- Charmed OpenSearch K8s - Revision #todo add revision or higher
+````
+`````
 
 ## Deploy an LDAP server on Kubernetes
 
 `````{tab-set}
-:sync-group: substrate
-
+---
+sync-group: substrate
+---
 ````{tab-item} VM
 :sync: vm
 
-For machine deployments, you'll need a separate Juju controller with a Kubernetes model in order to deploy the [`glauth-k8s` charm](https://charmhub.io/glauth-k8s). We'll then create a cross-controller relation to the OpenSearch VM model.
+For machine deployments, you'll need a model on the Kubernetes cloud registered with your Juju controller in order to deploy the [`glauth-k8s` charm](https://charmhub.io/glauth-k8s). We'll then create a cross-model relation to the OpenSearch VM model.
 
 ```shell
-juju switch <k8s_controller>
-juju add-model <k8s_model>
+juju add-model <k8s_model> <k8s_cloud>
 ```
 ````
 ````{tab-item} K8s
@@ -42,13 +62,14 @@ For Kubernetes deployments, you can simply deploy GLAuth and its supporting appl
 `````
 
 Deploy `glauth-k8s`, `self-signed-certificates`, and `postgresql-k8s`:
+
 ```shell
-juju deploy glauth-k8s --channel latest/edge --trust --config ldaps_enabled=true
-juju deploy self-signed-certificates --trust
+juju deploy glauth-k8s --channel latest/stable --trust --config ldaps_enabled=true
+juju deploy self-signed-certificates --channel 1/stable
 juju deploy postgresql-k8s --channel 14/stable --trust
 ```
 
-`ldaps_enabled=true` is **required**.
+`ldaps_enabled=true` is **required**: OpenSearch only connects to LDAP over LDAPS.
 
 Integrate `glauth-k8s` with `self-signed-certificates` and `postgresql-k8s`:
 
@@ -56,10 +77,20 @@ Integrate `glauth-k8s` with `self-signed-certificates` and `postgresql-k8s`:
 juju integrate glauth-k8s self-signed-certificates
 juju integrate glauth-k8s:pg-database postgresql-k8s:database
 ```
-Deploy the [`glauth-utils` charm](https://charmhub.io/glauth-utils) to manage LDAP users, and integrate it with the GLAuth application:
+
+Deploy the [Traefik charm](https://charmhub.io/traefik-k8s) to expose the LDAPS endpoint of GLAuth, and integrate the
+two applications:
 
 ```shell
-juju deploy glauth-utils --channel edge --trust
+juju deploy traefik-k8s --trust
+juju integrate traefik-k8s glauth-k8s:ldaps-ingress
+```
+
+Deploy the [`glauth-utils` charm](https://charmhub.io/glauth-utils) to manage LDAP users, and integrate it with the
+GLAuth application:
+
+```shell
+juju deploy glauth-utils --channel latest/stable --trust
 juju integrate glauth-k8s glauth-utils
 ```
 
@@ -71,43 +102,31 @@ Users and groups can now be created using `glauth-utils`.
 ````{tab-item} VM
 :sync: vm
 
-## Expose cross-controller URLs
+### Expose cross-model relations
 
-Deploy the [Traefik charm](https://charmhub.io/traefik-k8s) in order to expose endpoints from the K8s cluster:
-
-```shell
-juju deploy traefik-k8s --trust
-```
-
-Integrate the two applications:
-
-```shell
-juju integrate traefik-k8s glauth-k8s:ldaps-ingress
-```
-
-## Expose cross-model relations
-
-To offer the GLAuth interfaces, run:
+To offer the LDAP interface of GLAuth and the CA certificate that signed its LDAPS certificate, run:
 
 ```shell
 juju offer glauth-k8s:ldap ldap
-juju offer glauth-k8s:send-ca-cert send-ca-cert
+juju offer self-signed-certificates:send-ca-cert ldap-cert
 ```
 
-## Consume offers
+### Consume offers
 
-Switch to the VM controller:
+Switch to the OpenSearch model:
 
 ```shell
-juju switch <lxd_controller>:<my-model>
+juju switch <opensearch_model>
 ```
 
 Consume the LDAP offers:
 
 ```shell
-juju consume <k8s_controller>:admin/<k8s_model>.ldap
-juju consume <k8s_controller>:admin/<k8s_model>.send-ca-cert
+juju consume admin/<k8s_model>.ldap
+juju consume admin/<k8s_model>.ldap-cert
 ```
+
+The OpenSearch machines must be able to reach the address that Traefik exposes. To see it, run `juju run traefik-k8s/0 show-proxied-endpoints` in the Kubernetes model.
 ````
 
 ````{tab-item} K8s
@@ -118,10 +137,17 @@ This procedure applies to machine deployments. On Kubernetes, proceed to the nex
 `````
 
 (ldap-configure-roles)=
+
 ## Configure roles
 
-Permissions are granted to an LDAP group through the [`data-integrator` charm](https://charmhub.io/data-integrator). The LDAP group name
-**must be identical** to the key of the Juju secret created below. Supported group names may contain only lowercase letters, digits and hyphens.
+Permissions are granted to an LDAP group through the [`data-integrator` charm](https://charmhub.io/data-integrator)
+(revision #todo add revision or later).
+
+The LDAP group name **must be identical** to the key of the Juju secret created below. Juju secret keys must:
+
+- start with a lowercase letter
+- be at least three characters long
+- contain only lowercase letters, digits and single hyphens
 
 ### Grant permissions to a group
 
@@ -148,12 +174,12 @@ juju config search-admin-di \
   requested-entities-secret=<secret-uri>
 ```
 
-* `entity-type`: must be `GROUP` to grant permissions to an LDAP group.
-* `entity-permissions`: a list with one entry containing:
-    * `resource_name`: the index or index pattern the group may access.
-    * `resource_type`: must be `index_permissions`
-    * `privileges`: the OpenSearch action groups to allow.
-* `requested-entities-secret`: the URI of the secret whose key is the group name.
+- `entity-type`: must be `GROUP` to grant permissions to an LDAP group.
+- `entity-permissions`: a list with one entry containing:
+  - `resource_name`: the index or index pattern the group may access.
+  - `resource_type`: must be `index_permissions`
+  - `privileges`: the OpenSearch action groups to allow.
+- `requested-entities-secret`: the URI of the secret whose key is the group name.
 
 Integrate it with OpenSearch:
 
@@ -163,57 +189,75 @@ juju integrate search-admin-di opensearch
 
 ### Create the group and its users in LDAP
 
-Create an LDIF file defining your LDAP data:
-
-```text
-dn: ou=search-admin,ou=opensearch,ou=users,dc=glauth,dc=com
-objectClass: posixGroup
-ou: search-admin
-gidNumber: 5503
-
-dn: cn=alice,ou=search-admin,ou=opensearch,ou=users,dc=glauth,dc=com
-changetype: add
-objectClass: posixAccount
-uidNumber: 5004
-gidNumber: 5503
-cn: alice
-sn: alice
-uid: alice
-userPassword: {SHA256}<sha256-hash-of-password>
-```
-
-Copy the file to the `glauth-utils` unit and run the `apply-ldif` action:
-
-```shell
-juju scp <file.ldif> glauth-utils/leader:/var/tmp/<file.ldif>
-juju run glauth-utils/leader apply-ldif path=/var/tmp/<file.ldif>
-```
+Make sure the LDAP group exists and contains its users. Its name must be identical to the key of the Juju secret above.
 
 ### Adjust the directory layout (optional)
 
-If your directory uses a different schema, you can fine tune how OpenSearch searches the directory using four config options:
+If your directory uses a different schema, you can fine tune how OpenSearch searches the directory using four config
+options:
 
-* `ldap_user_base`: The base DN in the directory tree from which user searches are performed. Default `ou=users,dc=glauth,dc=com`
-* `ldap_user_search`: The search filter used to locate a user entry, where `{0}` is replaced with the login username. Default `(cn={0})`
-* `ldap_user_rolename`: The attribute on a user entry that specifies which groups the user belongs to. Default `memberOf`
-* `ldap_role_name_attr`: The attribute on a group entry that OpenSearch will read as the group name. Default `ou`
+- `ldap_user_base`: The base DN in the directory tree from which user searches are performed. Default
+  `ou=users,dc=glauth,dc=com`
+- `ldap_user_search`: The search filter used to locate a user entry, where `{0}` is replaced with the login username.
+  Default `(cn={0})`
+- `ldap_user_rolename`: The attribute on a user entry that specifies which groups the user belongs to. Default
+  `memberOf`
+- `ldap_role_name_attr`: The attribute on a group entry that OpenSearch will read as the group name. Default `ou`
 
 ## Enable LDAP
 
-To enable LDAP authentication, integrate the OpenSearch charm with the Glauth charm:
+To enable LDAP authentication, integrate the OpenSearch charm with GLAuth and with the CA certificate of its LDAPS
+endpoint:
+
+`````{tab-set}
+---
+sync-group: substrate
+---
+````{tab-item} VM
+:sync: vm
 
 ```shell
 juju integrate opensearch:ldap ldap
-juju integrate opensearch:ldap-certificate-transfer send-ca-cert
+juju integrate opensearch:ldap-certificate-transfer ldap-cert
 ```
+````
 
-When everything has stabilised, LDAP users can log in with their directory credentials and inherit the permissions granted by the roles corresponding to their LDAP groups.
+````{tab-item} K8s
+:sync: k8s
+
+```shell
+juju integrate opensearch:ldap glauth-k8s:ldap
+juju integrate opensearch:ldap-certificate-transfer self-signed-certificates:send-ca-cert
+```
+````
+`````
+
+When everything has stabilised, LDAP users can log in with their directory credentials and inherit the permissions
+granted by the roles corresponding to their LDAP groups.
 
 ## Disable LDAP
 
 You can disable LDAP by removing the relations with GLAuth:
 
+`````{tab-set}
+---
+sync-group: substrate
+---
+````{tab-item} VM
+:sync: vm
+
 ```shell
-juju remove-relation opensearch:ldap-certificate-transfer send-ca-cert
+juju remove-relation opensearch:ldap-certificate-transfer ldap-cert
 juju remove-relation opensearch:ldap ldap
 ```
+````
+
+````{tab-item} K8s
+:sync: k8s
+
+```shell
+juju remove-relation opensearch:ldap-certificate-transfer self-signed-certificates:send-ca-cert
+juju remove-relation opensearch:ldap glauth-k8s:ldap
+```
+````
+`````
