@@ -1,7 +1,7 @@
 ---
 myst:
   html_meta:
-    description: Deploy large-scale Charmed OpenSearch clusters with node roles, data tiers, and production configurations for high-performance workloads.
+    description: Deploy large-scale Charmed OpenSearch clusters on VMs or Kubernetes with node roles, data tiers, and production configurations for high-performance workloads.
 ---
 
 (how-to-deploy-large)=
@@ -9,10 +9,23 @@ myst:
 # How to launch a large deployment
 
 This guide shows how to deploy a multi-application OpenSearch cluster using Juju, with dedicated node roles for
-scalability and fault tolerance.
+scalability and fault tolerance. It covers both the **VM** charm (`opensearch`) and the **Kubernetes** charm
+(`opensearch-k8s`).
+
+All applications in this example are deployed in the same Juju model, using the same substrate — for Kubernetes, within
+a single Kubernetes cluster. The applications are integrated to form a single OpenSearch cluster.
 
 For background on node roles, data tiers, and the main orchestrator pattern, see
 [Node roles and cluster topology](explanation-node-roles).
+
+## Prerequisites
+
+Complete the preparation steps in the [standard deployment guide](how-to-deploy-standard) — substrate preparation,
+controller and model setup, kernel parameter configuration, and the optional TCP retries tuning — then return here
+before deploying OpenSearch.
+
+The Kubernetes charm requires the `--trust` flag to access the Kubernetes API and manage Kubernetes resources for the
+OpenSearch deployment. Unlike on VMs, this does not grant access to the model's cloud credentials.
 
 ## Node roles
 
@@ -21,9 +34,27 @@ configured, the charm auto-assigns: `data`, `ingest`, `ml`, `cluster_manager`.
 
 To set roles at deploy time:
 
+`````{tab-set}
+---
+sync-group: substrate
+---
+````{tab-item} VM
+:sync: vm
+
 ```shell
-juju deploy opensearch -n 3 --config roles="cluster_manager,data,ml"
+juju deploy opensearch -n 3 --config roles="cluster_manager,data,ml" --channel 2/stable
 ```
+````
+
+````{tab-item} K8s
+:sync: k8s
+
+```shell
+juju deploy opensearch-k8s opensearch -n 3 --config roles="cluster_manager,data,ml" --channel 2/edge --trust
+```
+````
+
+`````
 
 To change roles after deployment (triggers a rolling restart):
 
@@ -32,7 +63,8 @@ juju config opensearch roles="cluster_manager,data,ml"
 ```
 
 ```{note}
-Removal of the `cluster_manager` or `data` roles is not supported.
+The `cluster_manager` role cannot be removed. In a large deployment, the `data` role can be removed only if another
+application still holds it. See [Node roles and cluster topology](explanation-node-roles) for details.
 ```
 
 ## Deploy the cluster applications
@@ -42,8 +74,9 @@ See [Node roles and cluster topology](explanation-node-roles) for an explanation
 data-node pattern.
 
 ```{caution}
-The examples below use the `testing` profile (sets the JVM heap size to 1 GB per node) for a single-host LXD environment.
-For production, use the `production` profile (JVM heap set to 50% of RAM, capped at 31 GB).
+The examples below use the `testing` profile (sets the JVM heap size to 1 GB per node), which is suited to development
+and testing. For production, deploy each application with `--config profile=production` (JVM heap set to 50% of RAM,
+capped at 31 GB) and sufficient resources.
 See [How to optimize cluster performance with profiles](how-to-optimize-cluster-performance)
 for details on the available profiles.
 ```
@@ -51,8 +84,10 @@ for details on the available profiles.
 ```{note}
 **Two critical configuration rules for large deployments:**
 
-1. All applications must share the same `cluster_name` value.
-   A mismatch prevents applications from forming a cluster.
+1. Use the same `cluster_name` value for all applications (`app` in the examples below).
+   Applications with different `cluster_name` values cannot join the same OpenSearch cluster.
+   See [Large deployment configuration rules](explanation-node-roles-large) for details, including how a cluster name
+   is inherited when it is not explicitly configured.
 2. Set `init_hold=true` on every application **except** the main orchestrator.
    This prevents non-orchestrator applications from starting before integration.
 ```
@@ -63,18 +98,47 @@ See [Node roles and cluster topology](explanation-node-roles) for details on why
 
 Deploy the `main` application:
 
+`````{tab-set}
+---
+sync-group: substrate
+---
+````{tab-item} VM
+:sync: vm
+
 ```shell
 juju deploy -n 3 \
     opensearch main \
     --config cluster_name="app" \
     --channel 2/stable
 ```
+````
+
+````{tab-item} K8s
+:sync: k8s
+
+```shell
+juju deploy -n 3 \
+    opensearch-k8s main \
+    --config cluster_name="app" \
+    --channel 2/edge \
+    --trust
+```
+````
+
+`````
 
 Since no roles are specified, the charm auto-assigns all default roles.
 
 ### 2. Deploy a failover application (recommended)
 
 The failover application takes over orchestration if the `main` app fails or is removed:
+
+`````{tab-set}
+---
+sync-group: substrate
+---
+````{tab-item} VM
+:sync: vm
 
 ```shell
 juju deploy -n 3 \
@@ -84,10 +148,34 @@ juju deploy -n 3 \
     --config roles="cluster_manager" \
     --channel 2/stable
 ```
+````
+
+````{tab-item} K8s
+:sync: k8s
+
+```shell
+juju deploy -n 3 \
+    opensearch-k8s failover \
+    --config cluster_name="app" \
+    --config init_hold="true" \
+    --config roles="cluster_manager" \
+    --channel 2/edge \
+    --trust
+```
+````
+
+`````
 
 ### 3. Deploy data nodes
 
 Deploy an application with `data.hot` roles:
+
+`````{tab-set}
+---
+sync-group: substrate
+---
+````{tab-item} VM
+:sync: vm
 
 ```shell
 juju deploy -n 3 \
@@ -97,6 +185,23 @@ juju deploy -n 3 \
     --config init_hold="true" \
     --channel 2/stable
 ```
+````
+
+````{tab-item} K8s
+:sync: k8s
+
+```shell
+juju deploy -n 3 \
+    opensearch-k8s data-hot \
+    --config cluster_name="app" \
+    --config roles="data.hot" \
+    --config init_hold="true" \
+    --channel 2/edge \
+    --trust
+```
+````
+
+`````
 
 ### 4. Deploy TLS certificates
 
@@ -112,8 +217,8 @@ Track deployment progress:
 juju status --watch 1s
 ```
 
-At this point, `main` will show `blocked` (missing TLS), while `failover` and `data-hot` will show `blocked` (waiting
-for peer cluster relation).
+At this point, once the units have been provisioned, `main` will show `blocked` (missing TLS), while `failover` and
+`data-hot` will show `blocked` (waiting for peer cluster relation).
 
 ## Configure TLS encryption
 
@@ -130,7 +235,7 @@ relations are added in the next step.
 
 ## Form the OpenSearch cluster
 
-Integrate the applications via the peer-cluster relations:
+Integrate the applications via the peer-cluster relations to form a single OpenSearch cluster:
 
 ```shell
 juju integrate main:peer-cluster-orchestrator failover:peer-cluster
