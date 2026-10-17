@@ -81,8 +81,8 @@ jobs:
       - name: Lint / format / validate TF modules
         run: |
           pushd ./terraform
-          for dir in charm/simple_deployment charm/large_deployment product/simple_deployment product/large_deployment; do
-            (cd "${dir}" && terraform init && terraform fmt && terraform validate)
+          for dir in machine/charm/opensearch charm/large_deployment machine/product/simple_deployment product/large_deployment kubernetes/charm/opensearch kubernetes/product/simple_deployment; do
+            (cd "${dir}" && terraform init && terraform fmt -check && terraform validate)
           done
           popd
 
@@ -120,10 +120,10 @@ jobs:
       - name: Terraform deploy - simple deployments product module
         run: |
           MODEL_UUID=$(juju show-model test | grep "model-uuid" | awk '{split($0, a, ": "); print a[2]}')
-          pushd ./terraform/product/simple_deployment/
+          pushd ./terraform/machine/product/simple_deployment/
           terraform apply \
             -var="opensearch={\"model_uuid\": \"$MODEL_UUID\"}" \
-            -var="backups-integrator={\"config\": {\"bucket\": \"test\"}}" \
+            -var="backups={\"config\": {\"bucket\": \"test\"}}" \
             -auto-approve
           popd
 
