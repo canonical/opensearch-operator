@@ -161,11 +161,10 @@ The LDAP group name **must be identical** to the key of the Juju secret created 
 
 ### Grant permissions to a group
 
-Run the following commands in the model containing OpenSearch:
+Make sure the model containing OpenSearch is selected:
 
 ```shell
 juju switch <opensearch_model>
-```
 
 Deploy one `data-integrator` for each LDAP group you want to grant permissions to:
 
