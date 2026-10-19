@@ -39,6 +39,10 @@ You'll need:
 
 ## Deploy an LDAP server on Kubernetes
 
+Charmed OpenSearch works with any provider of the `ldap` interface. This guide covers the two Canonical-maintained
+ones: the [Authentik LDAP outpost](https://charmhub.io/authentik-ldap-outpost), which exposes an Authentik directory
+over LDAP, and [GLAuth](https://charmhub.io/glauth-k8s), a lightweight LDAP server. Both are Kubernetes charms.
+
 `````{tab-set}
 ---
 sync-group: substrate
@@ -46,7 +50,8 @@ sync-group: substrate
 ````{tab-item} VM
 :sync: vm
 
-For machine deployments, create a Kubernetes model for the [`glauth-k8s` charm](https://charmhub.io/glauth-k8s) and its supporting applications. We'll then create a cross-model relation to the OpenSearch VM model.
+For machine deployments, create a Kubernetes model for the LDAP provider and its supporting applications. We'll then
+create a cross-model relation to the OpenSearch VM model.
 
 ```shell
 juju add-model <k8s_model> <k8s_cloud>
@@ -55,32 +60,91 @@ juju add-model <k8s_model> <k8s_cloud>
 ````{tab-item} K8s
 :sync: k8s
 
-For Kubernetes deployments, you can simply deploy the [`glauth-k8s` charm](https://charmhub.io/glauth-k8s) and its supporting applications alongside OpenSearch without a separate Juju model.
+For Kubernetes deployments, you can simply deploy the LDAP provider and its supporting applications alongside
+OpenSearch without a separate Juju model.
 
 ````
 
 `````
 
-Deploy `glauth-k8s` and `postgresql-k8s`:
-
-```shell
-juju deploy glauth-k8s --channel latest/stable --trust --config ldaps_enabled=true
-juju deploy postgresql-k8s --channel 14/stable --trust
-```
-
-`ldaps_enabled=true` is **required**: OpenSearch only connects to LDAP over LDAPS.
-
-This example uses `self-signed-certificates` as the certificate provider. If it is already deployed in the model
-containing GLAuth, reuse it. Otherwise, deploy it:
-
-```shell
-juju deploy self-signed-certificates --channel 1/stable
-```
+OpenSearch only connects to LDAP over LDAPS. This example uses `self-signed-certificates` as the certificate provider.
+If it is already deployed in the model containing the LDAP provider, reuse it instead of deploying it again.
 
 ```{note}
 This guide uses `self-signed-certificates` for demonstration. For production deployments,
 use your organisation's preferred certificate authority.
 ```
+
+`````{tab-set}
+---
+sync-group: ldap-provider
+---
+````{tab-item} Authentik
+:sync: authentik
+
+Deploy the Authentik server, its worker, the LDAP outpost, and the supporting database, ingress, and certificate
+charms:
+
+```shell
+juju deploy postgresql-k8s --channel 14/stable --trust
+juju deploy authentik-server --channel latest/stable --trust
+juju deploy authentik-worker --channel latest/stable --trust
+juju deploy authentik-ldap-outpost --channel latest/stable --trust
+juju deploy traefik-k8s --trust
+juju deploy self-signed-certificates --channel 1/stable
+```
+
+Integrate them:
+
+```shell
+juju integrate authentik-server:pg-database postgresql-k8s:database
+juju integrate authentik-server:authentik-cluster authentik-worker
+juju integrate authentik-server:authentik-server-info authentik-ldap-outpost
+juju integrate authentik-server:traefik-route traefik-k8s
+juju integrate authentik-ldap-outpost:traefik-route traefik-k8s
+```
+
+Traefik is required: the outpost does not provision a certificate of its own, so Traefik terminates LDAPS for it on
+port 636. Wait until `traefik-k8s` is `active`, then provide it with a certificate:
+
+```shell
+juju integrate traefik-k8s:certificates self-signed-certificates
+```
+
+```{note}
+Traefik requests its certificate for its load balancer address. If the integration is added before that address is
+assigned, Traefik keeps serving its default certificate, which OpenSearch does not trust.
+```
+
+The outpost serves the directory under the base DN `dc=ldap,dc=goauthentik,dc=io`. To use a different one, set the
+`base_dn` config option of `authentik-ldap-outpost`.
+
+Users and groups are managed in Authentik itself. To reach its web interface, generate a recovery link for the
+bootstrap administrator:
+
+```shell
+juju run authentik-server/leader create-recovery-link
+```
+
+```{note}
+The outpost defaults to `search_mode=cached` and `bind_mode=cached`, which serve a periodically refreshed snapshot of
+the directory. Directory changes -- new users, changed group membership, changed passwords -- can take until the next
+synchronisation to reach OpenSearch. Set both to `direct` if every request must reflect the live Authentik state.
+```
+````
+
+````{tab-item} GLAuth
+:sync: glauth
+
+Deploy `glauth-k8s`, `self-signed-certificates`, and `postgresql-k8s`:
+
+```shell
+juju deploy glauth-k8s --channel latest/stable --trust --config ldaps_enabled=true
+juju deploy self-signed-certificates --channel 1/stable
+juju deploy postgresql-k8s --channel 14/stable --trust
+```
+
+`ldaps_enabled=true` is **required**: GLAuth starts with LDAPS disabled.
 
 Integrate `glauth-k8s` with `self-signed-certificates` and `postgresql-k8s`:
 
@@ -106,19 +170,26 @@ juju integrate glauth-k8s glauth-utils
 ```
 
 Users and groups can now be created using `glauth-utils`.
+````
+
+`````
 
 ## Create a cross-model relation (VM only)
 
 `````{tab-set}
+---
+sync-group: substrate
+---
 ````{tab-item} VM
 :sync: vm
 
 ### Expose cross-model relations
 
-To offer the LDAP interface of GLAuth and the CA certificate that signed its LDAPS certificate, run:
+Offer the `ldap` endpoint of the provider you deployed -- `authentik-ldap-outpost` or `glauth-k8s` -- together with
+the CA certificate that signed its LDAPS certificate:
 
 ```shell
-juju offer glauth-k8s:ldap ldap
+juju offer <ldap_provider>:ldap ldap
 juju offer self-signed-certificates:send-ca-cert ldap-cert
 ```
 
@@ -207,10 +278,26 @@ juju integrate search-admin-di opensearch
 
 Make sure the LDAP group exists and contains its users. Its name must be identical to the key of the Juju secret above.
 
-### Adjust the directory layout (optional)
+`````{tab-set}
+---
+sync-group: ldap-provider
+---
+````{tab-item} Authentik
+:sync: authentik
 
-If your directory uses a different schema, you can fine tune how OpenSearch searches the directory using four config
-options:
+Create the group and its users in the Authentik web interface, and add the users to the group.
+````
+
+````{tab-item} GLAuth
+:sync: glauth
+
+Create the group and its users with `glauth-utils`.
+````
+`````
+
+### Configure the directory layout
+
+OpenSearch uses four config options to search the directory:
 
 - `ldap_user_base`: The base DN in the directory tree from which user searches are performed. Default
   `ou=users,dc=glauth,dc=com`
@@ -220,10 +307,34 @@ options:
   `memberOf`
 - `ldap_role_name_attr`: The attribute on a group entry that OpenSearch will read as the group name. Default `ou`
 
+`````{tab-set}
+---
+sync-group: ldap-provider
+---
+````{tab-item} Authentik
+:sync: authentik
+
+Authentik stores users under `ou=users` of its base DN and names groups with a `cn` RDN. Point OpenSearch at them,
+substituting the base DN if you changed it:
+
+```shell
+juju config opensearch \
+  ldap_user_base="ou=users,dc=ldap,dc=goauthentik,dc=io" \
+  ldap_role_name_attr=cn
+```
+````
+
+````{tab-item} GLAuth
+:sync: glauth
+
+The defaults match the layout of GLAuth. If your directory uses a different schema, adjust the options above.
+````
+`````
+
 ## Enable LDAP
 
-To enable LDAP authentication, integrate the OpenSearch charm with GLAuth and with the CA certificate of its LDAPS
-endpoint:
+To enable LDAP authentication, integrate the OpenSearch charm with the LDAP provider and with the CA certificate of its
+LDAPS endpoint:
 
 `````{tab-set}
 ---
@@ -241,8 +352,10 @@ juju integrate opensearch:ldap-certificate-transfer ldap-cert
 ````{tab-item} K8s
 :sync: k8s
 
+Substitute `<ldap_provider>` with `authentik-ldap-outpost` or `glauth-k8s`:
+
 ```shell
-juju integrate opensearch:ldap glauth-k8s:ldap
+juju integrate opensearch:ldap <ldap_provider>:ldap
 juju integrate opensearch:ldap-certificate-transfer self-signed-certificates:send-ca-cert
 ```
 ````
@@ -260,7 +373,7 @@ their LDAP groups.
 
 ## Disable LDAP
 
-You can disable LDAP by removing the relations with GLAuth:
+You can disable LDAP by removing the relations with the LDAP provider:
 
 `````{tab-set}
 ---
@@ -280,7 +393,7 @@ juju remove-relation opensearch:ldap ldap
 
 ```shell
 juju remove-relation opensearch:ldap-certificate-transfer self-signed-certificates:send-ca-cert
-juju remove-relation opensearch:ldap glauth-k8s:ldap
+juju remove-relation opensearch:ldap <ldap_provider>:ldap
 ```
 ````
 `````

@@ -172,7 +172,7 @@ From `machine/`, deploy and relate the machine charm:
 
 ```bash
 juju deploy -n 1 ./opensearch_ubuntu@24.04-amd64.charm --show-log --verbose
-juju integrate self-signed-certificates opensearch
+juju integrate opensearch:certificates self-signed-certificates
 ```
 
 Alternatively, from `kubernetes/` in a Kubernetes model, supply the workload image declared in `metadata.yaml` when
@@ -182,7 +182,7 @@ deploying the locally packed charm:
 juju deploy -n 1 ./opensearch-k8s_ubuntu@24.04-amd64.charm \
   --resource opensearch-image="$(awk '/upstream-source:/ {print $2}' metadata.yaml)" \
   --show-log --verbose
-juju integrate self-signed-certificates opensearch-k8s
+juju integrate opensearch-k8s:certificates self-signed-certificates
 ```
 
 ```{note}

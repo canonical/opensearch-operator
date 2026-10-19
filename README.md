@@ -146,10 +146,10 @@ juju config \
     root-ca-validity=365
     
 # Enable TLS via relation.
-juju integrate self-signed-certificates opensearch
+juju integrate opensearch:certificates self-signed-certificates
 
 # Disable TLS by removing relation.
-juju remove-relation opensearch self-signed-certificates
+juju remove-relation opensearch:certificates self-signed-certificates
 ```
 
 **Note:** The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The Self Signed Certificates Operator offers a variety of configuration options. Read more on the TLS Certificates Operator [here](https://charmhub.io/self-signed-certificates).

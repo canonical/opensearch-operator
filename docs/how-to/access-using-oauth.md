@@ -101,7 +101,7 @@ Switch to the OpenSearch model, consume the offers, and integrate them with Open
 juju switch opensearch-model
 juju consume admin/oauth.self-signed-certificates
 juju consume admin/oauth.hydra
-juju integrate opensearch admin/oauth.self-signed-certificates
+juju integrate opensearch:certificates admin/oauth.self-signed-certificates
 juju integrate opensearch admin/oauth.hydra
 ```
 

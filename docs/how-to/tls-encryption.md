@@ -41,7 +41,7 @@ juju deploy self-signed-certificates --config ca-common-name="My CA"
 Integrate it with OpenSearch:
 
 ```shell
-juju integrate self-signed-certificates opensearch
+juju integrate opensearch:certificates self-signed-certificates
 ```
 
 Verify the relation with `juju status --relations`. The OpenSearch application turns `active` — it is no longer
