@@ -24,7 +24,7 @@ sync-group: substrate
 
 You'll need:
 
-- Charmed OpenSearch - Revision #todo add revision or higher
+- Charmed OpenSearch
 - A Kubernetes cloud registered with your Juju controller
 ````
 
@@ -33,7 +33,7 @@ You'll need:
 
 You'll need:
 
-- Charmed OpenSearch K8s - Revision #todo add revision or higher
+- Charmed OpenSearch K8s
 ````
 `````
 
@@ -46,7 +46,7 @@ sync-group: substrate
 ````{tab-item} VM
 :sync: vm
 
-For machine deployments, you'll need a model on the Kubernetes cloud registered with your Juju controller in order to deploy the [`glauth-k8s` charm](https://charmhub.io/glauth-k8s). We'll then create a cross-model relation to the OpenSearch VM model.
+For machine deployments, create a Kubernetes model for the [`glauth-k8s` charm](https://charmhub.io/glauth-k8s) and its supporting applications. We'll then create a cross-model relation to the OpenSearch VM model.
 
 ```shell
 juju add-model <k8s_model> <k8s_cloud>
@@ -55,21 +55,32 @@ juju add-model <k8s_model> <k8s_cloud>
 ````{tab-item} K8s
 :sync: k8s
 
-For Kubernetes deployments, you can simply deploy GLAuth and its supporting applications alongside OpenSearch without a separate Juju model.
+For Kubernetes deployments, you can simply deploy the [`glauth-k8s` charm](https://charmhub.io/glauth-k8s) and its supporting applications alongside OpenSearch without a separate Juju model.
 
 ````
 
 `````
 
-Deploy `glauth-k8s`, `self-signed-certificates`, and `postgresql-k8s`:
+Deploy `glauth-k8s` and `postgresql-k8s`:
 
 ```shell
 juju deploy glauth-k8s --channel latest/stable --trust --config ldaps_enabled=true
-juju deploy self-signed-certificates --channel 1/stable
 juju deploy postgresql-k8s --channel 14/stable --trust
 ```
 
 `ldaps_enabled=true` is **required**: OpenSearch only connects to LDAP over LDAPS.
+
+This example uses `self-signed-certificates` as the certificate provider. If it is already deployed in the model
+containing GLAuth, reuse it. Otherwise, deploy it:
+
+```shell
+juju deploy self-signed-certificates --channel 1/stable
+```
+
+```{note}
+This guide uses `self-signed-certificates` for demonstration. For production deployments,
+use your organisation's preferred certificate authority.
+```
 
 Integrate `glauth-k8s` with `self-signed-certificates` and `postgresql-k8s`:
 
@@ -140,8 +151,7 @@ This procedure applies to machine deployments. On Kubernetes, proceed to the nex
 
 ## Configure roles
 
-Permissions are granted to an LDAP group through the [`data-integrator` charm](https://charmhub.io/data-integrator)
-(revision #todo add revision or later).
+Permissions are granted to an LDAP group through the [`data-integrator` charm](https://charmhub.io/data-integrator).
 
 The LDAP group name **must be identical** to the key of the Juju secret created below. Juju secret keys must:
 
@@ -150,6 +160,12 @@ The LDAP group name **must be identical** to the key of the Juju secret created 
 - contain only lowercase letters, digits and single hyphens
 
 ### Grant permissions to a group
+
+Run the following commands in the model containing OpenSearch:
+
+```shell
+juju switch <opensearch_model>
+```
 
 Deploy one `data-integrator` for each LDAP group you want to grant permissions to:
 
@@ -164,7 +180,7 @@ juju add-secret search-admin-secret search-admin=password
 juju grant-secret search-admin-secret search-admin-di
 ```
 
-Configure the data-integrator:
+Configure the `data-integrator`:
 
 ```shell
 juju config search-admin-di \
@@ -232,8 +248,15 @@ juju integrate opensearch:ldap-certificate-transfer self-signed-certificates:sen
 ````
 `````
 
-When everything has stabilised, LDAP users can log in with their directory credentials and inherit the permissions
-granted by the roles corresponding to their LDAP groups.
+Check the status of the OpenSearch model:
+
+```shell
+juju status -m <opensearch_model>
+```
+
+Wait until all applications report `active` and all unit agents report `idle`. When everything has stabilised, LDAP
+users can log in with their directory credentials and inherit the permissions granted by the roles corresponding to
+their LDAP groups.
 
 ## Disable LDAP
 
