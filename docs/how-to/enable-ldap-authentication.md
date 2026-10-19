@@ -165,6 +165,7 @@ Make sure the model containing OpenSearch is selected:
 
 ```shell
 juju switch <opensearch_model>
+```
 
 Deploy one `data-integrator` for each LDAP group you want to grant permissions to:
 
