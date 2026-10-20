@@ -39,9 +39,9 @@ You'll need:
 
 ## Deploy an LDAP server on Kubernetes
 
-Charmed OpenSearch works with any provider of the `ldap` interface. This guide covers the two Canonical-maintained
-ones: the [Authentik LDAP outpost](https://charmhub.io/authentik-ldap-outpost), which exposes an Authentik directory
-over LDAP, and [GLAuth](https://charmhub.io/glauth-k8s), a lightweight LDAP server. Both are Kubernetes charms.
+Charmed OpenSearch works with any provider of the `ldap` interface. This guide covers the two Canonical-maintained ones:
+the [Authentik LDAP outpost](https://charmhub.io/authentik-ldap-outpost), which exposes an Authentik directory over
+LDAP, and [GLAuth](https://charmhub.io/glauth-k8s), a lightweight LDAP server. Both are Kubernetes charms.
 
 `````{tab-set}
 ---
@@ -68,7 +68,11 @@ OpenSearch without a separate Juju model.
 `````
 
 OpenSearch only connects to LDAP over LDAPS. This example uses `self-signed-certificates` as the certificate provider.
-If it is already deployed in the model containing the LDAP provider, reuse it instead of deploying it again.
+If it is already deployed in the model containing the LDAP provider, reuse it. Otherwise, deploy it:
+
+```shell
+juju deploy self-signed-certificates --channel 1/stable
+```
 
 ```{note}
 This guide uses `self-signed-certificates` for demonstration. For production deployments,
@@ -82,8 +86,7 @@ sync-group: ldap-provider
 ````{tab-item} Authentik
 :sync: authentik
 
-Deploy the Authentik server, its worker, the LDAP outpost, and the supporting database, ingress, and certificate
-charms:
+Deploy the Authentik server, its worker, the LDAP outpost, and the supporting database and ingress charms:
 
 ```shell
 juju deploy postgresql-k8s --channel 14/stable --trust
@@ -91,7 +94,6 @@ juju deploy authentik-server --channel latest/stable --trust
 juju deploy authentik-worker --channel latest/stable --trust
 juju deploy authentik-ldap-outpost --channel latest/stable --trust
 juju deploy traefik-k8s --trust
-juju deploy self-signed-certificates --channel 1/stable
 ```
 
 Integrate them:
@@ -136,11 +138,10 @@ synchronisation to reach OpenSearch. Set both to `direct` if every request must 
 ````{tab-item} GLAuth
 :sync: glauth
 
-Deploy `glauth-k8s`, `self-signed-certificates`, and `postgresql-k8s`:
+Deploy `glauth-k8s` and `postgresql-k8s`:
 
 ```shell
 juju deploy glauth-k8s --channel latest/stable --trust --config ldaps_enabled=true
-juju deploy self-signed-certificates --channel 1/stable
 juju deploy postgresql-k8s --channel 14/stable --trust
 ```
 
@@ -391,9 +392,18 @@ juju remove-relation opensearch:ldap ldap
 ````{tab-item} K8s
 :sync: k8s
 
+Substitute `<ldap_provider>` with `authentik-ldap-outpost` or `glauth-k8s`:
+
 ```shell
 juju remove-relation opensearch:ldap-certificate-transfer self-signed-certificates:send-ca-cert
 juju remove-relation opensearch:ldap <ldap_provider>:ldap
 ```
 ````
 `````
+
+The directory layout options keep their values after the relations are removed. Reset them before integrating a
+different LDAP provider:
+
+```shell
+juju config opensearch --reset ldap_user_base,ldap_user_search,ldap_user_rolename,ldap_role_name_attr
+```
