@@ -17,19 +17,21 @@ Pass the UUID of an existing Kubernetes model as `opensearch.model_uuid`. All ap
 | Name | Version |
 | ---- | ------- |
 | terraform | >= 1.11 |
-| juju | ~> 2.2 |
+| juju | >= 2.2.1 |
 
 ## Inputs
 
 | Name | Description | Default | Required |
 | ---- | ----------- | ------- | :------: |
-| azure_storage_secret_key | Azure Storage account key for `azure-storage-integrator`. Supply through `TF_VAR_azure_storage_secret_key` or `-var`, at plan and at apply. | `null` | no |
+| azure_storage_secret_key | Azure Storage account key for `azure-storage-integrator`. Supply through `TF_VAR_azure_storage_secret_key`, at plan and at apply. | `null` | no |
+| azure_storage_secret_uri | URI of an existing Juju secret holding the Azure Storage account key. | `null` | no |
 | azure_storage_secret_version | Version of the `azure-storage-integrator` credentials secret. Set to `1` to create, increment to rotate, `0` to remove. | `0` | no |
 | backups | Configuration for the optional backup integrator. | `null` | no |
 | backups_integration | External backup storage endpoint or offer. | `null` | no |
 | certificates_integration | External TLS endpoint or offer. | `null` | no |
 | data_integrator | Configuration for the optional `data-integrator`. | `null` | no |
-| gcs_secret_key | GCS service-account JSON key for `gcs-integrator`. Supply through `TF_VAR_gcs_secret_key` or `-var`, at plan and at apply. | `null` | no |
+| gcs_secret_key | GCS service-account JSON key for `gcs-integrator`. Supply through `TF_VAR_gcs_secret_key`, at plan and at apply. | `null` | no |
+| gcs_secret_uri | URI of an existing Juju secret holding the GCS key. | `null` | no |
 | gcs_secret_version | Version of the `gcs-integrator` credentials secret. Set to `1` to create, increment to rotate, `0` to remove. | `0` | no |
 | grafana_dashboard_integration | Optional COS Grafana dashboard endpoint or offer. | `null` | no |
 | ingress_integration | Ingress endpoint or offer for OpenSearch Dashboards. Required when Dashboards is deployed. | `null` | no |
@@ -38,8 +40,9 @@ Pass the UUID of an existing Kubernetes model as `opensearch.model_uuid`. All ap
 | offered_endpoints | OpenSearch endpoints to expose as Juju offers. | `[]` | no |
 | opensearch | OpenSearch app definition. | n/a | yes |
 | opensearch_dashboards | Optional OpenSearch Dashboards app definition. | `null` | no |
-| s3_access_key | S3 access key for `s3-integrator`. Supply through `TF_VAR_s3_access_key` or `-var`, at plan and at apply. | `null` | no |
-| s3_secret_key | S3 secret key for `s3-integrator`. Supply through `TF_VAR_s3_secret_key` or `-var`, at plan and at apply. | `null` | no |
+| s3_access_key | S3 access key for `s3-integrator`. Supply through `TF_VAR_s3_access_key`, at plan and at apply. | `null` | no |
+| s3_secret_key | S3 secret key for `s3-integrator`. Supply through `TF_VAR_s3_secret_key`, at plan and at apply. | `null` | no |
+| s3_secret_uri | URI of an existing Juju secret holding the S3 keys. | `null` | no |
 | s3_secret_version | Version of the `s3-integrator` credentials secret. Set to `1` to create, increment to rotate, `0` to remove. | `0` | no |
 | self_signed_certificates | Configuration for the `self-signed-certificates` app. | `{}` | no |
 
@@ -92,7 +95,7 @@ The `s3_secret_version` variable controls the secret: `0` none, `1` create, incr
 
 For Azure Storage, use `azure_storage_secret_key` and `azure_storage_secret_version`. For GCS, use `gcs_secret_key` and `gcs_secret_version`.
 
-Alternatively, set `backups.credentials_secret_uri` to a Juju secret you created and granted to the integrator. The secret version must then be `0`.
+Alternatively, set `s3_secret_uri`, `gcs_secret_uri` or `azure_storage_secret_uri` to a Juju secret you created. The secret version must then be `0`.
 
 To use your own integrator, set `backups_integration` instead of `backups`:
 

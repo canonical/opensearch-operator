@@ -4,6 +4,12 @@
 locals {
   backups_enabled = var.backups != null
 
+  backups_own_secret_uri = local.backups_enabled ? (
+    var.backups.storage_type == "s3" ? var.s3_secret_uri :
+    var.backups.storage_type == "gcs" ? var.gcs_secret_uri :
+    var.azure_storage_secret_uri
+  ) : null
+
   backups_provider = var.backups_integration != null ? var.backups_integration : local.backups_enabled ? {
     storage_type = var.backups.storage_type
     kind         = "endpoint"
@@ -12,8 +18,10 @@ locals {
     url          = null
   } : null
 
-  backups_secret_create = local.backups_secret_uri == null && local.backups_secret_version > 0
-  backups_secret_uri    = local.backups_enabled ? var.backups.credentials_secret_uri : null
+  backups_secret_create  = local.backups_own_secret_uri == null && local.backups_secret_version > 0
+  backups_secret_enabled = local.backups_own_secret_uri != null || local.backups_secret_create
+  backups_secret_input   = local.backups_enabled ? "${replace(var.backups.storage_type, "-", "_")}_secret" : ""
+  backups_secret_uri     = coalesce(local.backups_own_secret_uri, one(juju_secret.backups_credentials[*].secret_uri), "-")
 
   backups_secret_value = local.backups_secret_create ? (
     var.backups.storage_type == "s3" ? tomap({ access-key = var.s3_access_key, secret-key = var.s3_secret_key }) :
@@ -26,8 +34,6 @@ locals {
     var.backups.storage_type == "gcs" ? var.gcs_secret_version :
     var.azure_storage_secret_version
   ) : 0
-
-  backups_secret_version_name = local.backups_enabled ? "${replace(var.backups.storage_type, "-", "_")}_secret_version" : ""
 
   backups_settings = {
     s3            = { base = "ubuntu@24.04", channel = "2/stable", endpoint = "s3-credentials" }

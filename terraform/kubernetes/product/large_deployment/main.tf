@@ -93,8 +93,7 @@ resource "juju_application" "backups" {
   model_uuid = var.main.model_uuid
   config = merge(
     var.backups.config,
-    local.backups_secret_uri != null ? { credentials = local.backups_secret_uri } : {},
-    local.backups_secret_create ? { credentials = juju_secret.backups_credentials[0].secret_uri } : {},
+    local.backups_secret_enabled ? { credentials = local.backups_secret_uri } : {},
   )
 
   constraints = var.backups.constraints
@@ -112,16 +111,16 @@ resource "juju_secret" "backups_credentials" {
 }
 
 resource "juju_access_secret" "backups_credentials" {
-  count        = local.backups_secret_create ? 1 : 0
+  count        = local.backups_secret_enabled ? 1 : 0
   model_uuid   = var.main.model_uuid
   applications = [juju_application.backups[0].name]
-  secret_id    = juju_secret.backups_credentials[0].secret_id
+  secret_id    = regex("[^/:]+$", local.backups_secret_uri)
 }
 
 check "backups_credentials_source" {
   assert {
-    condition     = !(local.backups_secret_uri != null && local.backups_secret_version > 0)
-    error_message = "`${local.backups_secret_version_name}` will be ignored because `backups.credentials_secret_uri` is set. Set `${local.backups_secret_version_name}` to `0`."
+    condition     = !(local.backups_own_secret_uri != null && local.backups_secret_version > 0)
+    error_message = "`${local.backups_secret_input}_version` is ignored because `${local.backups_secret_input}_uri` is set."
   }
 }
 
@@ -137,6 +136,7 @@ resource "terraform_data" "updated_at" {
   input = timestamp()
   triggers_replace = sha256(jsonencode([
     var.apps,
+    var.azure_storage_secret_uri,
     var.azure_storage_secret_version,
     var.backups,
     var.backups_integration,
@@ -144,6 +144,7 @@ resource "terraform_data" "updated_at" {
     var.cluster_name,
     var.data_integrator,
     var.failover,
+    var.gcs_secret_uri,
     var.gcs_secret_version,
     var.grafana_dashboard_integration,
     var.ingress_integration,
@@ -152,6 +153,7 @@ resource "terraform_data" "updated_at" {
     var.metrics_endpoint_integration,
     var.offered_endpoints,
     var.opensearch_dashboards,
+    var.s3_secret_uri,
     var.s3_secret_version,
     var.self_signed_certificates,
   ]))

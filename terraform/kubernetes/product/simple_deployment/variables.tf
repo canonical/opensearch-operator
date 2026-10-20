@@ -2,11 +2,27 @@
 # See LICENSE file for licensing details.
 
 variable "azure_storage_secret_key" {
-  description = "Azure Storage account key for `azure-storage-integrator`. Supply through `TF_VAR_azure_storage_secret_key` or `-var`, at plan and at apply."
+  description = "Azure Storage account key for `azure-storage-integrator`. Supply through `TF_VAR_azure_storage_secret_key`, at plan and at apply."
   type        = string
   sensitive   = true
   ephemeral   = true
   default     = null
+}
+
+variable "azure_storage_secret_uri" {
+  description = "URI of an existing Juju secret holding the Azure Storage account key."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.azure_storage_secret_uri == null || startswith(coalesce(var.azure_storage_secret_uri, "-"), "secret:")
+    error_message = "`azure_storage_secret_uri` must be a Juju secret URI starting with `secret:`."
+  }
+
+  validation {
+    condition     = var.azure_storage_secret_uri == null || try(var.backups.storage_type, null) == "azure-storage"
+    error_message = "`azure_storage_secret_uri` needs an Azure Storage integrator. Set `backups.storage_type` to `azure-storage`."
+  }
 }
 
 variable "azure_storage_secret_version" {
@@ -33,13 +49,12 @@ variable "azure_storage_secret_version" {
 variable "backups" {
   description = "Configuration for the optional backup integrator."
   type = object({
-    storage_type           = optional(string, "s3")
-    config                 = optional(map(string), {})
-    channel                = optional(string)
-    credentials_secret_uri = optional(string)
-    base                   = optional(string)
-    revision               = optional(number)
-    constraints            = optional(string, "arch=amd64")
+    storage_type = optional(string, "s3")
+    config       = optional(map(string), {})
+    channel      = optional(string)
+    base         = optional(string)
+    revision     = optional(number)
+    constraints  = optional(string, "arch=amd64")
   })
 
   default = null
@@ -51,12 +66,7 @@ variable "backups" {
 
   validation {
     condition     = var.backups == null ? true : !contains(keys(var.backups.config), "credentials")
-    error_message = "Set `backups.credentials_secret_uri` instead of `backups.config.credentials`."
-  }
-
-  validation {
-    condition     = try(startswith(var.backups.credentials_secret_uri, "secret:"), true)
-    error_message = "`backups.credentials_secret_uri` must be a Juju secret URI starting with `secret:`."
+    error_message = "Set `s3_secret_uri`, `gcs_secret_uri` or `azure_storage_secret_uri` instead of `backups.config.credentials`."
   }
 }
 
@@ -166,11 +176,27 @@ variable "data_integrator" {
 }
 
 variable "gcs_secret_key" {
-  description = "GCS service-account JSON key for `gcs-integrator`. Supply through `TF_VAR_gcs_secret_key` or `-var`, at plan and at apply."
+  description = "GCS service-account JSON key for `gcs-integrator`. Supply through `TF_VAR_gcs_secret_key`, at plan and at apply."
   type        = string
   sensitive   = true
   ephemeral   = true
   default     = null
+}
+
+variable "gcs_secret_uri" {
+  description = "URI of an existing Juju secret holding the GCS key."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.gcs_secret_uri == null || startswith(coalesce(var.gcs_secret_uri, "-"), "secret:")
+    error_message = "`gcs_secret_uri` must be a Juju secret URI starting with `secret:`."
+  }
+
+  validation {
+    condition     = var.gcs_secret_uri == null || try(var.backups.storage_type, null) == "gcs"
+    error_message = "`gcs_secret_uri` needs a GCS integrator. Set `backups.storage_type` to `gcs`."
+  }
 }
 
 variable "gcs_secret_version" {
@@ -402,7 +428,7 @@ variable "opensearch_dashboards" {
 }
 
 variable "s3_access_key" {
-  description = "S3 access key for `s3-integrator`. Supply through `TF_VAR_s3_access_key` or `-var`, at plan and at apply."
+  description = "S3 access key for `s3-integrator`. Supply through `TF_VAR_s3_access_key`, at plan and at apply."
   type        = string
   sensitive   = true
   ephemeral   = true
@@ -410,7 +436,7 @@ variable "s3_access_key" {
 }
 
 variable "s3_secret_key" {
-  description = "S3 secret key for `s3-integrator`. Supply through `TF_VAR_s3_secret_key` or `-var`, at plan and at apply."
+  description = "S3 secret key for `s3-integrator`. Supply through `TF_VAR_s3_secret_key`, at plan and at apply."
   type        = string
   sensitive   = true
   ephemeral   = true
@@ -419,6 +445,22 @@ variable "s3_secret_key" {
   validation {
     condition     = (var.s3_access_key == null) == (var.s3_secret_key == null)
     error_message = "Set `s3_access_key` and `s3_secret_key` together."
+  }
+}
+
+variable "s3_secret_uri" {
+  description = "URI of an existing Juju secret holding the S3 keys."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.s3_secret_uri == null || startswith(coalesce(var.s3_secret_uri, "-"), "secret:")
+    error_message = "`s3_secret_uri` must be a Juju secret URI starting with `secret:`."
+  }
+
+  validation {
+    condition     = var.s3_secret_uri == null || try(var.backups.storage_type, null) == "s3"
+    error_message = "`s3_secret_uri` needs an S3 integrator. Set `backups.storage_type` to `s3`."
   }
 }
 
