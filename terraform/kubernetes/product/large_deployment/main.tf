@@ -54,7 +54,7 @@ resource "juju_offer" "certificates" {
 # OpenSearch dashboards
 module "opensearch_dashboards" {
   count  = local.dashboards_enabled ? 1 : 0
-  source = "git::https://github.com/canonical/opensearch-dashboards-operator.git//terraform/kubernetes/charm/opensearch_dashboards?ref=74bd9b434a906dfb57e9baf371df71a5a3695645"
+  source = "git::https://github.com/canonical/opensearch-dashboards-operator.git//terraform/kubernetes/charm/opensearch_dashboards?ref=6c84b90e07b65eeaab999d242c23143a7c298084"
 
   app_name    = var.opensearch_dashboards.app_name
   base        = var.opensearch_dashboards.base
