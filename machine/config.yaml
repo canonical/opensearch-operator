@@ -56,3 +56,31 @@ options:
       "production" will tune opensearch for maximum performance while "testing" will tune for
       minimal resources footprint.
       Performance tuning is described on: https://opensearch.org/docs/latest/tuning-your-cluster/performance/
+
+  ldap_user_base:
+    type: string
+    default: ou=users,dc=glauth,dc=com
+    description: |
+      Base DN in the LDAP directory tree from which user searches are performed.
+
+  ldap_user_search:
+    type: string
+    default: (cn={0})
+    description: |
+      LDAP search filter used to locate a user entry. {0} is replaced with the login username.
+      Entries whose cn is the name of an internal user or of a user provided to a client
+      relation are always excluded from the authentication. If set to empty, the authentication
+      search filter only holds these exclusions, matching every other entry of the user base.
+
+  ldap_user_rolename:
+    type: string
+    default: memberOf
+    description: |
+      Name of the attribute on a user entry that lists the roles or groups the user belongs to.
+      Used during authorisation to resolve roles directly from the user object.
+
+  ldap_role_name_attr:
+    type: string
+    default: ou
+    description: |
+      Name of the attribute on a role/group entry whose value is used as the OpenSearch role name.

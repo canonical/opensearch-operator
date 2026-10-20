@@ -72,7 +72,7 @@ async def test_deploy_and_remove_single_unit(
         TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
     )
     # Relate it to OpenSearch to set up TLS.
-    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.integrate(f"{APP_NAME}:certificates", TLS_CERTIFICATES_APP_NAME)
     await wait_until(
         ops_test,
         apps=[APP_NAME],
@@ -140,7 +140,7 @@ async def test_actions_get_admin_password(ops_test: OpsTest, substrate) -> None:
         TLS_CERTIFICATES_APP_NAME, channel=TLS_STABLE_CHANNEL, config=config
     )
     # Relate it to OpenSearch to set up TLS.
-    await ops_test.model.integrate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.integrate(f"{APP_NAME}:certificates", TLS_CERTIFICATES_APP_NAME)
     await wait_until(
         ops_test,
         apps=[APP_NAME],
