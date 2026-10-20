@@ -225,9 +225,9 @@ At this point, once the units have been provisioned, `main` will show `blocked` 
 Charmed OpenSearch requires TLS. Integrate `self-signed-certificates` with all OpenSearch applications:
 
 ```shell
-juju integrate self-signed-certificates main
-juju integrate self-signed-certificates failover
-juju integrate self-signed-certificates data-hot
+juju integrate main:certificates self-signed-certificates
+juju integrate failover:certificates self-signed-certificates
+juju integrate data-hot:certificates self-signed-certificates
 ```
 
 The `main` app will become `active` once TLS is configured. The other apps remain `blocked` until the peer-cluster

@@ -76,7 +76,7 @@ integrations in more detail in the [next page](tutorial-4-integrate-with-a-clien
 To integrate `self-signed-certificates` with `opensearch`, run the following command:
 
 ```shell
-juju integrate self-signed-certificates opensearch
+juju integrate opensearch:certificates self-signed-certificates
 ```
 
 <!-- test:await-idle --timeout 1200 -->

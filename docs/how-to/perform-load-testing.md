@@ -110,7 +110,7 @@ juju deploy opensearch \
     --bind "internal-space" \
     --storage opensearch-data=opensearch,512G
 
-juju integrate self-signed-certificates opensearch
+juju integrate opensearch:certificates self-signed-certificates
 ```
 
 ## Integrate with COS (optional)
