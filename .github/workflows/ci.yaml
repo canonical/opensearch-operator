@@ -47,9 +47,13 @@ jobs:
           promtool check rules kubernetes/src/alert_rules/prometheus/*.yaml
 
   terraform-test:
-    name: Terraform - Validation and Simple Deployment product
+    name: Terraform - Validation and Simple Deployment product | ${{ matrix.substrate }}
     # TODO remove this when terraform units=0 bug is fixed
     continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        substrate: [machine, kubernetes]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -60,6 +64,7 @@ jobs:
           persist-credentials: false
 
       - name: (Github hosted) Mount /mnt to have more storage 
+        if: matrix.substrate == 'machine'
         run: |
           sudo mkdir -p /mnt/lxd/storage-pools
           sudo mkdir -p /var/snap/lxd/common/lxd/storage-pools
@@ -79,18 +84,19 @@ jobs:
           sudo snap install terraform --channel=latest/stable --classic
 
       - name: Lint / format / validate TF modules
+        working-directory: ./terraform/${{ matrix.substrate }}
         run: |
-          pushd ./terraform
-          for dir in machine/charm/opensearch machine/product/simple_deployment machine/product/large_deployment kubernetes/charm/opensearch kubernetes/product/simple_deployment kubernetes/product/large_deployment; do
+          for dir in charm/opensearch product/simple_deployment product/large_deployment; do
             (cd "${dir}" && terraform init && terraform fmt -check && terraform validate)
           done
-          popd
 
       - name: run checks - prepare
+        if: matrix.substrate == 'machine'
         run: |
           sudo snap install juju --channel=3.6
 
       - name: LXD setup
+        if: matrix.substrate == 'machine'
         run: |
           sudo snap install lxd --channel=latest/stable
           sudo adduser "$USER" 'lxd'
@@ -100,13 +106,31 @@ jobs:
           sg 'lxd' -c "lxc network set lxdbr0 ipv6.address none"
           sudo iptables -F FORWARD
           sudo iptables -P FORWARD ACCEPT
+          mkdir -p ~/.local/share/juju
+          sg 'lxd' -c "juju bootstrap 'localhost' --config model-logs-size=10G"
+
+      - name: K8s setup
+        if: matrix.substrate == 'kubernetes'
+        run: |
+          # Docker and podman networking conflict with Canonical K8s
+          sudo apt-get remove --purge -y docker-ce docker-ce-cli containerd.io docker.io containerd 2>/dev/null || true
+          sudo nft flush ruleset
+          sudo rm -f /etc/cni/net.d/87-podman-bridge.conflist
+          sudo snap install concierge --classic
+          sudo concierge prepare -c concierge-k8s.yaml --juju-channel=3.6/stable
+          # `k8s status --wait-ready` doesn't wait for Cilium, CoreDNS and storage (canonical/k8s-snap#1789)
+          for res in deployment/cilium-operator deployment/coredns deployment/metrics-server daemonset/cilium daemonset/ck-storage-rawfile-csi-node statefulset/ck-storage-rawfile-csi-controller; do
+            if sudo k8s kubectl -n kube-system get "$res" >/dev/null 2>&1; then
+              sudo k8s kubectl -n kube-system rollout status "$res" --timeout=5m
+            else
+              echo "Skipping rollout status for missing $res"
+            fi
+          done
+          juju controller-config model-logs-size=10G
 
       - name: Juju setup
         run: |
-          mkdir -p ~/.local/share/juju
-          sg 'lxd' -c "juju bootstrap 'localhost' --config model-logs-size=10G"
-          juju model-defaults logging-config='<root>=INFO; unit=DEBUG'
-          juju add-model test
+          juju add-model test --config logging-config='<root>=INFO; unit=DEBUG'
 
           sudo tee -a /etc/sysctl.conf > /dev/null <<EOT
           vm.max_map_count=262144
@@ -118,14 +142,13 @@ jobs:
           sudo sysctl -p
 
       - name: Terraform deploy - simple deployments product module
+        working-directory: ./terraform/${{ matrix.substrate }}/product/simple_deployment
         run: |
           MODEL_UUID=$(juju show-model test | grep "model-uuid" | awk '{split($0, a, ": "); print a[2]}')
-          pushd ./terraform/machine/product/simple_deployment/
           terraform apply \
             -var="opensearch={\"model_uuid\": \"$MODEL_UUID\"}" \
             -var="backups={\"config\": {\"bucket\": \"test\"}}" \
             -auto-approve
-          popd
 
       - name: Wait for juju deployment
         run: |
