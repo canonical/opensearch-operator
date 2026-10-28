@@ -31,11 +31,8 @@ juju deploy data-integrator --channel=stable \
   --config extra-user-roles=admin
 ```
 
-Wait until all units become active:
-
-```shell
-juju status --watch 5s
-```
+At this stage, `opensearch` is `blocked` until it is integrated with a TLS provider, and `data-integrator` is `blocked`
+until it is integrated with OpenSearch. Both integrations are created later in this guide.
 
 ## Deploy the Identity Platform on MicroK8s
 
@@ -103,6 +100,12 @@ juju consume admin/oauth.self-signed-certificates
 juju consume admin/oauth.hydra
 juju integrate opensearch:certificates admin/oauth.self-signed-certificates
 juju integrate opensearch admin/oauth.hydra
+```
+
+Wait until all `opensearch` units become `active`:
+
+```shell
+juju status --watch 5s
 ```
 
 ## Create an OAuth client and obtain a token
@@ -194,6 +197,18 @@ Expect a `403 security_exception` — the client has no mapped roles yet.
 ```
 
 ### Get a username from the Data Integrator
+
+The `data-integrator` charm only receives a user once it is integrated with OpenSearch. Integrate the two applications:
+
+```shell
+juju integrate data-integrator opensearch
+```
+
+Wait until `data-integrator` becomes `active`:
+
+```shell
+juju status --watch 5s
+```
 
 Retrieve credentials from the `data-integrator` charm:
 

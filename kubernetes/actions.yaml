@@ -21,11 +21,11 @@ set-tls-private-key:
     - category
 
 set-password:
-  description: Change the admin user's password, which is used by charm. It is for internal charm users and SHOULD NOT be used by applications.
+  description: Change the password of a system user, which is used by charm. It is for internal charm users and SHOULD NOT be used by applications. Must be run on the leader unit.
   params:
     username:
       type: string
-      description: The username, the default value 'admin'. Possible values - admin.
+      description: The username, the default value 'admin'. Possible values - admin, kibanaserver, monitor.
       default: admin
     password:
       type: string
@@ -36,7 +36,7 @@ get-password:
   params:
     username:
       type: string
-      description: The username, the default value 'admin'. Possible values - admin.
+      description: The username, the default value 'admin'. Possible values - admin, kibanaserver, monitor.
       default: admin
 
 create-backup:
