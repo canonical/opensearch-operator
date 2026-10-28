@@ -1,0 +1,123 @@
+[32mINFO    [0m tests.integration.helpers:helpers.py:445 Calling: PUT -- https://10.193.21.107:9200/_plugins/_security/api/internalusers/my_user
+[32mINFO    [0m tests.integration.helpers:helpers.py:445 Calling: GET -- https://10.193.21.107:9200/_plugins/_security/api/internalusers/my_user
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.29   unsupported  02:04:23Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      2  opensearch                            1  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  710  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/1*                active    idle   2        10.193.21.107   9200/tcp  
+opensearch/2                 active    idle   3        10.193.21.108   9200/tcp  
+self-signed-certificates/1*  active    idle   4        10.193.21.131             
+
+Machine  State    Address        Inst id        Base          AZ             Message
+2        started  10.193.21.107  juju-07f5c1-2  ubuntu@24.04  runnervmtai0g  Running
+3        started  10.193.21.108  juju-07f5c1-3  ubuntu@24.04  runnervmtai0g  Running
+4        started  10.193.21.131  juju-07f5c1-4  ubuntu@24.04  runnervmtai0g  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+machine-0: 01:43:20 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:43:20 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:43:25 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:43:25 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:47:46 ERROR unit.opensearch/0.juju-log certificates:4: Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 01:47:48 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 01:47:54 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.193.21.105:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:47:54 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 01:47:54 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.193.21.105:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:47:55 ERROR unit.opensearch/0.juju-log certificates:4: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.193.21.105:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:47:56 ERROR unit.opensearch/0.juju-log certificates:4: Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 01:47:56 ERROR unit.opensearch/0.juju-log certificates:4: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.193.21.105:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:47:57 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.193.21.105:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:47:57 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 01:47:57 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.193.21.105:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:47:59 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.193.21.105:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:47:59 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 01:47:59 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.193.21.105:9200 and alternative_hosts: [] not reachable.'
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 01:47:59 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-1: 01:48:02 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 01:49:07 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:49:07 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:49:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:49:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-1: 01:51:10 ERROR unit.opensearch/1.juju-log opensearch-peers:7: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.193.21.107:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 01:51:23 ERROR unit.opensearch/1.juju-log opensearch-peers:7: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.193.21.107:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 01:51:30 ERROR unit.opensearch/2.juju-log opensearch-peers:7: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.193.21.108:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 01:51:33 ERROR unit.opensearch/2.juju-log opensearch-peers:7: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.193.21.108:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 01:53:05 ERROR unit.opensearch/1.juju-log opensearch-peers:7: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.193.21.107:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 01:53:07 ERROR unit.opensearch/2.juju-log opensearch-peers:7: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.193.21.108:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 01:53:09 ERROR unit.opensearch/2.juju-log opensearch-peers:7: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.193.21.108:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-1: 01:53:10 ERROR unit.opensearch/1.juju-log opensearch-peers:7: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.193.21.107:9200 and alternative_hosts: [] not reachable.'
+machine-4: 01:53:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:53:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 01:54:27 ERROR unit.opensearch/2.juju-log opensearch-peers:7: Failed to delete voting exclusions set(): HTTP error self.response_code=None
+self.response_text='Host 10.193.21.108:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 01:57:40 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.193.21.108:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 01:57:41 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.193.21.108:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-2: 01:57:42 ERROR unit.opensearch/2.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.193.21.108:9200 and alternative_hosts: [] not reachable.'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
