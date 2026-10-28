@@ -105,7 +105,7 @@ juju integrate opensearch admin/oauth.hydra
 Wait until all `opensearch` units become `active`:
 
 ```shell
-juju status --watch 5s
+watch juju status
 ```
 
 ## Create an OAuth client and obtain a token
