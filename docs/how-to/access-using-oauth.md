@@ -207,7 +207,7 @@ juju integrate data-integrator opensearch
 Wait until `data-integrator` becomes `active`:
 
 ```shell
-juju status --watch 5s
+watch juju status
 ```
 
 Retrieve credentials from the `data-integrator` charm:
