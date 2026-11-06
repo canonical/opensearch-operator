@@ -1,0 +1,61 @@
+[32mINFO    [0m tests.integration.helpers:helpers.py:445 Calling: PUT -- https://10.120.98.199:9200/_plugins/_security/api/internalusers/my_user
+[32mINFO    [0m tests.integration.helpers:helpers.py:445 Calling: GET -- https://10.120.98.199:9200/_plugins/_security/api/internalusers/my_user
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.29   unsupported  02:03:41Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+opensearch                         active      2  opensearch                            1  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  585  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports     Message
+opensearch/1*                active    idle   2        10.120.98.199   9200/tcp  
+opensearch/2                 active    idle   3        10.120.98.144   9200/tcp  
+self-signed-certificates/1*  active    idle   4        10.120.98.31              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+2        started  10.120.98.199  juju-4ff789-2  ubuntu@24.04  runnervmkb2gk  Running
+3        started  10.120.98.144  juju-4ff789-3  ubuntu@24.04  runnervmkb2gk  Running
+4        started  10.120.98.31   juju-4ff789-4  ubuntu@24.04  runnervmkb2gk  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+machine-1: 01:45:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:45:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:45:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:45:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-0: 01:49:22 ERROR unit.opensearch/0.juju-log certificates:4: Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 01:49:23 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 01:49:24 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.120.98.44:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:49:24 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 01:49:24 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.120.98.44:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:49:26 ERROR unit.opensearch/0.juju-log certificates:4: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.120.98.44:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:49:26 ERROR unit.opensearch/0.juju-log certificates:4: Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 01:49:26 ERROR unit.opensearch/0.juju-log certificates:4: HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.120.98.44:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:49:28 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.120.98.44:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:49:28 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 01:49:28 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.120.98.44:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:49:29 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.120.98.44:9200 and alternative_hosts: [] not reachable.'
+unit-opensearch-0: 01:49:30 ERROR unit.opensearch/0.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-0: 01:49:30 ERROR unit.opensearch/0.juju-log HTTP error when checking cluster health: HTTP error self.response_code=None
+self.response_text='Host 10.120.98.44:9200 and alternative_hosts: [] not reachable.'
+machine-2: 01:50:31 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:50:31 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:50:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:50:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-opensearch-2: 01:51:44 ERROR unit.opensearch/2.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-2: 01:51:46 ERROR unit.opensearch/2.juju-log Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-2: 01:51:47 ERROR unit.opensearch/2.juju-log upgrade-version-a:8: Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+unit-opensearch-2: 01:51:48 ERROR unit.opensearch/2.juju-log opensearch-peers:6: Missing cluster topology requirements: At least 1 cluster manager nodes and 1 data nodes are required.
+machine-4: 01:54:04 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:54:04 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
