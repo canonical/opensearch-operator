@@ -10,13 +10,13 @@ This module requires a `juju` model to be available. Refer to the [usage section
 | Name | Version |
 | ---- | ------- |
 | terraform | >= 1.6 |
-| juju | ~> 2.0 |
+| juju | >= 2.2.1 |
 
 ## Providers
 
 | Name | Version |
 | ---- | ------- |
-| juju | ~> 2.0 |
+| juju | >= 2.2.1 |
 
 ## Inputs
 
